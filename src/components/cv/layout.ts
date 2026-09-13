@@ -39,8 +39,18 @@ export const CV_LAYOUTS: Array<{
 
 const STORAGE_KEY = "lebenslauf:layout:v1";
 const MIRROR_STORAGE_KEY = "lebenslauf:layout-mirror:v1";
+const SECTION_GAP_STORAGE_KEY = "lebenslauf:section-gap:v1";
 export const CV_LAYOUT_EVENT = "lebenslauf-layout-change";
 const DEFAULT_LAYOUT: CvLayoutId = "classic";
+
+/**
+ * Globaler vertikaler Rubrik-Abstand. `null` bedeutet: die jeweilige Vorlage
+ * darf ihren bewährten Abstand behalten. Ein eigener Wert gilt für alle
+ * Rubriktitel, unabhängig davon, ob die Rubrik volle oder halbe Breite hat.
+ */
+export const CV_SECTION_GAP_MIN_MM = 0;
+export const CV_SECTION_GAP_MAX_MM = 12;
+export const CV_SECTION_GAP_CUSTOM_DEFAULT_MM = 4;
 
 function valid(value: string | null): value is CvLayoutId {
   return (
@@ -97,6 +107,23 @@ function readMirror(): boolean {
   }
 }
 
+export function normalizeCvSectionGapMm(value: unknown): number | null {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  return Math.max(CV_SECTION_GAP_MIN_MM, Math.min(CV_SECTION_GAP_MAX_MM, numeric));
+}
+
+function readSectionGap(): number | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(SECTION_GAP_STORAGE_KEY);
+    if (raw === null || raw.trim() === "") return null;
+    return normalizeCvSectionGapMm(raw);
+  } catch {
+    return null;
+  }
+}
+
 function rendererFor(choice: CvLayoutId): CvRenderLayoutId {
   // M5.6: diese Zuordnung entscheidet nur die Inhaltsgeometrie. Die visuelle
   // DNA (Typografie, Linien, Intensität, Radien) kommt aus DossierTheme.
@@ -115,8 +142,18 @@ function canonical(choice: CvLayoutId): CvLayoutId {
 
 function applyVariant(choice: CvLayoutId) {
   if (typeof document === "undefined") return;
-  document.documentElement.dataset.cvVariant = canonical(choice);
-  document.documentElement.dataset.cvMirrored = readMirror() ? "true" : "false";
+  const root = document.documentElement;
+  root.dataset.cvVariant = canonical(choice);
+  root.dataset.cvMirrored = readMirror() ? "true" : "false";
+
+  const sectionGap = readSectionGap();
+  if (sectionGap === null) {
+    delete root.dataset.cvSectionGap;
+    root.style.removeProperty("--cv-section-gap");
+  } else {
+    root.dataset.cvSectionGap = "custom";
+    root.style.setProperty("--cv-section-gap", `${sectionGap}mm`);
+  }
 }
 
 /** Tatsächlich ausgewählte Karte im Aufbau-Picker. */
@@ -136,6 +173,13 @@ export function getCvLayout(): CvRenderLayoutId {
 /** Zweispalten-Aufbauten starten immer normal: Sidebar links, Main rechts. */
 export function getCvLayoutMirror(): boolean {
   return readMirror();
+}
+
+/** `null` lässt die Abstände der gewählten Vorlage unverändert. */
+export function getCvSectionGapMm(): number | null {
+  const value = readSectionGap();
+  if (typeof document !== "undefined") applyVariant(readChoice());
+  return value;
 }
 
 export function setCvLayout(layout: CvLayoutId) {
@@ -160,12 +204,32 @@ export function setCvLayoutMirror(mirrored: boolean) {
   window.dispatchEvent(new CustomEvent(CV_LAYOUT_EVENT));
 }
 
+export function setCvSectionGapMm(value: number | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (value === null) window.localStorage.removeItem(SECTION_GAP_STORAGE_KEY);
+    else {
+      const normalized = normalizeCvSectionGapMm(value);
+      if (normalized === null) window.localStorage.removeItem(SECTION_GAP_STORAGE_KEY);
+      else window.localStorage.setItem(SECTION_GAP_STORAGE_KEY, String(normalized));
+    }
+  } catch {
+    // Die laufende Seite reagiert trotzdem über CSS + Event.
+  }
+  applyVariant(readChoice());
+  window.dispatchEvent(new CustomEvent(CV_LAYOUT_EVENT));
+}
+
 export function subscribeCvLayout(onChange: () => void) {
   if (typeof window === "undefined") return () => {};
 
   const local = () => onChange();
   const storage = (event: StorageEvent) => {
-    if (event.key === STORAGE_KEY || event.key === MIRROR_STORAGE_KEY) {
+    if (
+      event.key === STORAGE_KEY ||
+      event.key === MIRROR_STORAGE_KEY ||
+      event.key === SECTION_GAP_STORAGE_KEY
+    ) {
       applyVariant(readChoice());
       onChange();
     }
@@ -180,3 +244,5 @@ export function subscribeCvLayout(onChange: () => void) {
 
 /** Gleicher Event-Stream, aber mit dem rohen Aufbauwert als Snapshot. */
 export const subscribeCvLayoutChoice = subscribeCvLayout;
+/** Globaler Rubrik-Abstand teilt denselben Event-Stream wie die übrigen Aufbauoptionen. */
+export const subscribeCvSectionGap = subscribeCvLayout;
