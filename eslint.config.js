@@ -37,10 +37,10 @@ export default tseslint.config(
     },
   },
   {
-    // The Warm DOCX generator emits XML attributes inside template strings. The
-    // escaped quote in its XML-escape regexp is intentional source-level clarity
+    // The DOCX generators emit XML attributes inside template strings. The
+    // escaped quote in their XML-escape regexp is intentional source-level clarity
     // and has no runtime difference from an unescaped quote.
-    files: ["src/lib/dossier-docx-warm.ts"],
+    files: ["src/lib/dossier-docx-warm.ts", "src/lib/dossier-docx-studio3.ts"],
     rules: { "no-useless-escape": "off" },
   },
   // Formatting is enforced separately by the explicit Prettier release gate.
