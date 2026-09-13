@@ -19,15 +19,11 @@ import {
   letterPdfDocumentFromSaved,
   letterPdfHasContent,
 } from "@/lib/dossier-pdf-document";
-import { briefDossierDocxSupported, downloadBriefDossierDocx } from "@/lib/dossier-docx";
 import {
-  downloadPolishedWarmDossierDocx,
-  warmDossierDocxSupported,
-} from "@/lib/dossier-docx-warm-polish";
-import {
-  downloadPolishedStudio3DossierDocx,
-  studio3DossierDocxSupported,
-} from "@/lib/dossier-docx-studio3-polish";
+  DOSSIER_DOCX_SUPPORTED_LABELS,
+  downloadDossierDocx,
+  resolveDossierDocxProfile,
+} from "@/lib/dossier-docx-export";
 
 function readDocxDocuments() {
   return {
@@ -42,29 +38,13 @@ export function ProjectFileControls() {
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const docxDocuments = readDocxDocuments();
-  const briefDocxSupported = briefDossierDocxSupported(
+  const docxProfile = resolveDossierDocxProfile(
     docxDocuments.cover,
     docxDocuments.letter,
     docxDocuments.cv,
   );
-  const warmDocxSupported = warmDossierDocxSupported(
-    docxDocuments.cover,
-    docxDocuments.letter,
-    docxDocuments.cv,
-  );
-  const studio3DocxSupported = studio3DossierDocxSupported(
-    docxDocuments.cover,
-    docxDocuments.letter,
-    docxDocuments.cv,
-  );
-  const docxTemplateLabel = studio3DocxSupported
-    ? "Studio 3"
-    : warmDocxSupported
-      ? "Warm"
-      : briefDocxSupported
-        ? "Brief"
-        : null;
-  const docxSupported = docxTemplateLabel !== null;
+  const docxTemplateLabel = docxProfile?.label ?? null;
+  const docxSupported = docxProfile !== null;
   const docxReady = !!(
     docxDocuments.cover &&
     coverPdfHasContent(docxDocuments.cover.data) &&
@@ -73,6 +53,7 @@ export function ProjectFileControls() {
     docxDocuments.cv &&
     cvPdfHasContent(docxDocuments.cv.data)
   );
+  const supportedTemplateText = DOSSIER_DOCX_SUPPORTED_LABELS.join(", ");
 
   const saveProject = () => {
     const project = downloadDossierProjectFromBrowser();
@@ -99,13 +80,9 @@ export function ProjectFileControls() {
       return;
     }
 
-    const brief = briefDossierDocxSupported(cover, letter, cv);
-    const warm = warmDossierDocxSupported(cover, letter, cv);
-    const studio3 = studio3DossierDocxSupported(cover, letter, cv);
-    if (!brief && !warm && !studio3) {
-      setStatus(
-        "Der DOCX-Referenzexport ist momentan für die Vorlagen Brief, Warm und Studio 3 verfügbar.",
-      );
+    const profile = resolveDossierDocxProfile(cover, letter, cv);
+    if (!profile) {
+      setStatus(`Der DOCX-Referenzexport ist momentan für ${supportedTemplateText} verfügbar.`);
       return;
     }
 
@@ -118,10 +95,10 @@ export function ProjectFileControls() {
         ? "Bewerbungsdossier.docx"
         : `Bewerbungsdossier-${author}.docx`;
 
-    if (studio3) await downloadPolishedStudio3DossierDocx(cover, letter, cv, fileName);
-    else if (warm) await downloadPolishedWarmDossierDocx(cover, letter, cv, fileName);
-    else downloadBriefDossierDocx(cover, letter, cv, fileName);
-    setStatus("DOCX-Referenz wurde erstellt. Prüfe die Datei am besten in Microsoft Word.");
+    await downloadDossierDocx(cover, letter, cv, fileName);
+    setStatus(
+      `DOCX-Referenz ${profile.label} wurde erstellt. Prüfe die Datei am besten in Microsoft Word.`,
+    );
   };
 
   const loadProject = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -192,14 +169,14 @@ export function ProjectFileControls() {
         title={
           docxSupported
             ? `Bearbeitbare Word-Referenz der Vorlage ${docxTemplateLabel} herunterladen`
-            : "DOCX ist im Referenzschritt für die Vorlagen Brief, Warm und Studio 3 verfügbar"
+            : `DOCX ist im Referenzschritt für ${supportedTemplateText} verfügbar`
         }
       >
         Dossier als DOCX{docxTemplateLabel ? ` · ${docxTemplateLabel}` : ""}
       </button>
       {!docxSupported ? (
         <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-          DOCX-Referenz: derzeit für Brief, Warm oder Studio 3, jeweils im ganzen Dossier.
+          DOCX-Referenz: derzeit für {supportedTemplateText}, jeweils im ganzen Dossier.
         </p>
       ) : null}
 
