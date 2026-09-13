@@ -90,6 +90,7 @@ jobs:
               tests/e2e/dossier-docx-reference.spec.ts
               tests/e2e/dossier-docx-warm.spec.ts
               tests/e2e/dossier-docx-studio3.spec.ts
+              tests/e2e/dossier-docx-family-gallery.spec.ts
           - group: letter-m1-m5
             files: >-
               tests/e2e/letter-header-modes.spec.ts
