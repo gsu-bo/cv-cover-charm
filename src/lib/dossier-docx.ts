@@ -1,3 +1,4 @@
+import { DEFAULT_COVER_BEILAGEN } from "@/components/cover/types";
 import { CV_SECTION_LABELS, entryFilled, type CvData, type CvEntry } from "@/components/cv/types";
 import type { CoverPdfDocument, CvPdfDocument, LetterPdfDocument } from "@/lib/dossier-pdf-document";
 import { downloadBlob } from "@/lib/download";
@@ -6,6 +7,9 @@ const WORD_FONT = "Cabin";
 const WORD_FONT_FALLBACK = "Trebuchet MS";
 const MM_TO_TWIPS = 1440 / 25.4;
 const MM_TO_EMU = 36000;
+const INK = "111111";
+const MUTED = "6B7280";
+const RULE = "CBD5E1";
 
 const xmlEscape = (value: string) =>
   value
@@ -25,17 +29,20 @@ function run(
     bold = false,
     italic = false,
     underline = false,
-    color = "111111",
+    color = INK,
+    trackingPt = 0,
   }: {
     size?: number;
     bold?: boolean;
     italic?: boolean;
     underline?: boolean;
     color?: string;
+    trackingPt?: number;
   } = {},
 ) {
   const halfPoints = Math.round(size * 2);
-  return `<w:r><w:rPr><w:rFonts w:ascii="${WORD_FONT}" w:hAnsi="${WORD_FONT}" w:eastAsia="${WORD_FONT}"/><w:sz w:val="${halfPoints}"/><w:szCs w:val="${halfPoints}"/><w:color w:val="${color}"/>${bold ? "<w:b/><w:bCs/>" : ""}${italic ? "<w:i/><w:iCs/>" : ""}${underline ? '<w:u w:val="single"/>' : ""}</w:rPr><w:t xml:space="preserve">${xmlEscape(text)}</w:t></w:r>`;
+  const spacing = trackingPt ? `<w:spacing w:val="${Math.round(trackingPt * 20)}"/>` : "";
+  return `<w:r><w:rPr><w:rFonts w:ascii="${WORD_FONT}" w:hAnsi="${WORD_FONT}" w:eastAsia="${WORD_FONT}"/><w:sz w:val="${halfPoints}"/><w:szCs w:val="${halfPoints}"/><w:color w:val="${color}"/>${spacing}${bold ? "<w:b/><w:bCs/>" : ""}${italic ? "<w:i/><w:iCs/>" : ""}${underline ? '<w:u w:val="single"/>' : ""}</w:rPr><w:t xml:space="preserve">${xmlEscape(text)}</w:t></w:r>`;
 }
 
 function paragraph(
@@ -45,6 +52,8 @@ function paragraph(
     bold,
     italic,
     underline,
+    color,
+    trackingPt,
     align = "left",
     before = 0,
     after = 0,
@@ -55,6 +64,8 @@ function paragraph(
     bold?: boolean;
     italic?: boolean;
     underline?: boolean;
+    color?: string;
+    trackingPt?: number;
     align?: "left" | "center" | "right";
     before?: number;
     after?: number;
@@ -63,7 +74,7 @@ function paragraph(
   } = {},
 ) {
   const spacing = `<w:spacing w:before="${twips(before)}" w:after="${twips(after)}" w:line="${Math.round(240 * line)}" w:lineRule="auto"/>`;
-  return `<w:p><w:pPr>${spacing}<w:jc w:val="${align}"/>${keepNext ? "<w:keepNext/>" : ""}</w:pPr>${text ? run(text, { size, bold, italic, underline }) : "<w:r/>"}</w:p>`;
+  return `<w:p><w:pPr>${spacing}<w:jc w:val="${align}"/>${keepNext ? "<w:keepNext/>" : ""}</w:pPr>${text ? run(text, { size, bold, italic, underline, color, trackingPt }) : "<w:r/>"}</w:p>`;
 }
 
 function paragraphRuns(
@@ -74,30 +85,51 @@ function paragraphRuns(
     after = 0,
     line = 1.15,
     keepNext = false,
+    borderBottom,
   }: {
     align?: "left" | "center" | "right";
     before?: number;
     after?: number;
     line?: number;
     keepNext?: boolean;
+    borderBottom?: { color: string; size?: number };
   } = {},
 ) {
-  return `<w:p><w:pPr><w:spacing w:before="${twips(before)}" w:after="${twips(after)}" w:line="${Math.round(240 * line)}" w:lineRule="auto"/><w:jc w:val="${align}"/>${keepNext ? "<w:keepNext/>" : ""}</w:pPr>${runs.join("")}</w:p>`;
+  const border = borderBottom
+    ? `<w:pBdr><w:bottom w:val="single" w:sz="${borderBottom.size ?? 6}" w:space="1" w:color="${borderBottom.color}"/></w:pBdr>`
+    : "";
+  return `<w:p><w:pPr><w:spacing w:before="${twips(before)}" w:after="${twips(after)}" w:line="${Math.round(240 * line)}" w:lineRule="auto"/><w:jc w:val="${align}"/>${border}${keepNext ? "<w:keepNext/>" : ""}</w:pPr>${runs.join("")}</w:p>`;
 }
 
-const pageBreak = () => '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+function spacer(mm: number) {
+  return `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="${twips(mm)}" w:lineRule="exact"/></w:pPr><w:r><w:t></w:t></w:r></w:p>`;
+}
 
 function noBorderTable(rows: string, widthsMm: number[]) {
   const grid = widthsMm.map((width) => `<w:gridCol w:w="${twips(width)}"/>`).join("");
-  return `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${grid}</w:tblGrid>${rows}</w:tbl>`;
+  return `<w:tbl><w:tblPr><w:tblW w:w="${twips(widthsMm.reduce((sum, width) => sum + width, 0))}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${grid}</w:tblGrid>${rows}</w:tbl>`;
 }
 
-function cell(content: string, widthMm: number, align: "top" | "center" = "top") {
-  return `<w:tc><w:tcPr><w:tcW w:w="${twips(widthMm)}" w:type="dxa"/><w:vAlign w:val="${align}"/></w:tcPr>${content || paragraph()}</w:tc>`;
+function cell(
+  content: string,
+  widthMm: number,
+  {
+    align = "top",
+    border = false,
+    paddingMm = 0,
+  }: { align?: "top" | "center"; border?: boolean; paddingMm?: number } = {},
+) {
+  const borders = border
+    ? `<w:tcBorders><w:top w:val="single" w:sz="10" w:color="${INK}"/><w:left w:val="single" w:sz="10" w:color="${INK}"/><w:bottom w:val="single" w:sz="10" w:color="${INK}"/><w:right w:val="single" w:sz="10" w:color="${INK}"/></w:tcBorders>`
+    : "";
+  const margins = paddingMm
+    ? `<w:tcMar><w:top w:w="${twips(paddingMm)}" w:type="dxa"/><w:left w:w="${twips(paddingMm)}" w:type="dxa"/><w:bottom w:w="${twips(paddingMm)}" w:type="dxa"/><w:right w:w="${twips(paddingMm)}" w:type="dxa"/></w:tcMar>`
+    : "";
+  return `<w:tc><w:tcPr><w:tcW w:w="${twips(widthMm)}" w:type="dxa"/><w:vAlign w:val="${align}"/>${borders}${margins}</w:tcPr>${content || paragraph()}</w:tc>`;
 }
 
-function row(cells: string[], heightMm?: number) {
-  return `<w:tr>${heightMm ? `<w:trPr><w:trHeight w:val="${twips(heightMm)}" w:hRule="atLeast"/></w:trPr>` : ""}${cells.join("")}</w:tr>`;
+function row(cells: string[], heightMm?: number, exact = false) {
+  return `<w:tr>${heightMm ? `<w:trPr><w:trHeight w:val="${twips(heightMm)}" w:hRule="${exact ? "exact" : "atLeast"}"/></w:trPr>` : ""}${cells.join("")}</w:tr>`;
 }
 
 type EmbeddedImage = {
@@ -108,10 +140,7 @@ type EmbeddedImage = {
   bytes: Uint8Array;
 };
 
-function dataUrlImage(
-  value: string | null | undefined,
-  index: number,
-): EmbeddedImage | null {
+function dataUrlImage(value: string | null | undefined, index: number): EmbeddedImage | null {
   if (!value) return null;
   const match = value.match(/^data:image\/(png|jpe?g);base64,(.+)$/i);
   if (!match) return null;
@@ -134,6 +163,10 @@ function imageRun(image: EmbeddedImage, widthMm: number, heightMm: number, docPr
   return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="${docPrId}" name="Bewerbungsfoto ${docPrId}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${docPrId}" name="${xmlEscape(image.fileName)}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${image.rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
 }
 
+function initials(vorname: string, nachname: string) {
+  return `${vorname.trim().charAt(0)}${nachname.trim().charAt(0)}`.toUpperCase();
+}
+
 function coverPage(document: CoverPdfDocument, images: EmbeddedImage[]) {
   const data = document.data;
   const photo = dataUrlImage(data.foto, images.length + 1);
@@ -141,45 +174,73 @@ function coverPage(document: CoverPdfDocument, images: EmbeddedImage[]) {
   const fullName = [data.vorname, data.nachname].filter(Boolean).join(" ");
   const placeDate = [data.ort, data.datum].filter(Boolean).join(", ");
   const contact = [data.adresse, data.plzOrt, data.telefon, data.email, data.geburtsdatum].filter(Boolean);
-  const recipient = [data.lehrbetrieb, data.ansprechperson, data.betriebAdresse].filter(Boolean);
-  const kicker = data.kicker || "Bewerbung um eine Lehrstelle als";
+  const attachments = DEFAULT_COVER_BEILAGEN.map(
+    (fallback, index) => data.beilagen?.[index] ?? fallback,
+  ).filter((value) => value.trim());
+  const kicker = (data.kicker || "Bewerbung um eine Lehrstelle als").toUpperCase();
+  const eyebrow = (data.eyebrow || "Bewerbung").toUpperCase();
 
-  const topRow = noBorderTable(
+  const header = noBorderTable(
     row([
-      cell(paragraph(data.eyebrow || "Bewerbung", { size: 9, bold: true }), 85),
-      cell(paragraph(placeDate, { size: 9, align: "right" }), 85),
+      cell(
+        paragraph(eyebrow, {
+          size: 10.5,
+          bold: true,
+          trackingPt: 2.8,
+        }),
+        85,
+      ),
+      cell(paragraph(placeDate, { size: 9.5, color: MUTED, align: "right" }), 85),
     ]),
     [85, 85],
   );
 
-  const photoRow = photo
-    ? noBorderTable(
-        row([
-          cell(paragraph(), 112),
-          cell(paragraphRuns([imageRun(photo, 42, 42, 1)], { align: "right" }), 58),
-        ]),
-        [112, 58],
-      )
-    : paragraph();
+  const portraitContent = photo
+    ? paragraphRuns([imageRun(photo, 49.5, 49.5, 1)], { align: "center" })
+    : paragraph(initials(data.vorname, data.nachname), {
+        size: 27,
+        bold: true,
+        align: "center",
+      });
+  const portrait = noBorderTable(
+    row(
+      [
+        cell(paragraph(), 109),
+        cell(portraitContent, 52, { align: "center", border: true, paddingMm: photo ? 0.5 : 1 }),
+        cell(paragraph(), 9),
+      ],
+      52,
+      true,
+    ),
+    [109, 52, 9],
+  );
 
   const bottom = noBorderTable(
     row([
       cell(
         [
-          paragraph(data.labelKontakt || "Kontakt", { size: 8.5, bold: true, keepNext: true }),
+          paragraph((data.labelKontakt || "Kontakt").toUpperCase(), {
+            size: 9.5,
+            bold: true,
+            trackingPt: 1.6,
+            keepNext: true,
+            after: 2,
+          }),
           ...contact.map((line) => paragraph(line, { size: 9.5, after: 0.6 })),
         ].join(""),
         82,
       ),
       cell(
         [
-          paragraph(data.labelEmpfaenger || "Adressiert an", {
-            size: 8.5,
+          paragraph("BEILAGEN", {
+            size: 9.5,
             bold: true,
+            trackingPt: 1.6,
             align: "right",
             keepNext: true,
+            after: 2,
           }),
-          ...recipient.map((line) => paragraph(line, { size: 9.5, align: "right", after: 0.6 })),
+          ...attachments.map((line) => paragraph(line, { size: 9.5, align: "right", after: 0.6 })),
         ].join(""),
         88,
       ),
@@ -188,21 +249,28 @@ function coverPage(document: CoverPdfDocument, images: EmbeddedImage[]) {
   );
 
   return [
-    topRow,
-    photoRow,
-    paragraph(kicker, { size: 10, bold: true, before: photo ? 15 : 62, after: 2 }),
-    paragraph(data.beruf, { size: 32, bold: true, after: 6, line: 1.02 }),
-    paragraph(fullName, { size: 15, bold: true, after: 2 }),
-    data.lehrbeginn ? paragraph(`Lehrbeginn ${data.lehrbeginn}`, { size: 10.5 }) : "",
-    paragraph("", { before: 38 }),
+    header,
+    spacer(15),
+    portrait,
+    spacer(30),
+    paragraph(kicker, { size: 10.5, bold: true, trackingPt: 2.4, after: 2, keepNext: true }),
+    paragraph(data.beruf, { size: 36, bold: true, after: 6, line: 1.02, keepNext: true }),
+    paragraph(fullName, { size: 15, bold: true, after: 2, keepNext: true }),
+    data.lehrbeginn ? paragraph(`Lehrbeginn ${data.lehrbeginn}`, { size: 10.5, bold: true }) : "",
+    spacer(46),
     bottom,
   ].join("");
 }
 
 function letterPage(document: LetterPdfDocument, images: EmbeddedImage[]) {
   const data = document.data;
-  const senderLeft = [data.absenderName, data.absenderAdresse, data.absenderPlzOrt].filter(Boolean);
-  const senderRight = [data.absenderTelefon, data.absenderEmail].filter(Boolean);
+  const sender = [
+    data.absenderName,
+    data.absenderAdresse,
+    data.absenderPlzOrt,
+    data.absenderTelefon,
+    data.absenderEmail,
+  ].filter(Boolean);
   const recipient = [
     data.empfaengerFirma,
     data.empfaengerName,
@@ -213,40 +281,41 @@ function letterPage(document: LetterPdfDocument, images: EmbeddedImage[]) {
     .split(/\n\s*\n/g)
     .map((value) => value.trim())
     .filter(Boolean);
-
   const flowImages = (data.images ?? [])
     .map((image) => dataUrlImage(image.src, images.length + 1))
     .filter((image): image is EmbeddedImage => !!image);
   images.push(...flowImages);
 
   return [
-    noBorderTable(
-      row([
-        cell(senderLeft.map((line) => paragraph(line, { size: 9.5, after: 0.4 })).join(""), 100),
-        cell(
-          senderRight.map((line) => paragraph(line, { size: 9.5, align: "right", after: 0.4 })).join(""),
-          70,
-        ),
-      ]),
-      [100, 70],
+    ...sender.map((line, index) =>
+      paragraph(line, {
+        size: index === 0 ? 10.5 : 9.5,
+        bold: index === 0,
+        after: index === 0 ? 0.8 : 0.35,
+      }),
     ),
-    paragraph("", { before: 16 }),
-    ...recipient.map((line) => paragraph(line, { size: 10.5, after: 0.4 })),
-    paragraph([data.ort, data.datum].filter(Boolean).join(", "), { size: 10.5, align: "right", before: 8 }),
-    paragraph(data.betreff, { size: 12, bold: true, before: 9, after: 7, keepNext: true }),
+    spacer(10),
+    ...recipient.map((line) => paragraph(line, { size: 10, after: 0.35 })),
+    paragraph([data.ort, data.datum].filter(Boolean).join(", "), {
+      size: 9.5,
+      color: MUTED,
+      before: 5,
+      after: 0,
+    }),
+    paragraph(data.betreff, { size: 12, bold: true, before: 7, after: 8, keepNext: true }),
     paragraph(data.anrede, { size: 10.5, after: 5, keepNext: true }),
-    ...bodyParagraphs.map((text) => paragraph(text, { size: 10.5, after: 4.5, line: 1.22 })),
+    ...bodyParagraphs.map((text) => paragraph(text, { size: 10.5, after: 4.5, line: 1.46 })),
     ...flowImages.map((image, index) =>
       paragraphRuns([imageRun(image, 34, 34, 10 + index)], { align: "right", before: 2, after: 2 }),
     ),
-    paragraph(data.gruss, { size: 10.5, before: 5, after: 6 }),
-    paragraph(data.unterschrift, { size: 10.5, bold: true }),
+    paragraph(data.gruss, { size: 10.5, before: 5, after: 8 }),
+    paragraph(data.unterschrift || data.absenderName, { size: 10.5, bold: true }),
     data.showBeilagen !== false && (data.beilagen ?? []).some((item) => item.trim())
       ? [
-          paragraph("Beilagen", { size: 9.5, bold: true, before: 10, keepNext: true }),
+          paragraph("Beilagen", { size: 9.5, bold: true, before: 9, after: 1.5, keepNext: true }),
           ...(data.beilagen ?? [])
             .filter((item) => item.trim())
-            .map((item) => paragraph(item, { size: 9.5, after: 0.4 })),
+            .map((item) => paragraph(item, { size: 9.5, after: 0.35 })),
         ].join("")
       : "",
   ].join("");
@@ -259,12 +328,14 @@ function entryTable(entries: CvEntry[]) {
     filled
       .map((entry) =>
         row([
-          cell(paragraph(entry.zeit, { size: 9.5 }), 36),
+          cell(paragraph(entry.zeit, { size: 9.5, color: MUTED }), 36),
           cell(
             [
               paragraph(entry.titel, { size: 10.5, bold: true, keepNext: true }),
-              entry.ort ? paragraph(entry.ort, { size: 9.5, italic: true, after: 1 }) : "",
-              entry.beschreibung ? paragraph(entry.beschreibung, { size: 9.5, after: 4, line: 1.18 }) : "",
+              entry.ort ? paragraph(entry.ort, { size: 9.5, color: MUTED, after: 0.8 }) : "",
+              entry.beschreibung
+                ? paragraph(entry.beschreibung, { size: 9.5, after: 4, line: 1.22 })
+                : spacer(2),
             ].join(""),
             134,
           ),
@@ -276,7 +347,30 @@ function entryTable(entries: CvEntry[]) {
 }
 
 function cvHeading(label: string) {
-  return paragraph(label, { size: 11.5, bold: true, before: 6, after: 2.5, keepNext: true });
+  const title = label.toLocaleUpperCase("de-CH");
+  const labelWidth = Math.min(76, Math.max(34, 17 + title.length * 1.65));
+  const ruleWidth = 170 - labelWidth;
+  const ruleParagraph = paragraphRuns([], {
+    borderBottom: { color: RULE, size: 7 },
+    after: 1.5,
+  });
+  return noBorderTable(
+    row([
+      cell(
+        paragraph(title, {
+          size: 10.5,
+          bold: true,
+          trackingPt: 0.45,
+          keepNext: true,
+          after: 1.5,
+        }),
+        labelWidth,
+        { align: "center" },
+      ),
+      cell(ruleParagraph, ruleWidth, { align: "center" }),
+    ]),
+    [labelWidth, ruleWidth],
+  );
 }
 
 function cvPage(document: CvPdfDocument, images: EmbeddedImage[]) {
@@ -285,7 +379,12 @@ function cvPage(document: CvPdfDocument, images: EmbeddedImage[]) {
   const photo = dataUrlImage(person.foto, images.length + 1);
   if (photo) images.push(photo);
   const fullName = [person.vorname, person.nachname].filter(Boolean).join(" ");
-  const contact = [person.adresse, person.plzOrt, person.telefon, person.email, person.geburtsdatum, person.nationalitaet]
+  const address = [person.adresse, person.plzOrt].filter(Boolean).join(", ");
+  const direct = [person.telefon, person.email].filter(Boolean).join(" · ");
+  const personal = [
+    person.geburtsdatum ? `Geburtsdatum ${person.geburtsdatum}` : "",
+    person.nationalitaet ? `Nationalität ${person.nationalitaet}` : "",
+  ]
     .filter(Boolean)
     .join(" · ");
   const hidden = data.hidden ?? {};
@@ -295,20 +394,36 @@ function cvPage(document: CvPdfDocument, images: EmbeddedImage[]) {
     row([
       cell(
         [
-          data.titel ? paragraph(data.titel, { size: 9.5, bold: true, keepNext: true }) : "",
-          paragraph(fullName, { size: 24, bold: true, after: 1.5, keepNext: true }),
-          person.untertitel ? paragraph(person.untertitel, { size: 10.5 }) : "",
+          paragraph((data.titel || "Lebenslauf").toUpperCase(), {
+            size: 10.5,
+            color: MUTED,
+            bold: true,
+            trackingPt: 0.8,
+            keepNext: true,
+            after: 1.2,
+          }),
+          paragraph(fullName, { size: 25, bold: true, after: 1.5, keepNext: true }),
+          person.untertitel ? paragraph(person.untertitel, { size: 10.5, color: MUTED }) : "",
         ].join(""),
         photo ? 132 : 170,
       ),
       ...(photo
-        ? [cell(paragraphRuns([imageRun(photo, 30, 30, 50)], { align: "right" }), 38, "center")]
+        ? [
+            cell(paragraphRuns([imageRun(photo, 30, 30, 50)], { align: "right" }), 38, {
+              align: "center",
+            }),
+          ]
         : []),
     ]),
     photo ? [132, 38] : [170],
   );
 
-  const content: string[] = [header, paragraph(contact, { size: 9.5, before: 4, after: 5 })];
+  const content: string[] = [
+    header,
+    address ? paragraph(address, { size: 9.5, before: 3, after: 0.5 }) : "",
+    direct ? paragraph(direct, { size: 9.5, after: 0.5 }) : "",
+    personal ? paragraph(personal, { size: 9.5, color: MUTED, after: 5 }) : spacer(3),
+  ];
 
   if (!hidden.schule && data.schule.some(entryFilled)) {
     content.push(cvHeading(labels.schule || CV_SECTION_LABELS.schule), entryTable(data.schule));
@@ -324,25 +439,32 @@ function cvPage(document: CvPdfDocument, images: EmbeddedImage[]) {
           .filter((entry) => entry.name.trim() || entry.niveau.trim())
           .map((entry) =>
             row([
-              cell(paragraph(entry.name, { size: 9.5, bold: true }), 70),
-              cell(paragraph(entry.niveau, { size: 9.5 }), 100),
+              cell(paragraph(entry.name, { size: 9.5, bold: true, after: 1 }), 70),
+              cell(paragraph(entry.niveau, { size: 9.5, color: MUTED, after: 1 }), 100),
             ]),
           )
           .join(""),
         [70, 100],
       ),
+      spacer(2),
     );
   }
   if (!hidden.hobbys && data.hobbys.some((item) => item.trim())) {
     content.push(
       cvHeading(labels.hobbys || CV_SECTION_LABELS.hobbys),
-      ...data.hobbys.filter((item) => item.trim()).map((item) => paragraph(`• ${item}`, { size: 9.5, after: 0.8 })),
+      ...data.hobbys
+        .filter((item) => item.trim())
+        .map((item) => paragraph(`• ${item}`, { size: 9.5, after: 0.8 })),
+      spacer(2),
     );
   }
   if (!hidden.staerken && data.staerken.some((item) => item.trim())) {
     content.push(
       cvHeading(labels.staerken || CV_SECTION_LABELS.staerken),
-      ...data.staerken.filter((item) => item.trim()).map((item) => paragraph(`• ${item}`, { size: 9.5, after: 0.8 })),
+      ...data.staerken
+        .filter((item) => item.trim())
+        .map((item) => paragraph(`• ${item}`, { size: 9.5, after: 0.8 })),
+      spacer(2),
     );
   }
   if (!hidden.referenzen && data.referenzen.some((entry) => entry.name.trim() || entry.kontakt.trim())) {
@@ -352,7 +474,7 @@ function cvPage(document: CvPdfDocument, images: EmbeddedImage[]) {
         paragraphRuns(
           [
             run(reference.name, { size: 9.5, bold: true }),
-            reference.funktion ? run(` · ${reference.funktion}`, { size: 9.5 }) : "",
+            reference.funktion ? run(` · ${reference.funktion}`, { size: 9.5, color: MUTED }) : "",
           ],
           { after: 0.5 },
         ),
@@ -362,13 +484,34 @@ function cvPage(document: CvPdfDocument, images: EmbeddedImage[]) {
       }
     }
   }
-
   for (const section of data.customSections ?? []) {
     if (!section.title.trim() && !section.entries.some(entryFilled)) continue;
     content.push(cvHeading(section.title || "Weitere Angaben"), entryTable(section.entries));
   }
 
   return content.join("");
+}
+
+function pageBorders() {
+  return `<w:pgBorders w:offsetFrom="page"><w:top w:val="single" w:sz="64" w:space="0" w:color="${INK}"/><w:left w:val="nil"/><w:bottom w:val="single" w:sz="42" w:space="0" w:color="9CA3AF"/><w:right w:val="nil"/></w:pgBorders>`;
+}
+
+function sectionProperties({
+  topMm,
+  bottomMm,
+  bordered,
+  nextPage = false,
+}: {
+  topMm: number;
+  bottomMm: number;
+  bordered: boolean;
+  nextPage?: boolean;
+}) {
+  return `<w:sectPr>${nextPage ? '<w:type w:val="nextPage"/>' : ""}<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="${twips(topMm)}" w:right="${twips(20)}" w:bottom="${twips(bottomMm)}" w:left="${twips(20)}" w:header="${twips(8)}" w:footer="${twips(8)}" w:gutter="0"/>${bordered ? pageBorders() : ""}<w:cols w:space="708"/><w:docGrid w:linePitch="360"/></w:sectPr>`;
+}
+
+function sectionBreak(topMm: number, bottomMm: number, bordered: boolean) {
+  return `<w:p><w:pPr>${sectionProperties({ topMm, bottomMm, bordered, nextPage: true })}</w:pPr></w:p>`;
 }
 
 function stylesXml() {
@@ -379,9 +522,14 @@ function fontTableXml() {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:fonts xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:font w:name="${WORD_FONT}"><w:altName w:val="${WORD_FONT_FALLBACK}"/><w:family w:val="swiss"/><w:pitch w:val="variable"/></w:font><w:font w:name="${WORD_FONT_FALLBACK}"><w:family w:val="swiss"/><w:pitch w:val="variable"/></w:font></w:fonts>`;
 }
 
-function documentXml(cover: CoverPdfDocument, letter: LetterPdfDocument, cv: CvPdfDocument, images: EmbeddedImage[]) {
-  const body = `${coverPage(cover, images)}${pageBreak()}${letterPage(letter, images)}${pageBreak()}${cvPage(cv, images)}`;
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="${twips(20)}" w:right="${twips(20)}" w:bottom="${twips(20)}" w:left="${twips(20)}" w:header="${twips(8)}" w:footer="${twips(8)}" w:gutter="0"/><w:cols w:space="708"/><w:docGrid w:linePitch="360"/></w:sectPr></w:body></w:document>`;
+function documentXml(
+  cover: CoverPdfDocument,
+  letter: LetterPdfDocument,
+  cv: CvPdfDocument,
+  images: EmbeddedImage[],
+) {
+  const body = `${coverPage(cover, images)}${sectionBreak(20, 20, false)}${letterPage(letter, images)}${sectionBreak(20, 18, true)}${cvPage(cv, images)}${sectionProperties({ topMm: 29, bottomMm: 18, bordered: true })}`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body}</w:body></w:document>`;
 }
 
 function relationshipsXml(images: EmbeddedImage[]) {
