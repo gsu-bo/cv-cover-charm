@@ -16,11 +16,11 @@ describe("final red dossier coherence fixes", () => {
     expect(accent).not.toBe("#14b8a6");
   });
 
-  test("Studio 2 and Studio 3 CV text is no longer smaller than the matching letter body", () => {
-    expect(studioCss).toContain("font-size: 10.8pt !important;");
-    expect(studioCss).toContain("font-size: 11.1pt !important;");
-    expect(studioCss).toContain("font-size: 10.5pt !important;");
-    expect(studioCss).toContain("font-size: 9.6pt !important;");
+  test("Studio 2 and Studio 3 compensate their final native PDF reading scale", () => {
+    expect(studioCss).toContain("font-size: 11.6pt !important;");
+    expect(studioCss).toContain("font-size: 12pt !important;");
+    expect(studioCss).toContain("font-size: 11.3pt !important;");
+    expect(studioCss).toContain("font-size: 10.4pt !important;");
     expect(studioCss).toContain("font-size: 8.8pt !important;");
   });
 
