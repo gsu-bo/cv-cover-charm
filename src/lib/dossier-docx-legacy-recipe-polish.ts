@@ -61,9 +61,7 @@ function setParagraphColor(source: string, text: string, color: string) {
 function senderColor(letter: LetterPdfDocument) {
   const templateId = String(letter.design.template);
   const recipe = ALL_DOSSIER_DOCX_TEMPLATE_RECIPES[templateId];
-  const letterRecipe = recipe?.letter as
-    | (typeof recipe.letter & { contentSurface?: "light" })
-    | undefined;
+  const letterRecipe = recipe?.letter as { contentSurface?: "light" } | undefined;
   if (letterRecipe?.contentSurface === "light") return "#1c2328";
 
   const colors = letter.design.colors;
