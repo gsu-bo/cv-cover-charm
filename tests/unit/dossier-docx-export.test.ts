@@ -3,6 +3,9 @@ import {
   coverPdfDocumentFromSaved,
   cvPdfDocumentFromSaved,
   letterPdfDocumentFromSaved,
+  type CoverPdfDocument,
+  type CvPdfDocument,
+  type LetterPdfDocument,
 } from "../../src/lib/dossier-pdf-document";
 import {
   DOSSIER_DOCX_PROFILES,
@@ -15,6 +18,10 @@ import {
   transformStoredDocxDocumentXml,
   writeStoredDocxEntries,
 } from "../../src/lib/dossier-docx-package";
+import {
+  DOSSIER_DOCX_TEMPLATE_PLANS,
+  dossierDocxTemplatesForFamily,
+} from "../../src/lib/dossier-docx-family";
 
 function documents(template: string) {
   const palettes: Record<string, Record<string, string>> = {
@@ -33,7 +40,13 @@ function documents(template: string) {
       bg: "#f7fbfa",
     },
   };
-  const colors = palettes[template] ?? {};
+  const colors = palettes[template] ?? {
+    primary: "#243447",
+    secondary: "#c08457",
+    accent: "#4da3ff",
+    ink: "#1b232c",
+    bg: "#fbf8f4",
+  };
 
   const cover = coverPdfDocumentFromSaved({
     version: 3,
@@ -118,6 +131,21 @@ function documents(template: string) {
   return { cover, letter, cv };
 }
 
+function documentsAs(template: string) {
+  const base = documents("modern");
+  return {
+    cover: { ...base.cover, template } as CoverPdfDocument,
+    letter: {
+      ...base.letter,
+      design: { ...base.letter.design, template },
+    } as LetterPdfDocument,
+    cv: {
+      ...base.cv,
+      design: { ...base.cv.design, template },
+    } as CvPdfDocument,
+  };
+}
+
 describe("generic DOCX export profiles", () => {
   test("registry exposes the three reviewed visual models", () => {
     expect(
@@ -182,20 +210,63 @@ describe("generic DOCX export profiles", () => {
   });
 });
 
+describe("DOCX family fallback coverage", () => {
+  test("classifies all 39 selectable templates with an individual safety valve", () => {
+    expect(Object.keys(DOSSIER_DOCX_TEMPLATE_PLANS)).toHaveLength(39);
+    expect(Object.values(DOSSIER_DOCX_TEMPLATE_PLANS).every((plan) => plan.fallback === "individual")).toBe(
+      true,
+    );
+    expect(DOSSIER_DOCX_TEMPLATE_PLANS.warm4).toBeUndefined();
+    expect(DOSSIER_DOCX_TEMPLATE_PLANS.warm5).toBeUndefined();
+  });
+
+  test("keeps every geometry family populated", () => {
+    for (const family of [
+      "plain",
+      "editorial-frame",
+      "side-rail",
+      "masthead",
+      "banded",
+      "geometric",
+      "gradient",
+    ] as const) {
+      expect(dossierDocxTemplatesForFamily(family).length).toBeGreaterThan(0);
+    }
+  });
+
+  test("all 39 template plans resolve and produce structurally valid DOCX packages", async () => {
+    for (const [templateId, plan] of Object.entries(DOSSIER_DOCX_TEMPLATE_PLANS)) {
+      const docs = documentsAs(templateId);
+      const profile = resolveDossierDocxProfile(docs.cover, docs.letter, docs.cv);
+      expect(profile?.label).toBe(plan.label);
+      const blob = await createDossierDocxBlob(docs.cover, docs.letter, docs.cv);
+      expect(blob.type).toBe(DOCX_MIME_TYPE);
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      expect([...bytes.slice(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04]);
+      const entries = readStoredDocxEntries(bytes);
+      expect(entries.some((entry) => entry.name === "word/document.xml")).toBe(true);
+      expect(entries.some((entry) => entry.name === "word/styles.xml")).toBe(true);
+    }
+  });
+});
+
 describe("shared stored-DOCX transform core", () => {
   test("round-trips package entries while replacing editable document XML", async () => {
-    const original = new Blob([
-      writeStoredDocxEntries([
-        {
-          name: "word/document.xml",
-          bytes: new TextEncoder().encode("<w:document>ALT</w:document>"),
-        },
-        {
-          name: "word/styles.xml",
-          bytes: new TextEncoder().encode("<w:styles/>") ,
-        },
-      ]),
-    ], { type: DOCX_MIME_TYPE });
+    const original = new Blob(
+      [
+        writeStoredDocxEntries([
+          {
+            name: "word/document.xml",
+            bytes: new TextEncoder().encode("<w:document>ALT</w:document>"),
+          },
+          {
+            name: "word/styles.xml",
+            bytes: new TextEncoder().encode("<w:styles/>"),
+          },
+        ]),
+      ],
+      { type: DOCX_MIME_TYPE },
+    );
 
     const transformed = await transformStoredDocxDocumentXml(
       original,
