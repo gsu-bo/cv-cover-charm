@@ -522,7 +522,11 @@ export function briefDossierDocxSupported(
   letter: LetterPdfDocument | null,
   cv: CvPdfDocument | null,
 ) {
-  return cover?.template === "brief" && letter?.design.template === "brief" && cv?.design.template === "brief";
+  return (
+    String(cover?.template) === "brief" &&
+    String(letter?.design.template) === "brief" &&
+    String(cv?.design.template) === "brief"
+  );
 }
 
 export function createBriefDossierDocxBlob(
