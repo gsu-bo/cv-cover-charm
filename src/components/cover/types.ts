@@ -551,7 +551,7 @@ export const DEMO_DATA: CoverData = {
   geburtsdatum: "14.03.2010",
   lehrbetrieb: "Beispiel AG",
   ansprechperson: "Herr Thomas Weber",
-  betriebAdresse: "Industriestrasse 8, 4500 Solothurn",
+  betriebAdresse: "Industriestrasse 8, 4535 Hubersdorf",
   ort: "Hubersdorf",
   datum: "15.11.2026",
   labelKontakt: "",
