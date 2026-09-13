@@ -19,11 +19,7 @@ import {
   letterPdfDocumentFromSaved,
   letterPdfHasContent,
 } from "@/lib/dossier-pdf-document";
-import {
-  DOSSIER_DOCX_SUPPORTED_LABELS,
-  downloadDossierDocx,
-  resolveDossierDocxProfile,
-} from "@/lib/dossier-docx-export";
+import { downloadDossierDocx, resolveDossierDocxProfile } from "@/lib/dossier-docx-export";
 
 function readDocxDocuments() {
   return {
@@ -53,7 +49,6 @@ export function ProjectFileControls() {
     docxDocuments.cv &&
     cvPdfHasContent(docxDocuments.cv.data)
   );
-  const supportedTemplateText = DOSSIER_DOCX_SUPPORTED_LABELS.join(", ");
 
   const saveProject = () => {
     const project = downloadDossierProjectFromBrowser();
@@ -82,7 +77,7 @@ export function ProjectFileControls() {
 
     const profile = resolveDossierDocxProfile(cover, letter, cv);
     if (!profile) {
-      setStatus(`Der DOCX-Referenzexport ist momentan für ${supportedTemplateText} verfügbar.`);
+      setStatus("Für DOCX muss in Titelblatt, Motivationsschreiben und Lebenslauf dieselbe aktive Vorlage gewählt sein.");
       return;
     }
 
@@ -169,14 +164,14 @@ export function ProjectFileControls() {
         title={
           docxSupported
             ? `Bearbeitbare Word-Referenz der Vorlage ${docxTemplateLabel} herunterladen`
-            : `DOCX ist im Referenzschritt für ${supportedTemplateText} verfügbar`
+            : "DOCX benötigt dieselbe aktive Vorlage im ganzen Dossier"
         }
       >
         Dossier als DOCX{docxTemplateLabel ? ` · ${docxTemplateLabel}` : ""}
       </button>
       {!docxSupported ? (
         <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-          DOCX-Referenz: derzeit für {supportedTemplateText}, jeweils im ganzen Dossier.
+          DOCX: wähle dieselbe aktive Vorlage für Titelblatt, Motivationsschreiben und Lebenslauf.
         </p>
       ) : null}
 
