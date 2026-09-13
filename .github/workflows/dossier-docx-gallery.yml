@@ -1,0 +1,213 @@
+name: Dossier DOCX Gallery
+
+# Browser-truth DOCX QA for every active dossier template. The 39 exports are
+# isolated into 4-document batches (last batch: 3) and aggregated into one
+# downloadable artifact only after exact-count, uniqueness and OOXML checks.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - tmp-docx-gallery-validation
+      - render
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dossier-docx-gallery-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: DOCX gallery checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright runner
+        run: npm install --no-save --no-package-lock @playwright/test@1.55.0
+
+      - name: DOCX unit coverage
+        run: >-
+          bun test
+          tests/unit/dossier-docx-export.test.ts
+          tests/unit/dossier-docx-fresh-recipes.test.ts
+          tests/unit/dossier-docx-legacy-recipes.test.ts
+
+      - name: TypeScript typecheck
+        run: bun run typecheck
+
+      - name: Lint DOCX gallery surface
+        run: >-
+          bunx eslint
+          tests/e2e/dossier-docx-gallery.spec.ts
+          src/lib/dossier-docx-export.ts
+          src/lib/dossier-docx-family.ts
+          src/lib/dossier-docx-package.ts
+          src/lib/dossier-docx-template-recipes.ts
+          src/lib/dossier-docx-template-recipe-fresh.ts
+          src/lib/dossier-docx-template-recipe-legacy-extra.ts
+          src/lib/dossier-docx-legacy-recipe-renderer.ts
+
+      - name: Production build
+        run: bun run build
+
+  docx-batch:
+    name: Full DOCX batch ${{ matrix.batch }}
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        batch: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright runner
+        run: npm install --no-save --no-package-lock @playwright/test@1.55.0
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start application
+        shell: bash
+        run: |
+          bun run dev -- --host 127.0.0.1 --port 4173 > /tmp/cv-cover-charm.log 2>&1 &
+          echo $! > /tmp/cv-cover-charm.pid
+          for attempt in {1..60}; do
+            curl --fail --silent http://127.0.0.1:4173/ > /dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/cv-cover-charm.log
+          exit 1
+
+      - name: Generate dossier DOCX files for batch ${{ matrix.batch }}
+        env:
+          DOCX_GALLERY_BATCH_INDEX: ${{ matrix.batch }}
+          DOCX_GALLERY_DIR: artifacts/dossier-docx-gallery-batch-${{ matrix.batch }}
+        run: npx playwright test tests/e2e/dossier-docx-gallery.spec.ts --reporter=line --workers=1
+
+      - name: Verify batch output
+        shell: bash
+        run: |
+          dir="artifacts/dossier-docx-gallery-batch-${{ matrix.batch }}"
+          count="$(find "$dir" -maxdepth 1 -type f -name '*.docx' | wc -l | tr -d ' ')"
+          expected=4
+          if [ "${{ matrix.batch }}" -eq 9 ]; then expected=3; fi
+          echo "Batch ${{ matrix.batch }} generated $count/$expected DOCX files"
+          test "$count" -eq "$expected"
+          part="$(printf '%02d' '${{ matrix.batch }}')"
+          test -f "$dir/MANIFEST.part-$part.txt"
+          while IFS= read -r -d '' docx; do
+            unzip -tq "$docx" > /dev/null
+            unzip -Z1 "$docx" | grep -Fxq '[Content_Types].xml'
+            unzip -Z1 "$docx" | grep -Fxq 'word/document.xml'
+            unzip -Z1 "$docx" | grep -Fxq 'word/styles.xml'
+            unzip -Z1 "$docx" | grep -Fxq 'word/_rels/document.xml.rels'
+          done < <(find "$dir" -maxdepth 1 -type f -name '*.docx' -print0)
+
+      - name: Upload batch artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dossier-docx-batch-${{ matrix.batch }}
+          path: artifacts/dossier-docx-gallery-batch-${{ matrix.batch }}
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Show application log on failure
+        if: failure()
+        run: cat /tmp/cv-cover-charm.log || true
+
+      - name: Stop application
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/cv-cover-charm.pid ]; then kill "$(cat /tmp/cv-cover-charm.pid)" || true; fi
+
+  aggregate:
+    name: Aggregate 39 DOCX templates
+    needs:
+      - checks
+      - docx-batch
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Download all DOCX batches
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dossier-docx-batch-*
+          path: artifacts/batches
+
+      - name: Verify and build 39-template package
+        shell: bash
+        run: |
+          docx_count="$(find artifacts/batches -type f -name '*.docx' | wc -l | tr -d ' ')"
+          unique_count="$(find artifacts/batches -type f -name '*.docx' -printf '%f\n' | sort -u | wc -l | tr -d ' ')"
+          part_count="$(find artifacts/batches -type f -name 'MANIFEST.part-*.txt' | wc -l | tr -d ' ')"
+
+          echo "DOCX: $docx_count total, $unique_count unique; manifest parts: $part_count"
+          test "$docx_count" -eq 39
+          test "$unique_count" -eq 39
+          test "$part_count" -eq 10
+
+          mkdir -p artifacts/dossier-docx-templates
+          while IFS= read -r -d '' docx; do
+            base="$(basename "$docx")"
+            test ! -e "artifacts/dossier-docx-templates/$base"
+            unzip -tq "$docx" > /dev/null
+            unzip -Z1 "$docx" | grep -Fxq '[Content_Types].xml'
+            unzip -Z1 "$docx" | grep -Fxq 'word/document.xml'
+            unzip -Z1 "$docx" | grep -Fxq 'word/styles.xml'
+            cp "$docx" "artifacts/dossier-docx-templates/$base"
+          done < <(find artifacts/batches -type f -name '*.docx' -print0)
+
+          {
+            echo "Bewerbungsdossier DOCX Vorlagen"
+            echo
+            while IFS= read -r part; do
+              cat "$part"
+            done < <(find artifacts/batches -type f -name 'MANIFEST.part-*.txt' | sort)
+          } > artifacts/dossier-docx-templates/MANIFEST.txt
+
+          final_count="$(find artifacts/dossier-docx-templates -maxdepth 1 -type f -name '*.docx' | wc -l | tr -d ' ')"
+          manifest_count="$(grep -c '\.docx |' artifacts/dossier-docx-templates/MANIFEST.txt)"
+          manifest_unique_ids="$(awk -F ' \\| ' '/\.docx \\|/ {print $2}' artifacts/dossier-docx-templates/MANIFEST.txt | sort -u | wc -l | tr -d ' ')"
+          echo "Final package: $final_count DOCX; $manifest_count entries; $manifest_unique_ids unique template ids"
+          test "$final_count" -eq 39
+          test "$manifest_count" -eq 39
+          test "$manifest_unique_ids" -eq 39
+          test -f artifacts/dossier-docx-templates/MANIFEST.txt
+
+          find artifacts/dossier-docx-templates -maxdepth 1 -type f -printf '%f\n' | sort
+
+      - name: Upload 39-template DOCX ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: bewerbungsdossier-docx-vorlagen-39
+          path: artifacts/dossier-docx-templates
+          if-no-files-found: error
+          retention-days: 14
