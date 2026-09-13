@@ -139,6 +139,12 @@ function zipStore(entries: Array<{ name: string; bytes: Uint8Array }>) {
   return concat([...localParts, centralDirectory, end]);
 }
 
+function replaceFirst(source: string, search: string, replacement: string) {
+  const index = source.indexOf(search);
+  if (index < 0) throw new Error("Warm DOCX polish target missing.");
+  return source.slice(0, index) + replacement + source.slice(index + search.length);
+}
+
 function replaceFirstAfter(source: string, anchor: string, search: string, replacement: string) {
   const anchorIndex = source.indexOf(anchor);
   if (anchorIndex < 0) throw new Error(`Warm DOCX polish anchor missing: ${anchor}`);
@@ -173,7 +179,7 @@ function polishDocumentXml(source: string, cover: CoverPdfDocument) {
     const insetX = twips(4);
     const oldOpen = `<w:tc><w:tcPr><w:tcW w:w="${centerWidth}" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr><w:tc><w:tcPr><w:shd w:fill="${secondary}"/><w:tcMar><w:top w:w="${insetY}" w:type="dxa"/><w:left w:w="${insetX}" w:type="dxa"/><w:bottom w:w="${insetY}" w:type="dxa"/><w:right w:w="${insetX}" w:type="dxa"/></w:tcMar></w:tcPr>`;
     const newOpen = `<w:tc><w:tcPr><w:tcW w:w="${centerWidth}" w:type="dxa"/><w:vAlign w:val="top"/><w:shd w:fill="${secondary}"/><w:tcMar><w:top w:w="${insetY}" w:type="dxa"/><w:left w:w="${insetX}" w:type="dxa"/><w:bottom w:w="${insetY}" w:type="dxa"/><w:right w:w="${insetX}" w:type="dxa"/></w:tcMar></w:tcPr>`;
-    xml = replaceFirstAfter(xml, "Lehrbeginn", oldOpen, newOpen);
+    xml = replaceFirst(xml, oldOpen, newOpen);
 
     const oldClose = `</w:t></w:r></w:p></w:tc></w:tc><w:tc><w:tcPr><w:tcW w:w="${sideWidth}"`;
     const newClose = `</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="${sideWidth}"`;
