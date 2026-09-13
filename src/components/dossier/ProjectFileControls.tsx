@@ -20,7 +20,10 @@ import {
   letterPdfHasContent,
 } from "@/lib/dossier-pdf-document";
 import { briefDossierDocxSupported, downloadBriefDossierDocx } from "@/lib/dossier-docx";
-import { downloadWarmDossierDocx, warmDossierDocxSupported } from "@/lib/dossier-docx-warm";
+import {
+  downloadPolishedWarmDossierDocx,
+  warmDossierDocxSupported,
+} from "@/lib/dossier-docx-warm-polish";
 
 function readDocxDocuments() {
   return {
@@ -65,7 +68,7 @@ export function ProjectFileControls() {
     setStatus("Projekt wurde als JSON-Datei gespeichert.");
   };
 
-  const downloadDocx = () => {
+  const downloadDocx = async () => {
     const { cover, letter, cv } = readDocxDocuments();
     if (
       !cover ||
@@ -97,7 +100,7 @@ export function ProjectFileControls() {
         ? "Bewerbungsdossier.docx"
         : `Bewerbungsdossier-${author}.docx`;
 
-    if (warm) downloadWarmDossierDocx(cover, letter, cv, fileName);
+    if (warm) await downloadPolishedWarmDossierDocx(cover, letter, cv, fileName);
     else downloadBriefDossierDocx(cover, letter, cv, fileName);
     setStatus("DOCX-Referenz wurde erstellt. Prüfe die Datei am besten in Microsoft Word.");
   };
