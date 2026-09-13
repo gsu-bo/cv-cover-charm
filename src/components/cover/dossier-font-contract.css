@@ -1,0 +1,22 @@
+/*
+ * Final dossier font contract.
+ *
+ * Template-specific styles are intentionally free to shape weight, tracking,
+ * case and hierarchy. They must not, however, replace the resolved dossier
+ * font family after CoverCanvas / LetterCanvas have chosen it. Keep this file
+ * as the final Fresh stylesheet so late legacy rules cannot split the three
+ * dossier documents again.
+ *
+ * Cover custom elements are deliberately excluded: only built-in semantic
+ * roles carry data-dossier-role. Letter body text inherits the family already
+ * resolved on the LetterCanvas page, including an explicit user font override.
+ */
+[data-dossier-document="cover"] [data-dossier-role] > div,
+[data-dossier-document="cover"] [data-dossier-role] > div * {
+  font-family: var(--dossier-font) !important;
+}
+
+[data-letter-page]:not([data-letter-template="brief"]) [data-letter-text-layer],
+[data-letter-page]:not([data-letter-template="brief"]) [data-letter-text-layer] * {
+  font-family: inherit !important;
+}
