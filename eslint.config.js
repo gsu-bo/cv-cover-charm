@@ -36,6 +36,13 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // The Warm DOCX generator emits XML attributes inside template strings. The
+    // escaped quote in its XML-escape regexp is intentional source-level clarity
+    // and has no runtime difference from an unescaped quote.
+    files: ["src/lib/dossier-docx-warm.ts"],
+    rules: { "no-useless-escape": "off" },
+  },
   // Formatting is enforced separately by the explicit Prettier release gate.
   // Keep eslint-config-prettier here only to disable conflicting stylistic ESLint rules.
   eslintConfigPrettier,
