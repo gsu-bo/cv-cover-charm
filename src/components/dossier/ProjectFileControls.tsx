@@ -20,6 +20,7 @@ import {
   letterPdfHasContent,
 } from "@/lib/dossier-pdf-document";
 import { briefDossierDocxSupported, downloadBriefDossierDocx } from "@/lib/dossier-docx";
+import { downloadWarmDossierDocx, warmDossierDocxSupported } from "@/lib/dossier-docx-warm";
 
 function readDocxDocuments() {
   return {
@@ -34,11 +35,18 @@ export function ProjectFileControls() {
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const docxDocuments = readDocxDocuments();
-  const docxSupported = briefDossierDocxSupported(
+  const briefDocxSupported = briefDossierDocxSupported(
     docxDocuments.cover,
     docxDocuments.letter,
     docxDocuments.cv,
   );
+  const warmDocxSupported = warmDossierDocxSupported(
+    docxDocuments.cover,
+    docxDocuments.letter,
+    docxDocuments.cv,
+  );
+  const docxTemplateLabel = warmDocxSupported ? "Warm" : briefDocxSupported ? "Brief" : null;
+  const docxSupported = docxTemplateLabel !== null;
   const docxReady = !!(
     docxDocuments.cover &&
     coverPdfHasContent(docxDocuments.cover.data) &&
@@ -59,12 +67,24 @@ export function ProjectFileControls() {
 
   const downloadDocx = () => {
     const { cover, letter, cv } = readDocxDocuments();
-    if (!cover || !letter || !cv || !coverPdfHasContent(cover.data) || !letterPdfHasContent(letter.data) || !cvPdfHasContent(cv.data)) {
-      setStatus("Für DOCX müssen Titelblatt, Motivationsschreiben und Lebenslauf ausgefüllt sein.");
+    if (
+      !cover ||
+      !letter ||
+      !cv ||
+      !coverPdfHasContent(cover.data) ||
+      !letterPdfHasContent(letter.data) ||
+      !cvPdfHasContent(cv.data)
+    ) {
+      setStatus(
+        "Für DOCX müssen Titelblatt, Motivationsschreiben und Lebenslauf ausgefüllt sein.",
+      );
       return;
     }
-    if (!briefDossierDocxSupported(cover, letter, cv)) {
-      setStatus("Der DOCX-Referenzexport ist momentan nur für die Vorlage Brief verfügbar.");
+
+    const brief = briefDossierDocxSupported(cover, letter, cv);
+    const warm = warmDossierDocxSupported(cover, letter, cv);
+    if (!brief && !warm) {
+      setStatus("Der DOCX-Referenzexport ist momentan für die Vorlagen Brief und Warm verfügbar.");
       return;
     }
 
@@ -76,7 +96,9 @@ export function ProjectFileControls() {
       author === "Bewerbungsdossier"
         ? "Bewerbungsdossier.docx"
         : `Bewerbungsdossier-${author}.docx`;
-    downloadBriefDossierDocx(cover, letter, cv, fileName);
+
+    if (warm) downloadWarmDossierDocx(cover, letter, cv, fileName);
+    else downloadBriefDossierDocx(cover, letter, cv, fileName);
     setStatus("DOCX-Referenz wurde erstellt. Prüfe die Datei am besten in Microsoft Word.");
   };
 
@@ -147,15 +169,15 @@ export function ProjectFileControls() {
         className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
         title={
           docxSupported
-            ? "Bearbeitbare Word-Referenz der Vorlage Brief herunterladen"
-            : "DOCX ist im ersten Referenzschritt nur für die Vorlage Brief verfügbar"
+            ? `Bearbeitbare Word-Referenz der Vorlage ${docxTemplateLabel} herunterladen`
+            : "DOCX ist im Referenzschritt für die Vorlagen Brief und Warm verfügbar"
         }
       >
-        Dossier als DOCX · Brief
+        Dossier als DOCX{docxTemplateLabel ? ` · ${docxTemplateLabel}` : ""}
       </button>
       {!docxSupported ? (
         <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-          DOCX-Referenz: zuerst nur für die Vorlage Brief in allen drei Dossierteilen.
+          DOCX-Referenz: derzeit für Brief oder Warm, jeweils im ganzen Dossier.
         </p>
       ) : null}
 
