@@ -27,6 +27,7 @@ import "./templatefix-glow-density.css";
 import "./templatefix-frame.css";
 import "./templatefix-mono-luxe.css";
 import "./warm2-redesign.css";
+import "./templatefix-studio-pdf-scale.css";
 
 export { FRESH_TEMPLATE_IDS, type FreshTemplateId } from "./fresh-template-registry";
 
