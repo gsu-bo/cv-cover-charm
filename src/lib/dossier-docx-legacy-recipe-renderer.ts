@@ -14,6 +14,7 @@ import type {
 
 const MM_TO_TWIPS = 1440 / 25.4;
 const twips = (mm: number) => Math.round(mm * MM_TO_TWIPS);
+const CONTACT_ONLY_COVER_TEMPLATES = new Set(["forestFlow", "studio2", "warm4", "gallery"]);
 
 type RuntimeShape = DossierDocxRecipeShape & { fillHex?: string };
 type RuntimePage = DossierDocxTemplateRecipe["letter"] & { contentSurface?: "light" };
@@ -297,15 +298,20 @@ function patchCoverContact(
   colors: Palette,
 ) {
   if (!recipe.cover.lightCoverContact) return source;
-  const texts = [
+  const contactTexts = [
     "KONTAKT",
     cover.data.adresse,
     cover.data.plzOrt,
     cover.data.telefon,
     cover.data.email,
   ].filter(Boolean) as string[];
+  const attachmentTexts = CONTACT_ONLY_COVER_TEMPLATES.has(recipe.templateId)
+    ? []
+    : (["BEILAGEN", ...(cover.data.beilagen ?? [])].filter(Boolean) as string[]);
   let xml = source;
-  for (const text of texts) xml = setParagraphColor(xml, text, colors.paper);
+  for (const text of [...contactTexts, ...attachmentTexts]) {
+    xml = setParagraphColor(xml, text, colors.paper);
+  }
   return xml;
 }
 
