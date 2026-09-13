@@ -58,6 +58,7 @@ function documents(template = "brief") {
       betriebAdresse: "Industriestrasse 8",
       ort: "Hubersdorf",
       datum: "15.11.2026",
+      beilagen: ["Motivationsschreiben", "Lebenslauf", "Zeugnis"],
     },
   });
   const letter = letterPdfDocumentFromSaved({
@@ -155,9 +156,15 @@ describe("Brief DOCX reference export", () => {
     const fontTableXml = decoder.decode(entries.get("word/fontTable.xml"));
     expect(documentXml).toContain("Informatikerin EFZ");
     expect(documentXml).toContain("Bewerbung um eine Lehrstelle");
-    expect(documentXml).toContain("Lebenslauf");
-    expect(documentXml).toContain("Schulbildung");
+    expect(documentXml).toContain("LEBENSLAUF");
+    expect(documentXml).toContain("SCHULBILDUNG");
     expect(documentXml).toContain("Deutsch");
+    expect(documentXml).toContain("BEILAGEN");
+    expect(documentXml).toContain("Motivationsschreiben");
+    expect(documentXml).toContain(">LM<");
+    expect(documentXml).toContain("<w:pgBorders");
+    expect(documentXml).toContain('w:top w:val="single"');
+    expect(documentXml).toContain('w:bottom w:val="single"');
     expect(fontTableXml).toContain('w:font w:name="Cabin"');
     expect(fontTableXml).toContain('w:altName w:val="Trebuchet MS"');
   });
