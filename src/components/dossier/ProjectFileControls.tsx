@@ -4,12 +4,49 @@ import {
   downloadDossierProjectFromBrowser,
   parseDossierProjectText,
 } from "@/lib/dossier-project-file";
-import { replaceDossierProject } from "@/lib/dossier-project";
+import {
+  COVER_STORAGE_KEY,
+  CV_STORAGE_KEY,
+  LETTER_STORAGE_KEY,
+  readStoredDossierPart,
+  replaceDossierProject,
+} from "@/lib/dossier-project";
+import {
+  coverPdfDocumentFromSaved,
+  coverPdfHasContent,
+  cvPdfDocumentFromSaved,
+  cvPdfHasContent,
+  letterPdfDocumentFromSaved,
+  letterPdfHasContent,
+} from "@/lib/dossier-pdf-document";
+import { briefDossierDocxSupported, downloadBriefDossierDocx } from "@/lib/dossier-docx";
+
+function readDocxDocuments() {
+  return {
+    cover: coverPdfDocumentFromSaved(readStoredDossierPart(COVER_STORAGE_KEY)),
+    letter: letterPdfDocumentFromSaved(readStoredDossierPart(LETTER_STORAGE_KEY)),
+    cv: cvPdfDocumentFromSaved(readStoredDossierPart(CV_STORAGE_KEY)),
+  };
+}
 
 export function ProjectFileControls() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const docxDocuments = readDocxDocuments();
+  const docxSupported = briefDossierDocxSupported(
+    docxDocuments.cover,
+    docxDocuments.letter,
+    docxDocuments.cv,
+  );
+  const docxReady = !!(
+    docxDocuments.cover &&
+    coverPdfHasContent(docxDocuments.cover.data) &&
+    docxDocuments.letter &&
+    letterPdfHasContent(docxDocuments.letter.data) &&
+    docxDocuments.cv &&
+    cvPdfHasContent(docxDocuments.cv.data)
+  );
 
   const saveProject = () => {
     const project = downloadDossierProjectFromBrowser();
@@ -18,6 +55,29 @@ export function ProjectFileControls() {
       return;
     }
     setStatus("Projekt wurde als JSON-Datei gespeichert.");
+  };
+
+  const downloadDocx = () => {
+    const { cover, letter, cv } = readDocxDocuments();
+    if (!cover || !letter || !cv || !coverPdfHasContent(cover.data) || !letterPdfHasContent(letter.data) || !cvPdfHasContent(cv.data)) {
+      setStatus("Für DOCX müssen Titelblatt, Motivationsschreiben und Lebenslauf ausgefüllt sein.");
+      return;
+    }
+    if (!briefDossierDocxSupported(cover, letter, cv)) {
+      setStatus("Der DOCX-Referenzexport ist momentan nur für die Vorlage Brief verfügbar.");
+      return;
+    }
+
+    const author =
+      [cover.data.vorname, cover.data.nachname].filter(Boolean).join(" ") ||
+      [cv.data.person.vorname, cv.data.person.nachname].filter(Boolean).join(" ") ||
+      "Bewerbungsdossier";
+    const fileName =
+      author === "Bewerbungsdossier"
+        ? "Bewerbungsdossier.docx"
+        : `Bewerbungsdossier-${author}.docx`;
+    downloadBriefDossierDocx(cover, letter, cv, fileName);
+    setStatus("DOCX-Referenz wurde erstellt. Prüfe die Datei am besten in Microsoft Word.");
   };
 
   const loadProject = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -79,6 +139,25 @@ export function ProjectFileControls() {
           {loading ? "Wird geladen…" : "Projekt laden"}
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={downloadDocx}
+        disabled={!docxSupported || !docxReady}
+        className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
+        title={
+          docxSupported
+            ? "Bearbeitbare Word-Referenz der Vorlage Brief herunterladen"
+            : "DOCX ist im ersten Referenzschritt nur für die Vorlage Brief verfügbar"
+        }
+      >
+        Dossier als DOCX · Brief
+      </button>
+      {!docxSupported ? (
+        <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+          DOCX-Referenz: zuerst nur für die Vorlage Brief in allen drei Dossierteilen.
+        </p>
+      ) : null}
 
       <input
         ref={fileInputRef}
