@@ -1,0 +1,75 @@
+/* -------------------------------------------------------------------------- */
+/* Studio 2 / Studio 3 — final native-PDF reading scale                       */
+/* -------------------------------------------------------------------------- */
+/*
+ * The CV renderer exposes the active template on <html data-dossier-template>
+ * and the actual page as [data-dossier-document="cv"]. Earlier late overrides
+ * targeted [data-cv-template], which is not the ancestor of the text measured
+ * by the native jsPDF layer. As a result the final PDF kept the older, smaller
+ * Studio sizes even though the CSS regression itself was green.
+ *
+ * Target the real rendered root here, after the legacy Studio styles. The body
+ * is calibrated to land around the matching letter's 10.5 pt native PDF text;
+ * headings remain slightly larger. User-edited section-title size is left
+ * untouched.
+ */
+html[data-dossier-template="studio2"]
+  [data-dossier-document="cv"]
+  [data-cv-doc-title],
+html[data-dossier-template="studio3"]
+  [data-dossier-document="cv"]
+  [data-cv-doc-title] {
+  font-size: 10.2pt !important;
+  letter-spacing: 0.1em !important;
+}
+
+html[data-dossier-template="studio2"]
+  [data-dossier-document="cv"]
+  [data-cv-section-title]:not([data-cv-user-section-size="true"]),
+html[data-dossier-template="studio3"]
+  [data-dossier-document="cv"]
+  [data-cv-section-title]:not([data-cv-user-section-size="true"]) {
+  font-size: 11pt !important;
+}
+
+html[data-dossier-template="studio2"]
+  [data-dossier-document="cv"]
+  [data-cv-entry-title],
+html[data-dossier-template="studio3"]
+  [data-dossier-document="cv"]
+  [data-cv-entry-title] {
+  font-size: 11pt !important;
+  line-height: 1.3 !important;
+}
+
+html[data-dossier-template="studio2"]
+  [data-dossier-document="cv"]
+  [data-cv-body],
+html[data-dossier-template="studio3"]
+  [data-dossier-document="cv"]
+  [data-cv-body] {
+  font-size: 10.7pt !important;
+  line-height: 1.43 !important;
+}
+
+html[data-dossier-template="studio2"]
+  [data-dossier-document="cv"]
+  [data-cv-muted],
+html[data-dossier-template="studio3"]
+  [data-dossier-document="cv"]
+  [data-cv-muted] {
+  font-size: 9.6pt !important;
+  line-height: 1.36 !important;
+}
+
+html[data-dossier-template="studio2"]
+  [data-dossier-document="cv"]
+  [data-cv-main]
+  [data-cv-section]:not([data-cv-user-section-margin="true"]),
+html[data-dossier-template="studio3"]
+  [data-dossier-document="cv"]
+  [data-cv-main]
+  [data-cv-section]:not([data-cv-user-section-margin="true"]) {
+  margin-top: 5.6mm !important;
+  margin-bottom: 2.4mm !important;
+}
