@@ -21,6 +21,11 @@ import {
 } from "@/lib/dossier-docx-template-renderer";
 import { dossierDocxTemplateRecipe } from "@/lib/dossier-docx-template-recipe";
 import {
+  createLegacyRecipeDossierDocxBlob,
+  legacyRecipeDossierDocxSupported,
+} from "@/lib/dossier-docx-legacy-recipe-renderer";
+import { LEGACY_EXTRA_DOCX_RECIPES } from "@/lib/dossier-docx-template-recipe-legacy-extra";
+import {
   createGenericFamilyDossierDocxBlob,
   genericFamilyDossierDocxSupported,
 } from "@/lib/dossier-docx-family-renderer";
@@ -103,6 +108,26 @@ function resolveIndividualRecipeProfile(
   letter: LetterPdfDocument | null,
   cv: CvPdfDocument | null,
 ): DossierDocxProfile | null {
+  if (legacyRecipeDossierDocxSupported(cover, letter, cv) && cover) {
+    const templateId = String(cover.template);
+    const recipe = LEGACY_EXTRA_DOCX_RECIPES[templateId];
+    if (recipe) {
+      return {
+        templateId,
+        label: recipe.label,
+        architecture: "template-recipe",
+        visualModel: {
+          cover: `recipe:${templateId}`,
+          letter: `recipe:${templateId}`,
+          cv: `recipe:${templateId}`,
+        },
+        supports: legacyRecipeDossierDocxSupported,
+        createBlob: ({ cover: nextCover, letter: nextLetter, cv: nextCv }) =>
+          createLegacyRecipeDossierDocxBlob(nextCover, nextLetter, nextCv),
+      };
+    }
+  }
+
   if (!individualRecipeDossierDocxSupported(cover, letter, cv) || !cover) return null;
   const templateId = String(cover.template);
   const recipe = dossierDocxTemplateRecipe(templateId);
