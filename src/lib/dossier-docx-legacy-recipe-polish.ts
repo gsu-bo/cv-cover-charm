@@ -70,7 +70,25 @@ function senderColor(letter: LetterPdfDocument) {
   return hex(colors?.ink ?? colors?.light, fallback);
 }
 
+function letterSectionRange(source: string) {
+  const matches = [...source.matchAll(/<w:sectPr>[\s\S]*?<\/w:sectPr>/g)];
+  if (
+    matches.length < 2 ||
+    matches[0].index === undefined ||
+    matches[1].index === undefined
+  ) {
+    return null;
+  }
+  return {
+    start: matches[0].index + matches[0][0].length,
+    end: matches[1].index,
+  };
+}
+
 function restoreLetterSenderContrast(source: string, letter: LetterPdfDocument) {
+  const range = letterSectionRange(source);
+  if (!range) return source;
+
   const color = senderColor(letter);
   const texts = [
     letter.data.absenderName,
@@ -80,9 +98,9 @@ function restoreLetterSenderContrast(source: string, letter: LetterPdfDocument) 
     letter.data.absenderEmail,
   ].filter(Boolean) as string[];
 
-  let xml = source;
-  for (const text of texts) xml = setParagraphColor(xml, text, color);
-  return xml;
+  let letterXml = source.slice(range.start, range.end);
+  for (const text of texts) letterXml = setParagraphColor(letterXml, text, color);
+  return source.slice(0, range.start) + letterXml + source.slice(range.end);
 }
 
 export async function createPolishedLegacyRecipeDossierDocxBlob(
