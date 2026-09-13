@@ -16,9 +16,9 @@ import {
   studio3DossierDocxSupported,
 } from "@/lib/dossier-docx-studio3-polish";
 import {
-  createLegacyRecipeDossierDocxBlob,
+  createPolishedLegacyRecipeDossierDocxBlob,
   legacyRecipeDossierDocxSupported,
-} from "@/lib/dossier-docx-legacy-recipe-renderer";
+} from "@/lib/dossier-docx-legacy-recipe-polish";
 import { ALL_DOSSIER_DOCX_TEMPLATE_RECIPES } from "@/lib/dossier-docx-template-recipes";
 import {
   createGenericFamilyDossierDocxBlob,
@@ -119,7 +119,7 @@ function resolveIndividualRecipeProfile(
     },
     supports: legacyRecipeDossierDocxSupported,
     createBlob: ({ cover: nextCover, letter: nextLetter, cv: nextCv }) =>
-      createLegacyRecipeDossierDocxBlob(nextCover, nextLetter, nextCv),
+      createPolishedLegacyRecipeDossierDocxBlob(nextCover, nextLetter, nextCv),
   };
 }
 
