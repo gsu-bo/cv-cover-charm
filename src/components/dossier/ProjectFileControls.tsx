@@ -24,6 +24,10 @@ import {
   downloadPolishedWarmDossierDocx,
   warmDossierDocxSupported,
 } from "@/lib/dossier-docx-warm-polish";
+import {
+  downloadStudio3DossierDocx,
+  studio3DossierDocxSupported,
+} from "@/lib/dossier-docx-studio3";
 
 function readDocxDocuments() {
   return {
@@ -48,7 +52,18 @@ export function ProjectFileControls() {
     docxDocuments.letter,
     docxDocuments.cv,
   );
-  const docxTemplateLabel = warmDocxSupported ? "Warm" : briefDocxSupported ? "Brief" : null;
+  const studio3DocxSupported = studio3DossierDocxSupported(
+    docxDocuments.cover,
+    docxDocuments.letter,
+    docxDocuments.cv,
+  );
+  const docxTemplateLabel = studio3DocxSupported
+    ? "Studio 3"
+    : warmDocxSupported
+      ? "Warm"
+      : briefDocxSupported
+        ? "Brief"
+        : null;
   const docxSupported = docxTemplateLabel !== null;
   const docxReady = !!(
     docxDocuments.cover &&
@@ -86,8 +101,11 @@ export function ProjectFileControls() {
 
     const brief = briefDossierDocxSupported(cover, letter, cv);
     const warm = warmDossierDocxSupported(cover, letter, cv);
-    if (!brief && !warm) {
-      setStatus("Der DOCX-Referenzexport ist momentan für die Vorlagen Brief und Warm verfügbar.");
+    const studio3 = studio3DossierDocxSupported(cover, letter, cv);
+    if (!brief && !warm && !studio3) {
+      setStatus(
+        "Der DOCX-Referenzexport ist momentan für die Vorlagen Brief, Warm und Studio 3 verfügbar.",
+      );
       return;
     }
 
@@ -100,7 +118,8 @@ export function ProjectFileControls() {
         ? "Bewerbungsdossier.docx"
         : `Bewerbungsdossier-${author}.docx`;
 
-    if (warm) await downloadPolishedWarmDossierDocx(cover, letter, cv, fileName);
+    if (studio3) await downloadStudio3DossierDocx(cover, letter, cv, fileName);
+    else if (warm) await downloadPolishedWarmDossierDocx(cover, letter, cv, fileName);
     else downloadBriefDossierDocx(cover, letter, cv, fileName);
     setStatus("DOCX-Referenz wurde erstellt. Prüfe die Datei am besten in Microsoft Word.");
   };
@@ -173,14 +192,14 @@ export function ProjectFileControls() {
         title={
           docxSupported
             ? `Bearbeitbare Word-Referenz der Vorlage ${docxTemplateLabel} herunterladen`
-            : "DOCX ist im Referenzschritt für die Vorlagen Brief und Warm verfügbar"
+            : "DOCX ist im Referenzschritt für die Vorlagen Brief, Warm und Studio 3 verfügbar"
         }
       >
         Dossier als DOCX{docxTemplateLabel ? ` · ${docxTemplateLabel}` : ""}
       </button>
       {!docxSupported ? (
         <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-          DOCX-Referenz: derzeit für Brief oder Warm, jeweils im ganzen Dossier.
+          DOCX-Referenz: derzeit für Brief, Warm oder Studio 3, jeweils im ganzen Dossier.
         </p>
       ) : null}
 
