@@ -16,15 +16,10 @@ import {
   studio3DossierDocxSupported,
 } from "@/lib/dossier-docx-studio3-polish";
 import {
-  createIndividualRecipeDossierDocxBlob,
-  individualRecipeDossierDocxSupported,
-} from "@/lib/dossier-docx-template-renderer";
-import { dossierDocxTemplateRecipe } from "@/lib/dossier-docx-template-recipe";
-import {
   createLegacyRecipeDossierDocxBlob,
   legacyRecipeDossierDocxSupported,
 } from "@/lib/dossier-docx-legacy-recipe-renderer";
-import { LEGACY_EXTRA_DOCX_RECIPES } from "@/lib/dossier-docx-template-recipe-legacy-extra";
+import { ALL_DOSSIER_DOCX_TEMPLATE_RECIPES } from "@/lib/dossier-docx-template-recipes";
 import {
   createGenericFamilyDossierDocxBlob,
   genericFamilyDossierDocxSupported,
@@ -108,29 +103,9 @@ function resolveIndividualRecipeProfile(
   letter: LetterPdfDocument | null,
   cv: CvPdfDocument | null,
 ): DossierDocxProfile | null {
-  if (legacyRecipeDossierDocxSupported(cover, letter, cv) && cover) {
-    const templateId = String(cover.template);
-    const recipe = LEGACY_EXTRA_DOCX_RECIPES[templateId];
-    if (recipe) {
-      return {
-        templateId,
-        label: recipe.label,
-        architecture: "template-recipe",
-        visualModel: {
-          cover: `recipe:${templateId}`,
-          letter: `recipe:${templateId}`,
-          cv: `recipe:${templateId}`,
-        },
-        supports: legacyRecipeDossierDocxSupported,
-        createBlob: ({ cover: nextCover, letter: nextLetter, cv: nextCv }) =>
-          createLegacyRecipeDossierDocxBlob(nextCover, nextLetter, nextCv),
-      };
-    }
-  }
-
-  if (!individualRecipeDossierDocxSupported(cover, letter, cv) || !cover) return null;
+  if (!legacyRecipeDossierDocxSupported(cover, letter, cv) || !cover) return null;
   const templateId = String(cover.template);
-  const recipe = dossierDocxTemplateRecipe(templateId);
+  const recipe = ALL_DOSSIER_DOCX_TEMPLATE_RECIPES[templateId];
   if (!recipe) return null;
 
   return {
@@ -142,9 +117,9 @@ function resolveIndividualRecipeProfile(
       letter: `recipe:${templateId}`,
       cv: `recipe:${templateId}`,
     },
-    supports: individualRecipeDossierDocxSupported,
+    supports: legacyRecipeDossierDocxSupported,
     createBlob: ({ cover: nextCover, letter: nextLetter, cv: nextCv }) =>
-      createIndividualRecipeDossierDocxBlob(nextCover, nextLetter, nextCv),
+      createLegacyRecipeDossierDocxBlob(nextCover, nextLetter, nextCv),
   };
 }
 
