@@ -35,7 +35,7 @@ export const FRESH_TEMPLATE_REGISTRY = [
       { key: "bg", label: "Papier", default: "#f7f9ff" },
       { key: "primary", label: "Glow 1", default: "#6d5dfb" },
       { key: "secondary", label: "Glow 2", default: "#7dd3fc" },
-      { key: "accent", label: "Akzent", default: "#14b8a6" },
+      { key: "accent", label: "Akzent", default: "#4f46e5" },
       { key: "ink", label: "Text", default: "#172033" },
     ],
   },
