@@ -1,5 +1,6 @@
 import {
   applyPortableCvState,
+  clearPortableCvState,
   readPortableCvState,
   type PortableCvState,
 } from "@/components/cv/portable-state";
@@ -128,4 +129,29 @@ export function storeDossierProject(project: DossierProject): {
     applyPortableDossierChromeState(project.chrome, { replaceExisting: true });
   }
   return { cover: !!project.cover, letter: !!project.letter, cv: !!project.cv };
+}
+
+/**
+ * Vollständiger Restore für bewusst ausgewählte Projektdateien. Anders als der
+ * additive Legacy-Loader entfernt dieser Pfad fehlende Dossierteile und alte
+ * CV-Sidecars, damit sich zwei Projekte nie unbemerkt miteinander vermischen.
+ */
+export function replaceDossierProject(project: DossierProject): {
+  cover: boolean;
+  letter: boolean;
+  cv: boolean;
+} {
+  const storage = browserStorage();
+  if (!storage) return { cover: false, letter: false, cv: false };
+
+  storage.removeItem(COVER_STORAGE_KEY);
+  storage.removeItem(LETTER_STORAGE_KEY);
+  storage.removeItem(CV_STORAGE_KEY);
+  clearPortableCvState();
+
+  const restored = storeDossierProject(project);
+  if (!project.chrome) {
+    applyPortableDossierChromeState(normalizeDossierChromeState(null), { replaceExisting: true });
+  }
+  return restored;
 }
