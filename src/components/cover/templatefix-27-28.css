@@ -186,17 +186,18 @@
 }
 
 /* -------------------------------------------------------------------------- */
-/* Final combined-dossier coherence — bring CV reading scale up to the letter. */
+/* Final combined-dossier coherence — match the actual native PDF text scale. */
 /* -------------------------------------------------------------------------- */
 /*
- * The previous Studio CV pass was technically clean but rendered its body at
- * roughly 9–10 pt in the actual PDF while the matching letter sits around
- * 10–10.5 pt. Both templates also had a large unused lower half of the page.
- * Use that space for a calmer, more readable CV instead of compressing it.
+ * The Studio browser layout is exported with a scaled A4 preview. The native
+ * jsPDF text layer therefore lands a little smaller than the nominal CSS pt
+ * value. These defaults compensate at the source so the final PDF body reads
+ * at roughly the same 10–10.5 pt scale as the matching letter while preserving
+ * the browser layout/reflow and the user's explicit typography overrides.
  */
 [data-cv-template="studio2"] [data-cv-doc-title],
 [data-cv-template="studio3"] [data-cv-doc-title] {
-  font-size: 10.8pt !important;
+  font-size: 11.6pt !important;
   letter-spacing: 0.1em !important;
 }
 
@@ -206,21 +207,26 @@
   line-height: 1.15 !important;
 }
 
+[data-cv-template="studio2"] [data-cv-section-title],
+[data-cv-template="studio3"] [data-cv-section-title] {
+  font-size: 11.6pt !important;
+}
+
 [data-cv-template="studio2"] [data-cv-entry-title],
 [data-cv-template="studio3"] [data-cv-entry-title] {
-  font-size: 11.1pt !important;
+  font-size: 12pt !important;
   line-height: 1.28 !important;
 }
 
 [data-cv-template="studio2"] [data-cv-body],
 [data-cv-template="studio3"] [data-cv-body] {
-  font-size: 10.5pt !important;
+  font-size: 11.3pt !important;
   line-height: 1.45 !important;
 }
 
 [data-cv-template="studio2"] [data-cv-muted],
 [data-cv-template="studio3"] [data-cv-muted] {
-  font-size: 9.6pt !important;
+  font-size: 10.4pt !important;
   line-height: 1.4 !important;
 }
 
