@@ -175,7 +175,7 @@ const COVER: Record<FreshTemplateId, CoverSpec> = {
   },
   forestFlow: {
     shapes: [
-      rect("forest-cover-rail", 0, 0, 38, 297, "primary"),
+      rect("forest-cover-rail", 0, 0, 46, 297, "primary"),
       oval("forest-cover-orb", 16, 16, 50, 50, "secondary", 0.34),
       line("forest-cover-rule", 50, 36, 28, "accent", 1.2),
     ],
@@ -263,6 +263,7 @@ const COVER: Record<FreshTemplateId, CoverSpec> = {
     photoFrame: { kind: "oval", x: 138, y: 62, w: 40, h: 40, stroke: "accent" },
     heroAlign: "left",
     heroLeftMm: 20,
+    contentSurface: "light",
   },
   verlauf3: {
     shapes: [
@@ -273,6 +274,7 @@ const COVER: Record<FreshTemplateId, CoverSpec> = {
     photoFrame: { kind: "oval", x: 138, y: 62, w: 40, h: 40, stroke: "accent" },
     heroAlign: "left",
     heroLeftMm: 20,
+    contentSurface: "light",
   },
   ledger: {
     shapes: [
@@ -317,7 +319,7 @@ const COVER: Record<FreshTemplateId, CoverSpec> = {
   },
   ribbon: {
     shapes: [
-      roundrect("ribbon-cover-top", 0, 0, 190, 30, "primary"),
+      roundrect("ribbon-cover-top", 0, 0, 210, 30, "primary"),
       roundrect("ribbon-cover-signal", 18, 30, 144, 12, "secondary"),
       rect("ribbon-cover-bottom", 0, 292, 210, 5, "accent"),
     ],
@@ -339,6 +341,7 @@ const COVER: Record<FreshTemplateId, CoverSpec> = {
 
 function freshRecipe(template: FreshTemplateId, label: string): RuntimeRecipe {
   const spec = FRESH_LETTER_SPECS[template];
+  const lightContentSurface = template === "verlauf2" || template === "verlauf3";
   return {
     templateId: template,
     label,
@@ -346,10 +349,12 @@ function freshRecipe(template: FreshTemplateId, label: string): RuntimeRecipe {
     letter: {
       shapes: motifShapes(template, "letter"),
       margins: { top: 26, right: spec.right, bottom: 23, left: spec.left },
+      contentSurface: lightContentSurface ? "light" : undefined,
     },
     cv: {
       shapes: motifShapes(template, "cv"),
       margins: { top: 24, right: Math.max(20, spec.right), bottom: 20, left: Math.max(20, spec.left) },
+      contentSurface: lightContentSurface ? "light" : undefined,
     },
   };
 }
