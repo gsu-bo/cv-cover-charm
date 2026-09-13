@@ -312,15 +312,21 @@ function patchCoverContact(
 }
 
 function sectionBounds(source: string) {
-  const matches = [...source.matchAll(/<w:sectPr>[\s\S]*?<\/w:sectPr>/g)].filter(
-    (match): match is RegExpMatchArray & { index: number } => match.index !== undefined,
-  );
-  if (matches.length < 2) return null;
-  const firstEnd = matches[0].index + matches[0][0].length;
-  const secondEnd = matches[1].index + matches[1][0].length;
+  const matches = [...source.matchAll(/<w:sectPr>[\s\S]*?<\/w:sectPr>/g)];
+  if (
+    matches.length < 2 ||
+    matches[0].index === undefined ||
+    matches[1].index === undefined
+  ) {
+    return null;
+  }
+  const firstIndex = matches[0].index;
+  const secondIndex = matches[1].index;
+  const firstEnd = firstIndex + matches[0][0].length;
+  const secondEnd = secondIndex + matches[1][0].length;
   return [
-    { start: 0, end: matches[0].index },
-    { start: firstEnd, end: matches[1].index },
+    { start: 0, end: firstIndex },
+    { start: firstEnd, end: secondIndex },
     { start: secondEnd, end: source.length },
   ] as const;
 }
