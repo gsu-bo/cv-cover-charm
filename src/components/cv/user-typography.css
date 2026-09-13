@@ -54,6 +54,19 @@ html[data-dossier-template]
   margin-bottom: var(--cv-user-section-margin-bottom) !important;
 }
 
+/*
+ * Globaler Rubrik-Abstand: nur vertikal, nie horizontal. Ein eigener Wert
+ * ersetzt den Abstand oberhalb der Rubriktitel im normalen Dokumentfluss.
+ * Zwei 50%-Rubriken bleiben dadurch in derselben CSS-Grid-Zeile; der Regler
+ * ändert weder Spaltenbreite noch column-gap.
+ */
+html[data-cv-section-gap="custom"]
+  [data-dossier-document="cv"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-section] {
+  margin-top: var(--cv-section-gap) !important;
+}
+
 html[data-dossier-template]
   [data-dossier-document="cv"]
   :is([data-cv-page], [data-cv-measure-page])
