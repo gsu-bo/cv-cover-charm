@@ -15,6 +15,8 @@ function documentsFor(templateId: string) {
   return { cover, letter, cv };
 }
 
+type LightSurface = { contentSurface?: "light" };
+
 describe("Fresh DOCX recipe registry", () => {
   test("all Fresh templates are connected to an individual Word recipe", () => {
     expect(FRESH_TEMPLATE_REGISTRY).toHaveLength(22);
@@ -33,6 +35,22 @@ describe("Fresh DOCX recipe registry", () => {
       expect(profile?.architecture).toBe(
         template.id === "studio3" ? "native+transform+polish" : "template-recipe",
       );
+    }
+  });
+
+  test("reviewed Fresh Word geometry keeps the visual QA fixes", () => {
+    const forest = dossierDocxTemplateRecipe("forestFlow");
+    const ribbon = dossierDocxTemplateRecipe("ribbon");
+    const verlauf2 = dossierDocxTemplateRecipe("verlauf2");
+    const verlauf3 = dossierDocxTemplateRecipe("verlauf3");
+
+    expect(forest?.cover.shapes[0].w).toBe(46);
+    expect(ribbon?.cover.shapes[0].w).toBe(210);
+
+    for (const recipe of [verlauf2, verlauf3]) {
+      expect((recipe?.cover as LightSurface)?.contentSurface).toBe("light");
+      expect((recipe?.letter as LightSurface)?.contentSurface).toBe("light");
+      expect((recipe?.cv as LightSurface)?.contentSurface).toBe("light");
     }
   });
 });
