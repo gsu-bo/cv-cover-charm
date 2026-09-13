@@ -25,9 +25,9 @@ import {
   warmDossierDocxSupported,
 } from "@/lib/dossier-docx-warm-polish";
 import {
-  downloadStudio3DossierDocx,
+  downloadPolishedStudio3DossierDocx,
   studio3DossierDocxSupported,
-} from "@/lib/dossier-docx-studio3";
+} from "@/lib/dossier-docx-studio3-polish";
 
 function readDocxDocuments() {
   return {
@@ -118,7 +118,7 @@ export function ProjectFileControls() {
         ? "Bewerbungsdossier.docx"
         : `Bewerbungsdossier-${author}.docx`;
 
-    if (studio3) await downloadStudio3DossierDocx(cover, letter, cv, fileName);
+    if (studio3) await downloadPolishedStudio3DossierDocx(cover, letter, cv, fileName);
     else if (warm) await downloadPolishedWarmDossierDocx(cover, letter, cv, fileName);
     else downloadBriefDossierDocx(cover, letter, cv, fileName);
     setStatus("DOCX-Referenz wurde erstellt. Prüfe die Datei am besten in Microsoft Word.");
