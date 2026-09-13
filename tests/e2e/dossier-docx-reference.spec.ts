@@ -140,6 +140,6 @@ test.describe("Brief DOCX reference download", () => {
       }
     });
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("button", { name: "Dossier als DOCX · Brief" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Dossier als DOCX", exact: true })).toBeDisabled();
   });
 });
