@@ -30,19 +30,14 @@ describe("final red dossier coherence fixes", () => {
     );
   });
 
-  test("Studio body is calibrated to the matching 10.5 pt letter scale", () => {
-    expect(studioPdfScaleCss).toContain("font-size: 10.7pt !important;");
-    expect(studioPdfScaleCss).toContain("font-size: 11pt !important;");
-    expect(studioPdfScaleCss).toContain("font-size: 9.6pt !important;");
+  test("Studio body is lifted close to the 10.5 pt letter without loose pagination", () => {
+    expect(studioPdfScaleCss).toContain("font-size: 10.5pt !important;");
+    expect(studioPdfScaleCss).toContain("font-size: 10.8pt !important;");
+    expect(studioPdfScaleCss).toContain("font-size: 9.4pt !important;");
+    expect(studioPdfScaleCss).toContain("line-height: 1.36 !important;");
+    expect(studioPdfScaleCss).not.toContain("margin-top: 5.6mm !important;");
     expect(studioPdfScaleCss).toContain(
       '[data-cv-section-title]:not([data-cv-user-section-size="true"])',
     );
-  });
-
-  test("Studio default breathing room never overrides a user rubric-gap choice", () => {
-    expect(studioPdfScaleCss).toContain(
-      '[data-cv-section]:not([data-cv-user-section-margin="true"])',
-    );
-    expect(studioPdfScaleCss).toContain("margin-top: 5.6mm !important;");
   });
 });
