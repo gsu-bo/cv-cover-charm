@@ -110,7 +110,7 @@ function addRichLetterText(
       pdf.setFont(font, pdfFontStyle(style));
       pdf.setFontSize(fontSizePt);
       pdf.setTextColor(red, green, blue);
-      pdf.text(token, x, baseline, { renderingMode: "invisible" });
+      pdf.text(token, x, baseline);
     }
     node = walker.nextNode();
   }
@@ -146,7 +146,7 @@ function addLetterListMarkers(
     pdf.setFont(font, "normal");
     pdf.setFontSize(fontSizePt);
     pdf.setTextColor(red, green, blue);
-    pdf.text(marker, x, baseline, { renderingMode: "invisible" });
+    pdf.text(marker, x, baseline);
   }
 }
 
@@ -195,7 +195,7 @@ function addLetterRules(pdf: JsPdf, page: HTMLElement, mmX: number, mmY: number)
   }
 }
 
-/** Browserlayout vermessen und eine unsichtbare, durchsuchbare PDF-Textebene ergänzen. */
+/** Browserlayout vermessen und als sichtbare, durchsuchbare PDF-Textebene zeichnen. */
 function addLetterTextLayer(pdf: JsPdf, page: HTMLElement) {
   const pageRect = page.getBoundingClientRect();
   if (pageRect.width <= 0 || pageRect.height <= 0) {
@@ -231,7 +231,6 @@ function addLetterTextLayer(pdf: JsPdf, page: HTMLElement) {
     pdf.text(wrapLetterText(pdf, text, width), x, baseline, {
       align,
       lineHeightFactor,
-      renderingMode: "invisible",
     });
   }
 
@@ -249,15 +248,7 @@ async function addRasterPage(
   html2canvas: Html2Canvas,
   page: HTMLElement,
   rebuildLetterVectors = false,
-  normalizeCvZoom = false,
 ) {
-  const cvPageId = normalizeCvZoom ? page.dataset.cvPage : undefined;
-  const cvFlow = normalizeCvZoom ? page.querySelector<HTMLElement>("[data-cv-main] > div") : null;
-  const rawZoom = cvFlow
-    ? Number.parseFloat(window.getComputedStyle(cvFlow).getPropertyValue("zoom"))
-    : 1;
-  const cvZoom = Number.isFinite(rawZoom) && rawZoom > 0 ? rawZoom : 1;
-
   const canvas = await html2canvas(page, {
     scale: PDF.SCALE,
     backgroundColor: "#ffffff",
@@ -268,53 +259,31 @@ async function addRasterPage(
     windowHeight: PAGE.HEIGHT,
     scrollX: 0,
     scrollY: 0,
-    onclone:
-      rebuildLetterVectors || normalizeCvZoom
-        ? (clonedDocument) => {
-            if (rebuildLetterVectors) {
-              // Letter glyphs are rebuilt below as native PDF text. Hide them
-              // only inside html2canvas' clone so preview/export DOM, geometry and
-              // visual QA screenshots remain unchanged. Template chrome (including
-              // Warm's masthead sender) stays rasterized unless explicitly tagged.
-              for (const text of clonedDocument.querySelectorAll<HTMLElement>(
-                "[data-letter-pdf-text], [data-letter-pdf-richtext]",
-              )) {
-                text.style.setProperty("visibility", "hidden", "important");
-              }
-
-              // Rules and table borders are rebuilt below as crisp vector geometry.
-              for (const rule of clonedDocument.querySelectorAll<HTMLElement>(
-                "[data-letter-pdf-rule], [data-letter-pdf-richtext] hr",
-              )) {
-                rule.style.setProperty("border-color", "transparent", "important");
-                rule.style.setProperty("background", "transparent", "important");
-              }
-              for (const cell of clonedDocument.querySelectorAll<HTMLElement>(
-                "[data-letter-pdf-richtext] table[data-letter-table] td",
-              )) {
-                cell.style.setProperty("border-color", "transparent", "important");
-              }
-            }
-
-            if (normalizeCvZoom && cvZoom !== 1) {
-              const clonedPage = Array.from(
-                clonedDocument.querySelectorAll<HTMLElement>("[data-cv-page]"),
-              ).find((candidate) => candidate.dataset.cvPage === cvPageId);
-              const clonedFlow = clonedPage?.querySelector<HTMLElement>("[data-cv-main] > div");
-              if (clonedFlow) {
-                // CSS zoom is part of the live pagination contract, but html2canvas
-                // can squeeze word spacing when it paints text under zoom. Recreate
-                // the same effective geometry in the cloned PDF DOM with a wider
-                // unzoomed layout and a normal transform. The live editor and all
-                // pagination measurements remain untouched.
-                clonedFlow.style.setProperty("zoom", "1", "important");
-                clonedFlow.style.setProperty("width", `${100 / cvZoom}%`, "important");
-                clonedFlow.style.setProperty("transform", `scale(${cvZoom})`, "important");
-                clonedFlow.style.setProperty("transform-origin", "top left", "important");
-              }
-            }
+    onclone: rebuildLetterVectors
+      ? (clonedDocument) => {
+          // Letter glyphs are rebuilt below as native PDF text. Hide them only
+          // inside html2canvas' clone so preview/export DOM and QA screenshots
+          // keep their normal browser typography and geometry.
+          for (const text of clonedDocument.querySelectorAll<HTMLElement>(
+            "[data-letter-pdf-text], [data-letter-pdf-richtext]",
+          )) {
+            text.style.setProperty("visibility", "hidden", "important");
           }
-        : undefined,
+
+          // Rules and table borders are rebuilt below as crisp vector geometry.
+          for (const rule of clonedDocument.querySelectorAll<HTMLElement>(
+            "[data-letter-pdf-rule], [data-letter-pdf-richtext] hr",
+          )) {
+            rule.style.setProperty("border-color", "transparent", "important");
+            rule.style.setProperty("background", "transparent", "important");
+          }
+          for (const cell of clonedDocument.querySelectorAll<HTMLElement>(
+            "[data-letter-pdf-richtext] table[data-letter-table] td",
+          )) {
+            cell.style.setProperty("border-color", "transparent", "important");
+          }
+        }
+      : undefined,
   });
   pdf.addImage(
     canvas.toDataURL("image/jpeg", PDF.QUALITY),
@@ -328,7 +297,7 @@ async function addRasterPage(
   );
 }
 
-/** Titelblatt bleibt Raster; Anschreiben und CV erhalten zusätzlich echte PDF-Textebenen. */
+/** Titelblatt bleibt Raster; Anschreiben und CV erhalten echte, sichtbare PDF-Textebenen. */
 export async function downloadCombinedDossierPdf(
   root: HTMLElement,
   fileName: string,
@@ -372,7 +341,10 @@ export async function downloadCombinedDossierPdf(
   addLetterTextLayer(pdf, letter);
   for (const cvPage of cvPages) {
     pdf.addPage("a4", "portrait");
-    await addRasterPage(pdf, html2canvas, cvPage, false, true);
+    // Keep the raster on exactly the same live CSS-zoom geometry that the native
+    // CV text layer measures. The former clone normalization fixed raster glyph
+    // spacing but shifted decorative rules once text became native.
+    await addRasterPage(pdf, html2canvas, cvPage);
     addCvTextLayer(pdf, cvPage);
   }
 
