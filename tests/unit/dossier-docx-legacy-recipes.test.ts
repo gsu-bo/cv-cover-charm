@@ -138,6 +138,8 @@ function documentXml(bytes: Uint8Array) {
 
 describe("legacy individual DOCX recipes", () => {
   for (const [template, recipe] of Object.entries(ALL_DOSSIER_DOCX_TEMPLATE_RECIPES)) {
+    if (template === "studio3") continue;
+
     test(`${recipe.label} routes through its individual Word recipe`, async () => {
       const { cover, letter, cv } = documents(template);
       const profile = resolveDossierDocxProfile(cover, letter, cv);
@@ -153,6 +155,13 @@ describe("legacy individual DOCX recipes", () => {
       expect(xml).toContain(recipe.cv.shapes[0].id);
     });
   }
+
+  test("Studio 3 keeps its reviewed dedicated DOCX profile ahead of its safety recipe", () => {
+    const { cover, letter, cv } = documents("studio3");
+    const profile = resolveDossierDocxProfile(cover, letter, cv);
+    expect(profile?.architecture).toBe("native+transform+polish");
+    expect(profile?.label).toBe("Studio 3");
+  });
 
   test("Modern keeps its real paper and floats initials inside its photo frame", async () => {
     const { cover, letter, cv } = documents("modern");
