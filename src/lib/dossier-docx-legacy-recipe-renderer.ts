@@ -5,7 +5,7 @@ import type {
 } from "@/lib/dossier-pdf-document";
 import { createWarmDossierDocxBlob } from "@/lib/dossier-docx-warm";
 import { transformStoredDocxDocumentXml } from "@/lib/dossier-docx-package";
-import { LEGACY_EXTRA_DOCX_RECIPES } from "@/lib/dossier-docx-template-recipe-legacy-extra";
+import { ALL_DOSSIER_DOCX_TEMPLATE_RECIPES } from "@/lib/dossier-docx-template-recipes";
 import type {
   DossierDocxColorRole,
   DossierDocxRecipeShape,
@@ -93,8 +93,10 @@ function fillOpacity(opacity = 1) {
   return opacity < 0.999 ? `<v:fill opacity="${Math.round(opacity * 100)}%"/>` : "";
 }
 
-function shapeRun(shape: RuntimeShape, colors: Palette) {
-  const color = shape.fillHex ?? roleColor(colors, shape.color);
+function shapeRun(shape: RuntimeShape, colors: Palette, templateId: string) {
+  const neonPageBackground =
+    templateId === "neon" && /neon-(?:cover|letter|cv)-bg$/.test(shape.id);
+  const color = shape.fillHex ?? (neonPageBackground ? colors.paper : roleColor(colors, shape.color));
   const opacity = shape.opacity ?? 1;
   if (shape.kind === "line") {
     return `<w:r><w:pict><v:rect id="${shape.id}" style="${vmlStyle(shape.x, shape.y, shape.w, shape.strokeMm ?? 0.4)}" fillcolor="${color}" stroked="f">${fillOpacity(opacity)}</v:rect></w:pict></w:r>`;
@@ -106,8 +108,8 @@ function shapeRun(shape: RuntimeShape, colors: Palette) {
   return `<w:r><w:pict><v:${tag} id="${shape.id}" style="${vmlStyle(shape.x, shape.y, shape.w, shape.h)}" fillcolor="${color}" stroked="f">${fillOpacity(opacity)}</v:${tag}></w:pict></w:r>`;
 }
 
-function recipeShapes(shapes: readonly DossierDocxRecipeShape[], colors: Palette) {
-  return shapes.map((shape) => shapeRun(shape as RuntimeShape, colors)).join("");
+function recipeShapes(shapes: readonly DossierDocxRecipeShape[], colors: Palette, templateId: string) {
+  return shapes.map((shape) => shapeRun(shape as RuntimeShape, colors, templateId)).join("");
 }
 
 function replaceDrawing(source: string, id: string, replacement: string) {
@@ -209,6 +211,61 @@ function setParagraphColor(source: string, text: string, color: string) {
   );
 }
 
+function initials(vorname: string, nachname: string) {
+  return `${vorname.trim().charAt(0)}${nachname.trim().charAt(0)}`.toUpperCase();
+}
+
+function clearFirstText(source: string, text: string) {
+  if (!text) return source;
+  const escaped = xmlEscape(text);
+  const pattern = new RegExp(`(<w:t(?: xml:space="preserve")?>)${escaped}(</w:t>)`);
+  return source.replace(pattern, "$1$2");
+}
+
+function photoFrameRun(
+  recipe: RuntimeRecipe,
+  colors: Palette,
+  cover: CoverPdfDocument,
+) {
+  const frame = recipe.cover.photoFrame;
+  if (!frame) return "";
+  const tag = frame.kind === "oval" ? "oval" : "rect";
+  const stroke = roleColor(colors, frame.stroke);
+  const coverInitials = initials(cover.data.vorname, cover.data.nachname);
+  const textBox = cover.data.foto
+    ? ""
+    : `<v:textbox inset="0,0,0,0"><w:txbxContent><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Cabin" w:hAnsi="Cabin"/><w:sz w:val="42"/><w:szCs w:val="42"/><w:color w:val="${colors.ink.replace("#", "").toUpperCase()}"/><w:b/><w:bCs/></w:rPr><w:t>${xmlEscape(coverInitials)}</w:t></w:r></w:p></w:txbxContent></v:textbox>`;
+  const style = `${vmlStyle(frame.x, frame.y, frame.w, frame.h, 251657900)};v-text-anchor:middle`;
+  return `<w:r><w:pict><v:${tag} id="docx-recipe-cover-photo-mat" style="${style}" fillcolor="${colors.paper}" strokecolor="${stroke}" strokeweight="0.8pt">${textBox}</v:${tag}></w:pict></w:r>`;
+}
+
+function patchPhotoFrame(
+  source: string,
+  recipe: RuntimeRecipe,
+  colors: Palette,
+  cover: CoverPdfDocument,
+) {
+  const frame = recipe.cover.photoFrame;
+  if (!frame) return source;
+  let xml = replaceDrawing(source, "warm-cover-photo-mat", photoFrameRun(recipe, colors, cover));
+  if (cover.data.foto) {
+    const photoStyle = vmlStyle(
+      frame.x + 1,
+      frame.y + 1,
+      Math.max(1, frame.w - 2),
+      Math.max(1, frame.h - 2),
+      251658000,
+    );
+    xml = xml.replace(
+      /(<v:oval id="warm-cover-photo"[^>]*\bstyle=")[^"]+("[^>]*>)/,
+      `$1${photoStyle}$2`,
+    );
+  } else {
+    xml = clearFirstText(xml, initials(cover.data.vorname, cover.data.nachname));
+  }
+  return xml;
+}
+
 function patchCoverHero(source: string, recipe: RuntimeRecipe, cover: CoverPdfDocument) {
   const align = recipe.cover.heroAlign;
   if (!align) return source;
@@ -254,32 +311,45 @@ function patchCoverContact(
   return xml;
 }
 
-function recolorRange(source: string, startText: string, endText: string | null, color: string) {
-  const startNeedle = `>${xmlEscape(startText)}</w:t>`;
-  const start = source.indexOf(startNeedle);
-  if (start < 0) return source;
-  const end = endText ? source.indexOf(`>${xmlEscape(endText)}</w:t>`, start + startNeedle.length) : -1;
-  const stop = end >= 0 ? end : source.length;
-  const before = source.slice(0, start);
-  const middle = source
-    .slice(start, stop)
-    .replace(/<w:color w:val="[^"]+"\/>/g, `<w:color w:val="${color.replace("#", "").toUpperCase()}"/>`);
-  return before + middle + source.slice(stop);
+function sectionBounds(source: string) {
+  const matches = [...source.matchAll(/<w:sectPr>[\s\S]*?<\/w:sectPr>/g)].filter(
+    (match): match is RegExpMatchArray & { index: number } => match.index !== undefined,
+  );
+  if (matches.length < 2) return null;
+  const firstEnd = matches[0].index + matches[0][0].length;
+  const secondEnd = matches[1].index + matches[1][0].length;
+  return [
+    { start: 0, end: matches[0].index },
+    { start: firstEnd, end: matches[1].index },
+    { start: secondEnd, end: source.length },
+  ] as const;
 }
 
-function patchLightContentSurfaces(
+function recolorSection(source: string, sectionIndex: 0 | 1 | 2, color: string) {
+  const bounds = sectionBounds(source);
+  if (!bounds) return source;
+  const range = bounds[sectionIndex];
+  const wordColor = color.replace("#", "").toUpperCase();
+  const middle = source
+    .slice(range.start, range.end)
+    .replace(/<w:color w:val="[^"]+"\/>/g, `<w:color w:val="${wordColor}"/>`);
+  return source.slice(0, range.start) + middle + source.slice(range.end);
+}
+
+function patchContentSurfaces(
   source: string,
   recipe: RuntimeRecipe,
-  letter: LetterPdfDocument,
-  cv: CvPdfDocument,
+  coverColors: Palette,
 ) {
   let xml = source;
-  const cvTitle = cv.data.titel || "Lebenslauf";
-  if (recipe.letter.contentSurface === "light" && letter.data.absenderName) {
-    xml = recolorRange(xml, letter.data.absenderName, cvTitle, "#1c2328");
+  if (["neon", "verlauf", "edelDark"].includes(recipe.templateId)) {
+    xml = recolorSection(xml, 0, coverColors.ink);
+  }
+  if (recipe.letter.contentSurface === "light") {
+    xml = recolorSection(xml, 1, "#1c2328");
   }
   if (recipe.cv.contentSurface === "light") {
-    xml = recolorRange(xml, cvTitle, null, "#1c2328");
+    xml = recolorSection(xml, 2, "#1c2328");
   }
   return xml;
 }
@@ -299,22 +369,23 @@ function patchRecipeDocumentXml(
   xml = replacePageShapes(
     xml,
     ["warm-cover-teal", "warm-cover-large-orb", "warm-cover-small-orb"],
-    recipeShapes(recipe.cover.shapes, coverColors),
+    recipeShapes(recipe.cover.shapes, coverColors, recipe.templateId),
   );
   xml = replacePageShapes(
     xml,
     ["warm-letter-masthead", "warm-letter-ring", "warm-letter-orb", "warm-letter-footer"],
-    recipeShapes(recipe.letter.shapes, letterColors),
+    recipeShapes(recipe.letter.shapes, letterColors, recipe.templateId),
   );
   xml = replacePageShapes(
     xml,
     ["warm-cv-top-band", "warm-cv-orb", "warm-cv-bottom-band"],
-    recipeShapes(recipe.cv.shapes, cvColors),
+    recipeShapes(recipe.cv.shapes, cvColors, recipe.templateId),
   );
 
+  xml = patchPhotoFrame(xml, recipe, coverColors, cover);
   xml = patchCoverHero(xml, recipe, cover);
   xml = patchCoverContact(xml, recipe, cover, coverColors);
-  xml = patchLightContentSurfaces(xml, recipe, letter, cv);
+  xml = patchContentSurfaces(xml, recipe, coverColors);
   xml = patchSectionMargins(xml, 0, recipe.cover.margins);
   xml = patchSectionMargins(xml, 1, recipe.letter.margins);
   xml = patchSectionMargins(xml, 2, recipe.cv.margins);
@@ -339,7 +410,7 @@ export function legacyRecipeDossierDocxSupported(
 ) {
   if (!cover || !letter || !cv) return false;
   const template = sameTemplate(cover, letter, cv);
-  return !!template && !!LEGACY_EXTRA_DOCX_RECIPES[template];
+  return !!template && !!ALL_DOSSIER_DOCX_TEMPLATE_RECIPES[template];
 }
 
 export async function createLegacyRecipeDossierDocxBlob(
@@ -348,9 +419,11 @@ export async function createLegacyRecipeDossierDocxBlob(
   cv: CvPdfDocument,
 ) {
   const template = sameTemplate(cover, letter, cv);
-  const recipe = template ? (LEGACY_EXTRA_DOCX_RECIPES[template] as RuntimeRecipe | undefined) : undefined;
+  const recipe = template
+    ? (ALL_DOSSIER_DOCX_TEMPLATE_RECIPES[template] as RuntimeRecipe | undefined)
+    : undefined;
   if (!template || !recipe) {
-    throw new Error("DOCX-Legacy-Rezept benötigt dieselbe gemappte Vorlage in allen drei Dossierteilen.");
+    throw new Error("DOCX-Einzelrezept benötigt dieselbe gemappte Vorlage in allen drei Dossierteilen.");
   }
 
   const compatible = warmCompatibleDocuments(cover, letter, cv);
@@ -358,6 +431,6 @@ export async function createLegacyRecipeDossierDocxBlob(
   return transformStoredDocxDocumentXml(
     base,
     (xml) => patchRecipeDocumentXml(xml, recipe, cover, letter, cv),
-    `DOCX-Legacy-Rezept ${recipe.label}`,
+    `DOCX-Einzelrezept ${recipe.label}`,
   );
 }
