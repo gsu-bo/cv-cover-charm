@@ -16,6 +16,11 @@ import {
   studio3DossierDocxSupported,
 } from "@/lib/dossier-docx-studio3-polish";
 import {
+  createIndividualRecipeDossierDocxBlob,
+  individualRecipeDossierDocxSupported,
+} from "@/lib/dossier-docx-template-renderer";
+import { dossierDocxTemplateRecipe } from "@/lib/dossier-docx-template-recipe";
+import {
   createGenericFamilyDossierDocxBlob,
   genericFamilyDossierDocxSupported,
 } from "@/lib/dossier-docx-family-renderer";
@@ -35,6 +40,7 @@ export type DossierDocxProfile = {
     | "native"
     | "native+polish"
     | "native+transform+polish"
+    | "template-recipe"
     | "family-fallback";
   visualModel: {
     cover: string;
@@ -92,6 +98,31 @@ export const DOSSIER_DOCX_SUPPORTED_LABELS = DOSSIER_DOCX_PROFILES.map(
   (profile) => profile.label,
 );
 
+function resolveIndividualRecipeProfile(
+  cover: CoverPdfDocument | null,
+  letter: LetterPdfDocument | null,
+  cv: CvPdfDocument | null,
+): DossierDocxProfile | null {
+  if (!individualRecipeDossierDocxSupported(cover, letter, cv) || !cover) return null;
+  const templateId = String(cover.template);
+  const recipe = dossierDocxTemplateRecipe(templateId);
+  if (!recipe) return null;
+
+  return {
+    templateId,
+    label: recipe.label,
+    architecture: "template-recipe",
+    visualModel: {
+      cover: `recipe:${templateId}`,
+      letter: `recipe:${templateId}`,
+      cv: `recipe:${templateId}`,
+    },
+    supports: individualRecipeDossierDocxSupported,
+    createBlob: ({ cover: nextCover, letter: nextLetter, cv: nextCv }) =>
+      createIndividualRecipeDossierDocxBlob(nextCover, nextLetter, nextCv),
+  };
+}
+
 function resolveFamilyFallbackProfile(
   cover: CoverPdfDocument | null,
   letter: LetterPdfDocument | null,
@@ -124,6 +155,7 @@ export function resolveDossierDocxProfile(
 ) {
   return (
     DOSSIER_DOCX_PROFILES.find((profile) => profile.supports(cover, letter, cv)) ??
+    resolveIndividualRecipeProfile(cover, letter, cv) ??
     resolveFamilyFallbackProfile(cover, letter, cv)
   );
 }
