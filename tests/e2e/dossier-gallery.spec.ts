@@ -14,6 +14,9 @@ const GALLERY_DIR = process.env.GALLERY_DIR ?? "artifacts/dossier-gallery";
 const GALLERY_BATCH_SIZE = 4;
 const GALLERY_BATCH_COUNT = 10;
 const CHROME_STORAGE_KEY = "bewerbungsdossier:chrome:v1";
+const SAMPLE_LOCATION = "Hubersdorf";
+const SAMPLE_POSTAL_LOCATION = "4535 Hubersdorf";
+const SAMPLE_DATE = "15.11.2026";
 
 function galleryBatchIndex(): number | null {
   const raw = process.env.GALLERY_BATCH_INDEX;
@@ -108,6 +111,10 @@ async function downloadWholeDossier(page: Page, fileName: string) {
   expect(pdfText).toContain("Herr Thomas Weber");
   expect(pdfText).toContain("Guten Tag");
   expect(pdfText).toContain("Sekundarschule, Niveau A");
+  expect(pdfText).toContain(SAMPLE_POSTAL_LOCATION);
+  expect(pdfText).toContain(`${SAMPLE_LOCATION}, ${SAMPLE_DATE}`);
+  expect(pdfText).not.toContain("Solothurn");
+  expect(pdfText).not.toContain("Zuchwil");
   // Browser-to-PDF glyph placement can make pdf.js expose adjacent visual words
   // as a single text item (e.g. `Mathematikund`). This assertion still requires
   // the complete phrase and only ignores extractor whitespace boundaries.
@@ -140,15 +147,64 @@ test("UI sample dossier downloads and all live motivation-letter templates produ
   await loadDemoThroughUi(page, "/anschreiben");
   await loadDemoThroughUi(page, "/lebenslauf");
 
-  const stored = await page.evaluate((chromeStorageKey) => ({
-    cover: JSON.parse(localStorage.getItem("titelblatt:v3") ?? "null"),
-    letter: JSON.parse(localStorage.getItem("anschreiben:v1") ?? "null"),
-    cv: JSON.parse(localStorage.getItem("lebenslauf:v1") ?? "null"),
-    chrome: JSON.parse(localStorage.getItem(chromeStorageKey) ?? "null"),
-  }), CHROME_STORAGE_KEY);
+  // Gallery/release fixtures deliberately use one canonical place and date.
+  // This keeps all three dossier documents coherent even if individual editor
+  // demo defaults evolve independently.
+  const stored = await page.evaluate(
+    ({ chromeStorageKey, sampleLocation, samplePostalLocation, sampleDate }) => {
+      const cover = JSON.parse(localStorage.getItem("titelblatt:v3") ?? "null");
+      const letter = JSON.parse(localStorage.getItem("anschreiben:v1") ?? "null");
+      const cv = JSON.parse(localStorage.getItem("lebenslauf:v1") ?? "null");
+      const chrome = JSON.parse(localStorage.getItem(chromeStorageKey) ?? "null");
+
+      if (cover?.data) {
+        cover.data.ort = sampleLocation;
+        cover.data.datum = sampleDate;
+        cover.data.plzOrt = samplePostalLocation;
+        cover.data.betriebAdresse = `Industriestrasse 8, ${samplePostalLocation}`;
+        localStorage.setItem("titelblatt:v3", JSON.stringify(cover));
+      }
+      if (letter?.data) {
+        letter.data.absenderPlzOrt = samplePostalLocation;
+        letter.data.empfaengerPlzOrt = samplePostalLocation;
+        letter.data.ort = sampleLocation;
+        letter.data.datum = sampleDate;
+        localStorage.setItem("anschreiben:v1", JSON.stringify(letter));
+      }
+      if (cv?.data) {
+        cv.data.person.plzOrt = samplePostalLocation;
+        for (const entry of cv.data.schule ?? []) {
+          if (entry.id === "demo-s1") entry.ort = "Schulhaus Zentrum, Hubersdorf";
+          if (entry.id === "demo-s2") entry.ort = "Primarschule Hubersdorf";
+        }
+        for (const entry of cv.data.erfahrung ?? []) {
+          if (entry.id === "demo-p1") entry.ort = "Beispiel AG, Hubersdorf";
+          if (entry.id === "demo-p2") entry.ort = "Muster GmbH, Hubersdorf";
+        }
+        localStorage.setItem("lebenslauf:v1", JSON.stringify(cv));
+      }
+
+      return { cover, letter, cv, chrome };
+    },
+    {
+      chromeStorageKey: CHROME_STORAGE_KEY,
+      sampleLocation: SAMPLE_LOCATION,
+      samplePostalLocation: SAMPLE_POSTAL_LOCATION,
+      sampleDate: SAMPLE_DATE,
+    },
+  );
   expect(stored.cover?.data?.vorname).toBe("Lea");
   expect(stored.letter?.data?.unterschrift).toBe("Lea Müller");
   expect(stored.cv?.data?.person?.vorname).toBe("Lea");
+  expect(stored.cover?.data?.datum).toBe(SAMPLE_DATE);
+  expect(stored.letter?.data?.datum).toBe(SAMPLE_DATE);
+  expect(stored.cover?.data?.ort).toBe(SAMPLE_LOCATION);
+  expect(stored.letter?.data?.ort).toBe(SAMPLE_LOCATION);
+  expect(stored.cover?.data?.plzOrt).toBe(SAMPLE_POSTAL_LOCATION);
+  expect(stored.letter?.data?.absenderPlzOrt).toBe(SAMPLE_POSTAL_LOCATION);
+  expect(stored.letter?.data?.empfaengerPlzOrt).toBe(SAMPLE_POSTAL_LOCATION);
+  expect(stored.cv?.data?.person?.plzOrt).toBe(SAMPLE_POSTAL_LOCATION);
+  expect(JSON.stringify(stored)).not.toMatch(/Solothurn|Zuchwil/);
 
   // The gallery renders each template with its own product default. It must not
   // depend on whether an unopened chrome control happened to persist canonical

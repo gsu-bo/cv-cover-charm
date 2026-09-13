@@ -2,6 +2,8 @@ name: Dossier PDF Gallery
 
 # Reproducible visual QA: every live complete dossier PDF is rendered, but the expensive
 # PDF work is split into 4-document batches and aggregated back into one artifact.
+# The QA gallery keeps the real UI E2E example; the separate user package contains only
+# the 39 actual templates and deliberately excludes the E2E fixture.
 # The render branch is a release-candidate surface, so its full gallery runs automatically.
 on:
   workflow_dispatch:
@@ -207,7 +209,7 @@ jobs:
           if [ -f /tmp/cv-cover-charm.pid ]; then kill "$(cat /tmp/cv-cover-charm.pid)" || true; fi
 
   aggregate:
-    name: Aggregate 40/40 PDF gallery
+    name: Aggregate QA 40 + user 39
     needs:
       - checks
       - pdf-batch
@@ -221,7 +223,7 @@ jobs:
           pattern: dossier-pdf-batch-*
           path: artifacts/batches
 
-      - name: Verify and aggregate all 40 PDFs
+      - name: Verify QA gallery and build user package
         shell: bash
         run: |
           pdf_count="$(find artifacts/batches -type f -name '*.pdf' | wc -l | tr -d ' ')"
@@ -241,7 +243,7 @@ jobs:
           done < <(find artifacts/batches -type f -name '*.pdf' -print0)
 
           {
-            echo "Gesamtdossier PDF Galerie"
+            echo "Gesamtdossier PDF Galerie – QA"
             echo
             while IFS= read -r part; do
               cat "$part"
@@ -254,12 +256,47 @@ jobs:
           test "$manifest_count" -eq 40
           test -f artifacts/dossier-gallery/00-Beispieldossier-E2E.pdf
           test -f artifacts/dossier-gallery/MANIFEST.txt
-          find artifacts/dossier-gallery -maxdepth 1 -type f -printf '%f\n' | sort
 
-      - name: Upload final 40-PDF gallery ZIP
+          mkdir -p artifacts/dossier-templates
+          while IFS= read -r -d '' pdf; do
+            base="$(basename "$pdf")"
+            case "$base" in
+              00-Beispieldossier-E2E.pdf) continue ;;
+            esac
+            cp "$pdf" "artifacts/dossier-templates/$base"
+          done < <(find artifacts/dossier-gallery -maxdepth 1 -type f -name '*.pdf' -print0)
+
+          {
+            echo "Bewerbungsdossier Vorlagen"
+            echo
+            grep '\.pdf |' artifacts/dossier-gallery/MANIFEST.txt \
+              | grep -v '^00-Beispieldossier-E2E\.pdf |'
+          } > artifacts/dossier-templates/MANIFEST.txt
+
+          user_count="$(find artifacts/dossier-templates -maxdepth 1 -type f -name '*.pdf' | wc -l | tr -d ' ')"
+          user_manifest_count="$(grep -c '\.pdf |' artifacts/dossier-templates/MANIFEST.txt)"
+          echo "User package: $user_count templates; manifest entries: $user_manifest_count"
+          test "$user_count" -eq 39
+          test "$user_manifest_count" -eq 39
+          test ! -e artifacts/dossier-templates/00-Beispieldossier-E2E.pdf
+          test -f artifacts/dossier-templates/MANIFEST.txt
+
+          find artifacts/dossier-gallery -maxdepth 1 -type f -printf '%f\n' | sort
+          echo "--- user package ---"
+          find artifacts/dossier-templates -maxdepth 1 -type f -printf '%f\n' | sort
+
+      - name: Upload QA 40-PDF gallery ZIP
         uses: actions/upload-artifact@v4
         with:
           name: gesamtdossier-pdf-galerie
           path: artifacts/dossier-gallery
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload user 39-template ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: bewerbungsdossier-vorlagen-39
+          path: artifacts/dossier-templates
           if-no-files-found: error
           retention-days: 14
