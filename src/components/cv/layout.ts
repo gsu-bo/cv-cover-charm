@@ -108,6 +108,7 @@ function readMirror(): boolean {
 }
 
 export function normalizeCvSectionGapMm(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
   const numeric = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(numeric)) return null;
   return Math.max(CV_SECTION_GAP_MIN_MM, Math.min(CV_SECTION_GAP_MAX_MM, numeric));
