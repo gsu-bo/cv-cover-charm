@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { resolveCvLayoutChoice } from "../../src/components/cv/layout";
+import {
+  CV_SECTION_GAP_MAX_MM,
+  CV_SECTION_GAP_MIN_MM,
+  normalizeCvSectionGapMm,
+  resolveCvLayoutChoice,
+} from "../../src/components/cv/layout";
 import {
   CV_LAYOUT_SECTION_ORDER,
   customSectionKey,
@@ -74,6 +79,14 @@ describe("CV rubric layout", () => {
       widthMm: 190,
       heightMm: 10,
     });
+  });
+
+  test("global vertical rubric spacing keeps template default optional and clamps custom values", () => {
+    expect(normalizeCvSectionGapMm(null)).toBeNull();
+    expect(normalizeCvSectionGapMm("")).toBeNull();
+    expect(normalizeCvSectionGapMm("4.5")).toBe(4.5);
+    expect(normalizeCvSectionGapMm(-3)).toBe(CV_SECTION_GAP_MIN_MM);
+    expect(normalizeCvSectionGapMm(99)).toBe(CV_SECTION_GAP_MAX_MM);
   });
 
   test("Kolumne keeps Sidebar even when another template stored Standard", () => {
