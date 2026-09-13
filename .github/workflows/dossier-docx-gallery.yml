@@ -195,7 +195,7 @@ jobs:
 
           final_count="$(find artifacts/dossier-docx-templates -maxdepth 1 -type f -name '*.docx' | wc -l | tr -d ' ')"
           manifest_count="$(grep -c '\.docx |' artifacts/dossier-docx-templates/MANIFEST.txt)"
-          manifest_unique_ids="$(awk -F ' \\| ' '/\.docx \\|/ {print $2}' artifacts/dossier-docx-templates/MANIFEST.txt | sort -u | wc -l | tr -d ' ')"
+          manifest_unique_ids="$(grep '\.docx |' artifacts/dossier-docx-templates/MANIFEST.txt | cut -d'|' -f2 | sed 's/^ *//;s/ *$//' | sort -u | wc -l | tr -d ' ')"
           echo "Final package: $final_count DOCX; $manifest_count entries; $manifest_unique_ids unique template ids"
           test "$final_count" -eq 39
           test "$manifest_count" -eq 39
