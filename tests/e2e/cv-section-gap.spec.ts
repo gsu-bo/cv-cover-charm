@@ -91,6 +91,7 @@ test.describe("global CV rubric spacing", () => {
       .locator(
         '[data-cv-section-row]:has([data-cv-rubric="schule"]):has([data-cv-rubric="erfahrung"])',
       )
+      .filter({ visible: true })
       .first();
     await expect(pair).toBeVisible();
 
@@ -121,6 +122,7 @@ test.describe("global CV rubric spacing", () => {
     const exportRoot = page.locator('[data-dossier-document="cv"][data-export-mode="true"]').first();
     const exportMargin = await exportRoot
       .locator('[data-cv-section="schule"]')
+      .filter({ visible: true })
       .first()
       .evaluate((node) => Number.parseFloat(getComputedStyle(node).marginTop));
     expect(Math.abs(exportMargin - margins.school)).toBeLessThanOrEqual(0.5);
