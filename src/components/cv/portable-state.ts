@@ -1,4 +1,10 @@
-import { setCvLayout, setCvLayoutMirror, type CvLayoutId } from "./layout";
+import {
+  normalizeCvSectionGapMm,
+  setCvLayout,
+  setCvLayoutMirror,
+  setCvSectionGapMm,
+  type CvLayoutId,
+} from "./layout";
 import { setCvPlacement } from "./placement";
 import { setCvPhotoStyle } from "./photo";
 import {
@@ -18,6 +24,7 @@ import {
 
 const LAYOUT_KEY = "lebenslauf:layout:v1";
 const MIRROR_KEY = "lebenslauf:layout-mirror:v1";
+const SECTION_GAP_KEY = "lebenslauf:section-gap:v1";
 const PLACEMENT_KEY = "lebenslauf:placement:v1";
 const PHOTO_KEY = "lebenslauf:photo:v2";
 const PHOTO_PLACEMENT_KEY = "lebenslauf:photo-place:v1";
@@ -25,6 +32,7 @@ const PHOTO_PLACEMENT_KEY = "lebenslauf:photo-place:v1";
 const PORTABLE_CV_STORAGE_KEYS = [
   LAYOUT_KEY,
   MIRROR_KEY,
+  SECTION_GAP_KEY,
   PLACEMENT_KEY,
   PHOTO_KEY,
   PHOTO_PLACEMENT_KEY,
@@ -38,6 +46,7 @@ const PORTABLE_CV_STORAGE_KEYS = [
 export type PortableCvState = {
   layout?: CvLayoutId;
   mirrored?: boolean;
+  sectionGapMm?: number;
   placements?: Partial<CvPlacements>;
   photoStyle?: Partial<DossierPhotoStyle>;
   photoPlacement?: Partial<CvPhotoPlacement>;
@@ -69,9 +78,12 @@ export function readPortableCvState(): PortableCvState | undefined {
 
     const layout = validLayout(storage.getItem(LAYOUT_KEY));
     const mirroredRaw = storage.getItem(MIRROR_KEY);
+    const sectionGapRaw = storage.getItem(SECTION_GAP_KEY);
     const placementsRaw = storage.getItem(PLACEMENT_KEY);
     const photoRaw = storage.getItem(PHOTO_KEY);
     const photoPlacementRaw = storage.getItem(PHOTO_PLACEMENT_KEY);
+    const sectionGapMm =
+      sectionGapRaw === null ? null : normalizeCvSectionGapMm(sectionGapRaw);
 
     let placements: CvPlacements | undefined;
     if (placementsRaw) {
@@ -110,6 +122,7 @@ export function readPortableCvState(): PortableCvState | undefined {
     return {
       ...(layout ? { layout } : {}),
       ...(mirroredRaw !== null ? { mirrored: mirroredRaw === "true" } : {}),
+      ...(sectionGapMm !== null ? { sectionGapMm } : {}),
       ...(placements ? { placements } : {}),
       ...(photoStyle ? { photoStyle } : {}),
       ...(photoPlacement ? { photoPlacement } : {}),
@@ -128,6 +141,7 @@ export function applyPortableCvState(state?: PortableCvState | null) {
 
   if (state.layout) setCvLayout(state.layout);
   if (typeof state.mirrored === "boolean") setCvLayoutMirror(state.mirrored);
+  if (typeof state.sectionGapMm === "number") setCvSectionGapMm(state.sectionGapMm);
 
   if (state.placements && typeof state.placements === "object") {
     for (const key of Object.keys(DEFAULT_CV_PLACEMENTS) as CvPlacementKey[]) {
