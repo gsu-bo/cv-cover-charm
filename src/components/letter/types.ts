@@ -106,7 +106,7 @@ export const DEMO_LETTER: LetterData = {
   empfaengerFirma: "Beispiel AG",
   empfaengerName: "Herr Thomas Weber",
   empfaengerAdresse: "Industriestrasse 8",
-  empfaengerPlzOrt: "4500 Solothurn",
+  empfaengerPlzOrt: "4535 Hubersdorf",
   ort: "Hubersdorf",
   datum: "15.11.2026",
   betreff: "Bewerbung um eine Lehrstelle als Informatiker/in EFZ",
