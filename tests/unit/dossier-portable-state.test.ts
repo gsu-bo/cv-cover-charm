@@ -37,6 +37,7 @@ describe("portable CV dossier state", () => {
     const storage = installStorage({
       "lebenslauf:layout:v1": "timeline",
       "lebenslauf:layout-mirror:v1": "true",
+      "lebenslauf:section-gap:v1": "6.5",
       "lebenslauf:placement:v1": JSON.stringify({
         kontakt: "main",
         schule: "side",
@@ -69,6 +70,7 @@ describe("portable CV dossier state", () => {
     expect(project.cv?.portableState).toEqual({
       layout: "timeline",
       mirrored: true,
+      sectionGapMm: 6.5,
       placements: {
         kontakt: "main",
         schule: "side",
@@ -97,6 +99,7 @@ describe("portable CV dossier state", () => {
     for (const key of [
       "lebenslauf:layout:v1",
       "lebenslauf:layout-mirror:v1",
+      "lebenslauf:section-gap:v1",
       "lebenslauf:placement:v1",
       "lebenslauf:photo:v2",
       "lebenslauf:photo-place:v1",
@@ -107,6 +110,7 @@ describe("portable CV dossier state", () => {
     expect(storeDossierProject(project)).toEqual({ cover: false, letter: false, cv: true });
     expect(storage.get("lebenslauf:layout:v1")).toBe("timeline");
     expect(storage.get("lebenslauf:layout-mirror:v1")).toBe("true");
+    expect(storage.get("lebenslauf:section-gap:v1")).toBe("6.5");
     expect(JSON.parse(storage.get("lebenslauf:placement:v1") ?? "null")?.schule).toBe("side");
     expect(JSON.parse(storage.get("lebenslauf:photo:v2") ?? "null")?.zoom).toBe(1.7);
     expect(JSON.parse(storage.get("lebenslauf:photo-place:v1") ?? "null")?.frameColor).toBe(
@@ -122,6 +126,7 @@ describe("portable CV dossier state", () => {
     const storage = installStorage({
       "lebenslauf:layout:v1": "minimal",
       "lebenslauf:layout-mirror:v1": "false",
+      "lebenslauf:section-gap:v1": "5",
     });
 
     storeDossierProject({
@@ -133,5 +138,6 @@ describe("portable CV dossier state", () => {
 
     expect(storage.get("lebenslauf:layout:v1")).toBe("minimal");
     expect(storage.get("lebenslauf:layout-mirror:v1")).toBe("false");
+    expect(storage.get("lebenslauf:section-gap:v1")).toBe("5");
   });
 });
