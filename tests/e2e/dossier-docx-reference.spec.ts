@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 
 const BASE_URL = "http://127.0.0.1:4173";
+const ARTIFACT_DIR = "artifacts/dossier-docx-reference";
 
 test.describe("Brief DOCX reference download", () => {
   test("complete Brief dossier downloads a real DOCX package", async ({ page }) => {
@@ -118,6 +119,9 @@ test.describe("Brief DOCX reference download", () => {
     const bytes = await readFile(path!);
     expect(bytes.length).toBeGreaterThan(2_000);
     expect([...bytes.subarray(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04]);
+
+    await mkdir(ARTIFACT_DIR, { recursive: true });
+    await download.saveAs(`${ARTIFACT_DIR}/brief-reference.docx`);
   });
 
   test("DOCX stays disabled for another template family", async ({ page }) => {
