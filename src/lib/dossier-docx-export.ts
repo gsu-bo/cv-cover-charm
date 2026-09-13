@@ -15,6 +15,11 @@ import {
   createPolishedStudio3DossierDocxBlob,
   studio3DossierDocxSupported,
 } from "@/lib/dossier-docx-studio3-polish";
+import {
+  createGenericFamilyDossierDocxBlob,
+  genericFamilyDossierDocxSupported,
+} from "@/lib/dossier-docx-family-renderer";
+import { dossierDocxTemplatePlan } from "@/lib/dossier-docx-family";
 import { downloadBlob } from "@/lib/download";
 
 export type DossierDocxDocuments = {
@@ -26,11 +31,15 @@ export type DossierDocxDocuments = {
 export type DossierDocxProfile = {
   templateId: string;
   label: string;
-  architecture: "native" | "native+polish" | "native+transform+polish";
+  architecture:
+    | "native"
+    | "native+polish"
+    | "native+transform+polish"
+    | "family-fallback";
   visualModel: {
-    cover: "plain" | "organic-hero" | "editorial-split";
-    letter: "edge-bars" | "organic-masthead" | "two-tone-masthead";
-    cv: "edge-bars" | "banded" | "two-tone-masthead";
+    cover: string;
+    letter: string;
+    cv: string;
   };
   supports: (
     cover: CoverPdfDocument | null,
@@ -83,12 +92,40 @@ export const DOSSIER_DOCX_SUPPORTED_LABELS = DOSSIER_DOCX_PROFILES.map(
   (profile) => profile.label,
 );
 
+function resolveFamilyFallbackProfile(
+  cover: CoverPdfDocument | null,
+  letter: LetterPdfDocument | null,
+  cv: CvPdfDocument | null,
+): DossierDocxProfile | null {
+  if (!genericFamilyDossierDocxSupported(cover, letter, cv) || !cover) return null;
+  const templateId = String(cover.template);
+  const plan = dossierDocxTemplatePlan(templateId);
+  if (!plan) return null;
+
+  return {
+    templateId,
+    label: plan.label,
+    architecture: "family-fallback",
+    visualModel: {
+      cover: plan.family,
+      letter: plan.family,
+      cv: plan.family,
+    },
+    supports: genericFamilyDossierDocxSupported,
+    createBlob: ({ cover: nextCover, letter: nextLetter, cv: nextCv }) =>
+      createGenericFamilyDossierDocxBlob(nextCover, nextLetter, nextCv),
+  };
+}
+
 export function resolveDossierDocxProfile(
   cover: CoverPdfDocument | null,
   letter: LetterPdfDocument | null,
   cv: CvPdfDocument | null,
 ) {
-  return DOSSIER_DOCX_PROFILES.find((profile) => profile.supports(cover, letter, cv)) ?? null;
+  return (
+    DOSSIER_DOCX_PROFILES.find((profile) => profile.supports(cover, letter, cv)) ??
+    resolveFamilyFallbackProfile(cover, letter, cv)
+  );
 }
 
 export function dossierDocxSupported(
@@ -106,9 +143,7 @@ export async function createDossierDocxBlob(
 ) {
   const profile = resolveDossierDocxProfile(cover, letter, cv);
   if (!profile) {
-    throw new Error(
-      `DOCX ist derzeit für ${DOSSIER_DOCX_SUPPORTED_LABELS.join(", ")} verfügbar.`,
-    );
+    throw new Error("DOCX benötigt dieselbe aktive Vorlage in allen drei Dossierteilen.");
   }
   return profile.createBlob({ cover, letter, cv });
 }
