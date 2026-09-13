@@ -157,6 +157,27 @@ function replaceDrawing(source: string, id: string, replacement: string) {
   return source.replace(pattern, replacement);
 }
 
+function replaceParagraphAfter(source: string, text: string, afterMm: number) {
+  const textIndex = source.indexOf(`>${text}</w:t>`);
+  if (textIndex < 0) return source;
+  const paragraphStart = source.lastIndexOf("<w:p>", textIndex);
+  const paragraphEnd = source.indexOf("</w:p>", textIndex);
+  if (paragraphStart < 0 || paragraphEnd < 0) return source;
+  const paragraph = source.slice(paragraphStart, paragraphEnd + 6);
+  const next = paragraph.replace(/(<w:spacing\b[^>]*\bw:after=")\d+("[^>]*\/>)/, `$1${twips(afterMm)}$2`);
+  return source.slice(0, paragraphStart) + next + source.slice(paragraphEnd + 6);
+}
+
+function replaceSpacerAfter(source: string, anchor: string, fromMm: number, toMm: number) {
+  const anchorIndex = source.indexOf(anchor);
+  if (anchorIndex < 0) return source;
+  const oldSpacing = `<w:spacing w:before="0" w:after="0" w:line="${twips(fromMm)}" w:lineRule="exact"/>`;
+  const index = source.indexOf(oldSpacing, anchorIndex);
+  if (index < 0) return source;
+  const newSpacing = `<w:spacing w:before="0" w:after="0" w:line="${twips(toMm)}" w:lineRule="exact"/>`;
+  return source.slice(0, index) + newSpacing + source.slice(index + oldSpacing.length);
+}
+
 function polishDocumentXml(
   source: string,
   cover: CoverPdfDocument,
@@ -175,9 +196,17 @@ function polishDocumentXml(
   // Keep the same Studio-3 two-tone hierarchy with robust, editable VML rectangles.
   xml = replaceDrawing(xml, "studio3-cover-primary", rectRun("studio3-cover-primary", 0, 0, 210, 112, coverPrimary));
   xml = replaceDrawing(xml, "studio3-cover-mint", rectRun("studio3-cover-mint", 126, 0, 84, 90, coverSecondary));
-  xml = replaceDrawing(xml, "studio3-letter-primary", rectRun("studio3-letter-primary", 0, 0, 210, 27, letterPrimary));
-  xml = replaceDrawing(xml, "studio3-letter-mint", rectRun("studio3-letter-mint", 146, 0, 64, 27, letterSecondary));
+  xml = replaceDrawing(xml, "studio3-letter-primary", rectRun("studio3-letter-primary", 0, 0, 210, 34, letterPrimary));
+  xml = replaceDrawing(xml, "studio3-letter-mint", rectRun("studio3-letter-mint", 146, 0, 64, 34, letterSecondary));
   xml = replaceDrawing(xml, "studio3-cv-primary", rectRun("studio3-cv-primary", 0, 0, 210, 58, cvPrimary));
+
+  if (!cover.data.foto) {
+    const coverInitials = `${cover.data.vorname.trim().charAt(0)}${cover.data.nachname.trim().charAt(0)}`.toUpperCase();
+    xml = replaceParagraphAfter(xml, coverInitials, 45);
+  }
+  if (cover.data.lehrbeginn?.trim()) {
+    xml = replaceSpacerAfter(xml, "Lehrbeginn ·", 48, 63);
+  }
 
   return xml;
 }
