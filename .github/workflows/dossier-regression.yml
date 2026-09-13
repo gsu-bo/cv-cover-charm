@@ -17,7 +17,7 @@ permissions:
   statuses: write
 
 concurrency:
-  group: dossier-regression-${{ github.sha }}
+  group: dossier-regression-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
