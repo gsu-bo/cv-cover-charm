@@ -9,7 +9,16 @@ import {
   type DossierPhotoStyle,
 } from "@/lib/dossier-photo";
 import { PhotoStyleControls } from "@/components/photo/PhotoStyleControls";
-import { getCvLayout, subscribeCvLayout } from "./layout";
+import {
+  CV_SECTION_GAP_CUSTOM_DEFAULT_MM,
+  CV_SECTION_GAP_MAX_MM,
+  CV_SECTION_GAP_MIN_MM,
+  getCvLayout,
+  getCvSectionGapMm,
+  setCvSectionGapMm,
+  subscribeCvLayout,
+  subscribeCvSectionGap,
+} from "./layout";
 import { getCvPlacements, setCvPlacement, subscribeCvPlacements } from "./placement";
 import { getCvPhotoStyle, setCvPhotoStyle, subscribeCvPhotoStyle } from "./photo";
 import {
@@ -896,6 +905,13 @@ export function SectionLayoutControls({
   layout: CvSectionLayout;
   onLayout: (patch: Partial<CvSectionLayout>) => void;
 }) {
+  const sectionGapMm = useSyncExternalStore(
+    subscribeCvSectionGap,
+    getCvSectionGapMm,
+    () => null,
+  );
+  const customSectionGap = sectionGapMm !== null;
+
   return (
     <details className="group rounded-md border bg-muted/20">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-2 text-xs font-semibold hover:bg-accent/60">
@@ -968,6 +984,48 @@ export function SectionLayoutControls({
           </button>
         ) : null}
       </div>
+      {section === "person" && (
+        <div className="flex flex-col gap-2 border-t p-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold">Vertikaler Rubrik-Abstand</div>
+              <div className="text-[11px] text-muted-foreground">Global für den ganzen CV</div>
+            </div>
+            <label className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={customSectionGap}
+                onChange={(event) =>
+                  setCvSectionGapMm(
+                    event.target.checked ? CV_SECTION_GAP_CUSTOM_DEFAULT_MM : null,
+                  )
+                }
+              />
+              selber
+            </label>
+          </div>
+          {customSectionGap && (
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] text-muted-foreground">
+                Abstand {sectionGapMm?.toFixed(1).replace(".0", "")} mm
+              </span>
+              <input
+                type="range"
+                min={CV_SECTION_GAP_MIN_MM}
+                max={CV_SECTION_GAP_MAX_MM}
+                step={0.5}
+                value={sectionGapMm ?? CV_SECTION_GAP_CUSTOM_DEFAULT_MM}
+                onChange={(event) => setCvSectionGapMm(Number(event.target.value))}
+                className="w-full accent-primary"
+                aria-label="Vertikaler Rubrik-Abstand"
+              />
+            </label>
+          )}
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Nur vertikal: zwei Rubriken mit halber Breite bleiben weiterhin nebeneinander.
+          </p>
+        </div>
+      )}
     </details>
   );
 }
