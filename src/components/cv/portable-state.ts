@@ -132,6 +132,17 @@ export function readPortableCvState(): PortableCvState | undefined {
   }
 }
 
+/** Entfernt nur die portablen CV-Sidecars; andere Browserdaten bleiben erhalten. */
+export function clearPortableCvState() {
+  if (typeof window === "undefined") return;
+  try {
+    const storage = window.localStorage;
+    for (const key of PORTABLE_CV_STORAGE_KEYS) storage.removeItem(key);
+  } catch {
+    // Blockierter Browser-Speicher darf den restlichen Import nicht abbrechen.
+  }
+}
+
 /**
  * Missing values are intentionally ignored. Older dossier/CV files therefore
  * never wipe newer browser-local choices merely because they predate M7.
