@@ -303,11 +303,33 @@ function patchCoverContact(
     cover.data.plzOrt,
     cover.data.telefon,
     cover.data.email,
+  ].filter(Boolean) as string[];
+  let xml = source;
+  for (const text of texts) xml = setParagraphColor(xml, text, colors.paper);
+  return xml;
+}
+
+function patchLightCoverContent(
+  source: string,
+  recipe: RuntimeRecipe,
+  cover: CoverPdfDocument,
+) {
+  if (recipe.cover.contentSurface !== "light") return source;
+  const fullName = [cover.data.vorname, cover.data.nachname].filter(Boolean).join(" ");
+  const texts = [
+    fullName,
+    cover.data.beruf,
+    cover.data.lehrbeginn?.trim() ? `Lehrbeginn · ${cover.data.lehrbeginn}` : "",
+    "KONTAKT",
+    cover.data.adresse,
+    cover.data.plzOrt,
+    cover.data.telefon,
+    cover.data.email,
     "BEILAGEN",
     ...(cover.data.beilagen ?? []),
   ].filter(Boolean) as string[];
   let xml = source;
-  for (const text of texts) xml = setParagraphColor(xml, text, colors.paper);
+  for (const text of texts) xml = setParagraphColor(xml, text, "#1c2328");
   return xml;
 }
 
@@ -391,6 +413,7 @@ function patchRecipeDocumentXml(
   xml = patchPhotoFrame(xml, recipe, coverColors, cover);
   xml = patchCoverHero(xml, recipe, cover);
   xml = patchCoverContact(xml, recipe, cover, coverColors);
+  xml = patchLightCoverContent(xml, recipe, cover);
   xml = patchContentSurfaces(xml, recipe, coverColors);
   xml = patchSectionMargins(xml, 0, recipe.cover.margins);
   xml = patchSectionMargins(xml, 1, recipe.letter.margins);
