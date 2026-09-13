@@ -99,6 +99,7 @@ jobs:
               tests/e2e/element-ratio-lock.spec.ts
               tests/e2e/cv-edge-smoke.spec.ts
               tests/e2e/cv-card-refresh.spec.ts
+              tests/e2e/cv-section-gap.spec.ts
               tests/e2e/cv-pdf-text.spec.ts
           - group: cv-m9-pagination
             files: >-
