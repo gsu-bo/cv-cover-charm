@@ -120,6 +120,7 @@ jobs:
             files: >-
               tests/e2e/fresh-dossier-templates.spec.ts
               tests/e2e/fresh-modern-sidebar-geometry.spec.ts
+              tests/e2e/dossier-docx-fresh-gallery.spec.ts
 
     name: Browser smoke - ${{ matrix.group }}
 
@@ -171,6 +172,15 @@ jobs:
         with:
           name: dossier-docx-reference
           path: artifacts/dossier-docx-reference
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload Fresh DOCX gallery
+        if: matrix.group == 'fresh-dossier-templates' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dossier-docx-fresh-gallery
+          path: artifacts/dossier-docx-fresh-gallery
           if-no-files-found: warn
           retention-days: 14
 
