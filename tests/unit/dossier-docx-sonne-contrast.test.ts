@@ -36,6 +36,7 @@ async function sonneXml() {
       plzOrt: "4535 Hubersdorf",
       telefon: "+41 79 123 45 67",
       email: "lea@example.ch",
+      geburtsdatum: "14.03.2010",
       ort: "Hubersdorf",
       datum: "15.11.2026",
       showBeilagenOnCover: true,
@@ -120,10 +121,13 @@ describe("Sonne DOCX contrast", () => {
     expect(xml).toMatch(/id="warm-cv-paper"[^>]*fillcolor="#FFFFFF"/);
   });
 
-  test("keeps cover contact white and matches the PDF CV accent circle", async () => {
+  test("keeps all cover contact details white and matches the PDF CV accent circle", async () => {
     const xml = await sonneXml();
     const coverSection = xml.slice(0, xml.indexOf("<w:sectPr>"));
     expect(paragraphContaining(coverSection, "lea@example.ch")).toContain(
+      'w:color w:val="FFFFFF"',
+    );
+    expect(paragraphContaining(coverSection, "14.03.2010")).toContain(
       'w:color w:val="FFFFFF"',
     );
     expect(xml).toMatch(/id="sonne-cv-light"[^>]*fillcolor="#fbbf24"/);
