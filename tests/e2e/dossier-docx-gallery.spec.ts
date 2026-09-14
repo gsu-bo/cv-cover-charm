@@ -2,53 +2,55 @@ import { expect, test, type Page } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { FRESH_TEMPLATE_REGISTRY } from "../../src/components/cover/fresh-template-registry";
-import { TEMPLATES } from "../../src/components/cover/types";
+import { TEMPLATES, type TemplateId } from "../../src/components/cover/types";
+import { DEFAULT_DOSSIER_CHROME_STATE } from "../../src/lib/dossier-chrome";
 import { DOSSIER_DOCX_TEMPLATE_PLANS } from "../../src/lib/dossier-docx-family";
 import { readStoredDocxEntries } from "../../src/lib/dossier-docx-package";
+import {
+  defaultHeaderGapMmForTemplate,
+  defaultHeaderModeForTemplate,
+} from "../../src/lib/template-chrome";
 
 const BASE_URL = "http://127.0.0.1:4173";
 const GALLERY_DIR = process.env.DOCX_GALLERY_DIR ?? "artifacts/dossier-docx-gallery";
 const GALLERY_BATCH_SIZE = 4;
 const GALLERY_BATCH_COUNT = 10;
+const CHROME_STORAGE_KEY = "bewerbungsdossier:chrome:v1";
+const SAMPLE_LOCATION = "Hubersdorf";
+const SAMPLE_POSTAL_LOCATION = "4535 Hubersdorf";
+const SAMPLE_DATE = "15.11.2026";
 const RETIRED_TEMPLATE_IDS = new Set(["edelBlockig", "sonnig", "warm4", "warm5"]);
 
-function paletteFromSlots(slots: readonly { key: string; default: string }[]) {
-  return Object.fromEntries(slots.map(({ key, default: value }) => [key, value]));
-}
-
+// Keep the DOCX gallery in the exact same product order as the PDF gallery.
+// This is the canonical 39-template review order: Legacy, Fresh, then Edel Dark.
 const PRODUCT_TEMPLATES = [
   ...TEMPLATES.filter((template) => !RETIRED_TEMPLATE_IDS.has(template.id as string)).map(
-    (template) => ({
-      id: template.id as string,
-      name: template.name,
-      colors: paletteFromSlots(template.slots),
-    }),
+    (template) => ({ id: template.id, name: template.name }),
   ),
   ...FRESH_TEMPLATE_REGISTRY.filter(
     (template) => !RETIRED_TEMPLATE_IDS.has(template.id as string),
-  ).map((template) => ({
-    id: template.id,
-    name: template.name,
-    colors: paletteFromSlots(template.slots),
-  })),
-  {
-    id: "edelDark",
-    name: "Edel Dark",
-    colors: {
-      bg: "#12131a",
-      ink: "#f2eee6",
-      primary: "#12131a",
-      secondary: "#2a2d38",
-      accent: "#c9a24a",
-    },
-  },
+  ).map((template) => ({ id: template.id, name: template.name })),
+  { id: "edelDark", name: "Edel Dark" },
 ];
 
-const PRODUCT_TEMPLATE_BY_ID = new Map(PRODUCT_TEMPLATES.map((template) => [template.id, template]));
-const CASES = Object.entries(DOSSIER_DOCX_TEMPLATE_PLANS).map(([id, plan]) => {
-  const productTemplate = PRODUCT_TEMPLATE_BY_ID.get(id);
-  if (!productTemplate) throw new Error(`DOCX plan ${id} is not an active product template.`);
-  return { id, label: plan.label, colors: productTemplate.colors };
+const CASES: Array<{
+  id: string;
+  label: string;
+  buttonLabel: string;
+  letterTemplate: "brief" | TemplateId;
+  coverTemplate: TemplateId;
+  cvTemplate: TemplateId;
+}> = PRODUCT_TEMPLATES.map((template) => {
+  const plan = DOSSIER_DOCX_TEMPLATE_PLANS[template.id as keyof typeof DOSSIER_DOCX_TEMPLATE_PLANS];
+  if (!plan) throw new Error(`Active product template ${template.id} has no DOCX plan.`);
+  return {
+    id: template.id as string,
+    label: template.name,
+    buttonLabel: plan.label,
+    letterTemplate: template.id as "brief" | TemplateId,
+    coverTemplate: template.id as TemplateId,
+    cvTemplate: template.id as TemplateId,
+  };
 });
 
 function galleryBatchIndex(): number | null {
@@ -71,101 +73,77 @@ function safeName(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-async function seedCompleteDossier(page: Page) {
-  await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
-  await page.evaluate(() => {
-    localStorage.clear();
-    localStorage.setItem(
-      "titelblatt:v3",
-      JSON.stringify({
-        version: 3,
-        template: "modern",
-        data: {
-          vorname: "Lea",
-          nachname: "Müller",
-          beruf: "Informatikerin EFZ",
-          lehrbeginn: "August 2027",
-          adresse: "Dorfstrasse 12",
-          plzOrt: "4535 Hubersdorf",
-          telefon: "+41 79 123 45 67",
-          email: "lea@example.ch",
-          lehrbetrieb: "Beispiel AG",
-          ansprechperson: "Herr Thomas Weber",
-          betriebAdresse: "Industriestrasse 8",
-          ort: "Hubersdorf",
-          datum: "15.11.2026",
-          showBeilagenOnCover: true,
-          beilagen: ["Motivationsschreiben", "Lebenslauf", "Zeugnis"],
-        },
-        colors: {},
-      }),
-    );
-    localStorage.setItem(
-      "anschreiben:v1",
-      JSON.stringify({
-        version: 1,
-        data: {
-          absenderName: "Lea Müller",
-          absenderAdresse: "Dorfstrasse 12",
-          absenderPlzOrt: "4535 Hubersdorf",
-          absenderTelefon: "+41 79 123 45 67",
-          absenderEmail: "lea@example.ch",
-          empfaengerFirma: "Beispiel AG",
-          empfaengerName: "Herr Thomas Weber",
-          empfaengerAdresse: "Industriestrasse 8",
-          empfaengerPlzOrt: "4535 Hubersdorf",
-          ort: "Hubersdorf",
-          datum: "15.11.2026",
-          betreff: "Bewerbung um eine Lehrstelle als Informatikerin EFZ",
-          anrede: "Guten Tag Herr Weber",
-          text: "Die Informatik begeistert mich.\n\nIch freue mich auf Ihre Rückmeldung.",
-          gruss: "Freundliche Grüsse",
-          unterschrift: "Lea Müller",
-          showBeilagen: true,
-          beilagen: ["Lebenslauf", "Zeugnis"],
-        },
-        design: { template: "modern", font: "freundlich", colors: {} },
-      }),
-    );
-    localStorage.setItem(
-      "lebenslauf:v1",
-      JSON.stringify({
-        version: 6,
-        data: {
-          titel: "Lebenslauf",
-          person: {
-            vorname: "Lea",
-            nachname: "Müller",
-            adresse: "Dorfstrasse 12",
-            plzOrt: "4535 Hubersdorf",
-            telefon: "+41 79 123 45 67",
-            email: "lea@example.ch",
-            geburtsdatum: "14.03.2010",
-            nationalitaet: "Schweiz",
-            untertitel: "Schülerin, 3. Sek B",
-            foto: null,
-          },
-          schule: [
-            {
-              id: "schule-1",
-              zeit: "2023 – heute",
-              titel: "Sekundarschule",
-              ort: "Hubersdorf",
-              beschreibung: "Sek B",
-            },
-          ],
-          erfahrung: [],
-          sprachen: [{ id: "sprache-1", name: "Deutsch", niveau: "Muttersprache" }],
-          hobbys: ["Programmieren"],
-          staerken: ["Zuverlässig"],
-          referenzen: [],
-          labels: {},
-          hidden: {},
-        },
-        design: { template: "modern", colors: {}, bgOpacity: 0.25, useElements: false },
-      }),
-    );
-  });
+async function waitEditorReady(page: Page) {
+  const toggle = page.getByRole("button", { name: "Download", exact: true });
+  await expect(toggle).toHaveAttribute("data-editor-ready", "true", { timeout: 15_000 });
+  return toggle;
+}
+
+async function loadDemoThroughUi(page: Page, route: string) {
+  await page.goto(`${BASE_URL}${route}`, { waitUntil: "domcontentloaded" });
+  const toggle = await waitEditorReady(page);
+  await toggle.click();
+  const demo = page.getByRole("button", { name: "Beispieldaten übernehmen", exact: true });
+  await expect(demo).toBeVisible();
+  await demo.click();
+  await page.getByRole("button", { name: "Ja", exact: true }).click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await page.waitForTimeout(550);
+}
+
+async function seedCanonicalDossier(page: Page) {
+  await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => localStorage.clear());
+
+  // Use the very same real UI demo path as the PDF gallery. This prevents the
+  // DOCX and PDF review packages from silently drifting to different fixtures.
+  await loadDemoThroughUi(page, "/titelblatt");
+  await loadDemoThroughUi(page, "/anschreiben");
+  await loadDemoThroughUi(page, "/lebenslauf");
+
+  return page.evaluate(
+    ({ chromeStorageKey, sampleLocation, samplePostalLocation, sampleDate }) => {
+      const cover = JSON.parse(localStorage.getItem("titelblatt:v3") ?? "null");
+      const letter = JSON.parse(localStorage.getItem("anschreiben:v1") ?? "null");
+      const cv = JSON.parse(localStorage.getItem("lebenslauf:v1") ?? "null");
+      const chrome = JSON.parse(localStorage.getItem(chromeStorageKey) ?? "null");
+
+      if (cover?.data) {
+        cover.data.ort = sampleLocation;
+        cover.data.datum = sampleDate;
+        cover.data.plzOrt = samplePostalLocation;
+        cover.data.betriebAdresse = `Industriestrasse 8, ${samplePostalLocation}`;
+        localStorage.setItem("titelblatt:v3", JSON.stringify(cover));
+      }
+      if (letter?.data) {
+        letter.data.absenderPlzOrt = samplePostalLocation;
+        letter.data.empfaengerPlzOrt = samplePostalLocation;
+        letter.data.ort = sampleLocation;
+        letter.data.datum = sampleDate;
+        localStorage.setItem("anschreiben:v1", JSON.stringify(letter));
+      }
+      if (cv?.data) {
+        cv.data.person.plzOrt = samplePostalLocation;
+        for (const entry of cv.data.schule ?? []) {
+          if (entry.id === "demo-s1") entry.ort = "Schulhaus Zentrum, Hubersdorf";
+          if (entry.id === "demo-s2") entry.ort = "Primarschule Hubersdorf";
+        }
+        for (const entry of cv.data.erfahrung ?? []) {
+          if (entry.id === "demo-p1") entry.ort = "Beispiel AG, Hubersdorf";
+          if (entry.id === "demo-p2") entry.ort = "Muster GmbH, Hubersdorf";
+        }
+        localStorage.setItem("lebenslauf:v1", JSON.stringify(cv));
+      }
+
+      return { cover, letter, cv, chrome };
+    },
+    {
+      chromeStorageKey: CHROME_STORAGE_KEY,
+      sampleLocation: SAMPLE_LOCATION,
+      samplePostalLocation: SAMPLE_POSTAL_LOCATION,
+      sampleDate: SAMPLE_DATE,
+    },
+  );
 }
 
 async function assertCompleteDocx(path: string) {
@@ -187,18 +165,34 @@ async function assertCompleteDocx(path: string) {
 
 test("real browser DOCX gallery exports all 39 active dossier templates", async ({ page }) => {
   test.setTimeout(10 * 60_000);
-  await seedCompleteDossier(page);
+  const stored = await seedCanonicalDossier(page);
   await mkdir(GALLERY_DIR, { recursive: true });
 
-  const productIds = PRODUCT_TEMPLATES.map(({ id }) => id);
+  const productIds = PRODUCT_TEMPLATES.map(({ id }) => id as string);
   const planIds = Object.keys(DOSSIER_DOCX_TEMPLATE_PLANS);
   expect(PRODUCT_TEMPLATES).toHaveLength(39);
   expect(new Set(productIds).size).toBe(39);
   expect(CASES).toHaveLength(39);
+  expect(CASES.at(-1)?.label).toBe("Edel Dark");
   expect(new Set(planIds).size).toBe(39);
   expect([...productIds].sort()).toEqual([...planIds].sort());
   for (const retiredId of RETIRED_TEMPLATE_IDS) expect(productIds).not.toContain(retiredId);
 
+  // These are the same canonical fixture invariants asserted by the PDF gallery.
+  expect(stored.cover?.data?.vorname).toBe("Lea");
+  expect(stored.letter?.data?.unterschrift).toBe("Lea Müller");
+  expect(stored.cv?.data?.person?.vorname).toBe("Lea");
+  expect(stored.cover?.data?.datum).toBe(SAMPLE_DATE);
+  expect(stored.letter?.data?.datum).toBe(SAMPLE_DATE);
+  expect(stored.cover?.data?.ort).toBe(SAMPLE_LOCATION);
+  expect(stored.letter?.data?.ort).toBe(SAMPLE_LOCATION);
+  expect(stored.cover?.data?.plzOrt).toBe(SAMPLE_POSTAL_LOCATION);
+  expect(stored.letter?.data?.absenderPlzOrt).toBe(SAMPLE_POSTAL_LOCATION);
+  expect(stored.letter?.data?.empfaengerPlzOrt).toBe(SAMPLE_POSTAL_LOCATION);
+  expect(stored.cv?.data?.person?.plzOrt).toBe(SAMPLE_POSTAL_LOCATION);
+  expect(JSON.stringify(stored)).not.toMatch(/Solothurn|Zuchwil/);
+
+  const galleryBaseChrome = stored.chrome ?? DEFAULT_DOSSIER_CHROME_STATE;
   const batchIndex = galleryBatchIndex();
   const batchStart = batchIndex === null ? 0 : batchIndex * GALLERY_BATCH_SIZE;
   const batchEnd =
@@ -215,23 +209,69 @@ test("real browser DOCX gallery exports all 39 active dossier templates", async 
 
   const manifestEntries: string[] = [];
   for (const { item, globalIndex } of selectedCases) {
-    await page.evaluate(({ id, colors }) => {
-      const cover = JSON.parse(localStorage.getItem("titelblatt:v3") ?? "null");
-      const letter = JSON.parse(localStorage.getItem("anschreiben:v1") ?? "null");
-      const cv = JSON.parse(localStorage.getItem("lebenslauf:v1") ?? "null");
-      cover.template = id;
-      cover.colors = colors;
-      letter.design.template = id;
-      letter.design.colors = colors;
-      cv.design.template = id;
-      cv.design.colors = colors;
-      localStorage.setItem("titelblatt:v3", JSON.stringify(cover));
-      localStorage.setItem("anschreiben:v1", JSON.stringify(letter));
-      localStorage.setItem("lebenslauf:v1", JSON.stringify(cv));
-    }, item);
+    const headerMode = defaultHeaderModeForTemplate(item.coverTemplate);
+    const headerGapMm = defaultHeaderGapMmForTemplate(item.coverTemplate);
+    await page.evaluate(
+      ({
+        base,
+        baseChrome,
+        letterTemplate,
+        coverTemplate,
+        cvTemplate,
+        headerMode,
+        headerGapMm,
+        chromeStorageKey,
+      }) => {
+        const cover = structuredClone(base.cover);
+        const letter = structuredClone(base.letter);
+        const cv = structuredClone(base.cv);
+        const chrome = structuredClone(baseChrome);
+
+        cover.template = coverTemplate;
+        letter.design.template = letterTemplate;
+        letter.design.colors =
+          letterTemplate === "brief"
+            ? {
+                bg: "#ffffff",
+                ink: "#111111",
+                primary: "#111111",
+                secondary: "#111111",
+                accent: "#111111",
+                cvInk: "#111111",
+                cvMuted: "#4b5563",
+                cvHeading: "#111111",
+              }
+            : { ...(cover.colors?.[letterTemplate] ?? letter.design.colors) };
+        cv.design.template = cvTemplate;
+        cv.design.colors = { ...(cover.colors?.[cvTemplate] ?? cv.design.colors) };
+
+        chrome.shared.headerMode = headerMode;
+        chrome.shared.headerGapMm = headerGapMm;
+        chrome.cv.headerMode = headerMode;
+        chrome.cv.headerGapMm = headerGapMm;
+        chrome.letter.headerMode = headerMode;
+        chrome.letter.headerGapMm = headerGapMm;
+        letter.design.headerMode = headerMode;
+
+        localStorage.setItem("titelblatt:v3", JSON.stringify(cover));
+        localStorage.setItem("anschreiben:v1", JSON.stringify(letter));
+        localStorage.setItem("lebenslauf:v1", JSON.stringify(cv));
+        localStorage.setItem(chromeStorageKey, JSON.stringify(chrome));
+      },
+      {
+        base: stored,
+        baseChrome: galleryBaseChrome,
+        letterTemplate: item.letterTemplate,
+        coverTemplate: item.coverTemplate,
+        cvTemplate: item.cvTemplate,
+        headerMode,
+        headerGapMm,
+        chromeStorageKey: CHROME_STORAGE_KEY,
+      },
+    );
     await page.reload({ waitUntil: "domcontentloaded" });
 
-    const button = page.getByRole("button", { name: `Dossier als DOCX · ${item.label}` });
+    const button = page.getByRole("button", { name: `Dossier als DOCX · ${item.buttonLabel}` });
     await expect(button).toBeEnabled({ timeout: 30_000 });
     const downloadPromise = page.waitForEvent("download", { timeout: 90_000 });
     await button.click();
