@@ -102,22 +102,6 @@ function transformSection(source: string, index: number, transform: (segment: st
   return source.slice(0, start) + transform(source.slice(start, end)) + source.slice(end);
 }
 
-function patchFirstParagraphContaining(
-  source: string,
-  text: string,
-  mutate: (paragraph: string) => string,
-) {
-  if (!text) return source;
-  const needle = new RegExp(`<w:t[^>]*>${regexEscape(xmlEscape(text))}<\\/w:t>`);
-  const match = needle.exec(source);
-  if (!match || match.index === undefined) return source;
-  const start = source.lastIndexOf("<w:p>", match.index);
-  const end = source.indexOf("</w:p>", match.index);
-  if (start < 0 || end < 0) return source;
-  const paragraph = source.slice(start, end + 6);
-  return source.slice(0, start) + mutate(paragraph) + source.slice(end + 6);
-}
-
 function removeFirstParagraphContaining(source: string, text: string) {
   const needle = new RegExp(`<w:t[^>]*>${regexEscape(xmlEscape(text))}<\\/w:t>`);
   let removed = false;
@@ -143,14 +127,27 @@ function wordColor(value: string) {
   return value.replace("#", "").toUpperCase();
 }
 
-function setParagraphLeftBorder(source: string, text: string, color: string) {
-  const border = `<w:pBdr><w:left w:val="single" w:sz="24" w:space="5" w:color="${wordColor(color)}"/></w:pBdr>`;
-  return patchFirstParagraphContaining(source, text, (paragraph) => {
-    if (/<w:pBdr>[\s\S]*?<\/w:pBdr>/.test(paragraph)) {
-      return paragraph.replace(/<w:pBdr>[\s\S]*?<\/w:pBdr>/, border);
-    }
-    return paragraph.replace("</w:pPr>", `${border}</w:pPr>`);
-  });
+function setHeadingCellLeftBorder(source: string, text: string, color: string) {
+  const needle = new RegExp(`<w:t[^>]*>${regexEscape(xmlEscape(text))}<\\/w:t>`);
+  const match = needle.exec(source);
+  if (!match || match.index === undefined) return source;
+  const start = source.lastIndexOf("<w:tc>", match.index);
+  const end = source.indexOf("</w:tc>", match.index);
+  if (start < 0 || end < 0) return source;
+
+  let cell = source.slice(start, end + 7);
+  const leftBorder = `<w:left w:val="single" w:sz="28" w:space="0" w:color="${wordColor(color)}"/>`;
+  if (/<w:tcBorders>[\s\S]*?<\/w:tcBorders>/.test(cell)) {
+    cell = cell.replace(/<w:tcBorders>([\s\S]*?)<\/w:tcBorders>/, (_block, borders: string) => {
+      const next = /<w:left\b[^>]*\/>/.test(borders)
+        ? borders.replace(/<w:left\b[^>]*\/>/, leftBorder)
+        : `${borders}${leftBorder}`;
+      return `<w:tcBorders>${next}</w:tcBorders>`;
+    });
+  } else {
+    cell = cell.replace("</w:tcPr>", `<w:tcBorders>${leftBorder}</w:tcBorders></w:tcPr>`);
+  }
+  return source.slice(0, start) + cell + source.slice(end + 7);
 }
 
 function polishCvSectionDecorations(
@@ -174,7 +171,7 @@ function polishCvSectionDecorations(
     ...(cv.data.customSections ?? []).map((section) => section.title),
   ];
   for (const label of labels) {
-    xml = setParagraphLeftBorder(xml, label.trim().toUpperCase(), secondary);
+    xml = setHeadingCellLeftBorder(xml, label.trim().toUpperCase(), secondary);
   }
   return xml;
 }
