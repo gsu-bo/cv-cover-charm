@@ -115,6 +115,9 @@ describe("Studio 2 DOCX PDF parity", () => {
     expect(cover).toMatch(
       /id="studio2-cover-signal"[^>]*margin-left:124mm;[^>]*margin-top:0mm;[^>]*width:86mm;[^>]*height:96mm;/,
     );
+    expect(cover).toContain('<v:roundrect id="studio2-cover-signal" arcsize="38%"');
+    expect(cover).toContain('id="studio2-cover-signal-top-square"');
+    expect(cover).toContain('id="studio2-cover-signal-right-square"');
     expect(cover).toMatch(
       /<v:oval id="docx-recipe-cover-photo-mat"[^>]*margin-left:128mm;[^>]*margin-top:54mm;[^>]*width:49mm;[^>]*height:49mm;/,
     );
@@ -157,6 +160,8 @@ describe("Studio 2 DOCX PDF parity", () => {
       (xml.match(/<w:tcBorders><w:left w:val="single" w:sz="28" w:space="0" w:color="F2C84B"\/><\/w:tcBorders>/g) ?? []).length,
     ).toBeGreaterThanOrEqual(4);
     expect(xml).not.toContain('<w:pBdr><w:left w:val="single" w:sz="24"');
+    expect(xml).toMatch(/<w:color w:val="626974"\/><\/w:rPr><w:t xml:space="preserve">2023 – heute<\/w:t>/);
+    expect(xml).toMatch(/<w:color w:val="626974"\/><\/w:rPr><w:t xml:space="preserve">Muttersprache<\/w:t>/);
     expect((xml.match(/<w:sectPr>/g) ?? []).length).toBe(3);
   });
 });
