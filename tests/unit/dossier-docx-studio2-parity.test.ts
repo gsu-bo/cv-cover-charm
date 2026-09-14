@@ -115,9 +115,10 @@ describe("Studio 2 DOCX PDF parity", () => {
     expect(cover).toMatch(
       /id="studio2-cover-signal"[^>]*margin-left:124mm;[^>]*margin-top:0mm;[^>]*width:86mm;[^>]*height:96mm;/,
     );
-    expect(cover).toContain('<v:roundrect id="studio2-cover-signal" arcsize="38%"');
-    expect(cover).toContain('id="studio2-cover-signal-top-square"');
-    expect(cover).toContain('id="studio2-cover-signal-right-square"');
+    expect(cover).toContain('<v:shape id="studio2-cover-signal" coordorigin="0,0" coordsize="1000,1000"');
+    expect(cover).toContain('path="m 0,0 l 1000,0 1000,1000 190,1000 c 85,1000 0,915 0,810 l 0,0 x e"');
+    expect(cover).not.toContain('studio2-cover-signal-top-square');
+    expect(cover).not.toContain('studio2-cover-signal-right-square');
     expect(cover).toMatch(
       /<v:oval id="docx-recipe-cover-photo-mat"[^>]*margin-left:128mm;[^>]*margin-top:54mm;[^>]*width:49mm;[^>]*height:49mm;/,
     );
