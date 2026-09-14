@@ -110,13 +110,13 @@ describe("Studio 2 DOCX PDF parity", () => {
     const cover = xml.slice(0, xml.indexOf("<w:sectPr>"));
 
     expect(cover).toMatch(
-      /id="studio2-cover-rail"[^>]*margin-left:0mm;[^>]*margin-top:0mm;[^>]*width:124mm;[^>]*height:104mm;/,
+      /id="studio2-cover-rail"[^>]*margin-left:0mm;[^>]*margin-top:0mm;[^>]*width:124mm;[^>]*height:96mm;/,
     );
     expect(cover).toMatch(
-      /id="studio2-cover-signal"[^>]*margin-left:124mm;[^>]*margin-top:0mm;[^>]*width:86mm;[^>]*height:104mm;/,
+      /id="studio2-cover-signal"[^>]*margin-left:124mm;[^>]*margin-top:0mm;[^>]*width:86mm;[^>]*height:96mm;/,
     );
     expect(cover).toMatch(
-      /<v:oval id="docx-recipe-cover-photo-mat"[^>]*margin-left:128mm;[^>]*margin-top:76mm;[^>]*width:49mm;[^>]*height:49mm;/,
+      /<v:oval id="docx-recipe-cover-photo-mat"[^>]*margin-left:128mm;[^>]*margin-top:54mm;[^>]*width:49mm;[^>]*height:49mm;/,
     );
     expect(cover).toContain(">LM</w:t>");
     for (const id of [
@@ -150,8 +150,10 @@ describe("Studio 2 DOCX PDF parity", () => {
     );
     expect(xml).toContain('id="studio2-docx-cv-contact"');
     expect(xml).toMatch(
-      /id="studio2-cv-rail-rule"[^>]*margin-left:62mm;[^>]*margin-top:17mm;[^>]*width:140mm;[^>]*height:266mm;/,
+      /id="studio2-cv-rail-rule"[^>]*margin-left:62mm;[^>]*margin-top:17mm;[^>]*width:140mm;[^>]*height:266mm;[^>]*strokecolor="#e78a2f"/,
     );
+    expect(xml).toContain('w:bottom w:val="single" w:sz="8" w:space="1" w:color="E78A2F"');
+    expect((xml.match(/<w:left w:val="single" w:sz="24" w:space="5" w:color="F2C84B"\/>/g) ?? []).length).toBeGreaterThanOrEqual(4);
     expect((xml.match(/<w:sectPr>/g) ?? []).length).toBe(3);
   });
 });
