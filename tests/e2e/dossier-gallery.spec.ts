@@ -132,17 +132,15 @@ function safeName(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-test("UI sample dossier downloads and all live motivation-letter templates produce review PDFs", async ({
-  page,
-}) => {
+test("all 39 live dossier templates produce review PDFs", async ({ page }) => {
   test.setTimeout(15 * 60_000);
   const batchIndex = galleryBatchIndex();
 
   await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => localStorage.clear());
 
-  // Every batch still follows the real student path once, then renders only its
-  // assigned complete dossiers. Batching changes CI scheduling, not PDF truth.
+  // Every batch follows the real student data path once, then renders only its
+  // assigned complete template dossiers. No synthetic 40th PDF is emitted.
   await loadDemoThroughUi(page, "/titelblatt");
   await loadDemoThroughUi(page, "/anschreiben");
   await loadDemoThroughUi(page, "/lebenslauf");
@@ -236,29 +234,19 @@ test("UI sample dossier downloads and all live motivation-letter templates produ
   }
   expect(new Set(galleryIds).size).toBe(39);
 
-  const totalPdfCount = cases.length + 1; // UI example + 39 live dossier template cases.
-  expect(totalPdfCount).toBe(40);
+  const totalPdfCount = cases.length;
+  expect(totalPdfCount).toBe(39);
   expect(Math.ceil(totalPdfCount / GALLERY_BATCH_SIZE)).toBe(GALLERY_BATCH_COUNT);
 
   const batchStart = batchIndex === null ? 0 : batchIndex * GALLERY_BATCH_SIZE;
   const batchEnd =
     batchIndex === null ? totalPdfCount : Math.min(batchStart + GALLERY_BATCH_SIZE, totalPdfCount);
-  const includeSample = batchIndex === null || batchStart === 0;
-  const caseStart = batchIndex === null ? 0 : Math.max(0, batchStart - 1);
-  const caseEnd = batchIndex === null ? cases.length : Math.max(0, batchEnd - 1);
-  const selectedCases = cases.slice(caseStart, caseEnd).map((item, offset) => ({
+  const selectedCases = cases.slice(batchStart, batchEnd).map((item, offset) => ({
     item,
-    globalIndex: caseStart + offset,
+    globalIndex: batchStart + offset,
   }));
 
   const manifestEntries: string[] = [];
-
-  if (includeSample) {
-    await downloadWholeDossier(page, "00-Beispieldossier-E2E.pdf");
-    manifestEntries.push(
-      "00-Beispieldossier-E2E.pdf | echter UI-E2E: Titelblatt + Motivationsschreiben + Lebenslauf per Beispieldaten übernehmen",
-    );
-  }
 
   for (const { item, globalIndex } of selectedCases) {
     const headerMode = defaultHeaderModeForTemplate(item.coverTemplate);
