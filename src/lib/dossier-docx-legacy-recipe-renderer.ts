@@ -326,6 +326,7 @@ function patchCoverContact(
     cover.data.plzOrt,
     cover.data.telefon,
     cover.data.email,
+    cover.data.geburtsdatum,
   ].filter(Boolean) as string[];
   const attachmentTexts = CONTACT_ONLY_COVER_TEMPLATES.has(recipe.templateId)
     ? []
@@ -354,6 +355,7 @@ function patchLightCoverContent(
     cover.data.plzOrt,
     cover.data.telefon,
     cover.data.email,
+    cover.data.geburtsdatum,
     "BEILAGEN",
     ...(cover.data.beilagen ?? []),
   ].filter(Boolean) as string[];
