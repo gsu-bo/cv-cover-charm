@@ -29,6 +29,7 @@ import "./templatefix-mono-luxe.css";
 import "./warm2-redesign.css";
 import "./templatefix-studio-pdf-scale.css";
 import "./dossier-font-contract.css";
+import "./final-pdf-polish.css";
 
 export { FRESH_TEMPLATE_IDS, type FreshTemplateId } from "./fresh-template-registry";
 
