@@ -16,12 +16,16 @@
   height: 22mm !important;
 }
 
-/* Gallery's place/date block sat exactly on the left clipping edge of its
- * portrait tower, cutting the H from HUBERSDORF in the PDF export. */
+/* Gallery's place/date block already has deliberate template positioning.
+ * Overriding its outer transform cleared the clipping edge but also discarded
+ * the renderer's vertical geometry and moved the text behind the LM portrait.
+ * Keep that outer geometry intact and inset only the text inside the block. */
 html[data-dossier-template="gallery"]
   [data-dossier-document="cover"]
-  [data-block-id="ortDatum"] {
-  transform: translate(24mm, 22mm) !important;
+  [data-block-id="ortDatum"]
+  > div {
+  box-sizing: border-box !important;
+  padding-left: 3mm !important;
 }
 
 /* Ribbon's late cleanup compressed the gold hero to 48 mm. Restore enough
@@ -38,18 +42,19 @@ html[data-dossier-template="ribbon"]
 }
 
 /* The rebuilt 34–38 CVs inherited the browser's default link-blue-looking
- * heading colour through an over-broad `inherit` override. Use the dossier's
- * live ink colour instead, while never overriding an explicit user-selected
- * section-title colour. */
-[data-cv-template="prism"]
-  [data-cv-section-title]:not([data-cv-user-section-color="true"]),
-[data-cv-template="gallery"]
-  [data-cv-section-title]:not([data-cv-user-section-color="true"]),
-[data-cv-template="orbit"]
-  [data-cv-section-title]:not([data-cv-user-section-color="true"]),
-[data-cv-template="ribbon"]
-  [data-cv-section-title]:not([data-cv-user-section-color="true"]),
-[data-cv-template="cove"]
+ * heading colour through an over-broad `inherit !important` rule in the
+ * established template cleanup. Match that selector's dossier context and add
+ * the explicit-user exclusion so this late rule wins the cascade only for the
+ * untouched default heading colour. */
+html:is(
+    [data-dossier-template="prism"],
+    [data-dossier-template="gallery"],
+    [data-dossier-template="orbit"],
+    [data-dossier-template="ribbon"],
+    [data-dossier-template="cove"]
+  )
+  [data-dossier-document="cv"]
   [data-cv-section-title]:not([data-cv-user-section-color="true"]) {
   color: var(--cover-ink, #1f2937) !important;
+  -webkit-text-fill-color: var(--cover-ink, #1f2937) !important;
 }
