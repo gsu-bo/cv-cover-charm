@@ -173,7 +173,7 @@ function polishSonneCover(source: string, cover: CoverPdfDocument) {
   const primary = hex(cover.colors?.primary, "#fbbf24");
   const dark = hex(cover.colors?.bg, "#333333");
   const ink = hex(cover.colors?.ink, "#141414");
-  const light = hex(cover.colors?.light, "#f7f5f0");
+  const coverWhite = "#ffffff";
   const fullName = [cover.data.vorname, cover.data.nachname].filter(Boolean).join(" ");
   const placeDate = [cover.data.ort, cover.data.datum].filter(Boolean).join(", ");
   const contact = [
@@ -243,7 +243,7 @@ function polishSonneCover(source: string, cover: CoverPdfDocument) {
     contact.length
       ? textBoxRun("sonne-docx-cover-contact", 20, 236, 78, 44, [
           { text: "KONTAKT", size: 10, color: primary, bold: true, tracking: 28 },
-          ...contact.map((text) => ({ text, size: 10, color: light })),
+          ...contact.map((text) => ({ text, size: 10, color: coverWhite })),
         ])
       : "",
     attachments.length
@@ -255,7 +255,7 @@ function polishSonneCover(source: string, cover: CoverPdfDocument) {
           38,
           [
             { text: "BEILAGEN", size: 10, color: primary, bold: true, align: "right", tracking: 28 },
-            ...attachments.map((text) => ({ text, size: 10, color: light, align: "right" as const })),
+            ...attachments.map((text) => ({ text, size: 10, color: coverWhite, align: "right" as const })),
           ],
         )
       : "",
