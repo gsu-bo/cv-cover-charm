@@ -102,6 +102,22 @@ function transformSection(source: string, index: number, transform: (segment: st
   return source.slice(0, start) + transform(source.slice(start, end)) + source.slice(end);
 }
 
+function patchFirstParagraphContaining(
+  source: string,
+  text: string,
+  mutate: (paragraph: string) => string,
+) {
+  if (!text) return source;
+  const needle = new RegExp(`<w:t[^>]*>${regexEscape(xmlEscape(text))}<\\/w:t>`);
+  const match = needle.exec(source);
+  if (!match || match.index === undefined) return source;
+  const start = source.lastIndexOf("<w:p>", match.index);
+  const end = source.indexOf("</w:p>", match.index);
+  if (start < 0 || end < 0) return source;
+  const paragraph = source.slice(start, end + 6);
+  return source.slice(0, start) + mutate(paragraph) + source.slice(end + 6);
+}
+
 function removeFirstParagraphContaining(source: string, text: string) {
   const needle = new RegExp(`<w:t[^>]*>${regexEscape(xmlEscape(text))}<\\/w:t>`);
   let removed = false;
@@ -121,6 +137,46 @@ function setSectionMargins(
     /<w:pgMar[^>]*\/>/,
     `<w:pgMar w:top="${twips(margins.top)}" w:right="${twips(margins.right)}" w:bottom="${twips(margins.bottom)}" w:left="${twips(margins.left)}" w:header="454" w:footer="454" w:gutter="0"/>`,
   );
+}
+
+function wordColor(value: string) {
+  return value.replace("#", "").toUpperCase();
+}
+
+function setParagraphLeftBorder(source: string, text: string, color: string) {
+  const border = `<w:pBdr><w:left w:val="single" w:sz="24" w:space="5" w:color="${wordColor(color)}"/></w:pBdr>`;
+  return patchFirstParagraphContaining(source, text, (paragraph) => {
+    if (/<w:pBdr>[\s\S]*?<\/w:pBdr>/.test(paragraph)) {
+      return paragraph.replace(/<w:pBdr>[\s\S]*?<\/w:pBdr>/, border);
+    }
+    return paragraph.replace("</w:pPr>", `${border}</w:pPr>`);
+  });
+}
+
+function polishCvSectionDecorations(
+  source: string,
+  cv: DossierDocxDocuments["cv"],
+  secondary: string,
+  accent: string,
+) {
+  let xml = source.replace(
+    /(<w:pBdr><w:bottom\b[^>]*\bw:color=")[0-9A-Fa-f]{6}("[^>]*\/><\/w:pBdr>)/g,
+    `$1${wordColor(accent)}$2`,
+  );
+
+  const labels = [
+    cv.data.labels?.schule || "Schulbildung",
+    cv.data.labels?.erfahrung || "Praktika & Schnuppertage",
+    cv.data.labels?.sprachen || "Sprachen",
+    cv.data.labels?.hobbys || "Hobbys & Interessen",
+    cv.data.labels?.staerken || "Stärken",
+    cv.data.labels?.referenzen || "Referenzen",
+    ...(cv.data.customSections ?? []).map((section) => section.title),
+  ];
+  for (const label of labels) {
+    xml = setParagraphLeftBorder(xml, label.trim().toUpperCase(), secondary);
+  }
+  return xml;
 }
 
 function initials(cover: CoverPdfDocument) {
@@ -153,9 +209,9 @@ function studio2Cover(source: string, cover: CoverPdfDocument) {
   xml = replaceShapeBlock(
     xml,
     "studio2-cover-rail",
-    `<v:rect id="studio2-cover-rail" style="${vmlStyle(0, 0, 124, 104, -251658240)};v-text-anchor:top" fillcolor="${primary}" stroked="f"><v:textbox inset="16mm,14mm,0,0"><w:txbxContent>${railText}</w:txbxContent></v:textbox></v:rect>`,
+    `<v:rect id="studio2-cover-rail" style="${vmlStyle(0, 0, 124, 96, -251658240)};v-text-anchor:top" fillcolor="${primary}" stroked="f"><v:textbox inset="16mm,14mm,0,0"><w:txbxContent>${railText}</w:txbxContent></v:textbox></v:rect>`,
   );
-  xml = replaceShapeStyle(xml, "studio2-cover-signal", vmlStyle(124, 0, 86, 104, -251658240));
+  xml = replaceShapeStyle(xml, "studio2-cover-signal", vmlStyle(124, 0, 86, 96, -251658240));
 
   const dateText = `${textBoxParagraph({ text: placeDate, size: 8.5, color: "#ffffff", tracking: 35, align: "right" })}</w:p>`;
   xml = replaceShapeBlock(
@@ -168,7 +224,7 @@ function studio2Cover(source: string, cover: CoverPdfDocument) {
   xml = replaceShapeBlock(
     xml,
     "docx-recipe-cover-photo-mat",
-    `<v:oval id="docx-recipe-cover-photo-mat" style="${vmlStyle(128, 76, 49, 49, 251658400)};v-text-anchor:middle" fillcolor="${paper}" strokecolor="${primary}" strokeweight="0.8pt"><v:textbox inset="0,0,0,0"><w:txbxContent>${initialsText}</w:txbxContent></v:textbox></v:oval>`,
+    `<v:oval id="docx-recipe-cover-photo-mat" style="${vmlStyle(128, 54, 49, 49, 251658400)};v-text-anchor:middle" fillcolor="${paper}" strokecolor="${primary}" strokeweight="0.8pt"><v:textbox inset="0,0,0,0"><w:txbxContent>${initialsText}</w:txbxContent></v:textbox></v:oval>`,
   );
 
   const runs = [
@@ -255,13 +311,20 @@ function studio2Letter(source: string, cover: CoverPdfDocument) {
   });
 }
 
-function studio2Cv(source: string, cover: CoverPdfDocument) {
+function studio2Cv(
+  source: string,
+  cover: CoverPdfDocument,
+  cv: DossierDocxDocuments["cv"],
+) {
+  const secondary = cv.design.colors?.secondary ?? cover.colors?.secondary ?? "#f2c84b";
+  const accent = cv.design.colors?.accent ?? cover.colors?.accent ?? "#e78a2f";
+
   let xml = replaceShapeStyle(source, "studio2-cv-rail", vmlStyle(0, 0, 58, 297, -251658240));
   xml = replaceShapeStyle(xml, "studio2-cv-signal", vmlStyle(153, 0, 57, 22, -251658240));
   xml = replaceShapeBlock(
     xml,
     "studio2-cv-rail-rule",
-    `<v:rect id="studio2-cv-rail-rule" style="${vmlStyle(62, 17, 140, 266, -251658100)}" filled="f" stroked="t" strokecolor="#202a3b" strokeweight="0.45pt"></v:rect>`,
+    `<v:rect id="studio2-cv-rail-rule" style="${vmlStyle(62, 17, 140, 266, -251658100)}" filled="f" stroked="t" strokecolor="${accent}" strokeweight="0.45pt"><v:stroke opacity="58%"/></v:rect>`,
   );
 
   return transformSection(xml, 2, (segment) => {
@@ -272,6 +335,7 @@ function studio2Cv(source: string, cover: CoverPdfDocument) {
       segment = removeFirstParagraphContaining(segment, text);
     }
     segment = setSectionMargins(segment, { top: 8, right: 20, bottom: 18, left: 69 });
+    segment = polishCvSectionDecorations(segment, cv, secondary, accent);
     const lines = [fullName, cover.data.adresse, cover.data.plzOrt, cover.data.telefon, cover.data.email].filter(
       Boolean,
     ) as string[];
@@ -296,7 +360,12 @@ export async function createDossierDocxBlob(documents: DossierDocxDocuments) {
   const base = await createBaseDossierDocxBlob(documents);
   return transformStoredDocxDocumentXml(
     base,
-    (xml) => studio2Cv(studio2Letter(studio2Cover(xml, documents.cover), documents.cover), documents.cover),
+    (xml) =>
+      studio2Cv(
+        studio2Letter(studio2Cover(xml, documents.cover), documents.cover),
+        documents.cover,
+        documents.cv,
+      ),
     "Studio 2 DOCX 1:1 polish",
   );
 }
