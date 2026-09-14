@@ -158,7 +158,7 @@ describe("final DOCX visual fixes", () => {
       const cover = xml.slice(0, xml.indexOf("<w:sectPr>"));
       const name = paragraphContaining(cover, "Lea Müller");
       const initials = paragraphContaining(cover, "LM");
-      expect(name).toContain('w:before="900"');
+      expect(name).toContain('w:before="1400"');
       expect(initials).toContain('<w:color w:val="1C2328"/>');
       expect((xml.match(/<w:sectPr>/g) ?? []).length).toBe(3);
     });
