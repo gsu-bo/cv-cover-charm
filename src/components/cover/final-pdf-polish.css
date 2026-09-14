@@ -1,0 +1,55 @@
+/* -------------------------------------------------------------------------- */
+/* FINAL 39-PDF POLISH                                                        */
+/* -------------------------------------------------------------------------- */
+/*
+ * Narrow fixes from the final 39-vs-39 PDF/DOCX comparison. Keep these rules
+ * late in the cover CSS stack so they repair only the verified export defects
+ * without reopening the established template systems.
+ */
+
+/* Horizon's stacked contact block is taller than the old 10 mm motif band.
+ * When contact mode is active, extend that existing blue surface so every
+ * white sender row remains on colour instead of spilling onto white paper. */
+[data-letter-page][data-letter-template="horizon"][data-letter-header-mode="contact"]
+  [data-dossier-sheet-background="horizon"]
+  > div:nth-child(1) {
+  height: 22mm !important;
+}
+
+/* Gallery's place/date block sat exactly on the left clipping edge of its
+ * portrait tower, cutting the H from HUBERSDORF in the PDF export. */
+html[data-dossier-template="gallery"]
+  [data-dossier-document="cover"]
+  [data-block-id="ortDatum"] {
+  transform: translate(24mm, 22mm) !important;
+}
+
+/* Ribbon's late cleanup compressed the gold hero to 48 mm. Restore enough
+ * vertical room for the complete name/profession group to sit inside the
+ * ribbon rather than straddling its lower edge. */
+html[data-dossier-template="ribbon"]
+  [data-dossier-document="cover"]
+  > div:first-child
+  > div:first-child
+  > div:first-child {
+  top: 28mm !important;
+  height: 58mm !important;
+  border-radius: 0 29mm 29mm 0 !important;
+}
+
+/* The rebuilt 34–38 CVs inherited the browser's default link-blue-looking
+ * heading colour through an over-broad `inherit` override. Use the dossier's
+ * live ink colour instead, while never overriding an explicit user-selected
+ * section-title colour. */
+[data-cv-template="prism"]
+  [data-cv-section-title]:not([data-cv-user-section-color="true"]),
+[data-cv-template="gallery"]
+  [data-cv-section-title]:not([data-cv-user-section-color="true"]),
+[data-cv-template="orbit"]
+  [data-cv-section-title]:not([data-cv-user-section-color="true"]),
+[data-cv-template="ribbon"]
+  [data-cv-section-title]:not([data-cv-user-section-color="true"]),
+[data-cv-template="cove"]
+  [data-cv-section-title]:not([data-cv-user-section-color="true"]) {
+  color: var(--cover-ink, #1f2937) !important;
+}
