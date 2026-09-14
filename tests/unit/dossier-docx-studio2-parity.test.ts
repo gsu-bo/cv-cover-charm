@@ -150,9 +150,9 @@ describe("Studio 2 DOCX PDF parity", () => {
     );
     expect(xml).toContain('id="studio2-docx-cv-contact"');
     expect(xml).toMatch(
-      /id="studio2-cv-rail-rule"[^>]*margin-left:62mm;[^>]*margin-top:17mm;[^>]*width:140mm;[^>]*height:266mm;[^>]*strokecolor="#e78a2f"/,
+      /id="studio2-cv-rail-rule"[^>]*margin-left:10mm;[^>]*margin-top:10mm;[^>]*width:190mm;[^>]*height:277mm;[^>]*strokecolor="#f5d9bc"/,
     );
-    expect(xml).toContain('w:bottom w:val="single" w:sz="8" w:space="1" w:color="E78A2F"');
+    expect(xml).toContain('w:bottom w:val="single" w:sz="8" w:space="1" w:color="B18F6F"');
     expect(
       (xml.match(/<w:tcBorders><w:left w:val="single" w:sz="28" w:space="0" w:color="F2C84B"\/><\/w:tcBorders>/g) ?? []).length,
     ).toBeGreaterThanOrEqual(4);
