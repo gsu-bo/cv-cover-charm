@@ -1,9 +1,8 @@
 name: Dossier PDF Gallery
 
-# Reproducible visual QA: every live complete dossier PDF is rendered, but the expensive
-# PDF work is split into 4-document batches and aggregated back into one artifact.
-# The QA gallery keeps the real UI E2E example; the separate user package contains only
-# the 39 actual templates and deliberately excludes the E2E fixture.
+# Reproducible visual QA: exactly the 39 active dossier templates are rendered.
+# PDF work is split into 4-document batches (the final batch has 3) and
+# aggregated back into one exact 39-template artifact.
 # The render branch is a release-candidate surface, so its full gallery runs automatically.
 on:
   workflow_dispatch:
@@ -133,7 +132,7 @@ jobs:
           if [ -f /tmp/cv-cover-charm.pid ]; then kill "$(cat /tmp/cv-cover-charm.pid)" || true; fi
 
   pdf-batch:
-    name: Full PDF batch ${{ matrix.batch }}
+    name: PDF template batch ${{ matrix.batch }}
     needs: checks
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -173,7 +172,7 @@ jobs:
           cat /tmp/cv-cover-charm.log
           exit 1
 
-      - name: Generate complete dossier PDFs for batch ${{ matrix.batch }}
+      - name: Generate dossier template PDFs for batch ${{ matrix.batch }}
         env:
           GALLERY_BATCH_INDEX: ${{ matrix.batch }}
           GALLERY_DIR: artifacts/dossier-gallery-batch-${{ matrix.batch }}
@@ -185,7 +184,8 @@ jobs:
           dir="artifacts/dossier-gallery-batch-${{ matrix.batch }}"
           count="$(find "$dir" -maxdepth 1 -type f -name '*.pdf' | wc -l | tr -d ' ')"
           expected=4
-          echo "Batch ${{ matrix.batch }} generated $count/$expected complete PDFs"
+          if [ "${{ matrix.batch }}" -eq 9 ]; then expected=3; fi
+          echo "Batch ${{ matrix.batch }} generated $count/$expected template PDFs"
           test "$count" -eq "$expected"
           part="$(printf '%02d' '${{ matrix.batch }}')"
           test -f "$dir/MANIFEST.part-$part.txt"
@@ -209,7 +209,7 @@ jobs:
           if [ -f /tmp/cv-cover-charm.pid ]; then kill "$(cat /tmp/cv-cover-charm.pid)" || true; fi
 
   aggregate:
-    name: Aggregate QA 40 + user 39
+    name: Aggregate exact 39 PDFs
     needs:
       - checks
       - pdf-batch
@@ -223,7 +223,7 @@ jobs:
           pattern: dossier-pdf-batch-*
           path: artifacts/batches
 
-      - name: Verify QA gallery and build user package
+      - name: Verify and build exact 39-template package
         shell: bash
         run: |
           pdf_count="$(find artifacts/batches -type f -name '*.pdf' | wc -l | tr -d ' ')"
@@ -231,69 +231,37 @@ jobs:
           part_count="$(find artifacts/batches -type f -name 'MANIFEST.part-*.txt' | wc -l | tr -d ' ')"
 
           echo "PDFs: $pdf_count total, $unique_count unique; manifest parts: $part_count"
-          test "$pdf_count" -eq 40
-          test "$unique_count" -eq 40
+          test "$pdf_count" -eq 39
+          test "$unique_count" -eq 39
           test "$part_count" -eq 10
-
-          mkdir -p artifacts/dossier-gallery
-          while IFS= read -r -d '' pdf; do
-            base="$(basename "$pdf")"
-            test ! -e "artifacts/dossier-gallery/$base"
-            cp "$pdf" "artifacts/dossier-gallery/$base"
-          done < <(find artifacts/batches -type f -name '*.pdf' -print0)
-
-          {
-            echo "Gesamtdossier PDF Galerie – QA"
-            echo
-            while IFS= read -r part; do
-              cat "$part"
-            done < <(find artifacts/batches -type f -name 'MANIFEST.part-*.txt' | sort)
-          } > artifacts/dossier-gallery/MANIFEST.txt
-
-          final_count="$(find artifacts/dossier-gallery -maxdepth 1 -type f -name '*.pdf' | wc -l | tr -d ' ')"
-          manifest_count="$(grep -c '\.pdf |' artifacts/dossier-gallery/MANIFEST.txt)"
-          test "$final_count" -eq 40
-          test "$manifest_count" -eq 40
-          test -f artifacts/dossier-gallery/00-Beispieldossier-E2E.pdf
-          test -f artifacts/dossier-gallery/MANIFEST.txt
 
           mkdir -p artifacts/dossier-templates
           while IFS= read -r -d '' pdf; do
             base="$(basename "$pdf")"
-            case "$base" in
-              00-Beispieldossier-E2E.pdf) continue ;;
-            esac
+            test ! -e "artifacts/dossier-templates/$base"
             cp "$pdf" "artifacts/dossier-templates/$base"
-          done < <(find artifacts/dossier-gallery -maxdepth 1 -type f -name '*.pdf' -print0)
+          done < <(find artifacts/batches -type f -name '*.pdf' -print0)
 
           {
-            echo "Bewerbungsdossier Vorlagen"
+            echo "Bewerbungsdossier Vorlagen – 39 PDF"
             echo
-            grep '\.pdf |' artifacts/dossier-gallery/MANIFEST.txt \
-              | grep -v '^00-Beispieldossier-E2E\.pdf |'
+            while IFS= read -r part; do
+              cat "$part"
+            done < <(find artifacts/batches -type f -name 'MANIFEST.part-*.txt' | sort)
           } > artifacts/dossier-templates/MANIFEST.txt
 
-          user_count="$(find artifacts/dossier-templates -maxdepth 1 -type f -name '*.pdf' | wc -l | tr -d ' ')"
-          user_manifest_count="$(grep -c '\.pdf |' artifacts/dossier-templates/MANIFEST.txt)"
-          echo "User package: $user_count templates; manifest entries: $user_manifest_count"
-          test "$user_count" -eq 39
-          test "$user_manifest_count" -eq 39
+          final_count="$(find artifacts/dossier-templates -maxdepth 1 -type f -name '*.pdf' | wc -l | tr -d ' ')"
+          manifest_count="$(grep -c '\.pdf |' artifacts/dossier-templates/MANIFEST.txt)"
+          echo "Final package: $final_count templates; manifest entries: $manifest_count"
+          test "$final_count" -eq 39
+          test "$manifest_count" -eq 39
           test ! -e artifacts/dossier-templates/00-Beispieldossier-E2E.pdf
+          test -f artifacts/dossier-templates/39-Edel-Dark.pdf
           test -f artifacts/dossier-templates/MANIFEST.txt
 
-          find artifacts/dossier-gallery -maxdepth 1 -type f -printf '%f\n' | sort
-          echo "--- user package ---"
           find artifacts/dossier-templates -maxdepth 1 -type f -printf '%f\n' | sort
 
-      - name: Upload QA 40-PDF gallery ZIP
-        uses: actions/upload-artifact@v4
-        with:
-          name: gesamtdossier-pdf-galerie
-          path: artifacts/dossier-gallery
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload user 39-template ZIP
+      - name: Upload exact 39-template PDF ZIP
         uses: actions/upload-artifact@v4
         with:
           name: bewerbungsdossier-vorlagen-39
