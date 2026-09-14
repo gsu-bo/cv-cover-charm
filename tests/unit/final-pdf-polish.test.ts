@@ -26,10 +26,11 @@ describe("final 39-PDF visual polish", () => {
     expect(css).toContain("height: 22mm !important;");
   });
 
-  test("moves Gallery place text clear of the cover clipping edge", () => {
+  test("insets Gallery place text without overriding the positioned outer block", () => {
     expect(css).toContain('html[data-dossier-template="gallery"]');
     expect(css).toContain('[data-block-id="ortDatum"]');
-    expect(css).toContain("transform: translate(24mm, 22mm) !important;");
+    expect(css).toContain("padding-left: 3mm !important;");
+    expect(css).not.toContain("transform: translate(24mm, 22mm) !important;");
   });
 
   test("restores Ribbon hero height for its complete identity stack", () => {
@@ -41,10 +42,14 @@ describe("final 39-PDF visual polish", () => {
 
   test("uses live dossier ink for 34-38 CV headings without defeating user colour", () => {
     for (const template of ["prism", "gallery", "orbit", "ribbon", "cove"]) {
-      expect(css).toContain(`[data-cv-template="${template}"]`);
+      expect(css).toContain(`[data-dossier-template="${template}"]`);
     }
+    expect(css).toContain('[data-dossier-document="cv"]');
     expect(css).toContain(':not([data-cv-user-section-color="true"])');
     expect(css).toContain("color: var(--cover-ink, #1f2937) !important;");
+    expect(css).toContain(
+      "-webkit-text-fill-color: var(--cover-ink, #1f2937) !important;",
+    );
     expect(css).not.toContain("#0000FF");
   });
 });
