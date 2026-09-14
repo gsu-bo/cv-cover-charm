@@ -64,6 +64,11 @@ function warmColors(colors: Record<string, string> | undefined) {
   };
 }
 
+function warmInteriorColors(colors: Record<string, string> | undefined, templateId: string) {
+  const next = warmColors(colors);
+  return templateId === "sonne" ? { ...next, bg: "#ffffff" } : next;
+}
+
 function roleColor(colors: Palette, role: DossierDocxColorRole) {
   return colors[role];
 }
@@ -73,15 +78,24 @@ function warmCompatibleDocuments(
   letter: LetterPdfDocument,
   cv: CvPdfDocument,
 ) {
+  const templateId = String(cover.template);
   return {
     cover: { ...cover, template: "freundlich", colors: warmColors(cover.colors) } as CoverPdfDocument,
     letter: {
       ...letter,
-      design: { ...letter.design, template: "freundlich", colors: warmColors(letter.design.colors) },
+      design: {
+        ...letter.design,
+        template: "freundlich",
+        colors: warmInteriorColors(letter.design.colors, templateId),
+      },
     } as LetterPdfDocument,
     cv: {
       ...cv,
-      design: { ...cv.design, template: "freundlich", colors: warmColors(cv.design.colors) },
+      design: {
+        ...cv.design,
+        template: "freundlich",
+        colors: warmInteriorColors(cv.design.colors, templateId),
+      },
     } as CvPdfDocument,
   };
 }
@@ -97,8 +111,15 @@ function fillOpacity(opacity = 1) {
 function shapeRun(shape: RuntimeShape, colors: Palette, templateId: string) {
   const neonPageBackground =
     templateId === "neon" && /neon-(?:cover|letter|cv)-bg$/.test(shape.id);
-  const color = shape.fillHex ?? (neonPageBackground ? colors.paper : roleColor(colors, shape.color));
-  const opacity = shape.opacity ?? 1;
+  const sonneCvAccent = templateId === "sonne" && shape.id === "sonne-cv-light";
+  const color =
+    shape.fillHex ??
+    (neonPageBackground
+      ? colors.paper
+      : sonneCvAccent
+        ? colors.accent
+        : roleColor(colors, shape.color));
+  const opacity = sonneCvAccent ? 0.26 : (shape.opacity ?? 1);
   if (shape.kind === "line") {
     return `<w:r><w:pict><v:rect id="${shape.id}" style="${vmlStyle(shape.x, shape.y, shape.w, shape.strokeMm ?? 0.4)}" fillcolor="${color}" stroked="f">${fillOpacity(opacity)}</v:rect></w:pict></w:r>`;
   }
@@ -297,7 +318,8 @@ function patchCoverContact(
   cover: CoverPdfDocument,
   colors: Palette,
 ) {
-  if (!recipe.cover.lightCoverContact) return source;
+  const forceSonneContrast = recipe.templateId === "sonne";
+  if (!recipe.cover.lightCoverContact && !forceSonneContrast) return source;
   const contactTexts = [
     "KONTAKT",
     cover.data.adresse,
@@ -308,9 +330,10 @@ function patchCoverContact(
   const attachmentTexts = CONTACT_ONLY_COVER_TEMPLATES.has(recipe.templateId)
     ? []
     : (["BEILAGEN", ...(cover.data.beilagen ?? [])].filter(Boolean) as string[]);
+  const contactColor = forceSonneContrast ? "#ffffff" : colors.paper;
   let xml = source;
   for (const text of [...contactTexts, ...attachmentTexts]) {
-    xml = setParagraphColor(xml, text, colors.paper);
+    xml = setParagraphColor(xml, text, contactColor);
   }
   return xml;
 }
