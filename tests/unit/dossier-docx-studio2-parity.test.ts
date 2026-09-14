@@ -113,7 +113,7 @@ describe("Studio 2 DOCX PDF parity", () => {
       /id="studio2-cover-rail"[^>]*margin-left:0mm;[^>]*margin-top:0mm;[^>]*width:210mm;[^>]*height:96mm;[^>]*fillcolor="#202a3b"/,
     );
     expect(cover).toMatch(
-      /id="studio2-cover-signal"[^>]*margin-left:124mm;[^>]*margin-top:0mm;[^>]*width:86mm;[^>]*height:96mm;z-index:-251658239;/,
+      /id="studio2-cover-signal"[^>]*margin-left:124mm;[^>]*margin-top:0mm;[^>]*width:86mm;[^>]*height:96mm;z-index:251658000;/,
     );
     expect(cover).toContain('<v:shape id="studio2-cover-signal" coordorigin="0,0" coordsize="1000,1000"');
     expect(cover).toContain('path="m 0,0 l 1000,0 1000,1000 190,1000 c 85,1000 0,915 0,810 l 0,0 x e"');
