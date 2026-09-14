@@ -4,34 +4,14 @@ import type {
   LetterPdfDocument,
 } from "@/lib/dossier-pdf-document";
 import {
-  briefDossierDocxSupported,
-  createBriefDossierDocxBlob,
-} from "@/lib/dossier-docx";
-import {
-  createPolishedWarmDossierDocxBlob,
-  warmDossierDocxSupported,
-} from "@/lib/dossier-docx-warm-polish";
-import {
-  createPolishedStudio3DossierDocxBlob,
-  studio3DossierDocxSupported,
-} from "@/lib/dossier-docx-studio3-polish";
-import {
-  createPolishedLegacyRecipeDossierDocxBlob,
-  legacyRecipeDossierDocxSupported,
-} from "@/lib/dossier-docx-legacy-recipe-polish";
-import { ALL_DOSSIER_DOCX_TEMPLATE_RECIPES } from "@/lib/dossier-docx-template-recipes";
-import {
-  createGenericFamilyDossierDocxBlob,
-  genericFamilyDossierDocxSupported,
-} from "@/lib/dossier-docx-family-renderer";
+  createLazyTemplateDossierDocxBlob,
+  hasDossierDocxTemplateLoader,
+} from "@/lib/dossier-docx-template-loader";
+import type { DossierDocxDocuments } from "@/lib/dossier-docx-template-types";
 import { dossierDocxTemplatePlan } from "@/lib/dossier-docx-family";
 import { downloadBlob } from "@/lib/download";
 
-export type DossierDocxDocuments = {
-  cover: CoverPdfDocument;
-  letter: LetterPdfDocument;
-  cv: CvPdfDocument;
-};
+export type { DossierDocxDocuments };
 
 export type DossierDocxProfile = {
   templateId: string;
@@ -55,6 +35,31 @@ export type DossierDocxProfile = {
   createBlob: (documents: DossierDocxDocuments) => Blob | Promise<Blob>;
 };
 
+function matchingTemplateId(
+  cover: CoverPdfDocument | null,
+  letter: LetterPdfDocument | null,
+  cv: CvPdfDocument | null,
+) {
+  if (!cover || !letter || !cv) return null;
+  const coverId = String(cover.template);
+  const letterId = String(letter.design.template);
+  const cvId = String(cv.design.template);
+  return coverId && coverId === letterId && coverId === cvId ? coverId : null;
+}
+
+function supportsTemplate(templateId: string) {
+  return (
+    cover: CoverPdfDocument | null,
+    letter: LetterPdfDocument | null,
+    cv: CvPdfDocument | null,
+  ) => matchingTemplateId(cover, letter, cv) === templateId;
+}
+
+function lazyProfileBlob(templateId: string) {
+  return (documents: DossierDocxDocuments) =>
+    createLazyTemplateDossierDocxBlob(templateId, documents);
+}
+
 export const DOSSIER_DOCX_PROFILES: readonly DossierDocxProfile[] = [
   {
     templateId: "brief",
@@ -65,8 +70,8 @@ export const DOSSIER_DOCX_PROFILES: readonly DossierDocxProfile[] = [
       letter: "edge-bars",
       cv: "edge-bars",
     },
-    supports: briefDossierDocxSupported,
-    createBlob: ({ cover, letter, cv }) => createBriefDossierDocxBlob(cover, letter, cv),
+    supports: supportsTemplate("brief"),
+    createBlob: lazyProfileBlob("brief"),
   },
   {
     templateId: "freundlich",
@@ -77,8 +82,8 @@ export const DOSSIER_DOCX_PROFILES: readonly DossierDocxProfile[] = [
       letter: "organic-masthead",
       cv: "banded",
     },
-    supports: warmDossierDocxSupported,
-    createBlob: ({ cover, letter, cv }) => createPolishedWarmDossierDocxBlob(cover, letter, cv),
+    supports: supportsTemplate("freundlich"),
+    createBlob: lazyProfileBlob("freundlich"),
   },
   {
     templateId: "studio3",
@@ -89,8 +94,8 @@ export const DOSSIER_DOCX_PROFILES: readonly DossierDocxProfile[] = [
       letter: "two-tone-masthead",
       cv: "two-tone-masthead",
     },
-    supports: studio3DossierDocxSupported,
-    createBlob: ({ cover, letter, cv }) => createPolishedStudio3DossierDocxBlob(cover, letter, cv),
+    supports: supportsTemplate("studio3"),
+    createBlob: lazyProfileBlob("studio3"),
   },
 ] as const;
 
@@ -98,28 +103,29 @@ export const DOSSIER_DOCX_SUPPORTED_LABELS = DOSSIER_DOCX_PROFILES.map(
   (profile) => profile.label,
 );
 
+const REVIEWED_TEMPLATE_IDS = new Set(DOSSIER_DOCX_PROFILES.map((profile) => profile.templateId));
+
 function resolveIndividualRecipeProfile(
   cover: CoverPdfDocument | null,
   letter: LetterPdfDocument | null,
   cv: CvPdfDocument | null,
 ): DossierDocxProfile | null {
-  if (!legacyRecipeDossierDocxSupported(cover, letter, cv) || !cover) return null;
-  const templateId = String(cover.template);
-  const recipe = ALL_DOSSIER_DOCX_TEMPLATE_RECIPES[templateId];
-  if (!recipe) return null;
+  const templateId = matchingTemplateId(cover, letter, cv);
+  if (!templateId || REVIEWED_TEMPLATE_IDS.has(templateId)) return null;
+  const plan = dossierDocxTemplatePlan(templateId);
+  if (!plan || !hasDossierDocxTemplateLoader(templateId)) return null;
 
   return {
     templateId,
-    label: recipe.label,
+    label: plan.label,
     architecture: "template-recipe",
     visualModel: {
       cover: `recipe:${templateId}`,
       letter: `recipe:${templateId}`,
       cv: `recipe:${templateId}`,
     },
-    supports: legacyRecipeDossierDocxSupported,
-    createBlob: ({ cover: nextCover, letter: nextLetter, cv: nextCv }) =>
-      createPolishedLegacyRecipeDossierDocxBlob(nextCover, nextLetter, nextCv),
+    supports: supportsTemplate(templateId),
+    createBlob: lazyProfileBlob(templateId),
   };
 }
 
@@ -128,8 +134,8 @@ function resolveFamilyFallbackProfile(
   letter: LetterPdfDocument | null,
   cv: CvPdfDocument | null,
 ): DossierDocxProfile | null {
-  if (!genericFamilyDossierDocxSupported(cover, letter, cv) || !cover) return null;
-  const templateId = String(cover.template);
+  const templateId = matchingTemplateId(cover, letter, cv);
+  if (!templateId) return null;
   const plan = dossierDocxTemplatePlan(templateId);
   if (!plan) return null;
 
@@ -142,9 +148,17 @@ function resolveFamilyFallbackProfile(
       letter: plan.family,
       cv: plan.family,
     },
-    supports: genericFamilyDossierDocxSupported,
-    createBlob: ({ cover: nextCover, letter: nextLetter, cv: nextCv }) =>
-      createGenericFamilyDossierDocxBlob(nextCover, nextLetter, nextCv),
+    supports: supportsTemplate(templateId),
+    createBlob: async ({ cover: nextCover, letter: nextLetter, cv: nextCv }) => {
+      const {
+        createGenericFamilyDossierDocxBlob,
+        genericFamilyDossierDocxSupported,
+      } = await import("@/lib/dossier-docx-family-renderer");
+      if (!genericFamilyDossierDocxSupported(nextCover, nextLetter, nextCv)) {
+        throw new Error(`Kein DOCX-Family-Fallback für ${templateId}.`);
+      }
+      return createGenericFamilyDossierDocxBlob(nextCover, nextLetter, nextCv);
+    },
   };
 }
 
