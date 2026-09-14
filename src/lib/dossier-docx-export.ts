@@ -104,6 +104,10 @@ export const DOSSIER_DOCX_SUPPORTED_LABELS = DOSSIER_DOCX_PROFILES.map(
 );
 
 const REVIEWED_TEMPLATE_IDS = new Set(DOSSIER_DOCX_PROFILES.map((profile) => profile.templateId));
+const RETIRED_RECIPE_LABELS: Readonly<Record<string, string>> = {
+  warm4: "Warm 4",
+  warm5: "Warm 5",
+};
 
 function resolveIndividualRecipeProfile(
   cover: CoverPdfDocument | null,
@@ -113,11 +117,12 @@ function resolveIndividualRecipeProfile(
   const templateId = matchingTemplateId(cover, letter, cv);
   if (!templateId || REVIEWED_TEMPLATE_IDS.has(templateId)) return null;
   const plan = dossierDocxTemplatePlan(templateId);
-  if (!plan || !hasDossierDocxTemplateLoader(templateId)) return null;
+  const label = plan?.label ?? RETIRED_RECIPE_LABELS[templateId];
+  if (!label || !hasDossierDocxTemplateLoader(templateId)) return null;
 
   return {
     templateId,
-    label: plan.label,
+    label,
     architecture: "template-recipe",
     visualModel: {
       cover: `recipe:${templateId}`,

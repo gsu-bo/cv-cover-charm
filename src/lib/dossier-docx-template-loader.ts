@@ -2,6 +2,7 @@ import type {
   DossierDocxDocuments,
   DossierDocxTemplateModule,
 } from "@/lib/dossier-docx-template-types";
+import { DOSSIER_DOCX_TEMPLATE_PLANS } from "@/lib/dossier-docx-family";
 
 type DossierDocxTemplateLoader = () => Promise<DossierDocxTemplateModule>;
 
@@ -45,10 +46,12 @@ const DOSSIER_DOCX_TEMPLATE_LOADERS = {
   orbit: () => import("./dossier-docx-templates/orbit"),
   ribbon: () => import("./dossier-docx-templates/ribbon"),
   cove: () => import("./dossier-docx-templates/cove"),
+  warm4: () => import("./dossier-docx-templates/warm4"),
+  warm5: () => import("./dossier-docx-templates/warm5"),
 } satisfies Record<string, DossierDocxTemplateLoader>;
 
 export const DOSSIER_DOCX_LAZY_TEMPLATE_IDS = Object.freeze(
-  Object.keys(DOSSIER_DOCX_TEMPLATE_LOADERS),
+  Object.keys(DOSSIER_DOCX_TEMPLATE_PLANS),
 );
 
 export function hasDossierDocxTemplateLoader(templateId: string) {
