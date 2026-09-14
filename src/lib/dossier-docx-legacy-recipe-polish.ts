@@ -223,7 +223,7 @@ function restorePhotoInitials(source: string, cover: CoverPdfDocument) {
       const needle = `>${xmlEscape(value)}</w:t>`;
       const flowIndex = next.indexOf(needle, textboxEnd);
       if (flowIndex >= 0) {
-        next = next.slice(0, flowIndex + 1) + next.slice(flowIndex + 1).replace(xmlEscape(value), "", 1);
+        next = next.slice(0, flowIndex + 1) + next.slice(flowIndex + 1).replace(xmlEscape(value), "");
       }
     }
     return next;
@@ -304,7 +304,9 @@ function restoreCvIdentityContrast(source: string, cv: CvPdfDocument) {
     .join(" · ");
 
   return patchSection(source, 2, (cvXml) => {
-    let next = setParagraphColor(cvXml, cv.data.titel.toUpperCase(), DARK_TEXT);
+    let next = cv.data.titel
+      ? setParagraphColor(cvXml, cv.data.titel.toUpperCase(), DARK_TEXT)
+      : cvXml;
     if (identityLine) next = setParagraphColor(next, identityLine, DARK_TEXT);
     return next;
   });
