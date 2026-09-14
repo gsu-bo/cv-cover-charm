@@ -61,12 +61,11 @@ function roundCoverSignal(source: string, documents: DossierDocxDocuments) {
   if (documents.cover.data.foto) return source;
 
   const secondary = hex(documents.cover.colors?.secondary, "#f2c84b");
-  const rounded = `<v:roundrect id="studio2-cover-signal" arcsize="38%" style="${vmlStyle(124, 0, 86, 96, -251658240)}" fillcolor="${secondary}" stroked="f"></v:roundrect>`;
-  const squareTop = `<v:rect id="studio2-cover-signal-top-square" style="${vmlStyle(124, 0, 86, 72, -251658239)}" fillcolor="${secondary}" stroked="f"></v:rect>`;
-  const squareRight = `<v:rect id="studio2-cover-signal-right-square" style="${vmlStyle(196, 72, 14, 24, -251658239)}" fillcolor="${secondary}" stroked="f"></v:rect>`;
+  const path = "m 0,0 l 1000,0 1000,1000 190,1000 c 85,1000 0,915 0,810 l 0,0 x e";
+  const signal = `<v:shape id="studio2-cover-signal" coordorigin="0,0" coordsize="1000,1000" path="${path}" style="${vmlStyle(124, 0, 86, 96, -251658240)}" fillcolor="${secondary}" stroked="f"></v:shape>`;
 
   return transformSection(source, 0, (segment) =>
-    replaceShapeBlock(segment, "studio2-cover-signal", `${rounded}${squareTop}${squareRight}`),
+    replaceShapeBlock(segment, "studio2-cover-signal", signal),
   );
 }
 
