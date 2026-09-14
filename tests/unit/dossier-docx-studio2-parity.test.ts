@@ -153,7 +153,10 @@ describe("Studio 2 DOCX PDF parity", () => {
       /id="studio2-cv-rail-rule"[^>]*margin-left:62mm;[^>]*margin-top:17mm;[^>]*width:140mm;[^>]*height:266mm;[^>]*strokecolor="#e78a2f"/,
     );
     expect(xml).toContain('w:bottom w:val="single" w:sz="8" w:space="1" w:color="E78A2F"');
-    expect((xml.match(/<w:left w:val="single" w:sz="24" w:space="5" w:color="F2C84B"\/>/g) ?? []).length).toBeGreaterThanOrEqual(4);
+    expect(
+      (xml.match(/<w:tcBorders><w:left w:val="single" w:sz="28" w:space="0" w:color="F2C84B"\/><\/w:tcBorders>/g) ?? []).length,
+    ).toBeGreaterThanOrEqual(4);
+    expect(xml).not.toContain('<w:pBdr><w:left w:val="single" w:sz="24"');
     expect((xml.match(/<w:sectPr>/g) ?? []).length).toBe(3);
   });
 });
