@@ -110,7 +110,7 @@ describe("Studio 2 DOCX PDF parity", () => {
     const cover = xml.slice(0, xml.indexOf("<w:sectPr>"));
 
     expect(cover).toMatch(
-      /id="studio2-cover-rail"[^>]*margin-left:0mm;[^>]*margin-top:0mm;[^>]*width:124mm;[^>]*height:96mm;/,
+      /id="studio2-cover-rail"[^>]*margin-left:0mm;[^>]*margin-top:0mm;[^>]*width:210mm;[^>]*height:96mm;[^>]*fillcolor="#202a3b"/,
     );
     expect(cover).toMatch(
       /id="studio2-cover-signal"[^>]*margin-left:124mm;[^>]*margin-top:0mm;[^>]*width:86mm;[^>]*height:96mm;/,
