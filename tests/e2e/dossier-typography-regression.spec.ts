@@ -122,9 +122,11 @@ async function dossierFonts(page: Page, template: string, font?: string) {
   const cvRoot = page.locator('[data-dossier-document="cv"][data-export-mode="false"]').first();
   await expect(cvRoot).toBeVisible();
 
-  // The route intentionally paints its empty default once before the first-use
-  // title-page takeover runs in an effect. Wait for transferred applicant data
-  // so the font assertion observes the settled dossier state, not that transient frame.
+  // The route intentionally paints its empty Modern/Cabin default once before
+  // the first-use title-page takeover runs in an effect. The shared contact can
+  // already show Lea Müller before that design takeover has settled, so wait for
+  // the CV renderer itself to expose the persisted template before reading font.
+  await expect(cvRoot).toHaveAttribute("data-cv-template", template);
   await expect(
     page
       .locator(
