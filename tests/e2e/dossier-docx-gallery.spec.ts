@@ -192,6 +192,10 @@ test("real browser DOCX gallery exports all 39 active dossier templates", async 
   expect(stored.cv?.data?.person?.plzOrt).toBe(SAMPLE_POSTAL_LOCATION);
   expect(JSON.stringify(stored)).not.toMatch(/Solothurn|Zuchwil/);
 
+  // The real DOCX dossier export controls live on the root dossier surface.
+  // The shared UI fixture loader ends on /lebenslauf, so return before exporting.
+  await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
+
   const galleryBaseChrome = stored.chrome ?? DEFAULT_DOSSIER_CHROME_STATE;
   const batchIndex = galleryBatchIndex();
   const batchStart = batchIndex === null ? 0 : batchIndex * GALLERY_BATCH_SIZE;
