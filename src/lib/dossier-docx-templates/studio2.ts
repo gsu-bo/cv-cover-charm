@@ -127,6 +127,19 @@ function wordColor(value: string) {
   return value.replace("#", "").toUpperCase();
 }
 
+function colorChannels(value: string, fallback: string) {
+  const normalized = /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+  return [1, 3, 5].map((offset) => parseInt(normalized.slice(offset, offset + 2), 16));
+}
+
+function weightedColor(parts: Array<[string, number]>) {
+  const channels = parts.map(([color, weight]) => [colorChannels(color, "#000000"), weight] as const);
+  const rgb = [0, 1, 2].map((channel) =>
+    Math.max(0, Math.min(255, Math.round(channels.reduce((sum, [values, weight]) => sum + values[channel] * weight, 0)))),
+  );
+  return `#${rgb.map((value) => value.toString(16).padStart(2, "0")).join("")}`;
+}
+
 function setHeadingCellLeftBorder(source: string, text: string, color: string) {
   const needle = new RegExp(`<w:t[^>]*>${regexEscape(xmlEscape(text))}<\\/w:t>`);
   const match = needle.exec(source);
@@ -154,11 +167,11 @@ function polishCvSectionDecorations(
   source: string,
   cv: DossierDocxDocuments["cv"],
   secondary: string,
-  accent: string,
+  ruleColor: string,
 ) {
   let xml = source.replace(
     /(<w:pBdr><w:bottom\b[^>]*\bw:color=")[0-9A-Fa-f]{6}("[^>]*\/><\/w:pBdr>)/g,
-    `$1${wordColor(accent)}$2`,
+    `$1${wordColor(ruleColor)}$2`,
   );
 
   const labels = [
@@ -313,15 +326,26 @@ function studio2Cv(
   cover: CoverPdfDocument,
   cv: DossierDocxDocuments["cv"],
 ) {
+  const primary = cv.design.colors?.primary ?? cover.colors?.primary ?? "#202a3b";
   const secondary = cv.design.colors?.secondary ?? cover.colors?.secondary ?? "#f2c84b";
   const accent = cv.design.colors?.accent ?? cover.colors?.accent ?? "#e78a2f";
+  const paper = cv.design.colors?.bg ?? cover.colors?.bg ?? "#fbfbf8";
+  const frameColor = weightedColor([
+    [accent, 0.3],
+    [paper, 0.7],
+  ]);
+  const ruleColor = weightedColor([
+    [accent, 0.4],
+    [primary, 0.3],
+    [paper, 0.3],
+  ]);
 
   let xml = replaceShapeStyle(source, "studio2-cv-rail", vmlStyle(0, 0, 58, 297, -251658240));
   xml = replaceShapeStyle(xml, "studio2-cv-signal", vmlStyle(153, 0, 57, 22, -251658240));
   xml = replaceShapeBlock(
     xml,
     "studio2-cv-rail-rule",
-    `<v:rect id="studio2-cv-rail-rule" style="${vmlStyle(62, 17, 140, 266, -251658100)}" filled="f" stroked="t" strokecolor="${accent}" strokeweight="0.45pt"><v:stroke opacity="58%"/></v:rect>`,
+    `<v:rect id="studio2-cv-rail-rule" style="${vmlStyle(10, 10, 190, 277, -251658100)}" filled="f" stroked="t" strokecolor="${frameColor}" strokeweight="0.45pt"></v:rect>`,
   );
 
   return transformSection(xml, 2, (segment) => {
@@ -332,7 +356,7 @@ function studio2Cv(
       segment = removeFirstParagraphContaining(segment, text);
     }
     segment = setSectionMargins(segment, { top: 8, right: 20, bottom: 18, left: 69 });
-    segment = polishCvSectionDecorations(segment, cv, secondary, accent);
+    segment = polishCvSectionDecorations(segment, cv, secondary, ruleColor);
     const lines = [fullName, cover.data.adresse, cover.data.plzOrt, cover.data.telefon, cover.data.email].filter(
       Boolean,
     ) as string[];
