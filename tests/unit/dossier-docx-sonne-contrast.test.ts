@@ -133,4 +133,27 @@ describe("Sonne DOCX contrast", () => {
     expect(xml).toMatch(/id="sonne-cv-light"[^>]*fillcolor="#fbbf24"/);
     expect(xml).toMatch(/id="sonne-cv-light"[\s\S]*?<v:fill opacity="26%"\/>/);
   });
+
+  test("uses dedicated PDF-like editable cover overlays", async () => {
+    const xml = await sonneXml();
+    const coverSection = xml.slice(0, xml.indexOf("<w:sectPr>"));
+    for (const id of [
+      "sonne-docx-cover-kicker",
+      "sonne-docx-cover-date",
+      "sonne-docx-cover-name",
+      "sonne-docx-cover-role-label",
+      "sonne-docx-cover-role",
+      "sonne-docx-cover-initials",
+      "sonne-docx-cover-lehrbeginn",
+      "sonne-docx-cover-contact",
+      "sonne-docx-cover-attachments",
+    ]) {
+      expect(coverSection, id).toContain(`id="${id}"`);
+    }
+    expect(coverSection).toContain("Lehrbeginn August 2027");
+    expect(coverSection).toContain(">LM</w:t>");
+    expect(coverSection).toMatch(
+      /id="docx-recipe-cover-photo-mat"[^>]*style="[^"]*margin-left:114mm;[^"]*margin-top:16mm;[^"]*width:78mm;[^"]*height:78mm;/,
+    );
+  });
 });
