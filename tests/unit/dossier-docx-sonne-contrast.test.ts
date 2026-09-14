@@ -155,5 +155,17 @@ describe("Sonne DOCX contrast", () => {
     expect(coverSection).toMatch(
       /id="docx-recipe-cover-photo-mat"[^>]*style="[^"]*margin-left:114mm;[^"]*margin-top:16mm;[^"]*width:78mm;[^"]*height:78mm;/,
     );
+    expect(coverSection).toMatch(
+      /id="sonne-docx-cover-initials"[^>]*style="[^"]*margin-top:44mm;[^"]*z-index:251658500/,
+    );
+    expect(coverSection).toMatch(
+      /id="sonne-docx-cover-lehrbeginn"[^>]*arcsize="50%"/,
+    );
+    expect(coverSection).toMatch(
+      /id="sonne-docx-cover-name"[\s\S]{0,1200}<w:sz w:val="67"/,
+    );
+    expect(coverSection).toMatch(
+      /id="sonne-docx-cover-role"[\s\S]{0,1200}<w:sz w:val="44"/,
+    );
   });
 });
