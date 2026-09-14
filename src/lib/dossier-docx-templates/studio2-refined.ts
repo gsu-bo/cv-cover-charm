@@ -47,6 +47,14 @@ function replaceShapeBlock(source: string, id: string, replacement: string) {
   return source.replace(pattern, replacement);
 }
 
+function widenShapeStyle(source: string, id: string, widthMm: number) {
+  const pattern = new RegExp(`(\\bid="${regexEscape(id)}"[^>]*\\bstyle=")([^"]+)("[^>]*>)`);
+  return source.replace(pattern, (_match, before: string, style: string, after: string) => {
+    const next = style.replace(/width:[0-9.]+mm;/, `width:${widthMm}mm;`);
+    return `${before}${next}${after}`;
+  });
+}
+
 function transformSection(source: string, index: number, transform: (segment: string) => string) {
   const ends = [...source.matchAll(/<\/w:sectPr>/g)].map(
     (match) => (match.index ?? 0) + match[0].length,
@@ -64,9 +72,10 @@ function roundCoverSignal(source: string, documents: DossierDocxDocuments) {
   const path = "m 0,0 l 1000,0 1000,1000 190,1000 c 85,1000 0,915 0,810 l 0,0 x e";
   const signal = `<v:shape id="studio2-cover-signal" coordorigin="0,0" coordsize="1000,1000" path="${path}" style="${vmlStyle(124, 0, 86, 96, -251658240)}" fillcolor="${secondary}" stroked="f"></v:shape>`;
 
-  return transformSection(source, 0, (segment) =>
-    replaceShapeBlock(segment, "studio2-cover-signal", signal),
-  );
+  return transformSection(source, 0, (segment) => {
+    const navyUnderlay = widenShapeStyle(segment, "studio2-cover-rail", 210);
+    return replaceShapeBlock(navyUnderlay, "studio2-cover-signal", signal);
+  });
 }
 
 function softenCvSecondaryText(source: string, documents: DossierDocxDocuments) {
