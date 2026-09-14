@@ -30,7 +30,7 @@ function moveCoverNameBelowHero(source: string, documents: DossierDocxDocuments)
   if (start < 0 || end < 0) return source;
 
   let paragraph = cover.slice(start, end + 6);
-  paragraph = paragraph.replace(/w:before="\d+"/, 'w:before="900"');
+  paragraph = paragraph.replace(/w:before="\d+"/, 'w:before="1400"');
   cover = cover.slice(0, start) + paragraph + cover.slice(end + 6);
   return cover + source.slice(sectionStart);
 }
