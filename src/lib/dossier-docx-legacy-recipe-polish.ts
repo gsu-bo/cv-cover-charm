@@ -60,6 +60,7 @@ const COVER_PHOTO_TOP_MM: Readonly<Record<string, number>> = {
 };
 
 const LIGHT_CONTACT_DARK_ATTACHMENTS = new Set(["terracotta", "blockig"]);
+const DARK_COVER_INITIALS_TEMPLATES = new Set(["verlauf2", "verlauf3"]);
 const DARK_CV_IDENTITY_TEMPLATES = new Set(["colorful", "aurora"]);
 
 function hex(value: string | undefined, fallback: string) {
@@ -225,6 +226,9 @@ function restorePhotoInitials(source: string, cover: CoverPdfDocument) {
       if (flowIndex >= 0) {
         next = next.slice(0, flowIndex + 1) + next.slice(flowIndex + 1).replace(xmlEscape(value), "");
       }
+    }
+    if (DARK_COVER_INITIALS_TEMPLATES.has(String(cover.template))) {
+      next = setParagraphColor(next, value, DARK_TEXT);
     }
     return next;
   });
