@@ -12,7 +12,7 @@ function polishVerlaufCover(source: string) {
   cover = cover.replace(
     /<v:oval\b([^>]*\bid="warm-cover-photo-mat"[^>]*)>[\s\S]*?<\/v:oval>/,
     (_shape, rawAttributes: string) => {
-      let attributes = rawAttributes
+      const attributes = rawAttributes
         .replace(/\sfillcolor="[^"]*"/g, "")
         .replace(/\sstroked="[^"]*"/g, "")
         .replace(/z-index:-251658240/g, "z-index:251658050");
