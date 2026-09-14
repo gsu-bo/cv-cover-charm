@@ -116,8 +116,8 @@ describe("Sonne DOCX contrast", () => {
     expect(xml).toContain('id="warm-cover-paper"');
     expect(xml).toContain('id="warm-cover-paper" style=');
     expect(xml).toMatch(/id="warm-cover-paper"[^>]*fillcolor="#333333"/);
-    expect(xml).toMatch(/id="warm-letter-paper"[^>]*fillcolor="#ffffff"/);
-    expect(xml).toMatch(/id="warm-cv-paper"[^>]*fillcolor="#ffffff"/);
+    expect(xml).toMatch(/id="warm-letter-paper"[^>]*fillcolor="#FFFFFF"/);
+    expect(xml).toMatch(/id="warm-cv-paper"[^>]*fillcolor="#FFFFFF"/);
   });
 
   test("keeps cover contact white and matches the PDF CV accent circle", async () => {
