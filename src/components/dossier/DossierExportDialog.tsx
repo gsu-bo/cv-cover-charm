@@ -1,8 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import type { CvLayoutWarning } from "@/components/cv/CvCanvas";
 import { letterReadiness, letterTextLayerOverflows } from "@/components/letter/preflight";
-import { letterPdfDocumentFromSaved } from "@/lib/dossier-pdf-document";
-import { LETTER_STORAGE_KEY, readStoredDossierPart } from "@/lib/dossier-project";
+import {
+  coverPdfDocumentFromSaved,
+  coverPdfHasContent,
+  cvPdfDocumentFromSaved,
+  cvPdfHasContent,
+  letterPdfDocumentFromSaved,
+  letterPdfHasContent,
+} from "@/lib/dossier-pdf-document";
+import {
+  COVER_STORAGE_KEY,
+  CV_STORAGE_KEY,
+  LETTER_STORAGE_KEY,
+  readStoredDossierPart,
+} from "@/lib/dossier-project";
 
 export type DossierExportFormat = "json" | "pdf" | "docx";
 
@@ -19,6 +31,12 @@ type Props = {
   onClose: () => void;
   onDownload: (format: DossierExportFormat) => void | Promise<void>;
 };
+
+function joinParts(parts: string[]) {
+  if (parts.length <= 1) return parts[0] ?? "";
+  if (parts.length === 2) return `${parts[0]} und ${parts[1]}`;
+  return `${parts.slice(0, -1).join(", ")} und ${parts.at(-1)}`;
+}
 
 export function DossierExportDialog({
   open,
@@ -41,10 +59,21 @@ export function DossierExportDialog({
   const canDownloadJson = formatSelectionEnabled ? true : (jsonAvailable ?? false);
   const canDownloadPdf = pdfAvailable ?? true;
   const canDownloadDocx = docxAvailable ?? false;
+
+  const cover = coverPdfDocumentFromSaved(readStoredDossierPart(COVER_STORAGE_KEY));
   const letter = letterPdfDocumentFromSaved(readStoredDossierPart(LETTER_STORAGE_KEY));
+  const cv = cvPdfDocumentFromSaved(readStoredDossierPart(CV_STORAGE_KEY));
+  const missingParts = [
+    !cover || !coverPdfHasContent(cover.data) ? "Titelblatt" : null,
+    !letter || !letterPdfHasContent(letter.data) ? "Motivationsschreiben" : null,
+    !cv || !cvPdfHasContent(cv.data) ? "Lebenslauf" : null,
+  ].filter((part): part is string => part !== null);
+  const missingPartsText = joinParts(missingParts);
+
   const letterState = letter
     ? letterReadiness(letter.data)
     : { started: false, readyToSend: false, missing: ["Motivationsschreiben"] };
+  const missingLetterFields = joinParts(letterState.missing);
 
   useEffect(() => {
     if (!open) return;
@@ -188,9 +217,11 @@ export function DossierExportDialog({
             >
               <span className="block text-sm font-semibold">Fertiges Dossier (PDF)</span>
               <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                {canDownloadPdf
-                  ? `Titelblatt, Motivationsschreiben und ${cvPageCount || "alle"} CV-Seite${cvPageCount === 1 ? "" : "n"}.`
-                  : "Benötigt Titelblatt, Motivationsschreiben und Lebenslauf."}
+                {!canDownloadPdf && missingParts.length
+                  ? `Noch nicht verfügbar: Ergänze zuerst ${missingPartsText}.`
+                  : canDownloadPdf && !letterState.readyToSend
+                    ? `Noch nicht bereit: Im Motivationsschreiben fehlen ${missingLetterFields}.`
+                    : `Zum Verschicken: Titelblatt, Motivationsschreiben und ${cvPageCount || "alle"} CV-Seite${cvPageCount === 1 ? "" : "n"}.`}
               </span>
             </button>
             <button
@@ -203,11 +234,13 @@ export function DossierExportDialog({
             >
               <span className="block text-sm font-semibold">Bearbeitbares Dossier (DOCX)</span>
               <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                {!canDownloadDocx
-                  ? "Benötigt ein vollständiges Dossier mit derselben aktiven Vorlage."
+                {missingParts.length
+                  ? `Noch nicht verfügbar: Ergänze zuerst ${missingPartsText}.`
                   : !letterState.readyToSend
-                    ? "Ergänze zuerst die Pflichtangaben im Motivationsschreiben."
-                    : `Word-Datei${docxTemplateLabel ? ` · Vorlage ${docxTemplateLabel}` : ""}.`}
+                    ? `Noch nicht verfügbar: Im Motivationsschreiben fehlen ${missingLetterFields}.`
+                    : !canDownloadDocx
+                      ? "Noch nicht verfügbar: Titelblatt, Motivationsschreiben und Lebenslauf müssen dasselbe Design verwenden. Wähle bei allen drei dieselbe Vorlage."
+                      : `Word-Datei zum Weiterbearbeiten${docxTemplateLabel ? ` · Vorlage ${docxTemplateLabel}` : ""}.`}
               </span>
             </button>
           </div>
