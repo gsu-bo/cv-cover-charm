@@ -91,7 +91,6 @@ export function parseDossierProject(value: unknown): DossierProject | null {
   const letter = isRecord(value.letter) && isRecord(value.letter.data) ? value.letter : undefined;
   const cv = isRecord(value.cv) && isRecord(value.cv.data) ? value.cv : undefined;
   const chrome = isRecord(value.chrome) ? normalizeDossierChromeState(value.chrome) : undefined;
-  if (!cover && !letter && !cv) return null;
 
   return {
     kind: DOSSIER_PROJECT_KIND,
