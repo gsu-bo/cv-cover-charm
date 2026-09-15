@@ -9,6 +9,7 @@ import {
 } from "@/lib/dossier-docx-template-loader";
 import type { DossierDocxDocuments } from "@/lib/dossier-docx-template-types";
 import { dossierDocxTemplatePlan } from "@/lib/dossier-docx-family";
+import { applyLetterAlignmentToDocx } from "@/lib/dossier-docx-letter-alignment";
 import { downloadBlob } from "@/lib/download";
 
 export type { DossierDocxDocuments };
@@ -196,7 +197,8 @@ export async function createDossierDocxBlob(
   if (!profile) {
     throw new Error("DOCX benötigt dieselbe aktive Vorlage in allen drei Dossierteilen.");
   }
-  return profile.createBlob({ cover, letter, cv });
+  const blob = await profile.createBlob({ cover, letter, cv });
+  return applyLetterAlignmentToDocx(blob, letter);
 }
 
 export async function downloadDossierDocx(
