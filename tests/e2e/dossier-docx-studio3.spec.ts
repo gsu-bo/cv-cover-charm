@@ -170,6 +170,7 @@ async function seedStudio3Dossier(page: import("@playwright/test").Page) {
     );
   });
   await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle");
 }
 
 async function openDocxOption(page: import("@playwright/test").Page) {
@@ -213,6 +214,7 @@ test.describe("Studio 3 DOCX reference download", () => {
       }
     });
     await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle");
 
     const option = await openDocxOption(page);
     await expect(option).toBeDisabled();
