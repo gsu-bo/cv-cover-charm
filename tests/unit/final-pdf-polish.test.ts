@@ -59,4 +59,27 @@ describe("final 39-PDF visual polish", () => {
     );
     expect(css).not.toContain("#0000FF");
   });
+
+  test("keeps compact CV contact mastheads inside a print-safe top zone", () => {
+    for (const template of ["studio2", "studio3"]) {
+      expect(css).toContain(`[data-cv-template="${template}"] [data-dossier-integrated-contact]`);
+    }
+    expect(css).toContain("top: 3mm !important;");
+
+    for (const template of [
+      "studio",
+      "aurora",
+      "verlauf",
+      "horizon",
+      "violetPulse",
+      "warm2",
+      "warm3",
+      "verlauf2",
+      "verlauf3",
+      "prism",
+    ]) {
+      expect(css).toContain(`[data-cv-template="${template}"]`);
+    }
+    expect(css).toContain("top: 2mm !important;");
+  });
 });
