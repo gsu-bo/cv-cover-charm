@@ -22,10 +22,10 @@ function projectPersonName(project: DossierProject): string {
   const cvPerson = isRecord(cvData?.person) ? cvData.person : undefined;
 
   const coverName = coverData
-    ? [stringField(coverData.vorname), stringField(coverData.nachname)].filter(Boolean).join(" ")
+    ? [stringField(coverData.vorname), stringField(coverData.nachname)].filter(Boolean).join("")
     : "";
   const cvName = cvPerson
-    ? [stringField(cvPerson.vorname), stringField(cvPerson.nachname)].filter(Boolean).join(" ")
+    ? [stringField(cvPerson.vorname), stringField(cvPerson.nachname)].filter(Boolean).join("")
     : "";
   return coverName || cvName;
 }
