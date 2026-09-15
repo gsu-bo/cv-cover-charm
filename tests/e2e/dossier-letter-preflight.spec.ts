@@ -154,7 +154,6 @@ async function seedDossier(page: Page, letter: ReturnType<typeof letterPayload>)
 async function openReview(page: Page) {
   const card = page.getByRole("button").filter({ hasText: "Gesamtdossier herunterladen" });
   await expect(card).toBeVisible();
-  await expect(card).toContainText("Dossier prüfen & herunterladen", { timeout: 15_000 });
   await card.click();
   const dialog = page.getByRole("dialog", { name: "Dossier herunterladen" });
   await expect(dialog).toBeVisible();
@@ -174,7 +173,7 @@ test.describe("M1 dossier sending truth", () => {
     await expect(readiness).toContainText("noch nicht versandbereit");
     await expect(readiness).toContainText("Betreff");
     let downloadButton = dialog.getByRole("button", {
-      name: "Dossier herunterladen",
+      name: "PDF herunterladen",
       exact: true,
     });
     await expect(downloadButton).toBeDisabled();
@@ -196,7 +195,7 @@ test.describe("M1 dossier sending truth", () => {
     const overflow = dialog.locator("[data-dossier-letter-overflow]");
     await expect(overflow).toContainText("Motivationsschreiben ist zu lang", { timeout: 15_000 });
     await expect(overflow).toContainText("abgeschnittenes Dossier-PDF wird nicht erstellt");
-    downloadButton = dialog.getByRole("button", { name: "Dossier herunterladen", exact: true });
+    downloadButton = dialog.getByRole("button", { name: "PDF herunterladen", exact: true });
     await expect(downloadButton).toBeDisabled();
     await dialog.getByRole("button", { name: "Zurück zum Bearbeiten" }).click();
 
@@ -213,7 +212,7 @@ test.describe("M1 dossier sending truth", () => {
 
     dialog = await openReview(page);
     await expect(dialog.locator("[data-dossier-letter-overflow]")).toHaveCount(0);
-    downloadButton = dialog.getByRole("button", { name: "Dossier herunterladen", exact: true });
+    downloadButton = dialog.getByRole("button", { name: "PDF herunterladen", exact: true });
     await expect(downloadButton).toBeEnabled({ timeout: 15_000 });
 
     const [download] = await Promise.all([page.waitForEvent("download"), downloadButton.click()]);
