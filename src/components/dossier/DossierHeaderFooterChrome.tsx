@@ -217,10 +217,19 @@ export function DossierHeaderFooterChrome({
           >
             <div
               data-dossier-continuation-contact
-              className="min-w-0 flex-1 truncate text-center opacity-95"
-              style={{ transform: headerContentTransform }}
+              className="flex min-w-0 flex-1 flex-wrap items-center justify-center text-center opacity-95"
+              style={{ overflowWrap: "anywhere", transform: headerContentTransform }}
             >
-              {continuationBits.join(" · ")}
+              {continuationBits.map((value, index) => (
+                <span key={`${value}-${index}`} className="inline-flex min-w-0 items-center">
+                  {index ? (
+                    <span aria-hidden="true" className="mx-[1.1mm] shrink-0 opacity-60">
+                      ·
+                    </span>
+                  ) : null}
+                  <span className="min-w-0">{value}</span>
+                </span>
+              ))}
             </div>
           </div>
         ) : (
@@ -268,10 +277,25 @@ export function DossierHeaderFooterChrome({
                 </div>
               ) : (
                 <div
-                  className="my-auto min-w-0 flex-1 text-center opacity-95"
+                  data-dossier-inline-contact
+                  className="my-auto flex min-w-0 flex-1 flex-wrap items-center justify-center gap-y-[0.7mm] text-center"
                   style={{ overflowWrap: "anywhere", transform: headerContentTransform }}
                 >
-                  {contactRows.map((row) => row.value).join(" · ")}
+                  {contactRows.map((row, index) => (
+                    <span key={row.key} className="inline-flex min-w-0 items-center">
+                      {index ? (
+                        <span aria-hidden="true" className="mx-[1.5mm] shrink-0 opacity-55">
+                          ·
+                        </span>
+                      ) : null}
+                      <span
+                        className={row.strong ? "min-w-0 font-semibold" : "min-w-0 opacity-95"}
+                        style={{ overflowWrap: "anywhere" }}
+                      >
+                        {row.value}
+                      </span>
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
