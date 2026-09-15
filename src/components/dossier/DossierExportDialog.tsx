@@ -154,10 +154,7 @@ export function DossierExportDialog({
     !canDownloadDocx;
   const pdfOverflowIssue = canDownloadPdf && letterState.readyToSend && letterOverflow === true;
   const blockingCount =
-    missingParts.length +
-    letterIssueCount +
-    (docxDesignIssue ? 1 : 0) +
-    (pdfOverflowIssue ? 1 : 0);
+    missingParts.length + letterIssueCount + (docxDesignIssue ? 1 : 0) + (pdfOverflowIssue ? 1 : 0);
   const advisoryCount = (warnings?.length ?? 0) + (coverChanged ? 1 : 0);
 
   const missingPartsCompact = `${missingParts.length} Dossierteil${missingParts.length === 1 ? "" : "e"} ${
@@ -311,9 +308,11 @@ export function DossierExportDialog({
               ) : null}
               {pdfOverflowIssue ? (
                 <li data-dossier-letter-overflow>
-                  <span className="font-medium text-foreground">Motivationsschreiben ist zu lang.</span>{" "}
-                  Der Brief passt nicht auf eine A4-Seite; ein abgeschnittenes Dossier-PDF wird nicht
-                  erstellt.
+                  <span className="font-medium text-foreground">
+                    Motivationsschreiben ist zu lang.
+                  </span>{" "}
+                  Der Brief passt nicht auf eine A4-Seite; ein abgeschnittenes Dossier-PDF wird
+                  nicht erstellt.
                 </li>
               ) : null}
               {docxDesignIssue ? (
@@ -328,7 +327,8 @@ export function DossierExportDialog({
               ) : null}
               {coverChanged ? (
                 <li>
-                  Hinweis: Das Titelblatt wurde seit der letzten Übernahme in den Lebenslauf verändert.
+                  Hinweis: Das Titelblatt wurde seit der letzten Übernahme in den Lebenslauf
+                  verändert.
                 </li>
               ) : null}
               {warnings?.map((warning) => (
