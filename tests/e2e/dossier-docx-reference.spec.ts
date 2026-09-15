@@ -203,7 +203,8 @@ test.describe("DOCX reference download", () => {
 
     const option = await openDocxOption(page);
     await expect(option).toBeDisabled();
-    await expect(option).toContainText(
+    const requirements = page.locator("[data-dossier-export-check]");
+    await expect(requirements).toContainText(
       "Titelblatt, Motivationsschreiben und Lebenslauf müssen dasselbe Design verwenden.",
     );
   });
