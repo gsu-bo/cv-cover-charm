@@ -291,11 +291,15 @@ describe("combined dossier project", () => {
     }
   });
 
-  test("rejects unrelated JSON and empty project envelopes", () => {
+  test("rejects unrelated JSON but accepts empty project snapshots", () => {
     expect(parseDossierProject({ data: {} })).toBeNull();
     expect(
       parseDossierProject({ kind: DOSSIER_PROJECT_KIND, version: 1, savedAt: "now" }),
-    ).toBeNull();
+    ).toEqual({
+      kind: DOSSIER_PROJECT_KIND,
+      version: 1,
+      savedAt: "now",
+    });
     expect(
       parseDossierProject({
         kind: DOSSIER_PROJECT_KIND,
@@ -303,7 +307,11 @@ describe("combined dossier project", () => {
         savedAt: "now",
         cover: { version: 7 },
       }),
-    ).toBeNull();
+    ).toEqual({
+      kind: DOSSIER_PROJECT_KIND,
+      version: 1,
+      savedAt: "now",
+    });
   });
 });
 
