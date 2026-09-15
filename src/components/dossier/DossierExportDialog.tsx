@@ -20,7 +20,6 @@ type Props = {
   onDownload: (format: DossierExportFormat) => void | Promise<void>;
 };
 
-/** Letzter neutraler Kontrollmoment – Exportformat wählen und nur relevante Checks zeigen. */
 export function DossierExportDialog({
   open,
   cvPageCount,
@@ -39,7 +38,7 @@ export function DossierExportDialog({
   const [letterOverflow, setLetterOverflow] = useState<boolean | null>(null);
   const formatSelectionEnabled =
     jsonAvailable !== undefined || pdfAvailable !== undefined || docxAvailable !== undefined;
-  const canDownloadJson = jsonAvailable ?? false;
+  const canDownloadJson = formatSelectionEnabled ? true : (jsonAvailable ?? false);
   const canDownloadPdf = pdfAvailable ?? true;
   const canDownloadDocx = docxAvailable ?? false;
   const letter = letterPdfDocumentFromSaved(readStoredDossierPart(LETTER_STORAGE_KEY));
@@ -55,14 +54,12 @@ export function DossierExportDialog({
     }
     setFormat((current) => {
       if (current === "pdf" && canDownloadPdf) return current;
-      if (current === "docx" && canDownloadDocx) return current;
-      if (current === "json" && canDownloadJson) return current;
+      if (current === "docx" && canDownloadDocx && letterState.readyToSend) return current;
+      if (current === "json") return current;
       if (canDownloadPdf) return "pdf";
-      if (canDownloadJson) return "json";
-      if (canDownloadDocx) return "docx";
       return "json";
     });
-  }, [canDownloadDocx, canDownloadJson, canDownloadPdf, formatSelectionEnabled, open]);
+  }, [canDownloadDocx, canDownloadPdf, formatSelectionEnabled, letterState.readyToSend, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -79,7 +76,6 @@ export function DossierExportDialog({
       setLetterOverflow(null);
       return;
     }
-
     let resizeObserver: ResizeObserver | null = null;
     let innerFrame = 0;
     const measure = () => {
@@ -96,7 +92,6 @@ export function DossierExportDialog({
         resizeObserver.observe(layer);
       }
     };
-
     const mutationObserver = new MutationObserver(measure);
     mutationObserver.observe(document.body, { childList: true, subtree: true });
     const outerFrame = requestAnimationFrame(() => {
@@ -104,7 +99,6 @@ export function DossierExportDialog({
     });
     void document.fonts?.ready.then(measure);
     measure();
-
     return () => {
       cancelAnimationFrame(outerFrame);
       if (innerFrame) cancelAnimationFrame(innerFrame);
@@ -117,16 +111,9 @@ export function DossierExportDialog({
 
   const layoutPending = warnings === null || letterOverflow === null;
   const pdfBlocked =
-    !canDownloadPdf ||
-    downloading ||
-    layoutPending ||
-    !letterState.readyToSend ||
-    letterOverflow === true;
-  const docxBlocked = !canDownloadDocx || downloading;
-  const jsonBlocked = !canDownloadJson || downloading;
-  const downloadBlocked =
-    format === "pdf" ? pdfBlocked : format === "docx" ? docxBlocked : jsonBlocked;
-
+    !canDownloadPdf || downloading || layoutPending || !letterState.readyToSend || letterOverflow === true;
+  const docxBlocked = !canDownloadDocx || downloading || !letterState.readyToSend;
+  const downloadBlocked = format === "pdf" ? pdfBlocked : format === "docx" ? docxBlocked : downloading;
   const actionLabel = !formatSelectionEnabled
     ? downloading
       ? "PDF wird erstellt…"
@@ -142,7 +129,6 @@ export function DossierExportDialog({
         : downloading
           ? "JSON wird erstellt…"
           : "JSON herunterladen";
-
   const optionClass = (selected: boolean, disabled: boolean) =>
     `w-full rounded-lg border px-3 py-3 text-left transition-colors ${
       selected ? "border-primary bg-primary/5" : "border-input bg-background hover:bg-accent"
@@ -161,20 +147,11 @@ export function DossierExportDialog({
         aria-labelledby="dossier-export-title"
         className="w-full max-w-md rounded-xl border bg-background p-5 shadow-2xl"
       >
-        <h2 id="dossier-export-title" className="text-base font-semibold">
-          Dossier herunterladen
-        </h2>
+        <h2 id="dossier-export-title" className="text-base font-semibold">Dossier herunterladen</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {formatSelectionEnabled ? (
-            <>
-              Wähle das gewünschte Format. Die Dateien werden lokal erstellt und nicht hochgeladen.
-            </>
-          ) : (
-            <>
-              Reihenfolge: Titelblatt, Motivationsschreiben und {cvPageCount || "alle"} CV-Seite
-              {cvPageCount === 1 ? "" : "n"}.
-            </>
-          )}
+          {formatSelectionEnabled
+            ? "Wähle das gewünschte Format. Die Dateien werden lokal erstellt und nicht hochgeladen."
+            : `Reihenfolge: Titelblatt, Motivationsschreiben und ${cvPageCount || "alle"} CV-Seite${cvPageCount === 1 ? "" : "n"}.`}
         </p>
 
         {formatSelectionEnabled ? (
@@ -183,16 +160,15 @@ export function DossierExportDialog({
               type="button"
               role="radio"
               aria-checked={format === "json"}
-              disabled={!canDownloadJson || downloading}
+              disabled={downloading}
               onClick={() => setFormat("json")}
-              className={optionClass(format === "json", !canDownloadJson || downloading)}
+              className={optionClass(format === "json", downloading)}
             >
               <span className="block text-sm font-semibold">Projektdatei (JSON)</span>
               <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                Aktuellen Stand sichern und später wieder weiterbearbeiten.
+                Aktuellen Stand jederzeit sichern und später wieder weiterbearbeiten.
               </span>
             </button>
-
             <button
               type="button"
               role="radio"
@@ -208,20 +184,21 @@ export function DossierExportDialog({
                   : "Benötigt Titelblatt, Motivationsschreiben und Lebenslauf."}
               </span>
             </button>
-
             <button
               type="button"
               role="radio"
               aria-checked={format === "docx"}
-              disabled={!canDownloadDocx || downloading}
+              disabled={docxBlocked}
               onClick={() => setFormat("docx")}
-              className={optionClass(format === "docx", !canDownloadDocx || downloading)}
+              className={optionClass(format === "docx", docxBlocked)}
             >
               <span className="block text-sm font-semibold">Bearbeitbares Dossier (DOCX)</span>
               <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                {canDownloadDocx
-                  ? `Word-Datei${docxTemplateLabel ? ` · Vorlage ${docxTemplateLabel}` : ""}.`
-                  : "Benötigt ein vollständiges Dossier mit derselben aktiven Vorlage."}
+                {!canDownloadDocx
+                  ? "Benötigt ein vollständiges Dossier mit derselben aktiven Vorlage."
+                  : !letterState.readyToSend
+                    ? "Ergänze zuerst die Pflichtangaben im Motivationsschreiben."
+                    : `Word-Datei${docxTemplateLabel ? ` · Vorlage ${docxTemplateLabel}` : ""}.`}
               </span>
             </button>
           </div>
@@ -230,75 +207,49 @@ export function DossierExportDialog({
         <div className="mt-4 flex flex-col gap-2">
           {formatSelectionEnabled && format === "json" ? (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-              Diese Datei enthält deinen Projektstand zum späteren Laden – nicht das fertige
-              Bewerbungsdossier.
+              Diese Datei enthält deinen Projektstand zum späteren Laden – nicht das fertige Bewerbungsdossier.
             </div>
           ) : null}
-
           {formatSelectionEnabled && format === "docx" ? (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-              DOCX ist zum Weiterbearbeiten in Microsoft Word gedacht. Für eine unveränderliche
-              Bewerbung verwende PDF.
+              DOCX ist zum Weiterbearbeiten in Microsoft Word gedacht. Für eine unveränderliche Bewerbung verwende PDF.
             </div>
           ) : null}
-
           {format === "pdf" && !letterState.readyToSend ? (
-            <div
-              role="alert"
-              data-dossier-letter-readiness
-              className="rounded-md border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
-            >
+            <div role="alert" data-dossier-letter-readiness className="rounded-md border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
               <div className="font-semibold">Motivationsschreiben noch nicht versandbereit</div>
               <div className="mt-1">Ergänze noch:</div>
               <ul className="mt-1 list-disc space-y-1 pl-4">
-                {letterState.missing.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
+                {letterState.missing.map((item) => <li key={item}>{item}</li>)}
               </ul>
             </div>
           ) : null}
-
           {format === "pdf" && letterState.readyToSend && letterOverflow === null ? (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
               Motivationsschreiben wird auf eine sichere A4-Seite geprüft…
             </div>
           ) : null}
-
           {format === "pdf" && letterOverflow === true ? (
-            <div
-              role="alert"
-              data-dossier-letter-overflow
-              className="rounded-md border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
-            >
+            <div role="alert" data-dossier-letter-overflow className="rounded-md border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
               <div className="font-semibold">Motivationsschreiben ist zu lang</div>
-              <div>
-                Der Brief passt nicht auf eine A4-Seite. Kürze ihn im Motivationsschreiben-Editor;
-                ein abgeschnittenes Dossier-PDF wird nicht erstellt.
-              </div>
+              <div>Der Brief passt nicht auf eine A4-Seite. Kürze ihn im Motivationsschreiben-Editor; ein abgeschnittenes Dossier-PDF wird nicht erstellt.</div>
             </div>
           ) : null}
-
           {format === "pdf" && coverChanged ? (
             <div className="rounded-md border border-sky-300/70 bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-950 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-100">
               Das Titelblatt wurde seit der letzten Übernahme in den Lebenslauf verändert.
             </div>
           ) : null}
-
           {format === "pdf" && warnings === null && canDownloadPdf ? (
-            <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-              Lebenslauf-Layout wird geprüft…
-            </div>
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">Lebenslauf-Layout wird geprüft…</div>
           ) : format === "pdf" && warnings?.length ? (
             <div className="rounded-md border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
               <div className="font-semibold">Layout-Hinweise</div>
               <ul className="mt-1 list-disc space-y-1 pl-4">
-                {warnings.map((warning) => (
-                  <li key={warning.id}>{warning.message}</li>
-                ))}
+                {warnings.map((warning) => <li key={warning.id}>{warning.message}</li>)}
               </ul>
             </div>
           ) : null}
-
           {format !== "json" ? (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
               Kontrolliere vor dem Versenden Inhalt, Rechtschreibung und Kontaktdaten selbst.
@@ -307,21 +258,10 @@ export function DossierExportDialog({
         </div>
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={downloading}
-            className="rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-accent disabled:opacity-50"
-          >
+          <button type="button" onClick={onClose} disabled={downloading} className="rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-accent disabled:opacity-50">
             Zurück zum Bearbeiten
           </button>
-          <button
-            ref={downloadRef}
-            type="button"
-            onClick={() => void onDownload(format)}
-            disabled={downloadBlocked}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
-          >
+          <button ref={downloadRef} type="button" onClick={() => void onDownload(format)} disabled={downloadBlocked} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60">
             {actionLabel}
           </button>
         </div>
