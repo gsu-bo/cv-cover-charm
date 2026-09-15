@@ -18,20 +18,24 @@ export function ProjectLoadButton() {
     try {
       const project = parseDossierProjectText(await file.text());
       if (!project) {
-        window.alert("Diese Datei ist kein gültiges CV Cover Charm Projekt.");
+        window.alert(
+          "Diese Datei kann hier nicht als Projekt geöffnet werden. Wähle eine Projektdatei, die zuvor mit «Projekt speichern» erstellt wurde.",
+        );
         return;
       }
 
       const parts = dossierProjectPartLabels(project);
       const confirmed = window.confirm(
-        `Projekt laden?\n\nGefunden: ${parts.join(", ")}.\n\nDer aktuelle Browserstand wird durch diese Projektdatei ersetzt.`,
+        `Gespeichertes Projekt öffnen?\n\nIn der Datei gefunden: ${parts.join(", ")}.\n\nBeim Laden werden die gespeicherten Dossierdaten aus dieser Datei in diesem Browser geöffnet. Dein aktueller Stand in diesem Browser wird dadurch ersetzt.\n\nDie Datei wird nur auf diesem Gerät gelesen und nicht ins Internet hochgeladen.`,
       );
       if (!confirmed) return;
 
       replaceDossierProject(project);
       window.location.reload();
     } catch {
-      window.alert("Die Projektdatei konnte nicht gelesen werden.");
+      window.alert(
+        "Die Projektdatei konnte nicht gelesen werden. Wähle eine Datei, die zuvor mit «Projekt speichern» erstellt wurde.",
+      );
     } finally {
       setLoading(false);
     }
@@ -43,6 +47,7 @@ export function ProjectLoadButton() {
         type="button"
         onClick={() => fileInputRef.current?.click()}
         disabled={loading}
+        title="Einen früher gespeicherten Projektstand öffnen und weiterbearbeiten. Die Datei wird nicht hochgeladen."
         className="rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent disabled:opacity-50"
       >
         <span className="sm:hidden">{loading ? "Lädt…" : "Laden"}</span>
