@@ -145,12 +145,19 @@ export function DossierExportDialog({
     !letterState.readyToSend ||
     letterOverflow === true;
   const docxBlocked = !canDownloadDocx || downloading || !letterState.readyToSend;
-  const letterIssueCount = letterHasContent && !letterState.readyToSend ? letterState.missing.length : 0;
+  const letterIssueCount =
+    letterHasContent && !letterState.readyToSend ? letterState.missing.length : 0;
   const docxDesignIssue =
-    formatSelectionEnabled && missingParts.length === 0 && letterState.readyToSend && !canDownloadDocx;
+    formatSelectionEnabled &&
+    missingParts.length === 0 &&
+    letterState.readyToSend &&
+    !canDownloadDocx;
   const pdfOverflowIssue = canDownloadPdf && letterState.readyToSend && letterOverflow === true;
   const blockingCount =
-    missingParts.length + letterIssueCount + (docxDesignIssue ? 1 : 0) + (pdfOverflowIssue ? 1 : 0);
+    missingParts.length +
+    letterIssueCount +
+    (docxDesignIssue ? 1 : 0) +
+    (pdfOverflowIssue ? 1 : 0);
   const advisoryCount = (warnings?.length ?? 0) + (coverChanged ? 1 : 0);
 
   const missingPartsCompact = `${missingParts.length} Dossierteil${missingParts.length === 1 ? "" : "e"} ${
@@ -273,7 +280,7 @@ export function DossierExportDialog({
               <span className="mt-1 block text-xs text-muted-foreground">
                 {docxCompactStatus}
                 {docxCompactStatus === "Bereit" && docxTemplateLabel
-                  ? ` · ${docxTemplateLabel}`
+                  ? ` · Vorlage ${docxTemplateLabel}`
                   : ""}
               </span>
             </button>
@@ -320,7 +327,9 @@ export function DossierExportDialog({
                 <li>PDF: Layout wird noch geprüft.</li>
               ) : null}
               {coverChanged ? (
-                <li>Hinweis: Das Titelblatt wurde seit der letzten Übernahme in den Lebenslauf verändert.</li>
+                <li>
+                  Hinweis: Das Titelblatt wurde seit der letzten Übernahme in den Lebenslauf verändert.
+                </li>
               ) : null}
               {warnings?.map((warning) => (
                 <li key={warning.id}>Layout-Hinweis: {warning.message}</li>
