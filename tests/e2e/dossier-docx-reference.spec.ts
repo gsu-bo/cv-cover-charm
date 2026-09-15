@@ -204,7 +204,7 @@ test.describe("DOCX reference download", () => {
     const option = await openDocxOption(page);
     await expect(option).toBeDisabled();
     await expect(option).toContainText(
-      "Benötigt ein vollständiges Dossier mit derselben aktiven Vorlage.",
+      "Titelblatt, Motivationsschreiben und Lebenslauf müssen dasselbe Design verwenden.",
     );
   });
 });
