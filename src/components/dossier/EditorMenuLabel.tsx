@@ -21,7 +21,7 @@ export function EditorMenuLabel({
   return (
     <span data-editor-menu-label className="flex min-w-0 items-center gap-2">
       <Icon aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={1.7} />
-      <span className="truncate">{label}</span>
+      <span className="min-w-0 whitespace-normal break-words">{label}</span>
     </span>
   );
 }
