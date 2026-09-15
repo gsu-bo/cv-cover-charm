@@ -126,3 +126,31 @@ html[data-dossier-template="ribbon"] [data-dossier-document="cover"] [data-block
   width: 44mm !important;
   background: var(--cover-ink) !important;
 }
+
+/* -------------------------------------------------------------------------- */
+/* HORIZONTAL CONTACT HEADER                                                   */
+/* -------------------------------------------------------------------------- */
+/*
+ * The horizontal variant should read like a deliberate stationery band, not
+ * like tiny metadata squeezed into a large strip. Keep it centred, slightly
+ * larger and calmer. Long real-world values may wrap instead of being clipped.
+ */
+[data-dossier-header-text-layout="inline"] [data-dossier-integrated-contact] {
+  padding-left: 18mm !important;
+  padding-right: 18mm !important;
+}
+
+[data-dossier-header-text-layout="inline"] [data-dossier-integrated-contact] > div {
+  max-width: 174mm;
+  margin-inline: auto;
+  font-size: 9.4pt !important;
+  font-weight: 500;
+  line-height: 1.3 !important;
+  letter-spacing: 0.005em;
+  opacity: 1 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
