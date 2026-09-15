@@ -10,14 +10,24 @@ const UMLAUTS: Record<string, string> = {
   ß: "ss",
 };
 
+function compactDossierPersonName(name: string): string {
+  const match = name.match(/^(Bewerbungsdossier-)(.+?)(\.(?:json|pdf|docx))$/i);
+  if (!match) return name;
+  return `${match[1]}${match[2].replace(/\s+/g, "")}${match[3]}`;
+}
+
 /**
  * Chrome ignoriert das `download`-Attribut, sobald der Dateiname Zeichen
  * ausserhalb von Latin-1 … in der Praxis reicht schon ein "ü": aus
  * "Titelblatt-Lea-Müller.pdf" wird dann kommentarlos "download". Deshalb
  * werden Umlaute transliteriert und alles Übrige entfernt.
+ *
+ * Gesamtdossiers verwenden bewusst den kompakten Namen
+ * "Bewerbungsdossier-VornameNachname.ext". Andere Dateinamen behalten ihre
+ * bisherigen Trennzeichen.
  */
 export function safeFileName(name: string): string {
-  const ascii = name
+  const ascii = compactDossierPersonName(name)
     .replace(/[äöüÄÖÜß]/g, (c) => UMLAUTS[c])
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
