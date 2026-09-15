@@ -132,13 +132,24 @@ async function setWholeDossierTemplate(
   await page.reload({ waitUntil: "domcontentloaded" });
 }
 
+async function openDocxOption(page: import("@playwright/test").Page) {
+  const exportCard = page.getByRole("button", { name: /Gesamtdossier herunterladen/ });
+  await expect(exportCard).toBeEnabled();
+  await exportCard.click();
+  return page.getByRole("radio", { name: /Bearbeitbares Dossier \(DOCX\)/ });
+}
+
 test.describe("DOCX reference download", () => {
   test("complete Brief dossier downloads a real DOCX package", async ({ page }) => {
     await seedBriefDossier(page);
 
-    const button = page.getByRole("button", { name: "Dossier als DOCX · Brief" });
-    await expect(button).toBeEnabled();
+    const option = await openDocxOption(page);
+    await expect(option).toBeEnabled();
+    await expect(option).toContainText("Vorlage Brief");
+    await option.click();
 
+    const button = page.getByRole("button", { name: "DOCX herunterladen" });
+    await expect(button).toBeEnabled();
     const [download] = await Promise.all([page.waitForEvent("download"), button.click()]);
     expect(download.suggestedFilename()).toBe("Bewerbungsdossier-Lea-Mueller.docx");
 
@@ -156,7 +167,12 @@ test.describe("DOCX reference download", () => {
     await seedBriefDossier(page);
     await setWholeDossierTemplate(page, "modern");
 
-    const button = page.getByRole("button", { name: "Dossier als DOCX · Modern" });
+    const option = await openDocxOption(page);
+    await expect(option).toBeEnabled();
+    await expect(option).toContainText("Vorlage Modern");
+    await option.click();
+
+    const button = page.getByRole("button", { name: "DOCX herunterladen" });
     await expect(button).toBeEnabled();
     const [download] = await Promise.all([page.waitForEvent("download"), button.click()]);
     const path = await download.path();
@@ -181,6 +197,9 @@ test.describe("DOCX reference download", () => {
       }
     });
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("button", { name: "Dossier als DOCX", exact: true })).toBeDisabled();
+
+    const option = await openDocxOption(page);
+    await expect(option).toBeDisabled();
+    await expect(option).toContainText("Benötigt ein vollständiges Dossier mit derselben aktiven Vorlage.");
   });
 });
