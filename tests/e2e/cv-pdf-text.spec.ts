@@ -278,7 +278,7 @@ test.describe("CV PDF real text layer", () => {
 
     const dialog = page.getByRole("dialog", { name: "Dossier herunterladen" });
     await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText(/Reihenfolge: Titelblatt, Motivationsschreiben und/);
+    await expect(dialog).toContainText(/Titelblatt · Motivationsschreiben · 1 CV-Seite/);
     const confirm = dialog.getByRole("button", { name: "Dossier herunterladen" });
     await expect(confirm).toBeEnabled({ timeout: 10_000 });
 
