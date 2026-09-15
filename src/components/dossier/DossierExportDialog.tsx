@@ -38,6 +38,39 @@ function joinParts(parts: string[]) {
   return `${parts.slice(0, -1).join(", ")} und ${parts.at(-1)}`;
 }
 
+function FileFormatIcon({ label }: { label: "JSON" | "PDF" | "DOCX" }) {
+  const labelSize = label === "DOCX" ? 7.2 : 8.5;
+  return (
+    <svg
+      viewBox="0 0 40 48"
+      className="h-11 w-10 shrink-0 text-primary"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M7 3.5h18l8 8V43a1.5 1.5 0 0 1-1.5 1.5h-24A1.5 1.5 0 0 1 6 43V5A1.5 1.5 0 0 1 7.5 3.5Z"
+        fill="currentColor"
+        fillOpacity="0.08"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path d="M25 3.8V12h8" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="4" y="24" width="32" height="14" rx="4" fill="currentColor" />
+      <text
+        x="20"
+        y="33.3"
+        textAnchor="middle"
+        fill="var(--color-primary-foreground)"
+        fontSize={labelSize}
+        fontWeight="700"
+        letterSpacing="0.3"
+      >
+        {label}
+      </text>
+    </svg>
+  );
+}
+
 export function DossierExportDialog({
   open,
   cvPageCount,
@@ -249,8 +282,13 @@ export function DossierExportDialog({
               onClick={() => setFormat("json")}
               className={optionClass(format === "json", downloading)}
             >
-              <span className="block text-sm font-semibold">Projekt speichern</span>
-              <span className="mt-1 block text-xs text-muted-foreground">Zwischenstand · JSON</span>
+              <span className="flex items-center gap-3">
+                <FileFormatIcon label="JSON" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">Projekt speichern (*.json)</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">Zwischenstand</span>
+                </span>
+              </span>
             </button>
             <button
               type="button"
@@ -261,8 +299,13 @@ export function DossierExportDialog({
               onClick={() => setFormat("pdf")}
               className={optionClass(format === "pdf", !canDownloadPdf || downloading)}
             >
-              <span className="block text-sm font-semibold">PDF</span>
-              <span className="mt-1 block text-xs text-muted-foreground">{pdfCompactStatus}</span>
+              <span className="flex items-center gap-3">
+                <FileFormatIcon label="PDF" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">Fertiges Dossier (PDF)</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">{pdfCompactStatus}</span>
+                </span>
+              </span>
             </button>
             <button
               type="button"
@@ -273,12 +316,17 @@ export function DossierExportDialog({
               onClick={() => setFormat("docx")}
               className={optionClass(format === "docx", docxBlocked)}
             >
-              <span className="block text-sm font-semibold">Word (DOCX)</span>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                {docxCompactStatus}
-                {docxCompactStatus === "Bereit" && docxTemplateLabel
-                  ? ` · Vorlage ${docxTemplateLabel}`
-                  : ""}
+              <span className="flex items-center gap-3">
+                <FileFormatIcon label="DOCX" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">Bearbeitbares Dossier (DOCX)</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {docxCompactStatus}
+                    {docxCompactStatus === "Bereit" && docxTemplateLabel
+                      ? ` · Vorlage ${docxTemplateLabel}`
+                      : ""}
+                  </span>
+                </span>
               </span>
             </button>
           </div>
