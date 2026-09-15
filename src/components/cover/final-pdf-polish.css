@@ -69,3 +69,31 @@ html:is(
   color: var(--cover-ink, #1f2937) !important;
   -webkit-text-fill-color: var(--cover-ink, #1f2937) !important;
 }
+
+/* Final print-safety pass for compact CV mastheads. The browser/PDF text layer
+ * put the first readable contact line only ~1.1 mm from the paper edge in the
+ * two Studio variants and ~2.2 mm away in the other verified templates. Move
+ * only the integrated contact container, keeping the coloured masthead,
+ * document title, content flow and explicit chrome text offsets unchanged. */
+[data-cv-template="studio2"] [data-dossier-integrated-contact],
+[data-cv-template="studio3"] [data-dossier-integrated-contact] {
+  position: relative !important;
+  top: 3mm !important;
+}
+
+:is(
+    [data-cv-template="studio"],
+    [data-cv-template="aurora"],
+    [data-cv-template="verlauf"],
+    [data-cv-template="horizon"],
+    [data-cv-template="violetPulse"],
+    [data-cv-template="warm2"],
+    [data-cv-template="warm3"],
+    [data-cv-template="verlauf2"],
+    [data-cv-template="verlauf3"],
+    [data-cv-template="prism"]
+  )
+  [data-dossier-integrated-contact] {
+  position: relative !important;
+  top: 2mm !important;
+}
