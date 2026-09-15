@@ -130,6 +130,7 @@ test("real browser DOCX gallery covers every Fresh template", async ({ page }) =
       localStorage.setItem("lebenslauf:v1", JSON.stringify(cv));
     }, item);
     await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle");
 
     const exportCard = page.getByRole("button", { name: /Gesamtdossier herunterladen/ });
     await expect(exportCard).toBeEnabled();
