@@ -1,0 +1,31 @@
+/*
+ * Motivationsschreiben paragraph alignment.
+ *
+ * Only the letter editor/preview gets a default justification. Cover and CV
+ * typography are intentionally untouched. Alignment is stored per body block
+ * as data-align so editor, preview and PDF measurement share the same geometry.
+ */
+[data-letter-rich-editor] > :is(div, p),
+[data-letter-pdf-richtext] > :is(div, p) {
+  text-align: justify;
+}
+
+[data-letter-rich-editor] > :is(div, p)[data-align="left"],
+[data-letter-pdf-richtext] > :is(div, p)[data-align="left"] {
+  text-align: left;
+}
+
+[data-letter-rich-editor] > :is(div, p)[data-align="center"],
+[data-letter-pdf-richtext] > :is(div, p)[data-align="center"] {
+  text-align: center;
+}
+
+[data-letter-rich-editor] > :is(div, p)[data-align="right"],
+[data-letter-pdf-richtext] > :is(div, p)[data-align="right"] {
+  text-align: right;
+}
+
+[data-letter-rich-editor] > :is(div, p)[data-align="justify"],
+[data-letter-pdf-richtext] > :is(div, p)[data-align="justify"] {
+  text-align: justify;
+}
