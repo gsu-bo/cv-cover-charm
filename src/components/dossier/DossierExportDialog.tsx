@@ -166,6 +166,7 @@ export function DossierExportDialog({
             <button
               type="button"
               role="radio"
+              aria-label="Projektdatei (JSON) – Projekt speichern"
               aria-checked={format === "json"}
               disabled={downloading}
               onClick={() => setFormat("json")}
