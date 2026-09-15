@@ -47,6 +47,13 @@ function replaceShapeBlock(source: string, id: string, replacement: string) {
   return source.replace(pattern, replacement);
 }
 
+function transformShapeBlock(source: string, id: string, transform: (block: string) => string) {
+  const pattern = new RegExp(
+    `<v:(rect|oval|roundrect|shape)\\b([^>]*\\bid="${regexEscape(id)}"[^>]*)>[\\s\\S]*?<\\/v:\\1>`,
+  );
+  return source.replace(pattern, (block) => transform(block));
+}
+
 function widenShapeStyle(source: string, id: string, widthMm: number) {
   const pattern = new RegExp(`(\\bid="${regexEscape(id)}"[^>]*\\bstyle=")([^"]+)("[^>]*>)`);
   return source.replace(pattern, (_match, before: string, style: string, after: string) => {
@@ -78,6 +85,33 @@ function roundCoverSignal(source: string, documents: DossierDocxDocuments) {
   });
 }
 
+function polishContactBoxes(source: string) {
+  const tune = (
+    segment: string,
+    id: string,
+    geometry: { x: number; y: number; width: number; height: number },
+  ) =>
+    transformShapeBlock(segment, id, (block) => {
+      let next = block
+        .replace(/margin-left:-?[0-9.]+mm;/, `margin-left:${geometry.x}mm;`)
+        .replace(/margin-top:-?[0-9.]+mm;/, `margin-top:${geometry.y}mm;`)
+        .replace(/width:[0-9.]+mm;/, `width:${geometry.width}mm;`)
+        .replace(/height:[0-9.]+mm;/, `height:${geometry.height}mm;`)
+        .replace(/w:line="276"/g, 'w:line="210"')
+        .replace(/<w:sz w:val="(?:14|15)"\/>/g, '<w:sz w:val="17"/>')
+        .replace(/<w:szCs w:val="(?:14|15)"\/>/g, '<w:szCs w:val="17"/>');
+      return next;
+    });
+
+  let xml = transformSection(source, 1, (segment) =>
+    tune(segment, "studio2-docx-letter-contact", { x: 24, y: 1, width: 72, height: 20 }),
+  );
+  xml = transformSection(xml, 2, (segment) =>
+    tune(segment, "studio2-docx-cv-contact", { x: 10, y: 2, width: 46, height: 22 }),
+  );
+  return xml;
+}
+
 function softenCvSecondaryText(source: string, documents: DossierDocxDocuments) {
   const primary = hex(
     documents.cv.design.colors?.primary ?? documents.cover.colors?.primary,
@@ -103,7 +137,8 @@ export async function createDossierDocxBlob(documents: DossierDocxDocuments) {
   const base = await createStudio2DossierDocxBlob(documents);
   return transformStoredDocxDocumentXml(
     base,
-    (xml) => softenCvSecondaryText(roundCoverSignal(xml, documents), documents),
+    (xml) =>
+      softenCvSecondaryText(polishContactBoxes(roundCoverSignal(xml, documents)), documents),
     "Studio 2 DOCX refined PDF parity",
   );
 }
