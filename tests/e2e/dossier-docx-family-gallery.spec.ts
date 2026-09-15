@@ -160,7 +160,16 @@ test("one real browser DOCX per geometry family", async ({ page }) => {
     }, item);
     await page.reload({ waitUntil: "domcontentloaded" });
 
-    const button = page.getByRole("button", { name: `Dossier als DOCX · ${item.label}` });
+    const exportCard = page.getByRole("button", { name: /Gesamtdossier herunterladen/ });
+    await expect(exportCard).toBeEnabled();
+    await exportCard.click();
+
+    const docxOption = page.getByRole("radio", { name: /Bearbeitbares Dossier \(DOCX\)/ });
+    await expect(docxOption).toBeEnabled();
+    await expect(docxOption).toContainText(`Vorlage ${item.label}`);
+    await docxOption.click();
+
+    const button = page.getByRole("button", { name: "DOCX herunterladen" });
     await expect(button).toBeEnabled();
     const [download] = await Promise.all([page.waitForEvent("download"), button.click()]);
     const path = await download.path();
