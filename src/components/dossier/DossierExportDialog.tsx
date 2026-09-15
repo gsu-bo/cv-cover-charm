@@ -146,6 +146,22 @@ export function DossierExportDialog({
     !letterState.readyToSend ||
     letterOverflow === true;
   const docxBlocked = !canDownloadDocx || downloading || !letterState.readyToSend;
+  const pdfStatus = missingParts.length
+    ? `Fehlt: ${missingPartsText}.`
+    : !letterState.readyToSend
+      ? `Im Motivationsschreiben fehlt: ${missingLetterFields}.`
+      : letterOverflow === true
+        ? "Motivationsschreiben ist zu lang für eine A4-Seite."
+        : layoutPending
+          ? "Inhalt vorhanden – Layout wird geprüft."
+          : "Bereit.";
+  const docxStatus = missingParts.length
+    ? `Fehlt: ${missingPartsText}.`
+    : !letterState.readyToSend
+      ? `Im Motivationsschreiben fehlt: ${missingLetterFields}.`
+      : !canDownloadDocx
+        ? "Wähle in Titelblatt, Motivationsschreiben und Lebenslauf dasselbe Design."
+        : "Bereit.";
   const downloadBlocked =
     format === "pdf" ? pdfBlocked : format === "docx" ? docxBlocked : downloading;
   const actionLabel = !formatSelectionEnabled
@@ -243,6 +259,23 @@ export function DossierExportDialog({
                       : `Word-Datei zum Weiterbearbeiten${docxTemplateLabel ? ` · Vorlage ${docxTemplateLabel}` : ""}.`}
               </span>
             </button>
+          </div>
+        ) : null}
+
+        {formatSelectionEnabled ? (
+          <div
+            data-dossier-export-check
+            className="mt-3 rounded-lg border bg-muted/20 px-3 py-2 text-xs leading-relaxed"
+          >
+            <div className="font-semibold">Download-Check</div>
+            <ul className="mt-1 space-y-1 text-muted-foreground">
+              <li>
+                <span className="font-medium text-foreground">PDF:</span> {pdfStatus}
+              </li>
+              <li>
+                <span className="font-medium text-foreground">Word (DOCX):</span> {docxStatus}
+              </li>
+            </ul>
           </div>
         ) : null}
 
