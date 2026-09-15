@@ -1,17 +1,138 @@
 /*
- * Titelblatt und Lebenslauf hatten oberhalb des eigentlichen Formulars noch
- * eine zusätzliche Anweisung ("Alles ausfüllen …"). Die Editoren erklären
- * sich inzwischen selbst; Reset-Aktionen liegen gesammelt im Download-Menü.
- *
- * Die Dokumentmarker stammen aus den jeweiligen Vorschauen und begrenzen die
- * Regel zuverlässig auf diese beiden Editoren. Das Motivationsschreiben behält
- * seinen inhaltlichen Hinweis, weil er die Textaufgabe erklärt.
+ * One form language for Titelblatt, Motivationsschreiben and Lebenslauf.
+ * This stylesheet is deliberately scoped to the left editor panel only; it
+ * never changes the A4 preview or exported documents.
  */
-body:has([data-dossier-document="cover"])
-  [data-editor-panel]
+
+[data-editor-form-scroll] {
+  scrollbar-gutter: stable;
+}
+
+/* The three routes historically used slightly different wrapper widths,
+ * desktop padding and bottom spacing. The shared panel now owns those values.
+ */
+[data-editor-panel] > aside > div:last-child {
+  box-sizing: border-box;
+  display: flex !important;
+  width: min(92vw, 420px) !important;
+  max-width: 100% !important;
+  flex-direction: column !important;
+  gap: 0.75rem !important;
+  padding: 0.75rem !important;
+  padding-bottom: 3rem !important;
+}
+
+@media (min-width: 640px) {
+  [data-editor-panel] > aside > div:last-child {
+    width: 100% !important;
+  }
+}
+
+/* Every editor starts with the same quiet, compact helper row. Route-specific
+ * warnings remain separate cards below it.
+ */
+[data-editor-panel] > aside > div:last-child > div:first-child {
+  min-height: 1.75rem;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0.125rem 0.25rem !important;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+/* The old routes had hand-written horizontal separators before design
+ * controls. Group markers in Section now carry that hierarchy without using
+ * extra vertical space.
+ */
+[data-editor-panel] > aside > div:last-child > .h-px.bg-border,
+[data-editor-panel]
   > aside
-  > div
-  > div:first-child,
-body:has([data-cv-page]) [data-editor-panel] > aside > div > div:first-child {
+  > div:last-child
+  > div:has(> [data-editor-section])
+  > .h-px.bg-border {
   display: none;
+}
+
+/* Keep the same content -> design -> advanced flow even where an older route
+ * declared e.g. Layout or Rubriken anordnen earlier in its JSX.
+ */
+[data-editor-panel] > aside > div:last-child > [data-editor-section][data-form-group="design"] {
+  order: 10;
+}
+
+[data-editor-panel] > aside > div:last-child > [data-editor-section][data-form-group="advanced"] {
+  order: 20;
+}
+
+[data-editor-panel]
+  > aside
+  > div:last-child
+  > div:has(> [data-editor-section][data-form-group="design"]) {
+  order: 10;
+}
+
+[data-editor-panel]
+  > aside
+  > div:last-child
+  > div:has(> [data-editor-section])
+  > [data-editor-section][data-form-group="design"] {
+  order: 10;
+}
+
+[data-editor-panel]
+  > aside
+  > div:last-child
+  > div:has(> [data-editor-section])
+  > [data-editor-section][data-form-group="advanced"] {
+  order: 20;
+}
+
+/* Standard field rhythm. Existing component classes still decide colours,
+ * borders and semantic variants; these rules only remove accidental height
+ * differences between the three forms.
+ */
+[data-editor-panel]
+  [data-editor-section]
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not(
+        [type="file"]
+      ):not([type="hidden"]),
+    select,
+    textarea
+  ) {
+  min-height: 2.25rem;
+}
+
+[data-editor-panel] [data-editor-section] input[type="checkbox"],
+[data-editor-panel] [data-editor-section] input[type="radio"] {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  accent-color: hsl(var(--primary));
+}
+
+[data-editor-panel] [data-editor-section] input[type="range"] {
+  min-height: 1.5rem;
+}
+
+[data-editor-panel]
+  [data-editor-section]
+  button.rounded-md:not([data-editor-section-toggle]) {
+  min-height: 2rem;
+}
+
+[data-editor-panel] [data-editor-section] details > summary {
+  min-height: 2.25rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Important form labels must wrap instead of disappearing behind an ellipsis. */
+[data-editor-panel] [data-editor-section] .truncate {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
 }
