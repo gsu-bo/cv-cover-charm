@@ -321,9 +321,7 @@ export function DossierExportDialog({
               <span className="flex items-center gap-3">
                 <FileFormatIcon label="DOCX" />
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold">
-                    Bearbeitbares Dossier (DOCX)
-                  </span>
+                  <span className="block text-sm font-semibold">Bearbeitbares Dossier (DOCX)</span>
                   <span className="mt-1 block text-xs text-muted-foreground">
                     {docxCompactStatus}
                     {docxCompactStatus === "Bereit" && docxTemplateLabel
