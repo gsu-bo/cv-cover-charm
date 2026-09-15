@@ -132,8 +132,8 @@ export function DossierExportDialog({
           ? "DOCX wird erstellt…"
           : "DOCX herunterladen"
         : downloading
-          ? "JSON wird erstellt…"
-          : "JSON herunterladen";
+          ? "Projekt wird gespeichert…"
+          : "Projekt speichern";
   const optionClass = (selected: boolean, disabled: boolean) =>
     `w-full rounded-lg border px-3 py-3 text-left transition-colors ${
       selected ? "border-primary bg-primary/5" : "border-input bg-background hover:bg-accent"
@@ -157,7 +157,7 @@ export function DossierExportDialog({
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           {formatSelectionEnabled
-            ? "Wähle das gewünschte Format. Die Dateien werden lokal erstellt und nicht hochgeladen."
+            ? "Wähle, was du machen möchtest. Die Dateien werden nur auf deinem Gerät erstellt und nicht hochgeladen."
             : `Reihenfolge: Titelblatt, Motivationsschreiben und ${cvPageCount || "alle"} CV-Seite${cvPageCount === 1 ? "" : "n"}.`}
         </p>
 
@@ -171,9 +171,10 @@ export function DossierExportDialog({
               onClick={() => setFormat("json")}
               className={optionClass(format === "json", downloading)}
             >
-              <span className="block text-sm font-semibold">Projektdatei (JSON)</span>
+              <span className="block text-sm font-semibold">Projekt speichern</span>
               <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                Aktuellen Stand jederzeit sichern und später wieder weiterbearbeiten.
+                Speichert deinen aktuellen Stand. Du kannst die Datei später über «Projekt laden»
+                wieder öffnen und weiterarbeiten. Dateityp: JSON.
               </span>
             </button>
             <button
@@ -214,8 +215,9 @@ export function DossierExportDialog({
         <div className="mt-4 flex flex-col gap-2">
           {formatSelectionEnabled && format === "json" ? (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-              Diese Datei enthält deinen Projektstand zum späteren Laden – nicht das fertige
-              Bewerbungsdossier.
+              JSON ist nur der Dateityp für deinen gespeicherten Projektstand. Du musst die Datei
+              nicht öffnen oder bearbeiten. Bewahre sie auf und lade sie später hier wieder, wenn du
+              weiterarbeiten möchtest.
             </div>
           ) : null}
           {formatSelectionEnabled && format === "docx" ? (
