@@ -32,8 +32,9 @@ function protectNoPhotoCoverName(source: string, documents: DossierDocxDocuments
   const paragraph = source.slice(start, end + 6);
   const next = paragraph.replace(
     /<w:spacing\b([^>]*)w:before="\d+"([^>]*)\/>/,
-    (_match, before: string, after: string) =>
-      `<w:spacing${before}w:before="${twips(12)}"${after}/>` ,
+    (_match, before: string, after: string) => {
+      return `<w:spacing${before}w:before="${twips(12)}"${after}/>`;
+    },
   );
   return source.slice(0, start) + next + source.slice(end + 6);
 }
