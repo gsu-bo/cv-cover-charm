@@ -172,13 +172,24 @@ async function seedStudio3Dossier(page: import("@playwright/test").Page) {
   await page.reload({ waitUntil: "domcontentloaded" });
 }
 
+async function openDocxOption(page: import("@playwright/test").Page) {
+  const exportCard = page.getByRole("button", { name: /Gesamtdossier herunterladen/ });
+  await expect(exportCard).toBeEnabled();
+  await exportCard.click();
+  return page.getByRole("radio", { name: /Bearbeitbares Dossier \(DOCX\)/ });
+}
+
 test.describe("Studio 3 DOCX reference download", () => {
   test("complete Studio 3 dossier downloads a real DOCX package for render QA", async ({ page }) => {
     await seedStudio3Dossier(page);
 
-    const button = page.getByRole("button", { name: "Dossier als DOCX · Studio 3" });
-    await expect(button).toBeEnabled();
+    const option = await openDocxOption(page);
+    await expect(option).toBeEnabled();
+    await expect(option).toContainText("Vorlage Studio 3");
+    await option.click();
 
+    const button = page.getByRole("button", { name: "DOCX herunterladen" });
+    await expect(button).toBeEnabled();
     const [download] = await Promise.all([page.waitForEvent("download"), button.click()]);
     expect(download.suggestedFilename()).toBe("Bewerbungsdossier-Lea-Mueller.docx");
 
@@ -203,6 +214,7 @@ test.describe("Studio 3 DOCX reference download", () => {
     });
     await page.reload({ waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("button", { name: "Dossier als DOCX", exact: true })).toBeDisabled();
+    const option = await openDocxOption(page);
+    await expect(option).toBeDisabled();
   });
 });
