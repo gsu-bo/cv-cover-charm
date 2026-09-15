@@ -12,10 +12,10 @@ type Props = {
   warnings: CvLayoutWarning[] | null;
   coverChanged: boolean;
   downloading: boolean;
-  jsonAvailable: boolean;
-  pdfAvailable: boolean;
-  docxAvailable: boolean;
-  docxTemplateLabel: string | null;
+  jsonAvailable?: boolean;
+  pdfAvailable?: boolean;
+  docxAvailable?: boolean;
+  docxTemplateLabel?: string | null;
   onClose: () => void;
   onDownload: (format: DossierExportFormat) => void | Promise<void>;
 };
@@ -37,6 +37,11 @@ export function DossierExportDialog({
   const downloadRef = useRef<HTMLButtonElement>(null);
   const [format, setFormat] = useState<DossierExportFormat>("pdf");
   const [letterOverflow, setLetterOverflow] = useState<boolean | null>(null);
+  const formatSelectionEnabled =
+    jsonAvailable !== undefined || pdfAvailable !== undefined || docxAvailable !== undefined;
+  const canDownloadJson = jsonAvailable ?? false;
+  const canDownloadPdf = pdfAvailable ?? true;
+  const canDownloadDocx = docxAvailable ?? false;
   const letter = letterPdfDocumentFromSaved(readStoredDossierPart(LETTER_STORAGE_KEY));
   const letterState = letter
     ? letterReadiness(letter.data)
@@ -44,16 +49,20 @@ export function DossierExportDialog({
 
   useEffect(() => {
     if (!open) return;
+    if (!formatSelectionEnabled) {
+      setFormat("pdf");
+      return;
+    }
     setFormat((current) => {
-      if (current === "pdf" && pdfAvailable) return current;
-      if (current === "docx" && docxAvailable) return current;
-      if (current === "json" && jsonAvailable) return current;
-      if (pdfAvailable) return "pdf";
-      if (jsonAvailable) return "json";
-      if (docxAvailable) return "docx";
+      if (current === "pdf" && canDownloadPdf) return current;
+      if (current === "docx" && canDownloadDocx) return current;
+      if (current === "json" && canDownloadJson) return current;
+      if (canDownloadPdf) return "pdf";
+      if (canDownloadJson) return "json";
+      if (canDownloadDocx) return "docx";
       return "json";
     });
-  }, [docxAvailable, jsonAvailable, open, pdfAvailable]);
+  }, [canDownloadDocx, canDownloadJson, canDownloadPdf, formatSelectionEnabled, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -66,7 +75,7 @@ export function DossierExportDialog({
   }, [downloading, onClose, open]);
 
   useEffect(() => {
-    if (!open || !pdfAvailable) {
+    if (!open || !canDownloadPdf) {
       setLetterOverflow(null);
       return;
     }
@@ -102,24 +111,27 @@ export function DossierExportDialog({
       resizeObserver?.disconnect();
       mutationObserver.disconnect();
     };
-  }, [open, pdfAvailable]);
+  }, [canDownloadPdf, open]);
 
   if (!open) return null;
 
   const layoutPending = warnings === null || letterOverflow === null;
   const pdfBlocked =
-    !pdfAvailable ||
+    !canDownloadPdf ||
     downloading ||
     layoutPending ||
     !letterState.readyToSend ||
     letterOverflow === true;
-  const docxBlocked = !docxAvailable || downloading;
-  const jsonBlocked = !jsonAvailable || downloading;
+  const docxBlocked = !canDownloadDocx || downloading;
+  const jsonBlocked = !canDownloadJson || downloading;
   const downloadBlocked =
     format === "pdf" ? pdfBlocked : format === "docx" ? docxBlocked : jsonBlocked;
 
-  const actionLabel =
-    format === "pdf"
+  const actionLabel = !formatSelectionEnabled
+    ? downloading
+      ? "PDF wird erstellt…"
+      : "Dossier herunterladen"
+    : format === "pdf"
       ? downloading
         ? "PDF wird erstellt…"
         : "PDF herunterladen"
@@ -153,66 +165,75 @@ export function DossierExportDialog({
           Dossier herunterladen
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Wähle das gewünschte Format. Die Dateien werden lokal erstellt und nicht hochgeladen.
+          {formatSelectionEnabled ? (
+            <>Wähle das gewünschte Format. Die Dateien werden lokal erstellt und nicht hochgeladen.</>
+          ) : (
+            <>
+              Reihenfolge: Titelblatt, Motivationsschreiben und {cvPageCount || "alle"} CV-Seite
+              {cvPageCount === 1 ? "" : "n"}.
+            </>
+          )}
         </p>
 
-        <div className="mt-4 space-y-2" role="radiogroup" aria-label="Downloadformat">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={format === "json"}
-            disabled={!jsonAvailable || downloading}
-            onClick={() => setFormat("json")}
-            className={optionClass(format === "json", !jsonAvailable || downloading)}
-          >
-            <span className="block text-sm font-semibold">Projektdatei (JSON)</span>
-            <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-              Aktuellen Stand sichern und später wieder weiterbearbeiten.
-            </span>
-          </button>
+        {formatSelectionEnabled ? (
+          <div className="mt-4 space-y-2" role="radiogroup" aria-label="Downloadformat">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={format === "json"}
+              disabled={!canDownloadJson || downloading}
+              onClick={() => setFormat("json")}
+              className={optionClass(format === "json", !canDownloadJson || downloading)}
+            >
+              <span className="block text-sm font-semibold">Projektdatei (JSON)</span>
+              <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+                Aktuellen Stand sichern und später wieder weiterbearbeiten.
+              </span>
+            </button>
 
-          <button
-            type="button"
-            role="radio"
-            aria-checked={format === "pdf"}
-            disabled={!pdfAvailable || downloading}
-            onClick={() => setFormat("pdf")}
-            className={optionClass(format === "pdf", !pdfAvailable || downloading)}
-          >
-            <span className="block text-sm font-semibold">Fertiges Dossier (PDF)</span>
-            <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-              {pdfAvailable
-                ? `Titelblatt, Motivationsschreiben und ${cvPageCount || "alle"} CV-Seite${cvPageCount === 1 ? "" : "n"}.`
-                : "Benötigt Titelblatt, Motivationsschreiben und Lebenslauf."}
-            </span>
-          </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={format === "pdf"}
+              disabled={!canDownloadPdf || downloading}
+              onClick={() => setFormat("pdf")}
+              className={optionClass(format === "pdf", !canDownloadPdf || downloading)}
+            >
+              <span className="block text-sm font-semibold">Fertiges Dossier (PDF)</span>
+              <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+                {canDownloadPdf
+                  ? `Titelblatt, Motivationsschreiben und ${cvPageCount || "alle"} CV-Seite${cvPageCount === 1 ? "" : "n"}.`
+                  : "Benötigt Titelblatt, Motivationsschreiben und Lebenslauf."}
+              </span>
+            </button>
 
-          <button
-            type="button"
-            role="radio"
-            aria-checked={format === "docx"}
-            disabled={!docxAvailable || downloading}
-            onClick={() => setFormat("docx")}
-            className={optionClass(format === "docx", !docxAvailable || downloading)}
-          >
-            <span className="block text-sm font-semibold">Bearbeitbares Dossier (DOCX)</span>
-            <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-              {docxAvailable
-                ? `Word-Datei${docxTemplateLabel ? ` · Vorlage ${docxTemplateLabel}` : ""}.`
-                : "Benötigt ein vollständiges Dossier mit derselben aktiven Vorlage."}
-            </span>
-          </button>
-        </div>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={format === "docx"}
+              disabled={!canDownloadDocx || downloading}
+              onClick={() => setFormat("docx")}
+              className={optionClass(format === "docx", !canDownloadDocx || downloading)}
+            >
+              <span className="block text-sm font-semibold">Bearbeitbares Dossier (DOCX)</span>
+              <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+                {canDownloadDocx
+                  ? `Word-Datei${docxTemplateLabel ? ` · Vorlage ${docxTemplateLabel}` : ""}.`
+                  : "Benötigt ein vollständiges Dossier mit derselben aktiven Vorlage."}
+              </span>
+            </button>
+          </div>
+        ) : null}
 
         <div className="mt-4 flex flex-col gap-2">
-          {format === "json" ? (
+          {formatSelectionEnabled && format === "json" ? (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
               Diese Datei enthält deinen Projektstand zum späteren Laden – nicht das fertige
               Bewerbungsdossier.
             </div>
           ) : null}
 
-          {format === "docx" ? (
+          {formatSelectionEnabled && format === "docx" ? (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
               DOCX ist zum Weiterbearbeiten in Microsoft Word gedacht. Für eine unveränderliche
               Bewerbung verwende PDF.
@@ -261,7 +282,7 @@ export function DossierExportDialog({
             </div>
           ) : null}
 
-          {format === "pdf" && warnings === null && pdfAvailable ? (
+          {format === "pdf" && warnings === null && canDownloadPdf ? (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
               Lebenslauf-Layout wird geprüft…
             </div>
