@@ -207,13 +207,15 @@ export function DossierExportDialog({
         <div className="mt-4 flex flex-col gap-2">
           {format === "json" ? (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-              Diese Datei enthält deinen Projektstand zum späteren Laden – nicht das fertige Bewerbungsdossier.
+              Diese Datei enthält deinen Projektstand zum späteren Laden – nicht das fertige
+              Bewerbungsdossier.
             </div>
           ) : null}
 
           {format === "docx" ? (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-              DOCX ist zum Weiterbearbeiten in Microsoft Word gedacht. Für eine unveränderliche Bewerbung verwende PDF.
+              DOCX ist zum Weiterbearbeiten in Microsoft Word gedacht. Für eine unveränderliche
+              Bewerbung verwende PDF.
             </div>
           ) : null}
 
