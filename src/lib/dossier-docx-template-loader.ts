@@ -3,6 +3,7 @@ import type {
   DossierDocxTemplateModule,
 } from "@/lib/dossier-docx-template-types";
 import { DOSSIER_DOCX_TEMPLATE_PLANS } from "@/lib/dossier-docx-family";
+import { embedCabinFontsInDossierDocxBlob } from "@/lib/dossier-docx-font-embed";
 
 type DossierDocxTemplateLoader = () => Promise<DossierDocxTemplateModule>;
 
@@ -67,5 +68,6 @@ export async function createLazyTemplateDossierDocxBlob(
   ];
   if (!loader) throw new Error(`Kein lazy DOCX-Modul für ${templateId} registriert.`);
   const module = await loader();
-  return module.createDossierDocxBlob(documents);
+  const blob = await module.createDossierDocxBlob(documents);
+  return embedCabinFontsInDossierDocxBlob(blob);
 }
