@@ -44,8 +44,11 @@ const AUTO_GRADIENT_CONTACT_TEMPLATES = new Set([
 /**
  * Header mode chosen when a template is selected for the first time.
  *
- * This is a default, not a renderer override: users can still switch any
- * template to contact / compact / none afterwards through the shared controls.
+ * This is a default, not a renderer override for ordinary templates. Warm 1 is
+ * the one deliberate exception: its reviewed dossier has a custom 52 mm sender
+ * masthead on the motivation letter and only the quiet continuation edge on the
+ * CV. Both are driven by compact mode, so the generic contact masthead must not
+ * replace that paired design.
  */
 export function defaultHeaderModeForTemplate(template: string): DossierHeaderMode {
   return CONTACT_HEADER_DEFAULT_TEMPLATES.has(template) ? "contact" : "compact";
@@ -78,26 +81,45 @@ export function resolveTemplateChromeOptions(
   const primary = colors.primary ?? colors.ink ?? "#334155";
   const secondary = colors.secondary ?? colors.accent ?? primary;
 
+  // Warm 1 is a paired, reviewed dossier composition rather than a generic
+  // contact-header template. The motivation letter's compact mode renders the
+  // deep 52 mm teal/mustard masthead, while the CV's compact mode renders the
+  // thin teal continuation edge. Treat a generic contact request as that Warm
+  // composition so live preview and generated PDF cannot drift apart. Reset a
+  // contact-specific custom height as well; otherwise e.g. 22 mm would become
+  // an 18 mm "compact" stripe instead of the intended 3 mm CV edge.
+  const resolvedOptions: DossierChromeOptions =
+    template === "freundlich" && options.headerMode === "contact"
+      ? {
+          ...options,
+          headerMode: "compact",
+          headerHeightMm: null,
+          headerGapMm: defaultHeaderGapMmForTemplate(template),
+        }
+      : options;
+
   if (
-    options.headerMode === "contact" &&
+    resolvedOptions.headerMode === "contact" &&
     AUTO_GRADIENT_CONTACT_TEMPLATES.has(template) &&
-    options.headerBackgroundColor === null &&
-    options.headerGradientColor === null
+    resolvedOptions.headerBackgroundColor === null &&
+    resolvedOptions.headerGradientColor === null
   ) {
     return {
-      ...options,
+      ...resolvedOptions,
       headerBackgroundColor: primary,
       headerGradientColor: secondary,
     };
   }
 
-  if (template !== "modern") return options;
-  if (options.headerMode !== "compact" || options.footerMode !== "compact") return options;
+  if (template !== "modern") return resolvedOptions;
+  if (resolvedOptions.headerMode !== "compact" || resolvedOptions.footerMode !== "compact") {
+    return resolvedOptions;
+  }
 
   const accent = colors.accent ?? colors.secondary ?? "#f43f5e";
 
   return {
-    ...options,
+    ...resolvedOptions,
     // Keep the canonical mode and geometry values untouched. Only the visual
     // treatment changes while both compact zones are active.
     headerBackgroundColor: primary,
