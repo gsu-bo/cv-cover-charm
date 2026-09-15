@@ -340,6 +340,7 @@ async function seedCoreDossier(page: Page, withLetter = false) {
     },
   );
   await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle");
 }
 
 test.describe("M5.8 dossier regression", () => {
@@ -947,28 +948,38 @@ test.describe("M5.8 dossier regression", () => {
     expect(saved).toContain("<td>");
   });
 
-  test("start screen requires the letter, reads fresh storage and downloads cover-letter-CV in order", async ({
+  test("start screen keeps JSON available and unlocks finished dossier formats when complete", async ({
     page,
   }) => {
     await seedCoreDossier(page);
 
-    await expect(
-      page.getByText("Gesamtdossier verfügbar, sobald Motivationsschreiben ausgefüllt ist."),
-    ).toBeVisible();
+    await expect(page.getByText(/Die JSON-Projektdatei kannst du jederzeit sichern/)).toBeVisible();
 
     const dossierCard = page.getByRole("button", { name: /Gesamtdossier herunterladen/ });
     await dossierCard.click();
-    await expect(page.getByRole("dialog", { name: "Dossier herunterladen" })).toHaveCount(0);
-    await expect(page.getByText("Noch nicht vollständig: Motivationsschreiben.")).toBeVisible();
+    let dialog = page.getByRole("dialog", { name: "Dossier herunterladen" });
+    await expect(dialog).toBeVisible();
+
+    const jsonOption = dialog.getByRole("radio", { name: /Projektdatei \(JSON\)/ });
+    const pdfOption = dialog.getByRole("radio", { name: /Fertiges Dossier \(PDF\)/ });
+    const docxOption = dialog.getByRole("radio", { name: /Bearbeitbares Dossier \(DOCX\)/ });
+    await expect(jsonOption).toBeEnabled();
+    await expect(pdfOption).toBeDisabled();
+    await expect(docxOption).toBeDisabled();
+    await dialog.getByRole("button", { name: "Zurück zum Bearbeiten" }).click();
 
     await page.evaluate((letter) => {
       localStorage.setItem("anschreiben:v1", JSON.stringify(letter));
     }, letterPayload());
 
     await dossierCard.click();
-    const dialog = page.getByRole("dialog", { name: "Dossier herunterladen" });
+    dialog = page.getByRole("dialog", { name: "Dossier herunterladen" });
     await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText(/Reihenfolge: Titelblatt, Motivationsschreiben und/);
+
+    const readyPdfOption = dialog.getByRole("radio", { name: /Fertiges Dossier \(PDF\)/ });
+    const readyDocxOption = dialog.getByRole("radio", { name: /Bearbeitbares Dossier \(DOCX\)/ });
+    await expect(readyPdfOption).toBeEnabled();
+    await expect(readyDocxOption).toBeEnabled();
 
     await expect
       .poll(() =>
@@ -981,8 +992,9 @@ test.describe("M5.8 dossier regression", () => {
       )
       .toEqual(["cover", "letter", "cv"]);
 
-    const downloadButton = dialog.getByRole("button", { name: "Dossier herunterladen" });
-    await expect(downloadButton).toBeEnabled();
+    await readyPdfOption.click();
+    const downloadButton = dialog.getByRole("button", { name: "PDF herunterladen", exact: true });
+    await expect(downloadButton).toBeEnabled({ timeout: 15_000 });
     const downloadPromise = page.waitForEvent("download", { timeout: 90_000 });
     await downloadButton.click();
     const download = await downloadPromise;
