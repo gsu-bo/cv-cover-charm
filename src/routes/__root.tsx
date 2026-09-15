@@ -10,6 +10,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import editorActionMenuCss from "../components/dossier/editor-action-menu.css?url";
 import humanPolishCss from "../components/dossier/human-polish.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -115,6 +116,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      {
+        rel: "stylesheet",
+        href: editorActionMenuCss,
       },
       {
         rel: "stylesheet",
