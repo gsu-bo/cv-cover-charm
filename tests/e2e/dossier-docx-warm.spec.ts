@@ -129,6 +129,7 @@ async function seedWarmDossier(page: import("@playwright/test").Page) {
     );
   });
   await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle");
 }
 
 async function openDocxOption(page: import("@playwright/test").Page) {
@@ -172,6 +173,7 @@ test.describe("Warm DOCX reference download", () => {
       }
     });
     await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle");
 
     const option = await openDocxOption(page);
     await expect(option).toBeDisabled();
