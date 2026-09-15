@@ -17,15 +17,26 @@
 }
 
 /* Gallery's place/date block already has deliberate template positioning.
- * Overriding its outer transform cleared the clipping edge but also discarded
- * the renderer's vertical geometry and moved the text behind the LM portrait.
- * Keep that outer geometry intact and inset only the text inside the block. */
+ * Its wide tracked place line still starts a few pixels outside the portrait
+ * tower in Chromium PDF output, clipping the H from HUBERSDORF. Move only the
+ * rendered inner text to the right; do not touch the outer transform/geometry. */
 html[data-dossier-template="gallery"]
   [data-dossier-document="cover"]
   [data-block-id="ortDatum"]
   > div {
-  box-sizing: border-box !important;
-  padding-left: 3mm !important;
+  position: relative !important;
+  left: 4mm !important;
+}
+
+/* Forest Flow's bottom place/date marker is intentionally tracked out, but the
+ * final Hubsersdorf sample reached the exact right edge of the 52 mm grove.
+ * Keep the same typographic idea at a slightly tighter, calmer measure. */
+html[data-dossier-template="forestFlow"]
+  [data-dossier-document="cover"]
+  [data-block-id="ortDatum"]
+  > div {
+  font-size: 9.2pt !important;
+  letter-spacing: 0.22em !important;
 }
 
 /* Ribbon's late cleanup compressed the gold hero to 48 mm. Restore enough
