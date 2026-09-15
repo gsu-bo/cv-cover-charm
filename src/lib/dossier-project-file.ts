@@ -30,12 +30,11 @@ function projectPersonName(project: DossierProject): string {
   return coverName || cvName;
 }
 
-/** Liest den aktuellen Browserstand als portable Projektdatei. */
-export function dossierProjectFromBrowser(): DossierProject | null {
+/** Liest den aktuellen Browserstand als portable Projektdatei – auch ein leerer Startstand ist speicherbar. */
+export function dossierProjectFromBrowser(): DossierProject {
   const cover = readStoredDossierPart(COVER_STORAGE_KEY);
   const letter = readStoredDossierPart(LETTER_STORAGE_KEY);
   const cv = readStoredDossierPart(CV_STORAGE_KEY);
-  if (!cover && !letter && !cv) return null;
   return createDossierProject({ cover, letter, cv });
 }
 
@@ -59,9 +58,8 @@ export function dossierProjectFileName(project: DossierProject): string {
 }
 
 /** Lädt den aktuellen Projektstand lokal als JSON herunter. */
-export function downloadDossierProjectFromBrowser(): DossierProject | null {
+export function downloadDossierProjectFromBrowser(): DossierProject {
   const project = dossierProjectFromBrowser();
-  if (!project) return null;
   downloadBlob(
     new Blob([serializeDossierProject(project)], { type: "application/json;charset=utf-8" }),
     dossierProjectFileName(project),
