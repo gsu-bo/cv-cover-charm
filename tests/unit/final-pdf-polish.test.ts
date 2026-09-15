@@ -26,11 +26,18 @@ describe("final 39-PDF visual polish", () => {
     expect(css).toContain("height: 22mm !important;");
   });
 
-  test("insets Gallery place text without overriding the positioned outer block", () => {
+  test("moves only Gallery place text away from the portrait-tower clipping edge", () => {
     expect(css).toContain('html[data-dossier-template="gallery"]');
     expect(css).toContain('[data-block-id="ortDatum"]');
-    expect(css).toContain("padding-left: 3mm !important;");
+    expect(css).toContain("position: relative !important;");
+    expect(css).toContain("left: 4mm !important;");
     expect(css).not.toContain("transform: translate(24mm, 22mm) !important;");
+  });
+
+  test("keeps Forest Flow place/date marker inside the grove with breathing room", () => {
+    expect(css).toContain('html[data-dossier-template="forestFlow"]');
+    expect(css).toContain("font-size: 9.2pt !important;");
+    expect(css).toContain("letter-spacing: 0.22em !important;");
   });
 
   test("restores Ribbon hero height for its complete identity stack", () => {
