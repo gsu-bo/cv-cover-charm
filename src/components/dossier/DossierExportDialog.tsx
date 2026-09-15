@@ -56,19 +56,18 @@ export function DossierExportDialog({
   const [letterOverflow, setLetterOverflow] = useState<boolean | null>(null);
   const formatSelectionEnabled =
     jsonAvailable !== undefined || pdfAvailable !== undefined || docxAvailable !== undefined;
-  const canDownloadJson = formatSelectionEnabled ? true : (jsonAvailable ?? false);
   const canDownloadPdf = pdfAvailable ?? true;
   const canDownloadDocx = docxAvailable ?? false;
 
   const cover = coverPdfDocumentFromSaved(readStoredDossierPart(COVER_STORAGE_KEY));
   const letter = letterPdfDocumentFromSaved(readStoredDossierPart(LETTER_STORAGE_KEY));
   const cv = cvPdfDocumentFromSaved(readStoredDossierPart(CV_STORAGE_KEY));
+  const letterHasContent = !!letter && letterPdfHasContent(letter.data);
   const missingParts = [
     !cover || !coverPdfHasContent(cover.data) ? "Titelblatt" : null,
-    !letter || !letterPdfHasContent(letter.data) ? "Motivationsschreiben" : null,
+    !letterHasContent ? "Motivationsschreiben" : null,
     !cv || !cvPdfHasContent(cv.data) ? "Lebenslauf" : null,
   ].filter((part): part is string => part !== null);
-  const missingPartsText = joinParts(missingParts);
 
   const letterState = letter
     ? letterReadiness(letter.data)
@@ -146,22 +145,44 @@ export function DossierExportDialog({
     !letterState.readyToSend ||
     letterOverflow === true;
   const docxBlocked = !canDownloadDocx || downloading || !letterState.readyToSend;
-  const pdfStatus = missingParts.length
-    ? `Fehlt: ${missingPartsText}.`
+  const letterIssueCount = letterHasContent && !letterState.readyToSend ? letterState.missing.length : 0;
+  const docxDesignIssue =
+    formatSelectionEnabled && missingParts.length === 0 && letterState.readyToSend && !canDownloadDocx;
+  const pdfOverflowIssue = canDownloadPdf && letterState.readyToSend && letterOverflow === true;
+  const blockingCount =
+    missingParts.length + letterIssueCount + (docxDesignIssue ? 1 : 0) + (pdfOverflowIssue ? 1 : 0);
+  const advisoryCount = (warnings?.length ?? 0) + (coverChanged ? 1 : 0);
+
+  const missingPartsCompact = `${missingParts.length} Dossierteil${missingParts.length === 1 ? "" : "e"} ${
+    missingParts.length === 1 ? "fehlt" : "fehlen"
+  }`;
+  const missingFieldsCompact = `${letterState.missing.length} Angabe${
+    letterState.missing.length === 1 ? "" : "n"
+  } ${letterState.missing.length === 1 ? "fehlt" : "fehlen"}`;
+  const pdfCompactStatus = missingParts.length
+    ? missingPartsCompact
     : !letterState.readyToSend
-      ? `Im Motivationsschreiben fehlt: ${missingLetterFields}.`
+      ? missingFieldsCompact
       : letterOverflow === true
-        ? "Motivationsschreiben ist zu lang für eine A4-Seite."
+        ? "Brief ist zu lang"
         : layoutPending
-          ? "Inhalt vorhanden – Layout wird geprüft."
-          : "Bereit.";
-  const docxStatus = missingParts.length
-    ? `Fehlt: ${missingPartsText}.`
+          ? "Layout wird geprüft…"
+          : "Bereit";
+  const docxCompactStatus = missingParts.length
+    ? missingPartsCompact
     : !letterState.readyToSend
-      ? `Im Motivationsschreiben fehlt: ${missingLetterFields}.`
+      ? missingFieldsCompact
       : !canDownloadDocx
-        ? "Wähle in Titelblatt, Motivationsschreiben und Lebenslauf dasselbe Design."
-        : "Bereit.";
+        ? "Design angleichen"
+        : "Bereit";
+  const checkSummary = blockingCount
+    ? `Was fehlt noch? · ${blockingCount} Punkt${blockingCount === 1 ? "" : "e"}`
+    : layoutPending && canDownloadPdf
+      ? "Layout wird geprüft…"
+      : advisoryCount
+        ? `Bereit · ${advisoryCount} Hinweis${advisoryCount === 1 ? "" : "e"}`
+        : "Alles bereit";
+
   const downloadBlocked =
     format === "pdf" ? pdfBlocked : format === "docx" ? docxBlocked : downloading;
   const actionLabel = !formatSelectionEnabled
@@ -180,13 +201,13 @@ export function DossierExportDialog({
           ? "Projekt wird gespeichert…"
           : "Projekt speichern";
   const optionClass = (selected: boolean, disabled: boolean) =>
-    `w-full rounded-lg border px-3 py-3 text-left transition-colors ${
+    `min-h-[5.25rem] w-full rounded-lg border px-3 py-3 text-left transition-colors ${
       selected ? "border-primary bg-primary/5" : "border-input bg-background hover:bg-accent"
     } ${disabled ? "cursor-not-allowed opacity-50 hover:bg-background" : ""}`;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/35 p-4 backdrop-blur-[1px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/35 p-2 backdrop-blur-[1px] sm:p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !downloading) onClose();
       }}
@@ -195,19 +216,26 @@ export function DossierExportDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="dossier-export-title"
-        className="w-full max-w-md rounded-xl border bg-background p-5 shadow-2xl"
+        className="max-h-[calc(100vh-1rem)] w-full max-w-3xl overflow-y-auto rounded-xl border bg-background p-4 shadow-2xl sm:max-h-[calc(100vh-2rem)] sm:p-5"
       >
-        <h2 id="dossier-export-title" className="text-base font-semibold">
-          Dossier herunterladen
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {formatSelectionEnabled
-            ? "Wähle, was du machen möchtest. Die Dateien werden nur auf deinem Gerät erstellt und nicht hochgeladen."
-            : `Reihenfolge: Titelblatt, Motivationsschreiben und ${cvPageCount || "alle"} CV-Seite${cvPageCount === 1 ? "" : "n"}.`}
-        </p>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 id="dossier-export-title" className="text-base font-semibold">
+            Dossier herunterladen
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            {formatSelectionEnabled
+              ? "Nur lokal auf deinem Gerät · kein Upload."
+              : `Titelblatt · Motivationsschreiben · ${cvPageCount || "alle"} CV-Seite${cvPageCount === 1 ? "" : "n"}`}
+          </p>
+        </div>
 
         {formatSelectionEnabled ? (
-          <div className="mt-4 space-y-2" role="radiogroup" aria-label="Downloadformat">
+          <div
+            data-dossier-export-options
+            className="mt-3 grid gap-2 sm:grid-cols-3"
+            role="radiogroup"
+            aria-label="Downloadformat"
+          >
             <button
               type="button"
               role="radio"
@@ -218,141 +246,106 @@ export function DossierExportDialog({
               className={optionClass(format === "json", downloading)}
             >
               <span className="block text-sm font-semibold">Projekt speichern</span>
-              <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                Speichert deinen aktuellen Stand. Du kannst die Datei später über «Projekt laden»
-                wieder öffnen und weiterarbeiten. Dateityp: JSON.
-              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">Zwischenstand · JSON</span>
             </button>
             <button
               type="button"
               role="radio"
+              aria-label="Fertiges Dossier (PDF)"
               aria-checked={format === "pdf"}
               disabled={!canDownloadPdf || downloading}
               onClick={() => setFormat("pdf")}
               className={optionClass(format === "pdf", !canDownloadPdf || downloading)}
             >
-              <span className="block text-sm font-semibold">Fertiges Dossier (PDF)</span>
-              <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                {!canDownloadPdf && missingParts.length
-                  ? `Noch nicht verfügbar: Ergänze zuerst ${missingPartsText}.`
-                  : canDownloadPdf && !letterState.readyToSend
-                    ? `Noch nicht bereit: Im Motivationsschreiben fehlen ${missingLetterFields}.`
-                    : `Zum Verschicken: Titelblatt, Motivationsschreiben und ${cvPageCount || "alle"} CV-Seite${cvPageCount === 1 ? "" : "n"}.`}
-              </span>
+              <span className="block text-sm font-semibold">PDF</span>
+              <span className="mt-1 block text-xs text-muted-foreground">{pdfCompactStatus}</span>
             </button>
             <button
               type="button"
               role="radio"
+              aria-label="Bearbeitbares Dossier (DOCX)"
               aria-checked={format === "docx"}
               disabled={docxBlocked}
               onClick={() => setFormat("docx")}
               className={optionClass(format === "docx", docxBlocked)}
             >
-              <span className="block text-sm font-semibold">Bearbeitbares Dossier (DOCX)</span>
-              <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                {missingParts.length
-                  ? `Noch nicht verfügbar: Ergänze zuerst ${missingPartsText}.`
-                  : !letterState.readyToSend
-                    ? `Noch nicht verfügbar: Im Motivationsschreiben fehlen ${missingLetterFields}.`
-                    : !canDownloadDocx
-                      ? "Noch nicht verfügbar: Titelblatt, Motivationsschreiben und Lebenslauf müssen dasselbe Design verwenden. Wähle bei allen drei dieselbe Vorlage."
-                      : `Word-Datei zum Weiterbearbeiten${docxTemplateLabel ? ` · Vorlage ${docxTemplateLabel}` : ""}.`}
+              <span className="block text-sm font-semibold">Word (DOCX)</span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {docxCompactStatus}
+                {docxCompactStatus === "Bereit" && docxTemplateLabel
+                  ? ` · ${docxTemplateLabel}`
+                  : ""}
               </span>
             </button>
           </div>
         ) : null}
 
-        {formatSelectionEnabled ? (
-          <div
-            data-dossier-export-check
-            className="mt-3 rounded-lg border bg-muted/20 px-3 py-2 text-xs leading-relaxed"
-          >
-            <div className="font-semibold">Download-Check</div>
-            <ul className="mt-1 space-y-1 text-muted-foreground">
-              <li>
-                <span className="font-medium text-foreground">PDF:</span> {pdfStatus}
-              </li>
-              <li>
-                <span className="font-medium text-foreground">Word (DOCX):</span> {docxStatus}
-              </li>
+        <details data-dossier-export-check className="mt-3 rounded-lg border bg-muted/20">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
+            <span>{checkSummary}</span>
+            <span aria-hidden="true" className="text-muted-foreground">
+              ▾
+            </span>
+          </summary>
+          <div className="border-t px-3 py-2 text-xs leading-relaxed">
+            <ul className="space-y-1.5 text-muted-foreground">
+              {missingParts.map((part) => (
+                <li key={part}>
+                  <span className="font-medium text-foreground">{part}:</span> fehlt.
+                </li>
+              ))}
+              {letterIssueCount ? (
+                <li data-dossier-letter-readiness>
+                  <span className="font-medium text-foreground">
+                    Motivationsschreiben noch nicht versandbereit:
+                  </span>{" "}
+                  {missingLetterFields} ergänzen.
+                </li>
+              ) : null}
+              {pdfOverflowIssue ? (
+                <li data-dossier-letter-overflow>
+                  <span className="font-medium text-foreground">Motivationsschreiben ist zu lang.</span>{" "}
+                  Der Brief passt nicht auf eine A4-Seite; ein abgeschnittenes Dossier-PDF wird nicht
+                  erstellt.
+                </li>
+              ) : null}
+              {docxDesignIssue ? (
+                <li data-dossier-docx-design-issue>
+                  <span className="font-medium text-foreground">Word (DOCX):</span> Titelblatt,
+                  Motivationsschreiben und Lebenslauf müssen dasselbe Design verwenden. Wähle bei
+                  allen drei dieselbe Vorlage.
+                </li>
+              ) : null}
+              {!blockingCount && layoutPending && canDownloadPdf ? (
+                <li>PDF: Layout wird noch geprüft.</li>
+              ) : null}
+              {coverChanged ? (
+                <li>Hinweis: Das Titelblatt wurde seit der letzten Übernahme in den Lebenslauf verändert.</li>
+              ) : null}
+              {warnings?.map((warning) => (
+                <li key={warning.id}>Layout-Hinweis: {warning.message}</li>
+              ))}
+              {!blockingCount && !layoutPending ? (
+                <>
+                  <li>
+                    <span className="font-medium text-foreground">PDF:</span> bereit.
+                  </li>
+                  {formatSelectionEnabled ? (
+                    <li>
+                      <span className="font-medium text-foreground">Word (DOCX):</span>{" "}
+                      {canDownloadDocx ? "bereit." : "noch nicht verfügbar."}
+                    </li>
+                  ) : null}
+                </>
+              ) : null}
             </ul>
+            <p className="mt-2 border-t pt-2 text-muted-foreground">
+              Vor dem Versenden Inhalt, Rechtschreibung und Kontaktdaten selbst kontrollieren.
+            </p>
           </div>
-        ) : null}
+        </details>
 
-        <div className="mt-4 flex flex-col gap-2">
-          {formatSelectionEnabled && format === "json" ? (
-            <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-              JSON ist nur der Dateityp für deinen gespeicherten Projektstand. Du musst die Datei
-              nicht öffnen oder bearbeiten. Bewahre sie auf und lade sie später hier wieder, wenn du
-              weiterarbeiten möchtest.
-            </div>
-          ) : null}
-          {formatSelectionEnabled && format === "docx" ? (
-            <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-              DOCX ist zum Weiterbearbeiten in Microsoft Word gedacht. Für eine unveränderliche
-              Bewerbung verwende PDF.
-            </div>
-          ) : null}
-          {format === "pdf" && !letterState.readyToSend ? (
-            <div
-              role="alert"
-              data-dossier-letter-readiness
-              className="rounded-md border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
-            >
-              <div className="font-semibold">Motivationsschreiben noch nicht versandbereit</div>
-              <div className="mt-1">Ergänze noch:</div>
-              <ul className="mt-1 list-disc space-y-1 pl-4">
-                {letterState.missing.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {format === "pdf" && letterState.readyToSend && letterOverflow === null ? (
-            <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-              Motivationsschreiben wird auf eine sichere A4-Seite geprüft…
-            </div>
-          ) : null}
-          {format === "pdf" && letterOverflow === true ? (
-            <div
-              role="alert"
-              data-dossier-letter-overflow
-              className="rounded-md border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
-            >
-              <div className="font-semibold">Motivationsschreiben ist zu lang</div>
-              <div>
-                Der Brief passt nicht auf eine A4-Seite. Kürze ihn im Motivationsschreiben-Editor;
-                ein abgeschnittenes Dossier-PDF wird nicht erstellt.
-              </div>
-            </div>
-          ) : null}
-          {format === "pdf" && coverChanged ? (
-            <div className="rounded-md border border-sky-300/70 bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-950 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-100">
-              Das Titelblatt wurde seit der letzten Übernahme in den Lebenslauf verändert.
-            </div>
-          ) : null}
-          {format === "pdf" && warnings === null && canDownloadPdf ? (
-            <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-              Lebenslauf-Layout wird geprüft…
-            </div>
-          ) : format === "pdf" && warnings?.length ? (
-            <div className="rounded-md border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
-              <div className="font-semibold">Layout-Hinweise</div>
-              <ul className="mt-1 list-disc space-y-1 pl-4">
-                {warnings.map((warning) => (
-                  <li key={warning.id}>{warning.message}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {format !== "json" ? (
-            <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-              Kontrolliere vor dem Versenden Inhalt, Rechtschreibung und Kontaktdaten selbst.
-            </div>
-          ) : null}
-        </div>
-
-        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <div className="mt-4 flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
