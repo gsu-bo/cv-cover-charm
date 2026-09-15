@@ -61,7 +61,7 @@ describe("dossier JSON project files", () => {
     expect(text.endsWith("\n")).toBe(true);
     expect(parsed?.cover?.data).toEqual(project.cover?.data);
     expect(parsed?.cv?.data).toEqual(project.cv?.data);
-    expect(dossierProjectFileName(project)).toBe("Bewerbungsdossier-Lea-Mueller.json");
+    expect(dossierProjectFileName(project)).toBe("Bewerbungsdossier-LeaMueller.json");
   });
 
   test("rejects malformed or unrelated JSON before changing browser state", () => {
