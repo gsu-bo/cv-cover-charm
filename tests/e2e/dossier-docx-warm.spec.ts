@@ -131,13 +131,24 @@ async function seedWarmDossier(page: import("@playwright/test").Page) {
   await page.reload({ waitUntil: "domcontentloaded" });
 }
 
+async function openDocxOption(page: import("@playwright/test").Page) {
+  const exportCard = page.getByRole("button", { name: /Gesamtdossier herunterladen/ });
+  await expect(exportCard).toBeEnabled();
+  await exportCard.click();
+  return page.getByRole("radio", { name: /Bearbeitbares Dossier \(DOCX\)/ });
+}
+
 test.describe("Warm DOCX reference download", () => {
   test("complete Warm dossier downloads a real DOCX package for render QA", async ({ page }) => {
     await seedWarmDossier(page);
 
-    const button = page.getByRole("button", { name: "Dossier als DOCX · Warm" });
-    await expect(button).toBeEnabled();
+    const option = await openDocxOption(page);
+    await expect(option).toBeEnabled();
+    await expect(option).toContainText("Vorlage Warm");
+    await option.click();
 
+    const button = page.getByRole("button", { name: "DOCX herunterladen" });
+    await expect(button).toBeEnabled();
     const [download] = await Promise.all([page.waitForEvent("download"), button.click()]);
     expect(download.suggestedFilename()).toBe("Bewerbungsdossier-Lea-Mueller.docx");
 
@@ -162,7 +173,7 @@ test.describe("Warm DOCX reference download", () => {
     });
     await page.reload({ waitUntil: "domcontentloaded" });
 
-    const button = page.getByRole("button", { name: "Dossier als DOCX" });
-    await expect(button).toBeDisabled();
+    const option = await openDocxOption(page);
+    await expect(option).toBeDisabled();
   });
 });
