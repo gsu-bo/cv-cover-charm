@@ -135,7 +135,11 @@ test("real browser DOCX gallery covers every Fresh template", async ({ page }) =
     await expect(exportCard).toBeEnabled();
     await exportCard.click();
 
-    await expect(page.getByText(`DOCX · ${item.label}`, { exact: true })).toBeVisible();
+    const docxOption = page.getByRole("radio", { name: /Bearbeitbares Dossier \(DOCX\)/ });
+    await expect(docxOption).toBeEnabled();
+    await expect(docxOption).toContainText(`Vorlage ${item.label}`);
+    await docxOption.click();
+
     const downloadButton = page.getByRole("button", { name: "Als DOCX herunterladen" });
     await expect(downloadButton).toBeEnabled();
     const [download] = await Promise.all([
