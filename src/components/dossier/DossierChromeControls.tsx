@@ -151,6 +151,16 @@ export function DossierChromeControls({
     ["headerShowEmail", "E-Mail", options.headerShowEmail],
   ] as const;
 
+  // Keep the persisted model compact while making both contact presentations
+  // first-class choices in the form. "contact" + headerTextLayout remains the
+  // storage contract, so existing project files stay fully compatible.
+  const headerControlValue =
+    options.headerMode === "contact"
+      ? options.headerTextLayout === "inline"
+        ? "contact-inline"
+        : "contact-stacked"
+      : options.headerMode;
+
   // The shared model calls the rich footer "details". The letter UI historically
   // exposed the same behavior as "attachments"; keeping that form value avoids
   // breaking persisted browser automation and makes the migration additive.
@@ -190,9 +200,6 @@ export function DossierChromeControls({
           checked={state.sync}
           onChange={(event) => {
             const sync = event.target.checked;
-            // setDossierChromeSync copies the active document into shared when
-            // enabling, or shared into both documents when disabling. Mirror
-            // exactly that resulting value into a legacy editor model as well.
             const nextOptions = sync ? state[scope] : state.shared;
             setDossierChromeSync(scope, sync);
             onOptionsChange?.(nextOptions);
@@ -310,24 +317,35 @@ export function DossierChromeControls({
               data-dossier-header-mode-control
               {...(scope === "letter" ? { "data-letter-header-mode-control": "" } : {})}
               {...(scope === "cv" ? { "data-cv-header-mode-control": "" } : {})}
-              value={options.headerMode}
-              onChange={(event) =>
+              value={headerControlValue}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (value === "contact-inline" || value === "contact-stacked") {
+                  patchOptions({
+                    headerMode: "contact",
+                    headerTextLayout: value === "contact-inline" ? "inline" : "stacked",
+                    headerHeightMm: null,
+                  });
+                  return;
+                }
                 patchOptions({
-                  headerMode: event.target.value as DossierHeaderMode,
+                  headerMode: value as DossierHeaderMode,
                   headerHeightMm: null,
-                })
-              }
+                });
+              }}
               className={selectClass}
             >
               <option value="compact">Header kompakt</option>
-              <option value="contact">Header mit Kontaktdaten</option>
+              <option value="contact-stacked">Kontaktdaten untereinander</option>
+              <option value="contact-inline">Kontaktdaten waagrecht · getrennt</option>
               <option value="none">Kein Header</option>
             </select>
           </label>
 
           <span className="text-[11px] leading-relaxed text-muted-foreground">
-            Kompakt zeigt nur das Designband. Mit Kontaktdaten werden Name, Adresse/Wohnort, Telefon
-            und E-Mail integriert; auf Folgeseiten in einer kleineren Variante.
+            Kompakt zeigt nur das Designband. Die Kontaktvarianten integrieren Name, Adresse/Wohnort,
+            Telefon und E-Mail direkt in den farbigen Header; waagrecht werden die Angaben mit ·
+            getrennt.
           </span>
 
           {scope === "letter" || options.headerMode === "contact" ? (
@@ -412,40 +430,21 @@ export function DossierChromeControls({
               </label>
 
               {options.headerMode === "contact" ? (
-                <>
-                  <label className="block text-xs font-medium">
-                    Anordnung der Angaben
-                    <select
-                      data-dossier-header-text-layout-control
-                      value={options.headerTextLayout}
-                      onChange={(event) =>
-                        patchOptions({
-                          headerTextLayout: event.target.value === "inline" ? "inline" : "stacked",
-                        })
-                      }
-                      className={selectClass}
-                    >
-                      <option value="stacked">Alle Angaben untereinander</option>
-                      <option value="inline">Alle Angaben nebeneinander</option>
-                    </select>
-                  </label>
-
-                  <div
-                    data-dossier-header-fields
-                    className="grid grid-cols-2 gap-2 rounded-md border bg-muted/30 p-2.5"
-                  >
-                    {contactOptions.map(([key, label, checked]) => (
-                      <label key={key} className="flex items-center gap-2 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(event) => patchOptions({ [key]: event.target.checked })}
-                        />
-                        {label} integrieren
-                      </label>
-                    ))}
-                  </div>
-                </>
+                <div
+                  data-dossier-header-fields
+                  className="grid grid-cols-2 gap-2 rounded-md border bg-muted/30 p-2.5"
+                >
+                  {contactOptions.map(([key, label, checked]) => (
+                    <label key={key} className="flex items-center gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(event) => patchOptions({ [key]: event.target.checked })}
+                      />
+                      {label} integrieren
+                    </label>
+                  ))}
+                </div>
               ) : null}
 
               <BackgroundControl
