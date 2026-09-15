@@ -149,6 +149,7 @@ async function seedDossier(page: Page, letter: ReturnType<typeof letterPayload>)
     },
   );
   await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle");
 }
 
 async function openReview(page: Page) {
@@ -190,6 +191,7 @@ test.describe("M1 dossier sending truth", () => {
       { hugeBody: HUGE_BODY, letterKey: LETTER_KEY },
     );
     await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle");
 
     dialog = await openReview(page);
     const overflow = dialog.locator("[data-dossier-letter-overflow]");
@@ -209,6 +211,7 @@ test.describe("M1 dossier sending truth", () => {
       { fittingBody: LONG_FITTING_BODY, letterKey: LETTER_KEY },
     );
     await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle");
 
     dialog = await openReview(page);
     await expect(dialog.locator("[data-dossier-letter-overflow]")).toHaveCount(0);
