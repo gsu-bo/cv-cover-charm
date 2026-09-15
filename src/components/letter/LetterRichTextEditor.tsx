@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { List, Table2 } from "lucide-react";
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, List, Table2 } from "lucide-react";
 import {
   letterRichHtml,
+  letterTextAlign,
   richHtmlToPlainText,
   sanitizeLetterRichHtml,
+  type LetterTextAlign,
 } from "@/components/letter/rich-text";
 import type { LetterBodyColumns } from "@/components/letter/types";
 
@@ -17,6 +19,7 @@ type ToolbarState = {
   bold: boolean;
   italic: boolean;
   underline: boolean;
+  align: LetterTextAlign | null;
   columns: LetterBodyColumns | null;
   list: LetterListStyle | null;
 };
@@ -27,6 +30,17 @@ const LIST_OPTIONS: Array<{ value: LetterListStyle | "none"; marker: string; lab
   { value: "plus", marker: "+", label: "Plus" },
   { value: "dot", marker: "·", label: "Punkt zentriert" },
   { value: "none", marker: "", label: "Kein Zeichen" },
+];
+
+const ALIGN_OPTIONS: Array<{
+  value: LetterTextAlign;
+  label: string;
+  Icon: typeof AlignLeft;
+}> = [
+  { value: "left", label: "Linksbündig", Icon: AlignLeft },
+  { value: "center", label: "Zentriert", Icon: AlignCenter },
+  { value: "right", label: "Rechtsbündig", Icon: AlignRight },
+  { value: "justify", label: "Blocksatz", Icon: AlignJustify },
 ];
 
 const TABLE_GRID_SIZE = 8;
@@ -92,6 +106,10 @@ function columnsForBlock(block: HTMLElement | null): LetterBodyColumns {
   return 1;
 }
 
+function alignmentForBlock(block: HTMLElement | null): LetterTextAlign {
+  return letterTextAlign(block?.dataset.align);
+}
+
 function listForBlock(block: HTMLElement | null): LetterListStyle | null {
   const value = block?.dataset.list;
   return value === "bullet" || value === "dash" || value === "plus" || value === "dot"
@@ -136,6 +154,7 @@ export function LetterRichTextEditor({
     bold: false,
     italic: false,
     underline: false,
+    align: "justify",
     columns: 1,
     list: null,
   });
@@ -201,6 +220,12 @@ export function LetterRichTextEditor({
     const columns = columnValues.every((value) => value === columnValues[0])
       ? columnValues[0]
       : null;
+    const alignmentValues = selected.length
+      ? selected.map(alignmentForBlock)
+      : (["justify"] as LetterTextAlign[]);
+    const align = alignmentValues.every((value) => value === alignmentValues[0])
+      ? alignmentValues[0]
+      : null;
     const listValues = selected.map(listForBlock);
     const list =
       listValues.length && listValues.every((value) => value === listValues[0])
@@ -211,6 +236,7 @@ export function LetterRichTextEditor({
       bold: document.queryCommandState("bold"),
       italic: document.queryCommandState("italic"),
       underline: document.queryCommandState("underline"),
+      align,
       columns,
       list,
     });
@@ -240,6 +266,16 @@ export function LetterRichTextEditor({
     document.execCommand(name, false);
     emit();
     readToolbarState();
+  };
+
+  const setAlignment = (align: LetterTextAlign) => {
+    const editor = editorRef.current;
+    const range = restoreRange();
+    if (!editor || !range) return;
+    const blocks = ensureSelectedBlocks(editor, range);
+    for (const block of blocks) block.dataset.align = align;
+    emit();
+    setToolbar((current) => ({ ...current, align }));
   };
 
   const setColumns = (columns: LetterBodyColumns) => {
@@ -291,6 +327,7 @@ export function LetterRichTextEditor({
     const next = table.nextElementSibling;
     if (!(next instanceof HTMLElement) || !["DIV", "P"].includes(next.tagName)) {
       const paragraph = document.createElement("div");
+      paragraph.dataset.align = "justify";
       paragraph.innerHTML = "<br>";
       table.insertAdjacentElement("afterend", paragraph);
     }
@@ -355,6 +392,24 @@ export function LetterRichTextEditor({
         >
           U
         </button>
+
+        <span aria-hidden="true" className="mx-0.5 h-7 w-px self-center bg-border" />
+        {ALIGN_OPTIONS.map(({ value, label, Icon }) => (
+          <button
+            key={value}
+            type="button"
+            className={`${toolClass} flex items-center justify-center px-2 ${toolbar.align === value ? activeToolClass : ""}`}
+            aria-label={label}
+            aria-pressed={toolbar.align === value}
+            title={label}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => setAlignment(value)}
+          >
+            <Icon className="h-4 w-4" />
+          </button>
+        ))}
+
+        <span aria-hidden="true" className="mx-0.5 h-7 w-px self-center bg-border" />
         {([1, 2, 3] as const).map((count) => (
           <button
             key={count}
@@ -499,8 +554,9 @@ export function LetterRichTextEditor({
         />
       </div>
       <p className="text-[11px] leading-relaxed text-muted-foreground">
-        Wie in Word: Fett, Kursiv, Unterstrichen, Spalten und Listen gelten nur für die aktuelle
-        Auswahl oder den aktuellen Absatz. Tabellen werden beim aktuellen Absatz eingefügt.
+        Wie in Word: Fett, Kursiv, Unterstrichen, Ausrichtung, Spalten und Listen gelten für die
+        aktuelle Auswahl oder den aktuellen Absatz. Neue Briefabsätze sind standardmässig im
+        Blocksatz. Tabellen werden beim aktuellen Absatz eingefügt.
       </p>
     </div>
   );
