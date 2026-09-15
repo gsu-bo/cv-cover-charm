@@ -166,7 +166,9 @@ export function DossierExportDialog({
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           {formatSelectionEnabled ? (
-            <>Wähle das gewünschte Format. Die Dateien werden lokal erstellt und nicht hochgeladen.</>
+            <>
+              Wähle das gewünschte Format. Die Dateien werden lokal erstellt und nicht hochgeladen.
+            </>
           ) : (
             <>
               Reihenfolge: Titelblatt, Motivationsschreiben und {cvPageCount || "alle"} CV-Seite
