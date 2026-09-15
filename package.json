@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"tests/**/*.{ts,tsx}\"",
-    "format:check:release": "prettier src/components/dossier/DossierExportDialog.tsx > /tmp/export-formatted && diff -u src/components/dossier/DossierExportDialog.tsx /tmp/export-formatted",
+    "format:check:release": "prettier --check package.json src/styles.css src/components/letter/LetterCanvas.tsx src/components/letter/LetterLayoutControls.tsx src/components/letter/LetterTemplatePicker.tsx src/components/letter/layout-system.ts src/components/letter/preflight.ts src/components/letter/dossier-transfer.ts src/components/letter/types.ts src/components/dossier/DossierExportDialog.tsx src/lib/dossier-pdf.ts src/lib/dossier-pdf-document.ts tests/e2e/letter-header-modes.spec.ts tests/e2e/dossier-letter-preflight.spec.ts tests/e2e/cv-demo-pagination.spec.ts tests/e2e/dossier-responsive-product-smoke.spec.ts tests/unit/letter-compact-header.test.tsx tests/unit/letter-layout-system.test.ts",
     "check:release": "bun run test:unit && bun run format:check:release && bun run typecheck && bun run lint && bun run build"
   },
   "dependencies": {
