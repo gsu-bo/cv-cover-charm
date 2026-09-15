@@ -9,8 +9,12 @@ import {
   type ReactNode,
 } from "react";
 import { ThemeToggle } from "@/components/cover/ThemeToggle";
-import { DossierExportDialog } from "@/components/dossier/DossierExportDialog";
+import {
+  DossierExportDialog,
+  type DossierExportFormat,
+} from "@/components/dossier/DossierExportDialog";
 import { DossierPdfCanvas } from "@/components/dossier/DossierPdfCanvas";
+import { ProjectLoadButton } from "@/components/dossier/ProjectFileControls";
 import type { CvLayoutWarning } from "@/components/cv/CvCanvas";
 import {
   coverPdfDocumentFromSaved,
@@ -24,6 +28,8 @@ import {
   type LetterPdfDocument,
 } from "@/lib/dossier-pdf-document";
 import { downloadCombinedDossierPdf } from "@/lib/dossier-pdf";
+import { downloadDossierProjectFromBrowser } from "@/lib/dossier-project-file";
+import { downloadDossierDocx, resolveDossierDocxProfile } from "@/lib/dossier-docx-export";
 import {
   COVER_STORAGE_KEY,
   CV_STORAGE_KEY,
@@ -391,19 +397,16 @@ function Start() {
 
   const readiness = useMemo(() => dossierReadiness(documents), [documents]);
   const missingParts = useMemo(() => missingDossierParts(readiness), [readiness]);
+  const projectAvailable = !!(documents.cover || documents.letter || documents.cv);
+  const docxProfile = useMemo(
+    () => resolveDossierDocxProfile(documents.cover, documents.letter, documents.cv),
+    [documents],
+  );
+  const docxAvailable = readiness.complete && docxProfile !== null;
 
   const openDossierReview = () => {
-    // Direkt den aktuellen Browser-Speicher prüfen. setState ist asynchron und
-    // darf hier nicht darüber entscheiden, ob ein gerade gespeicherter Teil fehlt.
     const freshDocuments = readDossierDocuments();
-    const freshReadiness = dossierReadiness(freshDocuments);
-    const freshMissingParts = missingDossierParts(freshReadiness);
     setDocuments(freshDocuments);
-
-    if (!freshReadiness.complete) {
-      setDossierNote(`Noch nicht vollständig: ${freshMissingParts.join(", ")}.`);
-      return;
-    }
     setDossierNote(null);
     setWarnings(null);
     setCvPageCount(0);
@@ -439,7 +442,9 @@ function Start() {
       : "";
     const author = coverName || cvName || "Bewerbungsdossier";
     const fileName =
-      author === "Bewerbungsdossier" ? "Bewerbungsdossier.pdf" : `Bewerbungsdossier-${author}.pdf`;
+      author === "Bewerbungsdossier"
+        ? "Bewerbungsdossier.pdf"
+        : `Bewerbungsdossier-${author}.pdf`;
 
     setDownloading(true);
     try {
@@ -460,6 +465,75 @@ function Start() {
     }
   };
 
+  const downloadProject = () => {
+    const project = downloadDossierProjectFromBrowser();
+    if (!project) {
+      setDossierNote("Noch keine Dossierdaten zum Sichern vorhanden.");
+      return;
+    }
+    setReviewOpen(false);
+    setDossierNote("Projekt wurde als JSON-Datei gespeichert.");
+  };
+
+  const downloadDocx = async () => {
+    const { cover, letter, cv } = readDossierDocuments();
+    if (
+      !cover ||
+      !letter ||
+      !cv ||
+      !coverPdfHasContent(cover.data) ||
+      !letterPdfHasContent(letter.data) ||
+      !cvPdfHasContent(cv.data)
+    ) {
+      setDossierNote(
+        "Für DOCX müssen Titelblatt, Motivationsschreiben und Lebenslauf ausgefüllt sein.",
+      );
+      return;
+    }
+
+    const profile = resolveDossierDocxProfile(cover, letter, cv);
+    if (!profile) {
+      setDossierNote(
+        "Für DOCX muss in Titelblatt, Motivationsschreiben und Lebenslauf dieselbe aktive Vorlage gewählt sein.",
+      );
+      return;
+    }
+
+    const author =
+      [cover.data.vorname, cover.data.nachname].filter(Boolean).join(" ") ||
+      [cv.data.person.vorname, cv.data.person.nachname].filter(Boolean).join(" ") ||
+      "Bewerbungsdossier";
+    const fileName =
+      author === "Bewerbungsdossier"
+        ? "Bewerbungsdossier.docx"
+        : `Bewerbungsdossier-${author}.docx`;
+
+    setDownloading(true);
+    try {
+      await downloadDossierDocx(cover, letter, cv, fileName);
+      setReviewOpen(false);
+      setDossierNote(`DOCX-Referenz ${profile.label} wurde erstellt.`);
+    } catch (error) {
+      setDossierNote(
+        error instanceof Error ? error.message : "Das DOCX-Dossier konnte nicht erstellt werden.",
+      );
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const downloadExport = async (format: DossierExportFormat) => {
+    if (format === "json") {
+      downloadProject();
+      return;
+    }
+    if (format === "docx") {
+      await downloadDocx();
+      return;
+    }
+    await downloadDossier();
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="flex items-center gap-3 border-b px-4 py-3 sm:px-6">
@@ -469,6 +543,7 @@ function Start() {
             Für die Lehrstellenbewerbung in der Schweiz
           </p>
         </div>
+        <ProjectLoadButton />
         <ThemeToggle />
       </header>
 
@@ -506,10 +581,8 @@ function Start() {
           <Card
             onClick={openDossierReview}
             title="Gesamtdossier herunterladen"
-            text="Titelblatt, Motivationsschreiben und alle CV-Seiten gemeinsam prüfen und als PDF herunterladen."
-            hint={
-              readiness.complete ? "Dossier prüfen & herunterladen →" : "Noch nicht vollständig"
-            }
+            text="PDF oder DOCX exportieren – oder den aktuellen Stand als JSON-Projektdatei sichern."
+            hint="Format wählen →"
             art={<DossierArt />}
           />
         </div>
@@ -517,23 +590,20 @@ function Start() {
         {dossierNote ? (
           <p
             role="status"
-            className={`rounded-lg border px-3 py-2 text-xs leading-relaxed ${
-              readiness.complete
-                ? "bg-muted/30 text-muted-foreground"
-                : "border-amber-300/70 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
-            }`}
+            className="rounded-lg border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground"
           >
             {dossierNote}
           </p>
         ) : !readiness.complete ? (
           <p className="text-xs text-muted-foreground">
-            Gesamtdossier verfügbar, sobald {missingParts.join(", ")} ausgefüllt
-            {missingParts.length === 1 ? " ist" : " sind"}.
+            PDF und DOCX sind verfügbar, sobald {missingParts.join(", ")} ausgefüllt
+            {missingParts.length === 1 ? " ist" : " sind"}. Die JSON-Projektdatei kannst du jederzeit
+            sichern.
           </p>
         ) : null}
 
         <p className="text-xs text-muted-foreground">
-          Deine Eingaben bleiben im Browser. Zum Sichern lädst du den Entwurf als Datei herunter.
+          Projektdateien und Exporte werden lokal erstellt. Es wird nichts hochgeladen.
         </p>
       </main>
 
@@ -543,8 +613,12 @@ function Start() {
         warnings={warnings}
         coverChanged={false}
         downloading={downloading}
+        jsonAvailable={projectAvailable}
+        pdfAvailable={readiness.complete}
+        docxAvailable={docxAvailable}
+        docxTemplateLabel={docxProfile?.label ?? null}
         onClose={closeDossierReview}
-        onDownload={downloadDossier}
+        onDownload={downloadExport}
       />
 
       {readiness.complete && (reviewOpen || downloading) ? (

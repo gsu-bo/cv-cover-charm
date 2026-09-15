@@ -4,32 +4,56 @@ import { letterReadiness, letterTextLayerOverflows } from "@/components/letter/p
 import { letterPdfDocumentFromSaved } from "@/lib/dossier-pdf-document";
 import { LETTER_STORAGE_KEY, readStoredDossierPart } from "@/lib/dossier-project";
 
+export type DossierExportFormat = "json" | "pdf" | "docx";
+
 type Props = {
   open: boolean;
   cvPageCount: number;
   warnings: CvLayoutWarning[] | null;
   coverChanged: boolean;
   downloading: boolean;
+  jsonAvailable: boolean;
+  pdfAvailable: boolean;
+  docxAvailable: boolean;
+  docxTemplateLabel: string | null;
   onClose: () => void;
-  onDownload: () => void;
+  onDownload: (format: DossierExportFormat) => void | Promise<void>;
 };
 
-/** Letzter neutraler Kontrollmoment – ohne Qualitätsnote oder Fertig-Versprechen. */
+/** Letzter neutraler Kontrollmoment – Exportformat wählen und nur relevante Checks zeigen. */
 export function DossierExportDialog({
   open,
   cvPageCount,
   warnings,
   coverChanged,
   downloading,
+  jsonAvailable,
+  pdfAvailable,
+  docxAvailable,
+  docxTemplateLabel,
   onClose,
   onDownload,
 }: Props) {
   const downloadRef = useRef<HTMLButtonElement>(null);
+  const [format, setFormat] = useState<DossierExportFormat>("pdf");
   const [letterOverflow, setLetterOverflow] = useState<boolean | null>(null);
   const letter = letterPdfDocumentFromSaved(readStoredDossierPart(LETTER_STORAGE_KEY));
   const letterState = letter
     ? letterReadiness(letter.data)
     : { started: false, readyToSend: false, missing: ["Motivationsschreiben"] };
+
+  useEffect(() => {
+    if (!open) return;
+    setFormat((current) => {
+      if (current === "pdf" && pdfAvailable) return current;
+      if (current === "docx" && docxAvailable) return current;
+      if (current === "json" && jsonAvailable) return current;
+      if (pdfAvailable) return "pdf";
+      if (jsonAvailable) return "json";
+      if (docxAvailable) return "docx";
+      return "json";
+    });
+  }, [docxAvailable, jsonAvailable, open, pdfAvailable]);
 
   useEffect(() => {
     if (!open) return;
@@ -42,7 +66,7 @@ export function DossierExportDialog({
   }, [downloading, onClose, open]);
 
   useEffect(() => {
-    if (!open) {
+    if (!open || !pdfAvailable) {
       setLetterOverflow(null);
       return;
     }
@@ -78,13 +102,39 @@ export function DossierExportDialog({
       resizeObserver?.disconnect();
       mutationObserver.disconnect();
     };
-  }, [open]);
+  }, [open, pdfAvailable]);
 
   if (!open) return null;
 
   const layoutPending = warnings === null || letterOverflow === null;
+  const pdfBlocked =
+    !pdfAvailable ||
+    downloading ||
+    layoutPending ||
+    !letterState.readyToSend ||
+    letterOverflow === true;
+  const docxBlocked = !docxAvailable || downloading;
+  const jsonBlocked = !jsonAvailable || downloading;
   const downloadBlocked =
-    downloading || layoutPending || !letterState.readyToSend || letterOverflow === true;
+    format === "pdf" ? pdfBlocked : format === "docx" ? docxBlocked : jsonBlocked;
+
+  const actionLabel =
+    format === "pdf"
+      ? downloading
+        ? "PDF wird erstellt…"
+        : "PDF herunterladen"
+      : format === "docx"
+        ? downloading
+          ? "DOCX wird erstellt…"
+          : "DOCX herunterladen"
+        : downloading
+          ? "JSON wird erstellt…"
+          : "JSON herunterladen";
+
+  const optionClass = (selected: boolean, disabled: boolean) =>
+    `w-full rounded-lg border px-3 py-3 text-left transition-colors ${
+      selected ? "border-primary bg-primary/5" : "border-input bg-background hover:bg-accent"
+    } ${disabled ? "cursor-not-allowed opacity-50 hover:bg-background" : ""}`;
 
   return (
     <div
@@ -103,12 +153,71 @@ export function DossierExportDialog({
           Dossier herunterladen
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Reihenfolge: Titelblatt, Motivationsschreiben und {cvPageCount || "alle"} CV-Seite
-          {cvPageCount === 1 ? "" : "n"}.
+          Wähle das gewünschte Format. Die Dateien werden lokal erstellt und nicht hochgeladen.
         </p>
 
+        <div className="mt-4 space-y-2" role="radiogroup" aria-label="Downloadformat">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={format === "json"}
+            disabled={!jsonAvailable || downloading}
+            onClick={() => setFormat("json")}
+            className={optionClass(format === "json", !jsonAvailable || downloading)}
+          >
+            <span className="block text-sm font-semibold">Projektdatei (JSON)</span>
+            <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+              Aktuellen Stand sichern und später wieder weiterbearbeiten.
+            </span>
+          </button>
+
+          <button
+            type="button"
+            role="radio"
+            aria-checked={format === "pdf"}
+            disabled={!pdfAvailable || downloading}
+            onClick={() => setFormat("pdf")}
+            className={optionClass(format === "pdf", !pdfAvailable || downloading)}
+          >
+            <span className="block text-sm font-semibold">Fertiges Dossier (PDF)</span>
+            <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+              {pdfAvailable
+                ? `Titelblatt, Motivationsschreiben und ${cvPageCount || "alle"} CV-Seite${cvPageCount === 1 ? "" : "n"}.`
+                : "Benötigt Titelblatt, Motivationsschreiben und Lebenslauf."}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            role="radio"
+            aria-checked={format === "docx"}
+            disabled={!docxAvailable || downloading}
+            onClick={() => setFormat("docx")}
+            className={optionClass(format === "docx", !docxAvailable || downloading)}
+          >
+            <span className="block text-sm font-semibold">Bearbeitbares Dossier (DOCX)</span>
+            <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+              {docxAvailable
+                ? `Word-Datei${docxTemplateLabel ? ` · Vorlage ${docxTemplateLabel}` : ""}.`
+                : "Benötigt ein vollständiges Dossier mit derselben aktiven Vorlage."}
+            </span>
+          </button>
+        </div>
+
         <div className="mt-4 flex flex-col gap-2">
-          {!letterState.readyToSend ? (
+          {format === "json" ? (
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+              Diese Datei enthält deinen Projektstand zum späteren Laden – nicht das fertige Bewerbungsdossier.
+            </div>
+          ) : null}
+
+          {format === "docx" ? (
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+              DOCX ist zum Weiterbearbeiten in Microsoft Word gedacht. Für eine unveränderliche Bewerbung verwende PDF.
+            </div>
+          ) : null}
+
+          {format === "pdf" && !letterState.readyToSend ? (
             <div
               role="alert"
               data-dossier-letter-readiness
@@ -124,13 +233,13 @@ export function DossierExportDialog({
             </div>
           ) : null}
 
-          {letterState.readyToSend && letterOverflow === null ? (
+          {format === "pdf" && letterState.readyToSend && letterOverflow === null ? (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
               Motivationsschreiben wird auf eine sichere A4-Seite geprüft…
             </div>
           ) : null}
 
-          {letterOverflow === true ? (
+          {format === "pdf" && letterOverflow === true ? (
             <div
               role="alert"
               data-dossier-letter-overflow
@@ -144,17 +253,17 @@ export function DossierExportDialog({
             </div>
           ) : null}
 
-          {coverChanged ? (
+          {format === "pdf" && coverChanged ? (
             <div className="rounded-md border border-sky-300/70 bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-950 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-100">
               Das Titelblatt wurde seit der letzten Übernahme in den Lebenslauf verändert.
             </div>
           ) : null}
 
-          {warnings === null ? (
+          {format === "pdf" && warnings === null && pdfAvailable ? (
             <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
               Lebenslauf-Layout wird geprüft…
             </div>
-          ) : warnings.length ? (
+          ) : format === "pdf" && warnings?.length ? (
             <div className="rounded-md border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
               <div className="font-semibold">Layout-Hinweise</div>
               <ul className="mt-1 list-disc space-y-1 pl-4">
@@ -165,9 +274,11 @@ export function DossierExportDialog({
             </div>
           ) : null}
 
-          <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-            Kontrolliere vor dem Versenden Inhalt, Rechtschreibung und Kontaktdaten selbst.
-          </div>
+          {format !== "json" ? (
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+              Kontrolliere vor dem Versenden Inhalt, Rechtschreibung und Kontaktdaten selbst.
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -182,11 +293,11 @@ export function DossierExportDialog({
           <button
             ref={downloadRef}
             type="button"
-            onClick={onDownload}
+            onClick={() => void onDownload(format)}
             disabled={downloadBlocked}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
           >
-            {downloading ? "PDF wird erstellt…" : "Dossier herunterladen"}
+            {actionLabel}
           </button>
         </div>
       </div>
