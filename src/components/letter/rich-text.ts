@@ -1,6 +1,13 @@
 const ALLOWED_INLINE = new Set(["strong", "b", "em", "i", "u"]);
 const ALLOWED_BLOCK = new Set(["div", "p"]);
 const ALLOWED_LISTS = new Set(["bullet", "dash", "plus", "dot"]);
+const ALLOWED_ALIGNMENTS = new Set(["left", "center", "right", "justify"]);
+
+export type LetterTextAlign = "left" | "center" | "right" | "justify";
+
+export function letterTextAlign(value: string | undefined): LetterTextAlign {
+  return value && ALLOWED_ALIGNMENTS.has(value) ? (value as LetterTextAlign) : "justify";
+}
 
 function escapeHtml(value: string): string {
   return value
@@ -16,19 +23,19 @@ export function plainTextToRichHtml(text: string): string {
   return text
     .replace(/\r/g, "")
     .split("\n")
-    .map((line) => `<div>${line ? escapeHtml(line) : "<br>"}</div>`)
+    .map((line) => `<div data-align="justify">${line ? escapeHtml(line) : "<br>"}</div>`)
     .join("");
 }
 
 function blockAttributes(element: HTMLElement): string {
-  const attributes: string[] = [];
+  const attributes: string[] = [`data-align="${letterTextAlign(element.dataset.align)}"`];
   if (element.dataset.columns === "2" || element.dataset.columns === "3") {
     attributes.push(`data-columns="${element.dataset.columns}"`);
   }
   if (element.dataset.list && ALLOWED_LISTS.has(element.dataset.list)) {
     attributes.push(`data-list="${element.dataset.list}"`);
   }
-  return attributes.length ? ` ${attributes.join(" ")}` : "";
+  return ` ${attributes.join(" ")}`;
 }
 
 function serializeNode(node: Node): string {
@@ -61,7 +68,7 @@ function serializeTopLevelNodes(nodes: Node[]): string {
 
   const flushInline = () => {
     if (!inlineBuffer) return;
-    output += `<div>${inlineBuffer}</div>`;
+    output += `<div data-align="justify">${inlineBuffer}</div>`;
     inlineBuffer = "";
   };
 
@@ -71,7 +78,7 @@ function serializeTopLevelNodes(nodes: Node[]): string {
       if (raw.includes("\n")) {
         flushInline();
         for (const line of raw.replace(/\r/g, "").split("\n")) {
-          output += `<div>${line ? escapeHtml(line) : "<br>"}</div>`;
+          output += `<div data-align="justify">${line ? escapeHtml(line) : "<br>"}</div>`;
         }
         continue;
       }
