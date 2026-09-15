@@ -92,7 +92,7 @@ function polishContactBoxes(source: string) {
     geometry: { x: number; y: number; width: number; height: number },
   ) =>
     transformShapeBlock(segment, id, (block) => {
-      let next = block
+      const next = block
         .replace(/margin-left:-?[0-9.]+mm;/, `margin-left:${geometry.x}mm;`)
         .replace(/margin-top:-?[0-9.]+mm;/, `margin-top:${geometry.y}mm;`)
         .replace(/width:[0-9.]+mm;/, `width:${geometry.width}mm;`)
