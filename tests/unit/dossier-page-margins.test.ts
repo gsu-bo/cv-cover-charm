@@ -218,19 +218,45 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(project).toContain("DOSSIER_PROJECT_VERSION = 1");
   });
 
-  test("DOCX mirrors only letter and CV margins and leaves the cover section untouched", () => {
-    const section = (top: number, right: number, bottom: number, left: number) =>
-      `<w:sectPr><w:pgMar w:top="${top}" w:right="${right}" w:bottom="${bottom}" w:left="${left}" w:header="454" w:footer="454" w:gutter="0"/></w:sectPr>`;
-    const source = `${section(1, 2, 3, 4)}${section(5, 6, 7, 8)}${section(9, 10, 11, 12)}`;
+  test("DOCX patches the final letter/CV sections robustly and leaves every cover section untouched", () => {
+    const coverOne =
+      '<w:sectPr w:rsidR="cover-a"><w:pgMar w:top="1" w:right="2" w:bottom="3" w:left="4" w:header="454" w:footer="454" w:gutter="0"/></w:sectPr>';
+    const coverTwo =
+      '<w:sectPr w:rsidR="cover-b"><w:pgMar w:top="5" w:right="6" w:bottom="7" w:left="8"/></w:sectPr>';
+    const letter =
+      '<w:sectPr w:rsidR="letter"><w:pgMar w:top="9" w:right="10" w:bottom="11" w:left="12" w:header="455" w:footer="456" w:gutter="7"></w:pgMar></w:sectPr>';
+    const cv = '<w:sectPr w:rsidR="cv"><w:pgSz w:w="11906" w:h="16838"/></w:sectPr>';
+    const source = `${coverOne}${coverTwo}${letter}${cv}`;
     const patched = patchDossierDocxPageMarginsXml(source, {
       letter: { top: 20, right: 21, bottom: 22, left: 23 },
       cv: { top: 24, right: 25, bottom: 26, left: 27 },
     });
 
-    expect(patched).toContain(section(1, 2, 3, 4));
-    expect(patched).toContain('w:top="1134" w:right="1191" w:bottom="1247" w:left="1304"');
-    expect(patched).toContain('w:top="1361" w:right="1417" w:bottom="1474" w:left="1531"');
+    expect(patched).toContain(coverOne);
+    expect(patched).toContain(coverTwo);
+    expect(patched).toContain('w:rsidR="letter"');
+    expect(patched).toContain('w:top="1134"');
+    expect(patched).toContain('w:right="1191"');
+    expect(patched).toContain('w:bottom="1247"');
+    expect(patched).toContain('w:left="1304"');
+    expect(patched).toContain('w:header="455" w:footer="456" w:gutter="7"');
+    expect(patched).toContain("</w:pgMar>");
+    expect(patched).toContain('w:rsidR="cv"><w:pgSz w:w="11906" w:h="16838"/><w:pgMar');
+    expect(patched).toContain('w:top="1361"');
+    expect(patched).toContain('w:right="1417"');
+    expect(patched).toContain('w:bottom="1474"');
+    expect(patched).toContain('w:left="1531"');
+
+    const incomplete = `${coverOne}${letter}`;
+    expect(
+      patchDossierDocxPageMarginsXml(incomplete, {
+        letter: { top: 20, right: 21, bottom: 22, left: 23 },
+      }),
+    ).toBe(incomplete);
+
     expect(docxMargins).toContain("resolveSafeDossierDocxPageMargins");
+    expect(docxMargins).toContain("sectionCount - 2");
+    expect(docxMargins).toContain("sectionCount - 1");
     expect(docxMargins).toContain("clampDossierPageMarginsToMinimums(state.letter, minimums)");
     expect(docxMargins).toContain("clampDossierPageMarginsToMinimums(state.cv, minimums)");
     expect(docxMargins).toContain("letterSafePageMarginMinimums");

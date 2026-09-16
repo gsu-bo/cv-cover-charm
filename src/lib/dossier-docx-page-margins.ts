@@ -18,31 +18,54 @@ import { resolveTemplateChromeOptions } from "@/lib/template-chrome";
 
 const MM_TO_TWIPS = 1440 / 25.4;
 const twips = (mm: number) => Math.round(mm * MM_TO_TWIPS);
+const SECTION_PATTERN = /<w:sectPr\b[^>]*>[\s\S]*?<\/w:sectPr>/g;
+const PAGE_MARGIN_TAG_PATTERN = /<w:pgMar\b[^>]*\/?>/;
+
+function marginAttributes(margins: DossierPageMargins) {
+  return {
+    top: twips(margins.top),
+    right: twips(margins.right),
+    bottom: twips(margins.bottom),
+    left: twips(margins.left),
+  };
+}
+
+function patchTagAttribute(tag: string, name: string, amount: number) {
+  const attribute = new RegExp(`\\bw:${name}=(['"])-?\\d+\\1`);
+  if (attribute.test(tag)) return tag.replace(attribute, `w:${name}="${amount}"`);
+
+  const closingLength = tag.endsWith("/>") ? 2 : 1;
+  const insertionIndex = tag.length - closingLength;
+  return `${tag.slice(0, insertionIndex)} w:${name}="${amount}"${tag.slice(insertionIndex)}`;
+}
+
+function patchPageMarginTag(tag: string, margins: DossierPageMargins) {
+  let value = tag;
+  for (const [name, amount] of Object.entries(marginAttributes(margins))) {
+    value = patchTagAttribute(value, name, amount);
+  }
+  return value;
+}
+
+function createPageMarginTag(margins: DossierPageMargins) {
+  const attrs = marginAttributes(margins);
+  return `<w:pgMar w:top="${attrs.top}" w:right="${attrs.right}" w:bottom="${attrs.bottom}" w:left="${attrs.left}"/>`;
+}
+
+function patchSectionBlock(block: string, margins: DossierPageMargins) {
+  if (PAGE_MARGIN_TAG_PATTERN.test(block)) {
+    return block.replace(PAGE_MARGIN_TAG_PATTERN, (tag) => patchPageMarginTag(tag, margins));
+  }
+  return block.replace("</w:sectPr>", `${createPageMarginTag(margins)}</w:sectPr>`);
+}
 
 function patchSectionMargins(source: string, sectionIndex: number, margins: DossierPageMargins) {
-  const pattern = /<w:sectPr>[\s\S]*?<\/w:sectPr>/g;
-  const matches = [...source.matchAll(pattern)];
+  const matches = [...source.matchAll(SECTION_PATTERN)];
   const match = matches[sectionIndex];
   if (!match || match.index === undefined) return source;
 
   const block = match[0];
-  const next = block.replace(/<w:pgMar\b[^>]*\/>/, (pgMar) => {
-    let value = pgMar;
-    const attrs = {
-      top: twips(margins.top),
-      right: twips(margins.right),
-      bottom: twips(margins.bottom),
-      left: twips(margins.left),
-    };
-    for (const [name, amount] of Object.entries(attrs)) {
-      const attribute = new RegExp(`w:${name}="-?\\d+"`);
-      value = attribute.test(value)
-        ? value.replace(attribute, `w:${name}="${amount}"`)
-        : value.replace("/>", ` w:${name}="${amount}"/>`);
-    }
-    return value;
-  });
-
+  const next = patchSectionBlock(block, margins);
   return source.slice(0, match.index) + next + source.slice(match.index + block.length);
 }
 
@@ -121,16 +144,20 @@ export function resolveSafeDossierDocxPageMargins(
 }
 
 /**
- * Every dossier DOCX renderer emits the same three Word sections in this order:
- * title page, motivation letter, CV. The title page deliberately stays untouched.
+ * Dossier renderers place the motivation letter and CV in the final two Word
+ * sections. Earlier sections belong to the cover and stay untouched. Matching
+ * tolerates sectPr attributes and both compact/expanded pgMar serialization.
  */
 export function patchDossierDocxPageMarginsXml(
   source: string,
   state: DossierPageMarginsState,
 ) {
+  const sectionCount = [...source.matchAll(SECTION_PATTERN)].length;
+  if (sectionCount < 3) return source;
+
   let xml = source;
-  if (state.letter) xml = patchSectionMargins(xml, 1, state.letter);
-  if (state.cv) xml = patchSectionMargins(xml, 2, state.cv);
+  if (state.letter) xml = patchSectionMargins(xml, sectionCount - 2, state.letter);
+  if (state.cv) xml = patchSectionMargins(xml, sectionCount - 1, state.cv);
   return xml;
 }
 
