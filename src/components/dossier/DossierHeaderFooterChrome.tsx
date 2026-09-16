@@ -160,7 +160,8 @@ export function DossierHeaderFooterChrome({
       ? resolveTemplateChromeOptions(template, colors, options)
       : options;
   const headerMode = options.headerMode;
-  const continuationContact = pageIndex > 0 && headerMode === "contact";
+  const differentFirstPage = options.headerDifferentFirstPage !== false;
+  const continuationContact = pageIndex > 0 && differentFirstPage && headerMode === "contact";
   const sourcePalette = cvPalette(colors);
   const primary =
     template === "brief"
@@ -219,14 +220,11 @@ export function DossierHeaderFooterChrome({
     options.headerShowName && resolvedContact.name
       ? { key: "name", value: resolvedContact.name, strong: true }
       : null,
-    options.headerShowAddress && resolvedContact.place
-      ? { key: "place", value: resolvedContact.place, strong: false }
+    options.headerShowEmail && resolvedContact.email
+      ? { key: "email", value: resolvedContact.email, strong: false }
       : null,
     options.headerShowPhone && resolvedContact.phone
       ? { key: "phone", value: resolvedContact.phone, strong: false }
-      : null,
-    options.headerShowEmail && resolvedContact.email
-      ? { key: "email", value: resolvedContact.email, strong: false }
       : null,
   ].filter((row): row is ContactRow => row !== null);
   const footerValues = [resolvedFooterLeft, resolvedFooterRight].filter(
@@ -245,6 +243,7 @@ export function DossierHeaderFooterChrome({
     <div
       data-dossier-chrome={scope}
       data-dossier-header-mode={headerMode}
+      data-dossier-first-page-different={differentFirstPage ? "true" : "false"}
       data-dossier-footer-mode={options.footerMode}
       data-dossier-header-text-layout={options.headerTextLayout}
       data-dossier-header-inline-separator={inlineSeparator}
