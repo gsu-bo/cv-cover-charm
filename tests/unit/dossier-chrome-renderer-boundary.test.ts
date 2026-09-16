@@ -36,7 +36,9 @@ describe("dossier chrome renderer boundary", () => {
   test("chrome controls derive every field from their subscribed state snapshot", () => {
     const source = read("src/components/dossier/DossierChromeControls.tsx");
     expect(source).toContain("const options = state.sync ? state.shared : state[scope]");
-    expect(source).toContain("value={options.headerMode}");
+    expect(source).toContain("const headerControlValue");
+    expect(source).toContain("value={headerControlValue}");
+    expect(source).toContain("value={headerInlineSeparator}");
     expect(source).toContain('options.headerMode === "contact"');
     expect(source).not.toContain("getDossierChromeOptions");
     expect(source).not.toContain("selected.headerMode");
