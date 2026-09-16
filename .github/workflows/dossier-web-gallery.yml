@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: dossier-web-gallery-${{ github.sha }}
+  group: dossier-web-gallery-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
