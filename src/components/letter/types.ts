@@ -73,6 +73,7 @@ export type LetterDesign = {
   headerShowAddress?: boolean;
   headerShowPhone?: boolean;
   headerShowEmail?: boolean;
+  headerDifferentFirstPage?: boolean;
   headerHeightMm?: number | null;
   headerTextLayout?: DossierChromeTextLayout;
   headerInlineSeparator?: DossierChromeInlineSeparator;
@@ -211,6 +212,7 @@ export function emptyLetterDesign(): LetterDesign {
     headerShowAddress: true,
     headerShowPhone: true,
     headerShowEmail: true,
+    headerDifferentFirstPage: true,
     headerHeightMm: null,
     headerTextLayout: "stacked",
     headerInlineSeparator: "icons",
@@ -281,6 +283,7 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
     headerShowAddress: incoming.headerShowAddress !== false,
     headerShowPhone: incoming.headerShowPhone !== false,
     headerShowEmail: incoming.headerShowEmail !== false,
+    headerDifferentFirstPage: incoming.headerDifferentFirstPage !== false,
     headerHeightMm: normalizedMm(incoming.headerHeightMm),
     headerTextLayout: incoming.headerTextLayout === "inline" ? "inline" : "stacked",
     headerInlineSeparator: normalizedHeaderInlineSeparator(incoming.headerInlineSeparator),
