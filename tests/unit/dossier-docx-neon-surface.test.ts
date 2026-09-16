@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { LEGACY_EXTRA_DOCX_RECIPES } from "@/lib/dossier-docx-template-recipe-legacy-extra";
+import { dossierDocxTemplateRecipe } from "@/lib/dossier-docx-template-recipes";
 
 function shape(template: "neon" | "verlauf" | "citrus", page: "letter" | "cv", id: string) {
-  return LEGACY_EXTRA_DOCX_RECIPES[template][page].shapes.find((candidate) => candidate.id === id);
+  return dossierDocxTemplateRecipe(template)?.[page].shapes.find((candidate) => candidate.id === id);
 }
 
 describe("Neon DOCX content surfaces", () => {
