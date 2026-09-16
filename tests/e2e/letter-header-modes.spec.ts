@@ -112,7 +112,7 @@ test.describe("M1/M2 compact letter header", () => {
       await preview.locator("[data-letter-text-layer]").evaluate((node) => node.style.top),
     ).toBe("33mm");
 
-    await select.selectOption("contact");
+    await select.selectOption("contact-stacked");
     await expect(preview).toHaveAttribute("data-letter-header-mode", "contact");
     await expect(exportPage).toHaveAttribute("data-letter-header-mode", "contact");
     await expect(preview.locator("[data-letter-integrated-contact]")).toContainText("Lea Müller");
@@ -305,8 +305,12 @@ test.describe("M4 centralized letter layout", () => {
       await expect(preview).toHaveAttribute("data-letter-layout-archetype", archetype);
       await expect(exportPage).toHaveAttribute("data-letter-layout-archetype", archetype);
 
-      for (const mode of ["compact", "contact", "none"] as const) {
-        await headerSelect.selectOption(mode);
+      for (const [controlValue, mode] of [
+        ["compact", "compact"],
+        ["contact-stacked", "contact"],
+        ["none", "none"],
+      ] as const) {
+        await headerSelect.selectOption(controlValue);
         await expect(preview).toHaveAttribute("data-letter-header-mode", mode);
         await expect(exportPage).toHaveAttribute("data-letter-header-mode", mode);
         const contentBox = await previewLayer.getAttribute("data-letter-content-box");
