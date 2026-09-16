@@ -89,7 +89,8 @@ describe("selective dossier hyphenation", () => {
       "utf8",
     );
     expect(source).toContain('[data-letter-pdf-richtext="body"]');
-    expect(source).toContain("[data-cv-entry] > div > [data-cv-body]");
+    expect(source).toContain("[data-cv-entry] [data-cv-body]");
+    expect(source).not.toContain("[data-cv-entry] > div > [data-cv-body]");
     expect(source).not.toContain("data-dossier-document=\\\"cover\\\"");
     expect(source).toContain("Das Titelblatt bleibt unverändert.");
   });

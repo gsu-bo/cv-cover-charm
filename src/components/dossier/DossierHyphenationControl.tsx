@@ -16,7 +16,7 @@ function useDossierHyphenation() {
 
 const HYPHENATION_CSS = `
 html[data-dossier-hyphenation="true"] [data-letter-pdf-richtext="body"],
-html[data-dossier-hyphenation="true"] [data-cv-entry] > div > [data-cv-body] {
+html[data-dossier-hyphenation="true"] [data-cv-entry] [data-cv-body] {
   -webkit-hyphens: auto;
   hyphens: auto;
   word-break: normal;
@@ -24,7 +24,7 @@ html[data-dossier-hyphenation="true"] [data-cv-entry] > div > [data-cv-body] {
 }
 
 html[data-dossier-hyphenation="false"] [data-letter-pdf-richtext="body"],
-html[data-dossier-hyphenation="false"] [data-cv-entry] > div > [data-cv-body] {
+html[data-dossier-hyphenation="false"] [data-cv-entry] [data-cv-body] {
   -webkit-hyphens: manual;
   hyphens: manual;
 }
