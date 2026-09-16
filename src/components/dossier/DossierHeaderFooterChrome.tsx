@@ -1,9 +1,11 @@
+import { Mail, Smartphone } from "lucide-react";
 import { FONT_STACKS } from "@/components/cover/types";
 import { cvPalette, onColorRoles } from "@/components/cv/palette";
 import {
   dossierFooterVisualHeightMmForOptions,
   dossierHeaderVisualHeightMmForOptions,
   type DossierChromeContact,
+  type DossierChromeInlineSeparator,
   type DossierChromeOptions,
   type DossierChromeScope,
 } from "@/lib/dossier-chrome";
@@ -56,6 +58,71 @@ function automaticBorderColor({
     if (normalized && !occupied.has(normalized)) return normalized;
   }
   return "#94a3b8";
+}
+
+type ContactRow = {
+  key: "name" | "address" | "place" | "phone" | "email";
+  value: string;
+  strong: boolean;
+};
+
+function InlineContactSeparator({
+  style,
+  rowKey,
+  index,
+  compact = false,
+}: {
+  style: DossierChromeInlineSeparator;
+  rowKey: ContactRow["key"];
+  index: number;
+  compact?: boolean;
+}) {
+  if (style === "icons" && (rowKey === "phone" || rowKey === "email")) {
+    const Icon = rowKey === "phone" ? Smartphone : Mail;
+    return (
+      <span
+        aria-hidden="true"
+        className="inline-flex shrink-0 items-center justify-center"
+        style={{
+          marginLeft: index ? (compact ? "1mm" : "1.5mm") : 0,
+          marginRight: compact ? "0.7mm" : "0.9mm",
+          color: "#ffffff",
+          opacity: 0.94,
+        }}
+      >
+        <Icon
+          style={{ width: compact ? "2.5mm" : "3mm", height: compact ? "2.5mm" : "3mm" }}
+          strokeWidth={1.7}
+        />
+      </span>
+    );
+  }
+
+  if (index === 0) return null;
+
+  if (style === "space") {
+    return (
+      <span
+        aria-hidden="true"
+        className="shrink-0"
+        style={{ width: compact ? "3.5ch" : "5ch" }}
+      />
+    );
+  }
+
+  const symbol = style === "slash" ? "/" : style === "pipe" ? "|" : "·";
+  return (
+    <span
+      aria-hidden="true"
+      className="shrink-0"
+      style={{
+        marginInline: compact ? "1.05mm" : "1.5mm",
+        opacity: style === "pipe" ? 0.45 : 0.58,
+      }}
+    >
+      {symbol}
+    </span>
+  );
 }
 
 export function DossierHeaderFooterChrome({
@@ -147,17 +214,26 @@ export function DossierHeaderFooterChrome({
     options.headerShowEmail && resolvedContact.email
       ? { key: "email", value: resolvedContact.email, strong: false }
       : null,
-  ].filter((row): row is { key: string; value: string; strong: boolean } => row !== null);
-  const continuationBits = [
-    options.headerShowName ? resolvedContact.name : "",
-    options.headerShowAddress ? resolvedContact.place : "",
-    options.headerShowEmail ? resolvedContact.email : "",
-    options.headerShowPhone ? resolvedContact.phone : "",
-  ].filter(Boolean);
+  ].filter((row): row is ContactRow => row !== null);
+  const continuationRows = [
+    options.headerShowName && resolvedContact.name
+      ? { key: "name", value: resolvedContact.name, strong: true }
+      : null,
+    options.headerShowAddress && resolvedContact.place
+      ? { key: "place", value: resolvedContact.place, strong: false }
+      : null,
+    options.headerShowPhone && resolvedContact.phone
+      ? { key: "phone", value: resolvedContact.phone, strong: false }
+      : null,
+    options.headerShowEmail && resolvedContact.email
+      ? { key: "email", value: resolvedContact.email, strong: false }
+      : null,
+  ].filter((row): row is ContactRow => row !== null);
   const footerValues = [resolvedFooterLeft, resolvedFooterRight].filter(
     (value): value is string => !!value?.trim(),
   );
   const stackedHeader = options.headerTextLayout === "stacked";
+  const inlineSeparator = options.headerInlineSeparator ?? "icons";
   const headerContentOffsetY = options.headerContentOffsetYMm ?? 0;
   const footerContentOffsetY = options.footerContentOffsetYMm ?? 0;
   const headerContentTransform =
@@ -171,6 +247,7 @@ export function DossierHeaderFooterChrome({
       data-dossier-header-mode={headerMode}
       data-dossier-footer-mode={options.footerMode}
       data-dossier-header-text-layout={options.headerTextLayout}
+      data-dossier-header-inline-separator={inlineSeparator}
       data-dossier-footer-text-layout={options.footerTextLayout}
       data-dossier-border-enabled={visualOptions.borderEnabled ? "true" : "false"}
       data-dossier-border-color={borderColor}
@@ -220,14 +297,17 @@ export function DossierHeaderFooterChrome({
               className="flex min-w-0 flex-1 flex-wrap items-center justify-center text-center opacity-95"
               style={{ overflowWrap: "anywhere", transform: headerContentTransform }}
             >
-              {continuationBits.map((value, index) => (
-                <span key={`${value}-${index}`} className="inline-flex min-w-0 items-center">
-                  {index ? (
-                    <span aria-hidden="true" className="mx-[1.1mm] shrink-0 opacity-60">
-                      ·
-                    </span>
-                  ) : null}
-                  <span className="min-w-0">{value}</span>
+              {continuationRows.map((row, index) => (
+                <span key={row.key} className="inline-flex min-w-0 items-center">
+                  <InlineContactSeparator
+                    style={inlineSeparator}
+                    rowKey={row.key}
+                    index={index}
+                    compact
+                  />
+                  <span className={row.strong ? "min-w-0 font-semibold" : "min-w-0"}>
+                    {row.value}
+                  </span>
                 </span>
               ))}
             </div>
@@ -252,7 +332,7 @@ export function DossierHeaderFooterChrome({
               className="absolute inset-x-0 top-0 flex"
               style={{
                 height: `${headerVisualHeight}mm`,
-                padding: stackedHeader ? "1mm 23mm 1mm 24mm" : "2mm 23mm 2mm 24mm",
+                padding: stackedHeader ? "1mm 23mm 1mm 24mm" : "2mm 18mm",
                 boxSizing: "border-box",
                 color: headerRoles.ink,
                 fontSize: stackedHeader ? "8pt" : "8.5pt",
@@ -278,16 +358,16 @@ export function DossierHeaderFooterChrome({
               ) : (
                 <div
                   data-dossier-inline-contact
-                  className="my-auto flex min-w-0 flex-1 flex-wrap items-center justify-center gap-y-[0.7mm] text-center"
+                  className="my-auto flex min-w-0 flex-1 flex-wrap items-center justify-center gap-y-[0.8mm] text-center"
                   style={{ overflowWrap: "anywhere", transform: headerContentTransform }}
                 >
                   {contactRows.map((row, index) => (
                     <span key={row.key} className="inline-flex min-w-0 items-center">
-                      {index ? (
-                        <span aria-hidden="true" className="mx-[1.5mm] shrink-0 opacity-55">
-                          ·
-                        </span>
-                      ) : null}
+                      <InlineContactSeparator
+                        style={inlineSeparator}
+                        rowKey={row.key}
+                        index={index}
+                      />
                       <span
                         className={row.strong ? "min-w-0 font-semibold" : "min-w-0 opacity-95"}
                         style={{ overflowWrap: "anywhere" }}
@@ -397,7 +477,7 @@ export function DossierHeaderFooterChrome({
               style={{ transform: footerContentTransform }}
             >
               {footerValues.map((value) => (
-                <div key={value} className="truncate">
+                <div key={value} className="min-w-0 whitespace-normal break-words">
                   {value}
                 </div>
               ))}
@@ -407,7 +487,9 @@ export function DossierHeaderFooterChrome({
               className="flex h-full min-w-0 items-center justify-between gap-[8mm]"
               style={{ transform: footerContentTransform }}
             >
-              <span className="min-w-0 truncate">{footerValues.join(" · ")}</span>
+              <span className="min-w-0 whitespace-normal break-words">
+                {footerValues.join(" · ")}
+              </span>
             </div>
           )}
         </div>
