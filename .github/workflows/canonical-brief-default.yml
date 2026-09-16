@@ -25,24 +25,129 @@ jobs:
       - name: Apply canonical neutral fallback
         run: python .github/scripts/apply-canonical-brief-default.py
 
+      - name: Route remaining implicit fallbacks through Brief
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              if old not in text:
+                  raise SystemExit(f"patch target missing in {path}: {old[:120]!r}")
+              file.write_text(text.replace(old, new, 1))
+
+          replace(
+              "src/routes/anschreiben.tsx",
+              'import { FONT_LABELS, TEMPLATES, type FontKey } from "@/components/cover/types";\n',
+              'import { FONT_LABELS, TEMPLATES, type FontKey } from "@/components/cover/types";\nimport { DEFAULTS } from "@/default-config";\n',
+          )
+          replace(
+              "src/routes/anschreiben.tsx",
+              '''      design.template === "brief"
+                ? null
+                : (TEMPLATES.find((candidate) => candidate.id === design.template) ?? TEMPLATES[0]),''',
+              '''      design.template === "brief"
+                ? null
+                : (TEMPLATES.find((candidate) => candidate.id === design.template) ??
+                  TEMPLATES.find((candidate) => candidate.id === DEFAULTS.TEMPLATE) ??
+                  null),''',
+          )
+
+          replace(
+              "src/routes/lebenslauf.tsx",
+              'import { PDF, PREVIEW, SHAPE } from "@/default-config";',
+              'import { DEFAULTS, PDF, PREVIEW, SHAPE } from "@/default-config";',
+          )
+          replace(
+              "src/routes/lebenslauf.tsx",
+              '''function defaultColors(template: TemplateId): Record<string, string> {
+            const t = TEMPLATES.find((x) => x.id === template) ?? TEMPLATES[0];
+            return Object.fromEntries(t.slots.map((s) => [s.key, s.default]));
+          }''',
+              '''function templateDefinition(template: TemplateId) {
+            const definition =
+              TEMPLATES.find((candidate) => candidate.id === template) ??
+              TEMPLATES.find((candidate) => candidate.id === DEFAULTS.TEMPLATE);
+            if (!definition) throw new Error("Canonical dossier template is missing");
+            return definition;
+          }
+
+          function defaultColors(template: TemplateId): Record<string, string> {
+            const t = templateDefinition(template);
+            return Object.fromEntries(t.slots.map((s) => [s.key, s.default]));
+          }''',
+          )
+          replace(
+              "src/routes/lebenslauf.tsx",
+              '''  const activeTemplate = useMemo(
+            () => TEMPLATES.find((t) => t.id === design.template) ?? TEMPLATES[0],
+            [design.template],
+          );''',
+              '''  const activeTemplate = useMemo(
+            () => templateDefinition(design.template),
+            [design.template],
+          );''',
+          )
+
+          replace(
+              "src/lib/dossier-family.ts",
+              'import type { TemplateId } from "@/components/cover/types";\n',
+              'import type { TemplateId } from "@/components/cover/types";\nimport { DEFAULTS } from "@/default-config";\n',
+          )
+          replace(
+              "src/lib/dossier-family.ts",
+              '''const TEMPLATE_FAMILY: Record<string, DossierFamilyId> = {
+            klassisch: "editorial",''',
+              '''const TEMPLATE_FAMILY: Record<string, DossierFamilyId> = {
+            brief: "classic",
+            klassisch: "editorial",''',
+          )
+          replace(
+              "src/lib/dossier-family.ts",
+              '''export function familyForTemplate(template: TemplateId): DossierFamilyId {
+            return TEMPLATE_FAMILY[template as string] ?? "modern";
+          }''',
+              '''export function familyForTemplate(template: TemplateId): DossierFamilyId {
+            return (
+              TEMPLATE_FAMILY[template as string] ??
+              TEMPLATE_FAMILY[DEFAULTS.TEMPLATE as string] ??
+              "classic"
+            );
+          }''',
+          )
+          replace(
+              "src/lib/dossier-family.ts",
+              'export function getDossierFamily(template: TemplateId = "modern"): DossierFamilyId {',
+              'export function getDossierFamily(template: TemplateId = DEFAULTS.TEMPLATE): DossierFamilyId {',
+          )
+          PY
+
       - name: Audit implicit renderer fallbacks
         run: |
           echo "Remaining renderer fallback candidates:"
-          grep -R -n -E 'TEMPLATES\[0\]|\?\? "modern"|\|\| "modern"|defaultTemplate|fallbackTemplate' src || true
+          if grep -R -n -E 'TEMPLATES\[0\]|\?\? "modern"|\|\| "modern"|defaultTemplate|fallbackTemplate' src; then
+            echo "Implicit renderer fallback remains."
+            exit 1
+          fi
 
       - name: Format changed source and tests
-        run: npx --yes prettier@3.8.3 --write \
-          src/lib/dossier-default-presentation.ts \
-          src/default-config.ts \
-          src/lib/dossier-chrome.ts \
-          src/lib/template-chrome.ts \
-          src/components/cover/TemplatePicker.tsx \
-          src/components/letter/types.ts \
-          src/components/letter/LetterCanvas.tsx \
-          src/components/cv/layout.ts \
-          src/lib/dossier.ts \
-          src/lib/dossier-pdf-document.ts \
-          tests/unit/letter-brief-default.test.tsx \
+        run: >-
+          npx --yes prettier@3.8.3 --write
+          src/lib/dossier-default-presentation.ts
+          src/default-config.ts
+          src/lib/dossier-chrome.ts
+          src/lib/template-chrome.ts
+          src/components/cover/TemplatePicker.tsx
+          src/components/letter/types.ts
+          src/components/letter/LetterCanvas.tsx
+          src/components/cv/layout.ts
+          src/routes/anschreiben.tsx
+          src/routes/lebenslauf.tsx
+          src/lib/dossier-family.ts
+          src/lib/dossier.ts
+          src/lib/dossier-pdf-document.ts
+          tests/unit/letter-brief-default.test.tsx
           tests/unit/dossier-canonical-default.test.ts
 
       - name: Commit canonical fallback
