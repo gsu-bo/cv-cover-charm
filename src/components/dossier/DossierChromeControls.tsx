@@ -452,6 +452,24 @@ export function DossierChromeControls({
                     ))}
                   </div>
 
+                  <label className="grid gap-1 rounded-md border bg-muted/20 p-2.5 text-xs">
+                    <span className="flex items-center gap-2 font-medium">
+                      <input
+                        data-dossier-header-different-first-page-control
+                        type="checkbox"
+                        checked={options.headerDifferentFirstPage !== false}
+                        onChange={(event) =>
+                          patchOptions({ headerDifferentFirstPage: event.target.checked })
+                        }
+                      />
+                      Erste Seite anders
+                    </span>
+                    <span className="pl-6 text-[11px] font-normal leading-relaxed text-muted-foreground">
+                      Auf Folgeseiten wird ein kompakter Header verwendet (Vorname Nachname · E-Mail ·
+                      Tel.).
+                    </span>
+                  </label>
+
                   {options.headerTextLayout === "inline" ? (
                     <label className="block text-xs font-medium">
                       Trennung der Angaben
