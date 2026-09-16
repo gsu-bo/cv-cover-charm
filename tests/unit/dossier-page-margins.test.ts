@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { cvContentBox, cvDefaultContentBox, cvFrameFor } from "@/components/cv/archetype";
 import { letterPageGeometry } from "@/components/letter/layout-system";
 import { DEMO_LETTER, emptyLetterDesign } from "@/components/letter/types";
+import { patchDossierDocxPageMarginsXml } from "@/lib/dossier-docx-page-margins";
 import {
   DOSSIER_PAGE_MARGIN_MAX_MM,
   DOSSIER_PAGE_MARGIN_MIN_MM,
@@ -22,6 +23,7 @@ const letterCanvas = read("src/components/letter/LetterCanvas.tsx");
 const letterControls = read("src/components/letter/LetterLayoutControls.tsx");
 const letterLayout = read("src/components/letter/layout-system.ts");
 const project = read("src/lib/dossier-project.ts");
+const docxExport = read("src/lib/dossier-docx-export.ts");
 
 describe("configurable CV and motivation-letter page margins", () => {
   test("normalizes four safe millimetre values without inventing a default override", () => {
@@ -90,5 +92,20 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(project).toContain("applyPortableDossierPageMarginsState");
     expect(project).toContain("clearDossierPageMargins");
     expect(project).toContain("DOSSIER_PROJECT_VERSION = 1");
+  });
+
+  test("DOCX mirrors only letter and CV margins and leaves the cover section untouched", () => {
+    const section = (top: number, right: number, bottom: number, left: number) =>
+      `<w:sectPr><w:pgMar w:top="${top}" w:right="${right}" w:bottom="${bottom}" w:left="${left}" w:header="454" w:footer="454" w:gutter="0"/></w:sectPr>`;
+    const source = `${section(1, 2, 3, 4)}${section(5, 6, 7, 8)}${section(9, 10, 11, 12)}`;
+    const patched = patchDossierDocxPageMarginsXml(source, {
+      letter: { top: 20, right: 21, bottom: 22, left: 23 },
+      cv: { top: 24, right: 25, bottom: 26, left: 27 },
+    });
+
+    expect(patched).toContain(section(1, 2, 3, 4));
+    expect(patched).toContain('w:top="1134" w:right="1191" w:bottom="1247" w:left="1304"');
+    expect(patched).toContain('w:top="1361" w:right="1417" w:bottom="1474" w:left="1531"');
+    expect(docxExport).toContain("applyDossierPageMarginsToDocx(hyphenated)");
   });
 });

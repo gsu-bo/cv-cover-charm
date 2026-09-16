@@ -12,6 +12,7 @@ import { dossierDocxTemplatePlan } from "@/lib/dossier-docx-family";
 import { applyLetterAlignmentToDocx } from "@/lib/dossier-docx-letter-alignment";
 import { applyCvTextAlignmentToDocx } from "@/lib/dossier-docx-cv-alignment";
 import { applyDossierHyphenationToDocx } from "@/lib/dossier-docx-hyphenation";
+import { applyDossierPageMarginsToDocx } from "@/lib/dossier-docx-page-margins";
 import { getDossierHyphenationEnabled } from "@/lib/dossier-hyphenation";
 import { downloadBlob } from "@/lib/download";
 
@@ -203,12 +204,13 @@ export async function createDossierDocxBlob(
   const blob = await profile.createBlob({ cover, letter, cv });
   const letterAligned = await applyLetterAlignmentToDocx(blob, letter);
   const aligned = await applyCvTextAlignmentToDocx(letterAligned, cv);
-  return applyDossierHyphenationToDocx(
+  const hyphenated = await applyDossierHyphenationToDocx(
     aligned,
     letter,
     cv,
     getDossierHyphenationEnabled(),
   );
+  return applyDossierPageMarginsToDocx(hyphenated);
 }
 
 export async function downloadDossierDocx(
