@@ -30,12 +30,12 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          def replace(path: str, old: str, new: str) -> None:
+          def replace(path: str, old: str, new: str, count: int = 1) -> None:
               file = Path(path)
               text = file.read_text()
               if old not in text:
                   raise SystemExit(f"patch target missing in {path}: {old[:120]!r}")
-              file.write_text(text.replace(old, new, 1))
+              file.write_text(text.replace(old, new, count))
 
           replace(
               "src/routes/anschreiben.tsx",
@@ -44,14 +44,8 @@ jobs:
           )
           replace(
               "src/routes/anschreiben.tsx",
-              '''      design.template === "brief"
-                ? null
-                : (TEMPLATES.find((candidate) => candidate.id === design.template) ?? TEMPLATES[0]),''',
-              '''      design.template === "brief"
-                ? null
-                : (TEMPLATES.find((candidate) => candidate.id === design.template) ??
-                  TEMPLATES.find((candidate) => candidate.id === DEFAULTS.TEMPLATE) ??
-                  null),''',
+              'TEMPLATES.find((candidate) => candidate.id === design.template) ?? TEMPLATES[0]',
+              'TEMPLATES.find((candidate) => candidate.id === design.template) ??\n            TEMPLATES.find((candidate) => candidate.id === DEFAULTS.TEMPLATE) ??\n            null',
           )
 
           replace(
@@ -61,33 +55,13 @@ jobs:
           )
           replace(
               "src/routes/lebenslauf.tsx",
-              '''function defaultColors(template: TemplateId): Record<string, string> {
-            const t = TEMPLATES.find((x) => x.id === template) ?? TEMPLATES[0];
-            return Object.fromEntries(t.slots.map((s) => [s.key, s.default]));
-          }''',
-              '''function templateDefinition(template: TemplateId) {
-            const definition =
-              TEMPLATES.find((candidate) => candidate.id === template) ??
-              TEMPLATES.find((candidate) => candidate.id === DEFAULTS.TEMPLATE);
-            if (!definition) throw new Error("Canonical dossier template is missing");
-            return definition;
-          }
-
-          function defaultColors(template: TemplateId): Record<string, string> {
-            const t = templateDefinition(template);
-            return Object.fromEntries(t.slots.map((s) => [s.key, s.default]));
-          }''',
+              'TEMPLATES.find((x) => x.id === template) ?? TEMPLATES[0]',
+              'TEMPLATES.find((x) => x.id === template) ??\n    TEMPLATES.find((x) => x.id === DEFAULTS.TEMPLATE)!',
           )
           replace(
               "src/routes/lebenslauf.tsx",
-              '''  const activeTemplate = useMemo(
-            () => TEMPLATES.find((t) => t.id === design.template) ?? TEMPLATES[0],
-            [design.template],
-          );''',
-              '''  const activeTemplate = useMemo(
-            () => templateDefinition(design.template),
-            [design.template],
-          );''',
+              'TEMPLATES.find((t) => t.id === design.template) ?? TEMPLATES[0]',
+              'TEMPLATES.find((t) => t.id === design.template) ??\n      TEMPLATES.find((t) => t.id === DEFAULTS.TEMPLATE)!',
           )
 
           replace(
@@ -97,24 +71,13 @@ jobs:
           )
           replace(
               "src/lib/dossier-family.ts",
-              '''const TEMPLATE_FAMILY: Record<string, DossierFamilyId> = {
-            klassisch: "editorial",''',
-              '''const TEMPLATE_FAMILY: Record<string, DossierFamilyId> = {
-            brief: "classic",
-            klassisch: "editorial",''',
+              'const TEMPLATE_FAMILY: Record<string, DossierFamilyId> = {\n  klassisch: "editorial",',
+              'const TEMPLATE_FAMILY: Record<string, DossierFamilyId> = {\n  brief: "classic",\n  klassisch: "editorial",',
           )
           replace(
               "src/lib/dossier-family.ts",
-              '''export function familyForTemplate(template: TemplateId): DossierFamilyId {
-            return TEMPLATE_FAMILY[template as string] ?? "modern";
-          }''',
-              '''export function familyForTemplate(template: TemplateId): DossierFamilyId {
-            return (
-              TEMPLATE_FAMILY[template as string] ??
-              TEMPLATE_FAMILY[DEFAULTS.TEMPLATE as string] ??
-              "classic"
-            );
-          }''',
+              '  return TEMPLATE_FAMILY[template as string] ?? "modern";',
+              '  return (\n    TEMPLATE_FAMILY[template as string] ??\n    TEMPLATE_FAMILY[DEFAULTS.TEMPLATE as string] ??\n    "classic"\n  );',
           )
           replace(
               "src/lib/dossier-family.ts",
