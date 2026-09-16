@@ -207,7 +207,7 @@ export function emptyLetterDesign(): LetterDesign {
     ruleAfterSender: false,
     ruleAfterRecipient: false,
     ruleAfterSubject: false,
-    headerMode: "contact",
+    headerMode: "none",
     headerShowName: true,
     headerShowAddress: true,
     headerShowPhone: true,
@@ -262,7 +262,7 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
     incoming.headerMode === "contact" ||
     incoming.headerMode === "none"
       ? incoming.headerMode
-      : (fallback.headerMode ?? "contact");
+      : "contact";
   const footerMode: LetterFooterMode =
     incoming.footerMode === "attachments" || incoming.footerMode === "none"
       ? incoming.footerMode
