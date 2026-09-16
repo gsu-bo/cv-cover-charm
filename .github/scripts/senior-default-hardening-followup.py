@@ -28,4 +28,14 @@ replace(
   if ((template as string) === "edelDark") return FRAMES.edel;''',
 )
 
+# The canonical template is now genuinely part of TemplateId, so the letter
+# palette fallback no longer needs to assert it into the union.
+replace(
+    "src/components/letter/types.ts",
+    '''    TEMPLATES.find(
+      (candidate) => candidate.id === (CANONICAL_DOSSIER_PRESENTATION.template as TemplateId),
+    );''',
+    '''    TEMPLATES.find((candidate) => candidate.id === CANONICAL_DOSSIER_PRESENTATION.template);''',
+)
+
 Path(".github/scripts/senior-default-hardening-followup.py").unlink(missing_ok=True)
