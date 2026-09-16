@@ -247,14 +247,8 @@ export function letterSafePageMarginMinimums(
   const headerHeight = isWarmFirstPageCompactHeader(design.template, headerMode, pageIndex)
     ? WARM_FIRST_PAGE_HEADER_HEIGHT_MM
     : letterHeaderVisualHeightMm(design, pageIndex, headerMode);
-  const top = Math.max(
-    templateTop,
-    headerMode === "none" ? floor : headerHeight + 5,
-  );
-  const bottom = Math.max(
-    templateBottom,
-    footerMode === "none" ? floor : footerHeight + 5,
-  );
+  const top = Math.max(templateTop, headerMode === "none" ? floor : headerHeight + 5);
+  const bottom = Math.max(templateBottom, footerMode === "none" ? floor : footerHeight + 5);
 
   return {
     top: roundHalfMm(top),
