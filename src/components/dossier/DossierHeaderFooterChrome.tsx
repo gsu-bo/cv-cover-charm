@@ -86,7 +86,7 @@ function InlineContactSeparator({
         style={{
           marginLeft: index ? (compact ? "1mm" : "1.5mm") : 0,
           marginRight: compact ? "0.7mm" : "0.9mm",
-          color: "#ffffff",
+          color: "currentColor",
           opacity: 0.94,
         }}
       >
