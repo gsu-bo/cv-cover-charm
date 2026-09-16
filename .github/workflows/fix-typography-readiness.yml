@@ -1,0 +1,38 @@
+name: Fix typography readiness
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - .github/scripts/fix-typography-readiness.py
+      - .github/workflows/fix-typography-readiness.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Apply test readiness fix
+        run: python .github/scripts/fix-typography-readiness.py
+
+      - name: Format and validate diff
+        run: |
+          npx --yes prettier@3.8.3 --write tests/e2e/dossier-typography-regression.spec.ts
+          git diff --check
+
+      - name: Commit test fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "test(dossier): decouple typography readiness from contact chrome"
+          git push origin HEAD:dev
