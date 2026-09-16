@@ -84,15 +84,19 @@ async function loadDemoThroughUi(page: Page, route: string) {
 }
 
 async function downloadWholeDossier(page: Page, fileName: string) {
-  await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+  // The home screen is SSR-visible before React has attached the card onClick.
+  await page.goto(`${BASE_URL}/`, { waitUntil: "networkidle" });
   const card = page.getByRole("button", { name: /Gesamtdossier herunterladen/ });
-  await expect(card).toContainText("Dossier prüfen & herunterladen", { timeout: 15_000 });
+  await expect(card).toContainText("Format wählen", { timeout: 15_000 });
   await card.click();
 
   const dialog = page.getByRole("dialog", { name: "Dossier herunterladen" });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("Titelblatt, Motivationsschreiben");
-  const button = dialog.getByRole("button", { name: "Dossier herunterladen" });
+  await expect(dialog.getByRole("radio", { name: "Fertiges Dossier (PDF)" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  const button = dialog.getByRole("button", { name: "PDF herunterladen", exact: true });
   await expect(button).toBeEnabled({ timeout: 30_000 });
 
   const downloadPromise = page.waitForEvent("download", { timeout: 120_000 });
