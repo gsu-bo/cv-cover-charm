@@ -12,8 +12,14 @@ function legacyChromePatch(patch: Partial<DossierChromeOptions>): Partial<Letter
   if (patch.headerShowAddress !== undefined) next.headerShowAddress = patch.headerShowAddress;
   if (patch.headerShowPhone !== undefined) next.headerShowPhone = patch.headerShowPhone;
   if (patch.headerShowEmail !== undefined) next.headerShowEmail = patch.headerShowEmail;
+  if (patch.headerDifferentFirstPage !== undefined) {
+    next.headerDifferentFirstPage = patch.headerDifferentFirstPage;
+  }
   if (patch.headerHeightMm !== undefined) next.headerHeightMm = patch.headerHeightMm;
   if (patch.headerTextLayout !== undefined) next.headerTextLayout = patch.headerTextLayout;
+  if (patch.headerInlineSeparator !== undefined) {
+    next.headerInlineSeparator = patch.headerInlineSeparator;
+  }
   if (patch.headerBackgroundColor !== undefined) {
     next.headerBackgroundColor = patch.headerBackgroundColor;
   }
