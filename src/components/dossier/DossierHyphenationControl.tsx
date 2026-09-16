@@ -14,6 +14,22 @@ function useDossierHyphenation() {
   );
 }
 
+const HYPHENATION_CSS = `
+html[data-dossier-hyphenation="true"] [data-letter-pdf-richtext="body"],
+html[data-dossier-hyphenation="true"] [data-cv-entry] > div > [data-cv-body] {
+  -webkit-hyphens: auto;
+  hyphens: auto;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+html[data-dossier-hyphenation="false"] [data-letter-pdf-richtext="body"],
+html[data-dossier-hyphenation="false"] [data-cv-entry] > div > [data-cv-body] {
+  -webkit-hyphens: manual;
+  hyphens: manual;
+}
+`;
+
 /** Keeps preview and PDF DOM on the same persisted typography preference. */
 export function DossierHyphenationBridge() {
   const state = useDossierHyphenation();
@@ -22,7 +38,7 @@ export function DossierHyphenationBridge() {
     document.documentElement.dataset.dossierHyphenation = state.enabled ? "true" : "false";
   }, [state.enabled]);
 
-  return null;
+  return <style data-dossier-hyphenation-style>{HYPHENATION_CSS}</style>;
 }
 
 export function DossierHyphenationControl() {
