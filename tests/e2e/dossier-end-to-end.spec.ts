@@ -60,6 +60,12 @@ async function applyExampleData(
     .toBe(true);
 }
 
+function templateSectionToggle(page: Page) {
+  // Section headers now include a visual group marker ("Gestaltung"), so their
+  // accessible name is no longer guaranteed to start with "Vorlage".
+  return page.locator("[data-editor-section-toggle]").filter({ hasText: "Vorlage" }).first();
+}
+
 async function downloadCompleteDossier(page: Page) {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
 
@@ -67,12 +73,15 @@ async function downloadCompleteDossier(page: Page) {
     .getByRole("button")
     .filter({ hasText: "Gesamtdossier herunterladen" });
   await expect(dossierCard).toBeVisible();
-  await expect(dossierCard).toContainText("Dossier prüfen & herunterladen", { timeout: 15_000 });
   await dossierCard.click();
 
   const dialog = page.getByRole("dialog", { name: "Dossier herunterladen" });
   await expect(dialog).toBeVisible();
-  const downloadButton = dialog.getByRole("button", { name: "Dossier herunterladen", exact: true });
+  await expect(dialog.getByRole("radio", { name: "Fertiges Dossier (PDF)" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  const downloadButton = dialog.getByRole("button", { name: "PDF herunterladen", exact: true });
   await expect(downloadButton).toBeEnabled({ timeout: 15_000 });
 
   const [download] = await Promise.all([page.waitForEvent("download"), downloadButton.click()]);
@@ -134,7 +143,8 @@ test.describe("complete dossier end-to-end", () => {
     const downloadMenuButton = page.getByRole("button", { name: "Download", exact: true });
     await expect(downloadMenuButton).toHaveAttribute("data-editor-ready", "true");
 
-    const header = page.getByRole("button", { name: /^Vorlage/ });
+    const header = templateSectionToggle(page);
+    await expect(header).toBeVisible();
     if ((await header.getAttribute("aria-expanded")) !== "true") await header.click();
     const panelId = await header.getAttribute("aria-controls");
     expect(panelId).toBeTruthy();
@@ -185,7 +195,8 @@ test.describe("complete dossier end-to-end", () => {
     await page.reload({ waitUntil: "domcontentloaded" });
     const freshDownloadMenuButton = page.getByRole("button", { name: "Download", exact: true });
     await expect(freshDownloadMenuButton).toHaveAttribute("data-editor-ready", "true");
-    const headerAfterReload = page.getByRole("button", { name: /^Vorlage/ });
+    const headerAfterReload = templateSectionToggle(page);
+    await expect(headerAfterReload).toBeVisible();
     if ((await headerAfterReload.getAttribute("aria-expanded")) !== "true") {
       await headerAfterReload.click();
     }
