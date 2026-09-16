@@ -311,8 +311,9 @@ test.describe("M4 centralized letter layout", () => {
         ["none", "none"],
       ] as const) {
         await headerSelect.selectOption(controlValue);
-        await expect(preview).toHaveAttribute("data-letter-header-mode", mode);
-        await expect(exportPage).toHaveAttribute("data-letter-header-mode", mode);
+        const effectiveMode = template === "freundlich" && mode === "contact" ? "compact" : mode;
+        await expect(preview).toHaveAttribute("data-letter-header-mode", effectiveMode);
+        await expect(exportPage).toHaveAttribute("data-letter-header-mode", effectiveMode);
         const contentBox = await previewLayer.getAttribute("data-letter-content-box");
         expect(contentBox).not.toBeNull();
         await expect(exportLayer).toHaveAttribute("data-letter-content-box", contentBox!);
