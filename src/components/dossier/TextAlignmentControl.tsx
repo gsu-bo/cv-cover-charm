@@ -1,4 +1,11 @@
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight } from "lucide-react";
+import type { ComponentType } from "react";
+import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
+  type LucideProps,
+} from "lucide-react";
 import { TEXT_ALIGNMENTS, type TextAlignment } from "@/lib/text-alignment";
 
 const LABELS: Record<TextAlignment, string> = {
@@ -8,12 +15,12 @@ const LABELS: Record<TextAlignment, string> = {
   justify: "Blocksatz",
 };
 
-const ICONS = {
+const ICONS: Record<TextAlignment, ComponentType<LucideProps>> = {
   left: AlignLeft,
   center: AlignCenter,
   right: AlignRight,
   justify: AlignJustify,
-} satisfies Record<TextAlignment, typeof AlignLeft>;
+};
 
 type TextAlignmentControlProps<T extends TextAlignment> = {
   value: T | null;
@@ -28,7 +35,7 @@ export function TextAlignmentControl<T extends TextAlignment = TextAlignment>({
   ariaLabel = "Textausrichtung",
   alignments,
 }: TextAlignmentControlProps<T>) {
-  const options = alignments ?? (TEXT_ALIGNMENTS as readonly T[]);
+  const options: readonly TextAlignment[] = alignments ?? TEXT_ALIGNMENTS;
 
   return (
     <div
@@ -56,7 +63,7 @@ export function TextAlignmentControl<T extends TextAlignment = TextAlignment>({
                 : "text-muted-foreground hover:bg-accent hover:text-foreground"
             }`}
             onMouseDown={(event) => event.preventDefault()}
-            onClick={() => onChange(alignment)}
+            onClick={() => onChange(alignment as T)}
           >
             <Icon className="h-4 w-4" aria-hidden="true" />
           </button>
