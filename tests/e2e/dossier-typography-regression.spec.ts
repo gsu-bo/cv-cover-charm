@@ -115,25 +115,19 @@ async function dossierFonts(page: Page, template: string, font?: string) {
   const letterRoot = page.getByLabel("Vorschau Motivationsschreiben");
   await expect(letterRoot).toBeVisible();
   await expect(letterRoot).toHaveAttribute("data-letter-template", template);
-  const letter = await computedFont(page, '[data-letter-page] [data-letter-text-layer]');
+  const letter = await computedFont(page, "[data-letter-page] [data-letter-text-layer]");
 
   // No CV is seeded either: first visit must inherit the same dossier design from the cover.
   await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
   const cvRoot = page.locator('[data-dossier-document="cv"][data-export-mode="false"]').first();
   await expect(cvRoot).toBeVisible();
 
-  // The route intentionally paints its empty Modern/Cabin default once before
-  // the first-use title-page takeover runs in an effect. The shared contact can
-  // already show Lea Müller before that design takeover has settled, so wait for
-  // the CV renderer itself to expose the persisted template before reading font.
+  // The route intentionally paints its empty default once before the first-use
+  // title-page takeover settles. Readiness must not depend on one chrome mode:
+  // the applicant name may live in normal CV content or in an integrated contact
+  // header. Wait for the resolved template and transferred person data instead.
   await expect(cvRoot).toHaveAttribute("data-cv-template", template);
-  await expect(
-    page
-      .locator(
-        '[data-dossier-document="cv"][data-export-mode="false"] [data-cv-page="0"] [data-dossier-integrated-contact]',
-      )
-      .first(),
-  ).toContainText("Lea Müller");
+  await expect(cvRoot).toContainText("Lea Müller");
 
   const cv = await computedFont(
     page,
@@ -298,7 +292,9 @@ test.describe("dossier typography regression", () => {
     }
   });
 
-  test("Fresh Executive applicant initials use the resolved Palatino dossier font", async ({ page }) => {
+  test("Fresh Executive applicant initials use the resolved Palatino dossier font", async ({
+    page,
+  }) => {
     await seedCover(page, "frame");
     await page.goto(`${BASE_URL}/titelblatt`, { waitUntil: "domcontentloaded" });
     await settledCoverRoot(page, "frame");
