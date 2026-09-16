@@ -28,6 +28,7 @@ describe("canonical neutral dossier fallback", () => {
     const typedDefault: TemplateId = DEFAULTS.TEMPLATE;
     expect(CANONICAL_DOSSIER_PRESENTATION.template).toBe("brief");
     expect(typedDefault).toBe("brief");
+    expect(CANONICAL_DOSSIER_PRESENTATION.cv.layout).toBe("classic");
     expect(DEFAULT_DOSSIER_CHROME_STATE.shared.headerMode).toBe("none");
     expect(DEFAULT_DOSSIER_CHROME_STATE.shared.footerMode).toBe("none");
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerMode).toBe("contact");
