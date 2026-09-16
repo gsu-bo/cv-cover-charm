@@ -79,7 +79,9 @@ function resolveLetterChrome(
 ): DossierChromeOptions {
   const requested = chromeOptions ?? legacyChromeFromDesign(design);
   const plainBriefDefault =
-    design.template === "brief" && design.headerMode === "none" && requested.headerMode === "contact";
+    design.template === "brief" &&
+    design.headerMode === "none" &&
+    requested.headerMode === "contact";
   const effectiveRequested = plainBriefDefault
     ? {
         ...requested,
