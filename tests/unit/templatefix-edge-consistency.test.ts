@@ -21,7 +21,9 @@ const legacyCss = readFileSync(
 
 describe("Fresh 19-22 dossier rebuild", () => {
   test("unsaved CVs default to Standard while Kolumne always keeps Sidebar", () => {
-    expect(layout).toContain('const DEFAULT_LAYOUT: CvLayoutId = "classic";');
+    expect(layout).toContain(
+      "const DEFAULT_LAYOUT: CvLayoutId = CANONICAL_DOSSIER_PRESENTATION.cv.layout;",
+    );
     expect(layout).toContain('return template === "terracotta" ? "modern" : DEFAULT_LAYOUT;');
     expect(layout).toContain('if (template === "terracotta") return "modern";');
     expect(layout).toContain("return valid(saved) ? saved : fallback;");
@@ -75,7 +77,10 @@ describe("Fresh 19-22 dossier rebuild", () => {
     expect(frame).toContain("frame-bottom");
     expect(frame).toContain("frame-right");
 
-    const css = freshCss.slice(freshCss.indexOf("/* 21 FRAME"), freshCss.indexOf("/* 22 MONO LUXE"));
+    const css = freshCss.slice(
+      freshCss.indexOf("/* 21 FRAME"),
+      freshCss.indexOf("/* 22 MONO LUXE"),
+    );
     expect(css).toContain("border: 0.55mm solid var(--cover-primary) !important;");
     expect(css).toContain("background: transparent !important;");
     expect(css).not.toContain("width: 15mm !important;");

@@ -67,7 +67,7 @@ const LETTER_STORAGE_KEY = "anschreiben:v1";
 const EVENT = "bewerbungsdossier-chrome-change";
 
 export const DEFAULT_DOSSIER_CHROME_OPTIONS: DossierChromeOptions = {
-  headerMode: CANONICAL_DOSSIER_PRESENTATION.letter.headerMode,
+  headerMode: "contact",
   headerShowName: true,
   headerShowAddress: true,
   headerShowPhone: true,
@@ -81,7 +81,7 @@ export const DEFAULT_DOSSIER_CHROME_OPTIONS: DossierChromeOptions = {
   headerInlineSeparator: "icons",
   headerBackgroundColor: null,
   headerGradientColor: null,
-  footerMode: CANONICAL_DOSSIER_PRESENTATION.letter.footerMode,
+  footerMode: "compact",
   footerHeightMm: null,
   footerContentOffsetYMm: 0,
   footerTextLayout: "inline",
@@ -93,12 +93,18 @@ export const DEFAULT_DOSSIER_CHROME_OPTIONS: DossierChromeOptions = {
   textFont: null,
 };
 
+export const CANONICAL_DOSSIER_CHROME_OPTIONS: DossierChromeOptions = {
+  ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+  headerMode: CANONICAL_DOSSIER_PRESENTATION.letter.headerMode,
+  footerMode: CANONICAL_DOSSIER_PRESENTATION.letter.footerMode,
+};
+
 export const DEFAULT_DOSSIER_CHROME_STATE: DossierChromeState = {
   version: 1,
   sync: true,
-  shared: { ...DEFAULT_DOSSIER_CHROME_OPTIONS },
-  cv: { ...DEFAULT_DOSSIER_CHROME_OPTIONS },
-  letter: { ...DEFAULT_DOSSIER_CHROME_OPTIONS },
+  shared: { ...CANONICAL_DOSSIER_CHROME_OPTIONS },
+  cv: { ...CANONICAL_DOSSIER_CHROME_OPTIONS },
+  letter: { ...CANONICAL_DOSSIER_CHROME_OPTIONS },
 };
 
 let cached: DossierChromeState | null = null;

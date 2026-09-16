@@ -1,15 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import { DEFAULT_DOSSIER_CHROME_OPTIONS } from "../../src/lib/dossier-chrome";
 import {
+  defaultFooterModeForTemplate,
   defaultHeaderGapMmForTemplate,
   defaultHeaderModeForTemplate,
   resolveTemplateChromeOptions,
 } from "../../src/lib/template-chrome";
 
 describe("template-owned dossier chrome", () => {
+  test("Brief owns the neutral no-header/no-footer fallback", () => {
+    expect(defaultHeaderModeForTemplate("brief")).toBe("none");
+    expect(defaultFooterModeForTemplate("brief")).toBe("none");
+    expect(defaultHeaderGapMmForTemplate("brief")).toBe(12);
+  });
+
   test("ordinary templates and Warm default to compact headers", () => {
     for (const template of [
-      "brief",
       "klassisch",
       "modern",
       "edel",
@@ -81,11 +87,7 @@ describe("template-owned dossier chrome", () => {
       headerGradientColor: null,
     };
     expect(
-      resolveTemplateChromeOptions(
-        "verlauf",
-        { primary: "#123456", secondary: "#abcdef" },
-        source,
-      ),
+      resolveTemplateChromeOptions("verlauf", { primary: "#123456", secondary: "#abcdef" }, source),
     ).toBe(source);
   });
 
@@ -155,11 +157,7 @@ describe("template-owned dossier chrome", () => {
 
     for (const source of variants) {
       expect(
-        resolveTemplateChromeOptions(
-          "modern",
-          { primary: "#111827", accent: "#f43f5e" },
-          source,
-        ),
+        resolveTemplateChromeOptions("modern", { primary: "#111827", accent: "#f43f5e" }, source),
       ).toBe(source);
     }
   });

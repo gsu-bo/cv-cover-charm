@@ -8,7 +8,10 @@ import {
 } from "../../src/components/letter/types";
 import { letterPageGeometry } from "../../src/components/letter/layout-system";
 import { DEFAULTS } from "../../src/default-config";
-import { DEFAULT_DOSSIER_CHROME_OPTIONS } from "../../src/lib/dossier-chrome";
+import {
+  DEFAULT_DOSSIER_CHROME_OPTIONS,
+  DEFAULT_DOSSIER_CHROME_STATE,
+} from "../../src/lib/dossier-chrome";
 import { CANONICAL_DOSSIER_PRESENTATION } from "../../src/lib/dossier-default-presentation";
 import { resolveDossierDocxProfile } from "../../src/lib/dossier-docx-export";
 import {
@@ -21,8 +24,10 @@ describe("canonical neutral dossier fallback", () => {
   test("one contract owns the fresh template and neutral chrome", () => {
     expect(CANONICAL_DOSSIER_PRESENTATION.template).toBe("brief");
     expect(DEFAULTS.TEMPLATE as string).toBe("brief");
-    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerMode).toBe("none");
-    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerMode).toBe("none");
+    expect(DEFAULT_DOSSIER_CHROME_STATE.shared.headerMode).toBe("none");
+    expect(DEFAULT_DOSSIER_CHROME_STATE.shared.footerMode).toBe("none");
+    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerMode).toBe("contact");
+    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerMode).toBe("compact");
     expect(CANONICAL_DOSSIER_PRESENTATION.letter.continuationHeaderMode).toBe("none");
     expect(CANONICAL_DOSSIER_PRESENTATION.letter.continuationFooterMode).toBe("none");
   });

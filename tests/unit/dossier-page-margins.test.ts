@@ -41,12 +41,14 @@ const pageMarginsStore = read("src/lib/dossier-page-margins.ts");
 describe("configurable CV and motivation-letter page margins", () => {
   test("normalizes four safe millimetre values without inventing a default override", () => {
     expect(normalizeDossierPageMargins(null)).toBeNull();
-    expect(normalizeDossierPageMargins({ top: 14.24, right: 999, bottom: 4, left: 22.76 })).toEqual({
-      top: 14,
-      right: DOSSIER_PAGE_MARGIN_MAX_MM,
-      bottom: DOSSIER_PAGE_MARGIN_MIN_MM,
-      left: 23,
-    });
+    expect(normalizeDossierPageMargins({ top: 14.24, right: 999, bottom: 4, left: 22.76 })).toEqual(
+      {
+        top: 14,
+        right: DOSSIER_PAGE_MARGIN_MAX_MM,
+        bottom: DOSSIER_PAGE_MARGIN_MIN_MM,
+        left: 23,
+      },
+    );
     expect(normalizeDossierPageMarginsState({})).toEqual({});
   });
 
@@ -68,10 +70,7 @@ describe("configurable CV and motivation-letter page margins", () => {
     );
     expect(minimums).toEqual({ top: 27, right: 5, bottom: 7.5, left: 80 });
     expect(
-      clampDossierPageMarginsToMinimums(
-        { top: 5, right: 5, bottom: 5, left: 5 },
-        minimums,
-      ),
+      clampDossierPageMarginsToMinimums({ top: 5, right: 5, bottom: 5, left: 5 }, minimums),
     ).toEqual(minimums);
 
     setDossierPageMargins("cv", { top: 5, right: 5, bottom: 5, left: 5 });
@@ -113,16 +112,18 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(minimums.left).toBe(96);
     expect(DOSSIER_PAGE_MARGIN_HARD_MAX_MM).toBe(120);
     expect(
-      clampDossierPageMarginsToMinimums(
-        { top: 30, right: 20, bottom: 20, left: 110 },
-        minimums,
-      )?.left,
+      clampDossierPageMarginsToMinimums({ top: 30, right: 20, bottom: 20, left: 110 }, minimums)
+        ?.left,
     ).toBe(110);
   });
 
   test("motivation-letter custom margins protect header, footer and template structure", () => {
     clearDossierPageMargins();
-    const design = { ...emptyLetterDesign(), headerMode: "contact" as const };
+    const design = {
+      ...emptyLetterDesign(),
+      headerMode: "contact" as const,
+      footerMode: "compact" as const,
+    };
     const minimums = letterSafePageMarginMinimums(DEMO_LETTER, design);
     expect(minimums.top).toBe(27);
     expect(minimums.bottom).toBeGreaterThanOrEqual(7.5);
@@ -149,10 +150,7 @@ describe("configurable CV and motivation-letter page margins", () => {
 
   test("letter controls derive safety limits from the current letter data", () => {
     const design = { ...emptyLetterDesign(), footerMode: "attachments" as const };
-    const short = letterSafePageMarginMinimums(
-      { ...DEMO_LETTER, beilagen: ["Zeugnis"] },
-      design,
-    );
+    const short = letterSafePageMarginMinimums({ ...DEMO_LETTER, beilagen: ["Zeugnis"] }, design);
     const long = letterSafePageMarginMinimums(
       { ...DEMO_LETTER, beilagen: ["Sehr lange Beilage ".repeat(30)] },
       design,
@@ -163,7 +161,7 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(letterControls).toContain("currentLetterDefaultMargins(data, design)");
     expect(letterControls).toContain("letterSafePageMarginMinimums(data, design)");
     expect(letterControls).not.toContain("DEMO_LETTER");
-    expect(letterRoute).toContain('<LetterLayoutControls\n                data={data}');
+    expect(letterRoute).toContain("<LetterLayoutControls\n                data={data}");
   });
 
   test("both editors expose the same secondary collapsed control", () => {

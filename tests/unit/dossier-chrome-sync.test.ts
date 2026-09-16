@@ -12,8 +12,8 @@ describe("shared CV and motivation-letter header/footer settings", () => {
   test("synchronization is enabled by default", () => {
     const state = normalizeDossierChromeState(null);
     expect(state.sync).toBe(true);
-    expect(state.shared.headerMode).toBe("contact");
-    expect(state.shared.footerMode).toBe("compact");
+    expect(state.shared.headerMode).toBe("none");
+    expect(state.shared.footerMode).toBe("none");
   });
 
   test("with sync enabled either editor changes the one shared configuration", () => {
@@ -43,10 +43,10 @@ describe("shared CV and motivation-letter header/footer settings", () => {
 
   test("with sync off CV and motivation letter can diverge", () => {
     const split = setDossierChromeSyncState(DEFAULT_DOSSIER_CHROME_STATE, "letter", false);
-    const cv = patchDossierChromeState(split, "cv", { headerMode: "none" });
+    const cv = patchDossierChromeState(split, "cv", { headerMode: "contact" });
 
-    expect(cv.cv.headerMode).toBe("none");
-    expect(cv.letter.headerMode).toBe("contact");
+    expect(cv.cv.headerMode).toBe("contact");
+    expect(cv.letter.headerMode).toBe("none");
   });
 
   test("turning sync back on uses the document where the checkbox was enabled", () => {
