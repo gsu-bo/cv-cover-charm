@@ -15,17 +15,21 @@ const ICONS = {
   justify: AlignJustify,
 } satisfies Record<TextAlignment, typeof AlignLeft>;
 
-export function TextAlignmentControl({
+type TextAlignmentControlProps<T extends TextAlignment> = {
+  value: T | null;
+  onChange: (value: T) => void;
+  ariaLabel?: string;
+  alignments?: readonly T[];
+};
+
+export function TextAlignmentControl<T extends TextAlignment = TextAlignment>({
   value,
   onChange,
   ariaLabel = "Textausrichtung",
-  alignments = TEXT_ALIGNMENTS,
-}: {
-  value: TextAlignment | null;
-  onChange: (value: TextAlignment) => void;
-  ariaLabel?: string;
-  alignments?: readonly TextAlignment[];
-}) {
+  alignments,
+}: TextAlignmentControlProps<T>) {
+  const options = alignments ?? (TEXT_ALIGNMENTS as readonly T[]);
+
   return (
     <div
       data-text-alignment-control
@@ -33,7 +37,7 @@ export function TextAlignmentControl({
       role="group"
       aria-label={ariaLabel}
     >
-      {alignments.map((alignment, index) => {
+      {options.map((alignment, index) => {
         const Icon = ICONS[alignment];
         const active = value === alignment;
         return (
@@ -45,7 +49,7 @@ export function TextAlignmentControl({
             aria-pressed={active}
             title={LABELS[alignment]}
             className={`inline-flex h-8 min-w-8 items-center justify-center px-2 transition-colors focus:outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring ${
-              index < alignments.length - 1 ? "border-r border-input" : ""
+              index < options.length - 1 ? "border-r border-input" : ""
             } ${
               active
                 ? "bg-primary text-primary-foreground hover:bg-primary/90"

@@ -1,30 +1,29 @@
-import { normalizeTextAlignment, type TextAlignment } from "@/lib/text-alignment";
+import { isBodyTextAlignment, type BodyTextAlignment } from "@/lib/text-alignment";
 
 export const CV_TEXT_ALIGNMENT_STORAGE_KEY = "lebenslauf:text-align:v1";
 const CV_TEXT_ALIGNMENT_EVENT = "lebenslauf:text-align-changed";
-const DEFAULT_CV_TEXT_ALIGNMENT: TextAlignment = "left";
-let memoryAlignment: TextAlignment | undefined;
+const DEFAULT_CV_TEXT_ALIGNMENT: BodyTextAlignment = "left";
+let memoryAlignment: BodyTextAlignment | undefined;
 
-export function readPersistedCvTextAlignment(): TextAlignment | undefined {
+export function readPersistedCvTextAlignment(): BodyTextAlignment | undefined {
   if (typeof window === "undefined") return undefined;
   try {
     const value = window.localStorage.getItem(CV_TEXT_ALIGNMENT_STORAGE_KEY);
-    return value === null ? undefined : normalizeTextAlignment(value, DEFAULT_CV_TEXT_ALIGNMENT);
+    return isBodyTextAlignment(value) ? value : undefined;
   } catch {
     return undefined;
   }
 }
 
-export function getCvTextAlignment(): TextAlignment {
+export function getCvTextAlignment(): BodyTextAlignment {
   return memoryAlignment ?? readPersistedCvTextAlignment() ?? DEFAULT_CV_TEXT_ALIGNMENT;
 }
 
-export function setCvTextAlignment(value: TextAlignment) {
-  if (typeof window === "undefined") return;
-  const next = normalizeTextAlignment(value, DEFAULT_CV_TEXT_ALIGNMENT);
-  memoryAlignment = next;
+export function setCvTextAlignment(value: BodyTextAlignment) {
+  if (typeof window === "undefined" || !isBodyTextAlignment(value)) return;
+  memoryAlignment = value;
   try {
-    window.localStorage.setItem(CV_TEXT_ALIGNMENT_STORAGE_KEY, next);
+    window.localStorage.setItem(CV_TEXT_ALIGNMENT_STORAGE_KEY, value);
   } catch {
     // Blockierter Speicher verhindert nur die Persistenz; die Sitzung bleibt reaktiv.
   }
@@ -46,10 +45,7 @@ export function subscribeCvTextAlignment(listener: () => void) {
   if (typeof window === "undefined") return () => {};
   const onStorage = (event: StorageEvent) => {
     if (event.key !== CV_TEXT_ALIGNMENT_STORAGE_KEY) return;
-    memoryAlignment =
-      event.newValue === null
-        ? undefined
-        : normalizeTextAlignment(event.newValue, DEFAULT_CV_TEXT_ALIGNMENT);
+    memoryAlignment = isBodyTextAlignment(event.newValue) ? event.newValue : undefined;
     listener();
   };
   window.addEventListener(CV_TEXT_ALIGNMENT_EVENT, listener);

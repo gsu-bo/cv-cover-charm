@@ -4,6 +4,7 @@ import type { TemplateId } from "@/components/cover/types";
 import { DossierPageMarginsControl } from "@/components/dossier/DossierPageMarginsControl";
 import { TextAlignmentControl } from "@/components/dossier/TextAlignmentControl";
 import type { DossierChromeOptions } from "@/lib/dossier-chrome";
+import { BODY_TEXT_ALIGNMENTS } from "@/lib/text-alignment";
 import {
   cvDefaultContentBox,
   cvFrameFor,
@@ -74,7 +75,7 @@ export function CvTextAlignmentPortal({
           value={alignment}
           onChange={setCvTextAlignment}
           ariaLabel="Ausrichtung des Lebenslauf-Fliesstexts"
-          alignments={["left", "justify"] as const}
+          alignments={BODY_TEXT_ALIGNMENTS}
         />
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           Gilt für CV-Inhalte und Beschreibungen. Name und Rubriktitel behalten ihre eigene

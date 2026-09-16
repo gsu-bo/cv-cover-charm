@@ -22,7 +22,7 @@ import {
   normalizeDossierPhotoStyle,
   type DossierPhotoStyle,
 } from "@/lib/dossier-photo";
-import type { TextAlignment } from "@/lib/text-alignment";
+import type { BodyTextAlignment } from "@/lib/text-alignment";
 import {
   DEFAULT_CV_PLACEMENTS,
   type CvPlacementKey,
@@ -58,7 +58,7 @@ export type PortableCvState = {
   placements?: Partial<CvPlacements>;
   photoStyle?: Partial<DossierPhotoStyle>;
   photoPlacement?: Partial<CvPhotoPlacement>;
-  textAlign?: TextAlignment;
+  textAlign?: BodyTextAlignment;
 };
 
 const validLayout = (value: string | null): CvLayoutId | undefined => {

@@ -1,12 +1,13 @@
+import { isBodyTextAlignment, type BodyTextAlignment } from "@/lib/text-alignment";
+
 const ALLOWED_INLINE = new Set(["strong", "b", "em", "i", "u"]);
 const ALLOWED_BLOCK = new Set(["div", "p"]);
 const ALLOWED_LISTS = new Set(["bullet", "dash", "plus", "dot"]);
-const ALLOWED_ALIGNMENTS = new Set(["left", "center", "right", "justify"]);
 
-export type LetterTextAlign = "left" | "center" | "right" | "justify";
+export type LetterTextAlign = BodyTextAlignment;
 
 export function letterTextAlign(value: string | undefined): LetterTextAlign {
-  return value && ALLOWED_ALIGNMENTS.has(value) ? (value as LetterTextAlign) : "justify";
+  return isBodyTextAlignment(value) ? value : "justify";
 }
 
 function escapeHtml(value: string): string {

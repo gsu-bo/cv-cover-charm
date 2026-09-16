@@ -2,7 +2,7 @@ import type { CvPdfDocument } from "@/lib/dossier-pdf-document";
 import { transformStoredDocxDocumentXml } from "@/lib/dossier-docx-package";
 import { readPersistedCvTextAlignment } from "@/components/cv/text-alignment";
 import type { CvData, CvEntry } from "@/components/cv/types";
-import type { TextAlignment } from "@/lib/text-alignment";
+import type { BodyTextAlignment } from "@/lib/text-alignment";
 
 const xmlEscape = (value: string) =>
   value
@@ -22,7 +22,7 @@ const xmlDecode = (value: string) =>
 
 const normalized = (value: string) => value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 
-function wordAlignment(align: TextAlignment) {
+function wordAlignment(align: BodyTextAlignment) {
   return align === "justify" ? "both" : align;
 }
 
@@ -78,7 +78,7 @@ function paragraphText(paragraph: string) {
   );
 }
 
-function withAlignment(paragraph: string, align: TextAlignment) {
+function withAlignment(paragraph: string, align: BodyTextAlignment) {
   const jc = `<w:jc w:val="${wordAlignment(align)}"/>`;
   if (/<w:pPr(?:\s[^>]*)?>[\s\S]*?<\/w:pPr>/.test(paragraph)) {
     return paragraph.replace(/<w:pPr(?:\s[^>]*)?>([\s\S]*?)<\/w:pPr>/, (all, inner: string) => {
@@ -91,7 +91,7 @@ function withAlignment(paragraph: string, align: TextAlignment) {
   return paragraph.replace(/<w:p(?:\s[^>]*)?>/, (open) => `${open}<w:pPr>${jc}</w:pPr>`);
 }
 
-function patchCvBodyAlignment(source: string, cv: CvPdfDocument, align: TextAlignment) {
+function patchCvBodyAlignment(source: string, cv: CvPdfDocument, align: BodyTextAlignment) {
   const start = cvStartIndex(source, cv.data);
   if (start < 0) return source;
   const candidates = cvBodyCandidates(cv.data);

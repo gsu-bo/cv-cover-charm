@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { List, Table2 } from "lucide-react";
 import { TextAlignmentControl } from "@/components/dossier/TextAlignmentControl";
+import { BODY_TEXT_ALIGNMENTS } from "@/lib/text-alignment";
 import {
   letterRichHtml,
   letterTextAlign,
@@ -388,6 +389,7 @@ export function LetterRichTextEditor({
           value={toolbar.align}
           onChange={setAlignment}
           ariaLabel="Textausrichtung"
+          alignments={BODY_TEXT_ALIGNMENTS}
         />
 
         <span aria-hidden="true" className="mx-0.5 h-7 w-px self-center bg-border" />
