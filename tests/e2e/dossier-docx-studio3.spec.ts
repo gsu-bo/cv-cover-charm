@@ -192,7 +192,7 @@ test.describe("Studio 3 DOCX reference download", () => {
     const button = page.getByRole("button", { name: "DOCX herunterladen" });
     await expect(button).toBeEnabled();
     const [download] = await Promise.all([page.waitForEvent("download"), button.click()]);
-    expect(download.suggestedFilename()).toBe("Bewerbungsdossier-Lea-Mueller.docx");
+    expect(download.suggestedFilename()).toBe("Bewerbungsdossier-LeaMueller.docx");
 
     const path = await download.path();
     expect(path).not.toBeNull();
