@@ -1,6 +1,9 @@
 import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";
 import { DossierPageMarginsControl } from "@/components/dossier/DossierPageMarginsControl";
-import { letterPageGeometry } from "@/components/letter/layout-system";
+import {
+  letterPageGeometry,
+  letterSafePageMarginMinimums,
+} from "@/components/letter/layout-system";
 import { DEMO_LETTER, type LetterAlignment, type LetterDesign } from "@/components/letter/types";
 import type { DossierChromeOptions } from "@/lib/dossier-chrome";
 import type { DossierPageMargins } from "@/lib/dossier-page-margins";
@@ -113,6 +116,7 @@ export function LetterLayoutControls({
   onChange: (value: Partial<LetterDesign>) => void;
 }) {
   const defaultMargins = currentLetterDefaultMargins(design);
+  const minimumMargins = letterSafePageMarginMinimums(DEMO_LETTER, design);
   const accentColor = design.colors.accent ?? design.colors.primary;
 
   return (
@@ -174,6 +178,7 @@ export function LetterLayoutControls({
       <DossierPageMarginsControl
         scope="letter"
         defaultMargins={defaultMargins}
+        minimumMargins={minimumMargins}
         accentColor={accentColor}
         onApplied={() => onChange({})}
       />
