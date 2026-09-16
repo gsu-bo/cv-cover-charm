@@ -210,7 +210,7 @@ export async function createDossierDocxBlob(
     cv,
     getDossierHyphenationEnabled(),
   );
-  return applyDossierPageMarginsToDocx(hyphenated);
+  return applyDossierPageMarginsToDocx(hyphenated, letter, cv);
 }
 
 export async function downloadDossierDocx(
