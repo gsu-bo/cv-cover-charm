@@ -6,6 +6,7 @@ on:
       - dev
     paths:
       - .github/scripts/senior-default-hardening.py
+      - .github/scripts/senior-default-hardening-followup.py
       - .github/workflows/senior-default-hardening.yml
 
 permissions:
@@ -30,7 +31,9 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Apply senior-review fixes
-        run: python .github/scripts/senior-default-hardening.py
+        run: |
+          python .github/scripts/senior-default-hardening.py
+          python .github/scripts/senior-default-hardening-followup.py
 
       - name: Format touched files
         run: >-
@@ -38,6 +41,7 @@ jobs:
           src/components/cover/types.ts
           src/default-config.ts
           src/components/letter/types.ts
+          src/components/cv/archetype.ts
           src/lib/dossier-chrome.ts
           src/components/letter/layout-system.ts
           src/components/letter/LetterCanvas.tsx
@@ -46,7 +50,7 @@ jobs:
 
       - name: Guard fake Brief casts
         run: |
-          if rg -n '"brief" as TemplateId|CANONICAL_DOSSIER_PRESENTATION\.template as TemplateId' src; then
+          if git grep -n -E '"brief" as TemplateId|CANONICAL_DOSSIER_PRESENTATION\.template as TemplateId' -- src; then
             echo "Found a remaining fake Brief TemplateId cast"
             exit 1
           fi
