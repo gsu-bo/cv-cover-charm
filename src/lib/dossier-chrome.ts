@@ -181,10 +181,15 @@ function normalizeOptions(
       fallback.letterRecipientOffsetYMm ?? 0,
     ),
     headerTextLayout: value.headerTextLayout === "inline" ? "inline" : "stacked",
-    headerInlineSeparator: normalizedHeaderInlineSeparator(
-      value.headerInlineSeparator,
-      fallback.headerInlineSeparator ?? "icons",
-    ),
+    // Before this field existed, horizontal contact rows always rendered with a
+    // midpoint. Preserve that appearance for persisted legacy options that omit it.
+    headerInlineSeparator:
+      value.headerInlineSeparator === undefined
+        ? "dot"
+        : normalizedHeaderInlineSeparator(
+            value.headerInlineSeparator,
+            fallback.headerInlineSeparator ?? "icons",
+          ),
     headerBackgroundColor: normalizedColor(value.headerBackgroundColor),
     headerGradientColor: normalizedColor(value.headerGradientColor),
     footerMode:
