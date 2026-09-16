@@ -23,6 +23,7 @@ describe("dossier chrome customization", () => {
   test("new defaults use stacked header text, inline footer text and no automatic border", () => {
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerTextLayout).toBe("stacked");
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerDifferentFirstPage).toBe(true);
+    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerInlineSeparator).toBe("icons");
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerTextLayout).toBe("inline");
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerHeightMm).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerHeightMm).toBeNull();
@@ -34,6 +35,21 @@ describe("dossier chrome customization", () => {
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.borderColor).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.borderWidthMm).toBe(0.6);
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.textFont).toBeNull();
+  });
+
+  test("legacy inline headers keep their historical midpoint separator", () => {
+    const { headerInlineSeparator: _removed, ...legacyShared } = DEFAULT_DOSSIER_CHROME_OPTIONS;
+    const state = normalizeDossierChromeState({
+      sync: true,
+      shared: {
+        ...legacyShared,
+        headerTextLayout: "inline",
+      },
+    });
+
+    expect(state.shared.headerInlineSeparator).toBe("dot");
+    expect(state.cv.headerInlineSeparator).toBe("dot");
+    expect(state.letter.headerInlineSeparator).toBe("dot");
   });
 
   test("normalization keeps customization and lets old branches inherit shared border settings", () => {
@@ -152,6 +168,28 @@ describe("dossier chrome customization", () => {
     expect(markup).toContain("Dorfstrasse 12");
     expect(markup).toContain(">Lebenslauf</div>");
     expect(markup).toContain("> · Zeugnis</div>");
+  });
+
+  test("inline contact icons inherit the computed header contrast", () => {
+    const markup = renderToStaticMarkup(
+      createElement(DossierHeaderFooterChrome, {
+        scope: "cv",
+        template: "modern",
+        colors: { primary: "#ffffff", accent: "#f1f5f9" },
+        contact,
+        options: {
+          ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+          headerMode: "contact",
+          headerTextLayout: "inline",
+          headerInlineSeparator: "icons",
+          headerBackgroundColor: "#ffffff",
+          headerGradientColor: null,
+        },
+      }),
+    );
+
+    expect(markup).toContain('data-dossier-header-inline-separator="icons"');
+    expect(markup).toContain("color:currentColor");
   });
 
   test("automatic border color avoids matching either default surface", () => {
