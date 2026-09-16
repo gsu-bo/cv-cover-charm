@@ -15,13 +15,14 @@ const contact = {
   name: "Lea Müller",
   address: "Dorfstrasse 12",
   place: "4535 Hubersdorf",
-  phone: "+41 79 123 45 67",
+  phone: "079 123 45 67",
   email: "lea@example.ch",
 };
 
 describe("dossier chrome customization", () => {
   test("new defaults use stacked header text, inline footer text and no automatic border", () => {
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerTextLayout).toBe("stacked");
+    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerDifferentFirstPage).toBe(true);
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerTextLayout).toBe("inline");
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerHeightMm).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerHeightMm).toBeNull();
@@ -65,6 +66,7 @@ describe("dossier chrome customization", () => {
     });
 
     expect(state.shared.headerHeightMm).toBe(28);
+    expect(state.shared.headerDifferentFirstPage).toBe(true);
     expect(state.shared.footerHeightMm).toBe(16);
     expect(state.shared.headerTextLayout).toBe("inline");
     expect(state.shared.footerTextLayout).toBe("stacked");
