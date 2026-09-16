@@ -162,6 +162,9 @@ async function assertCompleteDocx(path: string) {
 }
 
 async function downloadDocxThroughFormatDialog(page: Page) {
+  // The SSR home card is visible before React has attached its click handler.
+  await page.waitForLoadState("networkidle");
+
   const dossierCard = page
     .getByRole("button")
     .filter({ hasText: "Gesamtdossier herunterladen" });
