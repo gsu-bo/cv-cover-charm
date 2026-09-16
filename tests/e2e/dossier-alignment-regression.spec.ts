@@ -202,13 +202,13 @@ test.describe("body alignment Web/PDF parity", () => {
         .first();
       await expect(previewCanvas).toBeVisible();
       await expect(previewCanvas.locator("..")).toHaveAttribute("data-cv-body-align", align);
-      const previewBody = previewCanvas
-        .locator("[data-cv-body]:visible")
-        .filter({ hasText: "CV-ALIGNMENT-PROBE" })
+      const previewText = previewCanvas
+        .locator("[data-cv-page]:visible")
+        .getByText("CV-ALIGNMENT-PROBE", { exact: false })
         .first();
-      await expect(previewBody).toBeVisible();
+      await expect(previewText).toBeVisible();
       await expect
-        .poll(() => previewBody.evaluate((node) => getComputedStyle(node).textAlign))
+        .poll(() => previewText.evaluate((node) => getComputedStyle(node).textAlign))
         .toBe(align);
 
       const exportCanvas = page
@@ -216,12 +216,12 @@ test.describe("body alignment Web/PDF parity", () => {
         .first();
       await expect(exportCanvas).toBeAttached();
       await expect(exportCanvas.locator("..")).toHaveAttribute("data-cv-body-align", align);
-      const exportBody = exportCanvas
-        .locator("[data-cv-body]")
-        .filter({ hasText: "CV-ALIGNMENT-PROBE" })
+      const exportText = exportCanvas
+        .locator("[data-cv-page]")
+        .getByText("CV-ALIGNMENT-PROBE", { exact: false })
         .first();
       await expect
-        .poll(() => exportBody.evaluate((node) => getComputedStyle(node).textAlign))
+        .poll(() => exportText.evaluate((node) => getComputedStyle(node).textAlign))
         .toBe(align);
 
       const download = await downloadCv(page);
