@@ -83,11 +83,13 @@ jobs:
               tests/e2e/dossier-transfer-regression.spec.ts
               tests/e2e/dossier-font-sync.spec.ts
               tests/e2e/dossier-typography-regression.spec.ts
+              tests/e2e/dossier-alignment-regression.spec.ts
               tests/e2e/dossier-letter-preflight.spec.ts
               tests/e2e/dossier-state-roundtrip.spec.ts
               tests/e2e/dossier-state-isolation.spec.ts
               tests/e2e/dossier-chrome-sync.spec.ts
               tests/e2e/dossier-docx-reference.spec.ts
+              tests/e2e/dossier-docx-alignment.spec.ts
               tests/e2e/dossier-docx-warm.spec.ts
               tests/e2e/dossier-docx-studio3.spec.ts
               tests/e2e/dossier-docx-family-gallery.spec.ts
