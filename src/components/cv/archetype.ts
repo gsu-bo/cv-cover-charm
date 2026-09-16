@@ -83,6 +83,7 @@ const quiet = (borderInsetMm: number, extra: Partial<CvFrame> = {}): CvFrame => 
 
 /** Eine einzige Zuordnung Vorlage → CV-Bauform. */
 const FRAMES: Record<TemplateId, CvFrame> = {
+  brief: quiet(0),
   studio: column(72, { footMm: 6, headFirstMm: 38, headRestMm: 13 }),
   terracotta: column(70),
   // Blockig keeps the narrow structural rail used by its letter instead of
@@ -110,7 +111,6 @@ const FRAMES: Record<TemplateId, CvFrame> = {
 };
 
 export function cvFrameFor(template: TemplateId): CvFrame {
-  if ((template as string) === "brief") return quiet(0);
   if ((template as string) === "edelDark") return FRAMES.edel;
   return FRAMES[template] ?? FRAMES.klassisch;
 }

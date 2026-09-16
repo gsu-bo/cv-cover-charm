@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { TemplateId } from "../../src/components/cover/types";
 import { defaultCvLayoutForTemplate } from "../../src/components/cv/layout";
 import { cvFrameFor } from "../../src/components/cv/archetype";
 import {
@@ -11,6 +12,7 @@ import { DEFAULTS } from "../../src/default-config";
 import {
   DEFAULT_DOSSIER_CHROME_OPTIONS,
   DEFAULT_DOSSIER_CHROME_STATE,
+  normalizeDossierChromeState,
 } from "../../src/lib/dossier-chrome";
 import { CANONICAL_DOSSIER_PRESENTATION } from "../../src/lib/dossier-default-presentation";
 import { resolveDossierDocxProfile } from "../../src/lib/dossier-docx-export";
@@ -22,8 +24,9 @@ import {
 
 describe("canonical neutral dossier fallback", () => {
   test("one contract owns the fresh template and neutral chrome", () => {
+    const typedDefault: TemplateId = DEFAULTS.TEMPLATE;
     expect(CANONICAL_DOSSIER_PRESENTATION.template).toBe("brief");
-    expect(DEFAULTS.TEMPLATE as string).toBe("brief");
+    expect(typedDefault).toBe("brief");
     expect(DEFAULT_DOSSIER_CHROME_STATE.shared.headerMode).toBe("none");
     expect(DEFAULT_DOSSIER_CHROME_STATE.shared.footerMode).toBe("none");
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerMode).toBe("contact");
@@ -32,7 +35,7 @@ describe("canonical neutral dossier fallback", () => {
     expect(CANONICAL_DOSSIER_PRESENTATION.letter.continuationFooterMode).toBe("none");
   });
 
-  test("fresh Brief keeps page 1 and continuation pages plain", () => {
+  test("fresh and raw Brief designs keep page 1 and continuation pages plain", () => {
     const design = emptyLetterDesign();
     const first = letterPageGeometry(EMPTY_LETTER, design, { pageIndex: 0, finalPage: false });
     const continuation = letterPageGeometry(EMPTY_LETTER, design, {
@@ -47,6 +50,28 @@ describe("canonical neutral dossier fallback", () => {
     expect(first.effectiveFooterMode).toBe("none");
     expect(continuation.effectiveHeaderMode).toBe("none");
     expect(continuation.effectiveFooterMode).toBe("none");
+
+    const rawDesign = { ...design, headerMode: undefined, footerMode: undefined };
+    const rawFirst = letterPageGeometry(EMPTY_LETTER, rawDesign, {
+      pageIndex: 0,
+      finalPage: false,
+    });
+    const rawContinuation = letterPageGeometry(EMPTY_LETTER, rawDesign, {
+      pageIndex: 1,
+      finalPage: true,
+    });
+    expect(rawFirst.effectiveHeaderMode).toBe("none");
+    expect(rawFirst.effectiveFooterMode).toBe("none");
+    expect(rawContinuation.effectiveHeaderMode).toBe("none");
+    expect(rawContinuation.effectiveFooterMode).toBe("none");
+  });
+
+  test("partial chrome state recovers to the fresh Brief contract, not legacy chrome", () => {
+    const recovered = normalizeDossierChromeState({});
+    expect(recovered.shared.headerMode).toBe("none");
+    expect(recovered.shared.footerMode).toBe("none");
+    expect(recovered.cv.headerMode).toBe("none");
+    expect(recovered.letter.headerMode).toBe("none");
   });
 
   test("fresh CV resolves to Brief + Standard without a sidebar frame", () => {

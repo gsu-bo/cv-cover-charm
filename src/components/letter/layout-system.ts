@@ -1,4 +1,5 @@
 import type { TemplateId } from "@/components/cover/types";
+import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
 import { cvFrameFor } from "@/components/cv/archetype";
 import {
   DOSSIER_PAGE_MARGIN_MIN_MM,
@@ -146,14 +147,31 @@ export function letterFooterHeightMm(
   return Math.min(30, 7 + visualLineCount * 3.8);
 }
 
-function effectiveHeaderMode(design: LetterDesign): LetterHeaderMode {
-  // Header modes have the same semantic meaning as in the CV. The shared chrome
-  // renderer decides how the contact mode is visually condensed on continuation pages.
-  return design.headerMode ?? "compact";
+function effectiveHeaderMode(design: LetterDesign, pageIndex: number): LetterHeaderMode {
+  // Explicit legacy/user choices always win. Only an actually missing choice may
+  // consume the semantic Brief contract.
+  if (design.headerMode) return design.headerMode;
+  if (design.template === CANONICAL_DOSSIER_PRESENTATION.template) {
+    return pageIndex > 0
+      ? CANONICAL_DOSSIER_PRESENTATION.letter.continuationHeaderMode
+      : CANONICAL_DOSSIER_PRESENTATION.letter.headerMode;
+  }
+  // Established template compatibility remains intentionally compact here.
+  return "compact";
 }
 
-function effectiveFooterMode(design: LetterDesign, finalPage: boolean): LetterFooterMode {
-  const requested = design.footerMode ?? "compact";
+function effectiveFooterMode(
+  design: LetterDesign,
+  finalPage: boolean,
+  pageIndex: number,
+): LetterFooterMode {
+  const requested =
+    design.footerMode ??
+    (design.template === CANONICAL_DOSSIER_PRESENTATION.template
+      ? pageIndex > 0
+        ? CANONICAL_DOSSIER_PRESENTATION.letter.continuationFooterMode
+        : CANONICAL_DOSSIER_PRESENTATION.letter.footerMode
+      : "compact");
   // Attachment lists belong on the final page only. Earlier pages keep the compact band.
   if (requested === "attachments" && !finalPage) return "compact";
   return requested;
@@ -215,8 +233,8 @@ export function letterSafePageMarginMinimums(
   const finalPage = context.finalPage ?? true;
   const fresh = freshLetterSpec(design.template);
   const archetype = fresh?.archetype ?? letterArchetypeFor(design.template);
-  const headerMode = effectiveHeaderMode(design);
-  const footerMode = effectiveFooterMode(design, finalPage);
+  const headerMode = effectiveHeaderMode(design, pageIndex);
+  const footerMode = effectiveFooterMode(design, finalPage, pageIndex);
   const footerHeight = letterFooterHeightMm(data, footerMode, design.footerHeightMm ?? null);
 
   let left = floor;
@@ -269,10 +287,18 @@ export function letterPageGeometry(
   const fresh = freshLetterSpec(design.template);
   const archetype = fresh?.archetype ?? letterArchetypeFor(design.template);
   const freshTemplate = fresh !== null;
-  const requestedHeaderMode = design.headerMode ?? "compact";
-  const requestedFooterMode = design.footerMode ?? "compact";
-  const headerMode = effectiveHeaderMode(design);
-  const footerMode = effectiveFooterMode(design, finalPage);
+  const requestedHeaderMode =
+    design.headerMode ??
+    (design.template === CANONICAL_DOSSIER_PRESENTATION.template
+      ? CANONICAL_DOSSIER_PRESENTATION.letter.headerMode
+      : "compact");
+  const requestedFooterMode =
+    design.footerMode ??
+    (design.template === CANONICAL_DOSSIER_PRESENTATION.template
+      ? CANONICAL_DOSSIER_PRESENTATION.letter.footerMode
+      : "compact");
+  const headerMode = effectiveHeaderMode(design, pageIndex);
+  const footerMode = effectiveFooterMode(design, finalPage, pageIndex);
   const footerHeight = letterFooterHeightMm(data, footerMode, design.footerHeightMm ?? null);
   const defaultInsets = fresh
     ? { left: fresh.left, right: fresh.right }

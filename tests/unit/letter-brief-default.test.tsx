@@ -27,6 +27,19 @@ describe("plain letter default", () => {
     expect(markup).toContain('data-letter-footer-mode="none"');
   });
 
+  test("an un-normalized fresh Brief design cannot re-invent legacy chrome in SSR", () => {
+    const design = { ...emptyLetterDesign(), headerMode: undefined, footerMode: undefined };
+    const markup = renderToStaticMarkup(
+      createElement(LetterCanvas, {
+        data: DEMO_LETTER,
+        design,
+      }),
+    );
+
+    expect(markup).toContain('data-letter-header-mode="none"');
+    expect(markup).toContain('data-letter-footer-mode="none"');
+  });
+
   test("an explicitly selected shared contact header still renders on the Brief template", () => {
     const design = emptyLetterDesign();
     const markup = renderToStaticMarkup(

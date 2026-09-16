@@ -1,4 +1,3 @@
-import type { TemplateId } from "@/components/cover/types";
 import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
 
 /**
@@ -44,7 +43,7 @@ export const DEFAULTS = {
   /** Ort für die "Ort, Datum"-Zeile. Leer lassen für kein Vorbelegen. */
   LOCATION: "Hubersdorf",
   /** Vorlage, die beim ersten Öffnen gewählt ist. */
-  TEMPLATE: CANONICAL_DOSSIER_PRESENTATION.template as TemplateId,
+  TEMPLATE: CANONICAL_DOSSIER_PRESENTATION.template,
   /**
    * Zeile über dem Beruf. Im Formular überschreibbar – hier steht nur, was
    * beim leeren Formular drinsteht.

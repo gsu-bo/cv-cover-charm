@@ -8,7 +8,7 @@ import type {
 } from "@/lib/dossier-chrome";
 
 export type LetterAlignment = "left" | "right";
-export type LetterTemplateId = "brief" | TemplateId;
+export type LetterTemplateId = TemplateId;
 export type LetterBodyColumns = 1 | 2 | 3;
 export type LetterHeaderMode = "compact" | "contact" | "none";
 export type LetterFooterMode = "compact" | "attachments" | "none";
@@ -165,9 +165,7 @@ export function defaultLetterColors(template: LetterTemplateId): Record<string, 
   }
   const definition =
     TEMPLATES.find((candidate) => candidate.id === template) ??
-    TEMPLATES.find(
-      (candidate) => candidate.id === (CANONICAL_DOSSIER_PRESENTATION.template as TemplateId),
-    );
+    TEMPLATES.find((candidate) => candidate.id === CANONICAL_DOSSIER_PRESENTATION.template);
   if (!definition) return defaultLetterColors("brief");
   return Object.fromEntries(definition.slots.map((slot) => [slot.key, slot.default]));
 }

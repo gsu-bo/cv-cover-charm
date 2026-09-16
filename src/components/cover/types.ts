@@ -55,6 +55,7 @@ export type ColorSlot = {
 };
 
 export type TemplateId =
+  | "brief"
   | "klassisch"
   | "modern"
   | "freundlich"
@@ -299,7 +300,7 @@ export const FONT_LABELS: Record<FontKey, string> = {
 
 export const TEMPLATES: TemplateDefinition[] = [
   {
-    id: "brief" as TemplateId,
+    id: "brief",
     name: "Brief",
     description: "Reinweisses Papier, schwarze Typografie, ohne Gestaltungselemente",
     slots: [

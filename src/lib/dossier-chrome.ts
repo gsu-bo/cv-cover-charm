@@ -263,7 +263,7 @@ export function normalizeDossierChromeState(value: unknown): DossierChromeState 
       letter: { ...DEFAULT_DOSSIER_CHROME_STATE.letter },
     };
   }
-  const shared = normalizeOptions(value.shared);
+  const shared = normalizeOptions(value.shared, CANONICAL_DOSSIER_CHROME_OPTIONS);
   return {
     version: 1,
     sync: value.sync !== false,
