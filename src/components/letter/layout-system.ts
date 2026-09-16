@@ -1,6 +1,11 @@
 import type { TemplateId } from "@/components/cover/types";
 import { cvFrameFor } from "@/components/cv/archetype";
-import { getDossierPageMargins } from "@/lib/dossier-page-margins";
+import {
+  DOSSIER_PAGE_MARGIN_MIN_MM,
+  clampDossierPageMarginsToMinimums,
+  getDossierPageMargins,
+  type DossierPageMargins,
+} from "@/lib/dossier-page-margins";
 import { freshLetterSpec } from "./fresh-letter-system";
 import "./fresh-letter-integrity.css";
 import {
@@ -192,6 +197,73 @@ function letterContentTopMm(
   return mode === "contact" ? Math.max(18, height + 9) : Math.max(18, height + 18);
 }
 
+const roundHalfMm = (value: number) => Math.round(value * 2) / 2;
+
+/**
+ * Hard collision minimums for custom motivation-letter margins. The values are
+ * intentionally smaller than the normal template text box where whitespace is
+ * optional, but they protect shared header/footer chrome and structural rails,
+ * frames and fresh-template edge motifs.
+ */
+export function letterSafePageMarginMinimums(
+  data: LetterData,
+  design: LetterDesign,
+  context: LetterPageContext = {},
+): DossierPageMargins {
+  const floor = DOSSIER_PAGE_MARGIN_MIN_MM;
+  const pageIndex = Math.max(0, context.pageIndex ?? 0);
+  const finalPage = context.finalPage ?? true;
+  const fresh = freshLetterSpec(design.template);
+  const archetype = fresh?.archetype ?? letterArchetypeFor(design.template);
+  const headerMode = effectiveHeaderMode(design);
+  const footerMode = effectiveFooterMode(design, finalPage);
+  const footerHeight = letterFooterHeightMm(data, footerMode, design.footerHeightMm ?? null);
+
+  let left = floor;
+  let right = floor;
+  let templateTop = floor;
+  let templateBottom = floor;
+
+  if (archetype === "sidebar") left = Math.max(left, 11);
+  if (archetype === "band") templateTop = Math.max(templateTop, 10);
+  if (archetype === "frame") {
+    left = Math.max(left, 15);
+    right = Math.max(right, 15);
+    templateTop = Math.max(templateTop, 15);
+    templateBottom = Math.max(templateBottom, 15);
+  }
+
+  if (fresh) {
+    // Fresh artwork is confined to the top safety zone or to full-height edge
+    // rails. Keep custom text margins clear of those structural motifs.
+    templateTop = Math.max(templateTop, 18);
+    const railRight = fresh.motifs.reduce((max, motif) => {
+      const fullHeightEdgeRail = motif.h >= LETTER_PAGE_MM.height * 0.5 && motif.x < 60;
+      return fullHeightEdgeRail ? Math.max(max, motif.x + motif.w) : max;
+    }, 0);
+    if (railRight > 0) left = Math.max(left, railRight + 5);
+  }
+
+  const headerHeight = isWarmFirstPageCompactHeader(design.template, headerMode, pageIndex)
+    ? WARM_FIRST_PAGE_HEADER_HEIGHT_MM
+    : letterHeaderVisualHeightMm(design, pageIndex, headerMode);
+  const top = Math.max(
+    templateTop,
+    headerMode === "none" ? floor : headerHeight + 5,
+  );
+  const bottom = Math.max(
+    templateBottom,
+    footerMode === "none" ? floor : footerHeight + 5,
+  );
+
+  return {
+    top: roundHalfMm(top),
+    right: roundHalfMm(right),
+    bottom: roundHalfMm(bottom),
+    left: roundHalfMm(left),
+  };
+}
+
 export function letterPageGeometry(
   data: LetterData,
   design: LetterDesign,
@@ -218,7 +290,13 @@ export function letterPageGeometry(
       : footerMode === "attachments"
         ? footerHeight + 7
         : footerHeight + 14.6;
-  const customMargins = getDossierPageMargins("letter");
+  const storedCustomMargins = getDossierPageMargins("letter");
+  const customMargins = storedCustomMargins
+    ? clampDossierPageMarginsToMinimums(
+        storedCustomMargins,
+        letterSafePageMarginMinimums(data, design, context),
+      )
+    : null;
   const headerGapMm =
     customMargins || headerMode === "none"
       ? 0
