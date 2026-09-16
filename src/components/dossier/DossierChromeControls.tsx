@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { FONT_LABELS, type FontKey } from "@/components/cover/types";
+import { DossierHyphenationControl } from "@/components/dossier/DossierHyphenationControl";
 import {
   DEFAULT_DOSSIER_CHROME_STATE,
   getDossierChromeState,
@@ -218,6 +219,8 @@ export function DossierChromeControls({
       </div>
 
       <div className="mt-3 grid gap-3 border-t pt-3">
+        <DossierHyphenationControl />
+
         <label className="block text-xs font-medium">
           Schrift in Header &amp; Footer
           <select
