@@ -4,7 +4,11 @@ import type { TemplateId } from "@/components/cover/types";
 import { DossierPageMarginsControl } from "@/components/dossier/DossierPageMarginsControl";
 import { TextAlignmentControl } from "@/components/dossier/TextAlignmentControl";
 import type { DossierChromeOptions } from "@/lib/dossier-chrome";
-import { cvDefaultContentBox, cvFrameFor } from "@/components/cv/archetype";
+import {
+  cvDefaultContentBox,
+  cvFrameFor,
+  type CvRenderLayout,
+} from "@/components/cv/archetype";
 import { getCvLayout, subscribeCvLayout } from "@/components/cv/layout";
 import {
   getCvTextAlignment,
@@ -31,7 +35,11 @@ export function CvTextAlignmentPortal({
     getCvTextAlignment,
     (): ReturnType<typeof getCvTextAlignment> => "left",
   );
-  const layout = useSyncExternalStore(subscribeCvLayout, getCvLayout, () => "classic");
+  const layout = useSyncExternalStore<CvRenderLayout>(
+    subscribeCvLayout,
+    getCvLayout,
+    () => "classic",
+  );
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const defaultMargins = useMemo(
     () => cvDefaultContentBox(cvFrameFor(template), 0, layout, sidebarPct, chromeOptions),
