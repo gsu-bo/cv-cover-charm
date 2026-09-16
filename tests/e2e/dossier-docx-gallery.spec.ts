@@ -36,7 +36,6 @@ const PRODUCT_TEMPLATES = [
 const CASES: Array<{
   id: string;
   label: string;
-  buttonLabel: string;
   letterTemplate: "brief" | TemplateId;
   coverTemplate: TemplateId;
   cvTemplate: TemplateId;
@@ -46,7 +45,6 @@ const CASES: Array<{
   return {
     id: template.id as string,
     label: template.name,
-    buttonLabel: plan.label,
     letterTemplate: template.id as "brief" | TemplateId,
     coverTemplate: template.id as TemplateId,
     cvTemplate: template.id as TemplateId,
@@ -163,6 +161,27 @@ async function assertCompleteDocx(path: string) {
   expect((documentXml.match(/<w:sectPr(?:\s|>)/g) ?? []).length).toBe(3);
 }
 
+async function downloadDocxThroughFormatDialog(page: Page) {
+  const dossierCard = page
+    .getByRole("button")
+    .filter({ hasText: "Gesamtdossier herunterladen" });
+  await expect(dossierCard).toBeVisible();
+  await dossierCard.click();
+
+  const dialog = page.getByRole("dialog", { name: "Dossier herunterladen" });
+  await expect(dialog).toBeVisible();
+  const docxOption = dialog.getByRole("radio", { name: "Bearbeitbares Dossier (DOCX)" });
+  await expect(docxOption).toBeEnabled({ timeout: 30_000 });
+  await docxOption.click();
+  await expect(docxOption).toHaveAttribute("aria-checked", "true");
+
+  const downloadButton = dialog.getByRole("button", { name: "DOCX herunterladen", exact: true });
+  await expect(downloadButton).toBeEnabled({ timeout: 30_000 });
+  const downloadPromise = page.waitForEvent("download", { timeout: 90_000 });
+  await downloadButton.click();
+  return downloadPromise;
+}
+
 test("real browser DOCX gallery exports all 39 active dossier templates", async ({ page }) => {
   test.setTimeout(10 * 60_000);
   const stored = await seedCanonicalDossier(page);
@@ -275,11 +294,7 @@ test("real browser DOCX gallery exports all 39 active dossier templates", async 
     );
     await page.reload({ waitUntil: "domcontentloaded" });
 
-    const button = page.getByRole("button", { name: `Dossier als DOCX · ${item.buttonLabel}` });
-    await expect(button).toBeEnabled({ timeout: 30_000 });
-    const downloadPromise = page.waitForEvent("download", { timeout: 90_000 });
-    await button.click();
-    const download = await downloadPromise;
+    const download = await downloadDocxThroughFormatDialog(page);
 
     const fileNumber = String(globalIndex + 1).padStart(2, "0");
     const fileName = `${fileNumber}-${safeName(item.label)}.docx`;
