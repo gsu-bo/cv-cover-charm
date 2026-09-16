@@ -1,0 +1,153 @@
+name: Dossier Web Gallery
+
+# Visual QA for the ordinary editor previews. Each of the 39 active templates
+# produces cover + letter + CV screenshots (117 PNGs total). This deliberately
+# tests the normal Web renderer rather than the hidden/export PDF canvas.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dossier-web-gallery-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  web-batch:
+    name: Web template batch ${{ matrix.batch }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        batch: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright runner
+        run: npm install --no-save --no-package-lock @playwright/test@1.55.0
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start application
+        shell: bash
+        run: |
+          bun run dev -- --host 127.0.0.1 --port 4173 > /tmp/cv-cover-charm.log 2>&1 &
+          echo $! > /tmp/cv-cover-charm.pid
+          for attempt in {1..60}; do
+            curl --fail --silent http://127.0.0.1:4173/ > /dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/cv-cover-charm.log
+          exit 1
+
+      - name: Capture visible Web previews for batch ${{ matrix.batch }}
+        env:
+          WEB_GALLERY_BATCH_INDEX: ${{ matrix.batch }}
+          WEB_GALLERY_DIR: artifacts/dossier-web-gallery-batch-${{ matrix.batch }}
+        run: npx playwright test tests/e2e/dossier-web-gallery.spec.ts --reporter=line --workers=1
+
+      - name: Verify batch output
+        shell: bash
+        run: |
+          dir="artifacts/dossier-web-gallery-batch-${{ matrix.batch }}"
+          png_count="$(find "$dir" -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' ')"
+          expected=12
+          if [ "${{ matrix.batch }}" -eq 9 ]; then expected=9; fi
+          echo "Batch ${{ matrix.batch }} generated $png_count/$expected Web PNGs"
+          test "$png_count" -eq "$expected"
+          part="$(printf '%02d' '${{ matrix.batch }}')"
+          test -f "$dir/MANIFEST.part-$part.txt"
+
+      - name: Upload batch artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dossier-web-batch-${{ matrix.batch }}
+          path: artifacts/dossier-web-gallery-batch-${{ matrix.batch }}
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Show application log on failure
+        if: failure()
+        run: cat /tmp/cv-cover-charm.log || true
+
+      - name: Stop application
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/cv-cover-charm.pid ]; then kill "$(cat /tmp/cv-cover-charm.pid)" || true; fi
+
+  aggregate:
+    name: Aggregate 39 Web template sets
+    needs:
+      - web-batch
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Download all Web batches
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dossier-web-batch-*
+          path: artifacts/batches
+
+      - name: Verify and build exact 39-template Web package
+        shell: bash
+        run: |
+          png_count="$(find artifacts/batches -type f -name '*.png' | wc -l | tr -d ' ')"
+          unique_count="$(find artifacts/batches -type f -name '*.png' -printf '%f\n' | sort -u | wc -l | tr -d ' ')"
+          part_count="$(find artifacts/batches -type f -name 'MANIFEST.part-*.txt' | wc -l | tr -d ' ')"
+
+          echo "PNGs: $png_count total, $unique_count unique; manifest parts: $part_count"
+          test "$png_count" -eq 117
+          test "$unique_count" -eq 117
+          test "$part_count" -eq 10
+
+          mkdir -p artifacts/dossier-web-gallery
+          while IFS= read -r -d '' png; do
+            base="$(basename "$png")"
+            test ! -e "artifacts/dossier-web-gallery/$base"
+            cp "$png" "artifacts/dossier-web-gallery/$base"
+          done < <(find artifacts/batches -type f -name '*.png' -print0)
+
+          {
+            echo "Bewerbungsdossier Vorlagen – 39 Web-Sets / 117 PNG"
+            echo "Format: template-key | label | cover | letter | cv"
+            echo
+            while IFS= read -r part; do
+              cat "$part"
+            done < <(find artifacts/batches -type f -name 'MANIFEST.part-*.txt' | sort)
+          } > artifacts/dossier-web-gallery/MANIFEST.txt
+
+          final_count="$(find artifacts/dossier-web-gallery -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' ')"
+          manifest_count="$(grep -c ' | .*--cover.png | .*--letter.png | .*--cv.png' artifacts/dossier-web-gallery/MANIFEST.txt)"
+          echo "Final package: $final_count PNGs; manifest template rows: $manifest_count"
+          test "$final_count" -eq 117
+          test "$manifest_count" -eq 39
+          test -f artifacts/dossier-web-gallery/39-Edel-Dark--cover.png
+          test -f artifacts/dossier-web-gallery/39-Edel-Dark--letter.png
+          test -f artifacts/dossier-web-gallery/39-Edel-Dark--cv.png
+
+      - name: Upload exact 39-template Web gallery
+        uses: actions/upload-artifact@v4
+        with:
+          name: dossier-web-gallery-39
+          path: artifacts/dossier-web-gallery
+          if-no-files-found: error
+          retention-days: 14
