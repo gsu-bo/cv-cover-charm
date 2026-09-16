@@ -94,10 +94,16 @@ async function captureVisiblePreview(
   route: string,
   selector: string,
   fileName: string,
+  expectedAttribute?: { name: string; value: string },
 ) {
   await page.goto(`${BASE_URL}${route}`, { waitUntil: "domcontentloaded" });
   await waitEditorReady(page);
   const preview = page.locator(selector).first();
+  if (expectedAttribute) {
+    await expect(preview).toHaveAttribute(expectedAttribute.name, expectedAttribute.value, {
+      timeout: 15_000,
+    });
+  }
   await settleVisiblePreview(page, preview);
   await preview.screenshot({
     path: join(GALLERY_DIR, fileName),
@@ -220,6 +226,12 @@ test("all 39 live dossier templates produce visible Web preview screenshots", as
     const headerMode = defaultHeaderModeForTemplate(item.coverTemplate);
     const headerGapMm = defaultHeaderGapMmForTemplate(item.coverTemplate);
 
+    // Never inject the next fixture while an editor from the previous case is
+    // still mounted. Its 400 ms autosave may otherwise overwrite localStorage
+    // after this write and make several gallery files silently capture the
+    // previous template while the test still passes.
+    await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+
     await page.evaluate(
       ({
         base,
@@ -279,6 +291,16 @@ test("all 39 live dossier templates produce visible Web preview screenshots", as
       },
     );
 
+    const persistedTemplates = await page.evaluate(() => ({
+      cover: JSON.parse(localStorage.getItem("titelblatt:v3") ?? "null")?.template ?? null,
+      letter:
+        JSON.parse(localStorage.getItem("anschreiben:v1") ?? "null")?.design?.template ?? null,
+      cv: JSON.parse(localStorage.getItem("lebenslauf:v1") ?? "null")?.design?.template ?? null,
+    }));
+    expect(persistedTemplates.cover).toBe(item.coverTemplate);
+    expect(persistedTemplates.letter).toBe(item.letterTemplate);
+    expect(persistedTemplates.cv).toBe(item.cvTemplate);
+
     const fileNumber = String(globalIndex + 1).padStart(2, "0");
     const baseName = `${fileNumber}-${safeName(item.label)}`;
     const coverName = `${baseName}--cover.png`;
@@ -291,12 +313,19 @@ test("all 39 live dossier templates produce visible Web preview screenshots", as
       'main [data-dossier-document="cover"]',
       coverName,
     );
-    await captureVisiblePreview(page, "/anschreiben", "main [data-letter-page]", letterName);
+    await captureVisiblePreview(
+      page,
+      "/anschreiben",
+      "main [data-letter-page]",
+      letterName,
+      { name: "data-letter-template", value: item.letterTemplate as string },
+    );
     await captureVisiblePreview(
       page,
       "/lebenslauf",
       '[data-dossier-document="cv"][data-export-mode="false"]',
       cvName,
+      { name: "data-cv-template", value: item.cvTemplate as string },
     );
 
     manifestEntries.push(`${baseName} | ${item.label} | ${coverName} | ${letterName} | ${cvName}`);
