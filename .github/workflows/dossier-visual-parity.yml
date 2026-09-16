@@ -1,0 +1,186 @@
+name: Dossier Visual Parity x39
+
+# Same-SHA visual truth across all active dossier templates:
+#   visible Website preview -> PNG
+#   exported PDF            -> PNG
+#   exported DOCX -> LibreOffice PDF -> PNG
+# The report compares 39 templates x cover/letter/CV = 117 page triplets.
+# Similarity is observational QA: malformed/missing outputs fail the workflow,
+# while low SSIM is reported and ranked without blocking release by itself.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - render
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dossier-visual-parity-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  source-batch:
+    name: Visual parity source batch ${{ matrix.batch }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        batch: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright runner
+        run: npm install --no-save --no-package-lock @playwright/test@1.55.0
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start application
+        shell: bash
+        run: |
+          bun run dev -- --host 127.0.0.1 --port 4173 > /tmp/cv-cover-charm.log 2>&1 &
+          echo $! > /tmp/cv-cover-charm.pid
+          for attempt in {1..60}; do
+            curl --fail --silent http://127.0.0.1:4173/ > /dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/cv-cover-charm.log
+          exit 1
+
+      - name: Generate same-SHA Web/PDF/DOCX source batch
+        shell: bash
+        run: |
+          bash scripts/run_dossier_gallery_batch.sh web  "${{ matrix.batch }}" artifacts/parity-source/web
+          bash scripts/run_dossier_gallery_batch.sh pdf  "${{ matrix.batch }}" artifacts/parity-source/pdf
+          bash scripts/run_dossier_gallery_batch.sh docx "${{ matrix.batch }}" artifacts/parity-source/docx
+
+      - name: Upload same-SHA source batch
+        uses: actions/upload-artifact@v4
+        with:
+          name: dossier-visual-parity-source-${{ matrix.batch }}
+          path: artifacts/parity-source
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Show application log on failure
+        if: failure()
+        run: cat /tmp/cv-cover-charm.log || true
+
+      - name: Stop application
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/cv-cover-charm.pid ]; then kill "$(cat /tmp/cv-cover-charm.pid)" || true; fi
+
+  compare:
+    name: Compare Website vs PDF vs DOCX — 39 templates
+    needs:
+      - source-batch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all same-SHA source batches
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dossier-visual-parity-source-*
+          path: artifacts/parity-batches
+
+      - name: Assemble exact 39-template source packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/parity-source/{web,pdf,docx}
+
+          while IFS= read -r -d '' file; do
+            base="$(basename "$file")"
+            test ! -e "artifacts/parity-source/web/$base"
+            cp "$file" "artifacts/parity-source/web/$base"
+          done < <(find artifacts/parity-batches -path '*/web/*.png' -print0)
+
+          while IFS= read -r -d '' file; do
+            base="$(basename "$file")"
+            test ! -e "artifacts/parity-source/pdf/$base"
+            cp "$file" "artifacts/parity-source/pdf/$base"
+          done < <(find artifacts/parity-batches -path '*/pdf/*.pdf' -print0)
+
+          while IFS= read -r -d '' file; do
+            base="$(basename "$file")"
+            test ! -e "artifacts/parity-source/docx/$base"
+            cp "$file" "artifacts/parity-source/docx/$base"
+          done < <(find artifacts/parity-batches -path '*/docx/*.docx' -print0)
+
+          {
+            echo "Bewerbungsdossier Vorlagen – 39 Web-Sets / 117 PNG"
+            echo "Format: template-key | label | cover | letter | cv"
+            echo
+            while IFS= read -r part; do cat "$part"; done < <(find artifacts/parity-batches -path '*/web/MANIFEST.part-*.txt' | sort)
+          } > artifacts/parity-source/web/MANIFEST.txt
+
+          web_count="$(find artifacts/parity-source/web -maxdepth 1 -type f -name '*.png' | wc -l | tr -d ' ')"
+          pdf_count="$(find artifacts/parity-source/pdf -maxdepth 1 -type f -name '*.pdf' | wc -l | tr -d ' ')"
+          docx_count="$(find artifacts/parity-source/docx -maxdepth 1 -type f -name '*.docx' | wc -l | tr -d ' ')"
+          manifest_rows="$(grep -c ' | .*--cover.png | .*--letter.png | .*--cv.png' artifacts/parity-source/web/MANIFEST.txt)"
+
+          echo "Exact source set: Web=$web_count PNG, PDF=$pdf_count, DOCX=$docx_count, templates=$manifest_rows"
+          test "$web_count" -eq 117
+          test "$pdf_count" -eq 39
+          test "$docx_count" -eq 39
+          test "$manifest_rows" -eq 39
+
+      - name: Install parity renderer dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-writer fonts-cabin fontconfig python3-venv
+          libreoffice --version
+          fc-match Cabin
+          python3 -m venv .parity-venv
+          .parity-venv/bin/pip install --disable-pip-version-check \
+            pillow==11.3.0 \
+            numpy==2.2.6 \
+            scikit-image==0.25.2 \
+            pymupdf==1.26.4
+
+      - name: Render and measure visual parity
+        run: |
+          .parity-venv/bin/python scripts/dossier_visual_parity.py \
+            --web-dir artifacts/parity-source/web \
+            --pdf-dir artifacts/parity-source/pdf \
+            --docx-dir artifacts/parity-source/docx \
+            --out-dir artifacts/dossier-visual-parity-39
+
+      - name: Publish parity summary
+        shell: bash
+        run: |
+          cat artifacts/dossier-visual-parity-39/SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep report compact
+        shell: bash
+        run: |
+          rm -rf \
+            artifacts/dossier-visual-parity-39/normalized \
+            artifacts/dossier-visual-parity-39/docx-pdf
+
+      - name: Upload x39 visual parity report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dossier-visual-parity-39
+          path: artifacts/dossier-visual-parity-39
+          if-no-files-found: error
+          retention-days: 14
