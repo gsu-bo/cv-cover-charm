@@ -6,12 +6,13 @@ import {
   setCvTextAlignment,
   subscribeCvTextAlignment,
 } from "@/components/cv/text-alignment";
+import type { TextAlignment } from "@/lib/text-alignment";
 
 const TARGET_SELECTOR =
   '[data-editor-section-title="Schrift und Layout"] [data-editor-section-body]';
 
 export function CvTextAlignmentPortal() {
-  const alignment = useSyncExternalStore(
+  const alignment = useSyncExternalStore<TextAlignment>(
     subscribeCvTextAlignment,
     getCvTextAlignment,
     () => "left",
