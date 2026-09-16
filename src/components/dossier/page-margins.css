@@ -4,5 +4,5 @@
  * Keep this stylesheet intentionally rule-free: the visible letter/PDF layout,
  * its data-letter-content-box metadata and overflow/preflight calculations must
  * all read the same JavaScript geometry instead of being corrected afterwards
- * with CSS !important overrides.
+ * by a late CSS override.
  */

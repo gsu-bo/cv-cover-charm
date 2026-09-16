@@ -14,6 +14,10 @@ const letterCanvas = readFileSync(
   new URL("../../src/components/letter/LetterCanvas.tsx", import.meta.url),
   "utf8",
 );
+const letterLayout = readFileSync(
+  new URL("../../src/components/letter/layout-system.ts", import.meta.url),
+  "utf8",
+);
 
 describe("dossier header spacing", () => {
   test("defaults to 12 mm and clamps persisted values to 0–40 mm", () => {
@@ -59,11 +63,10 @@ describe("dossier header spacing", () => {
     expect(controls).toContain("headerGapMm: 12");
   });
 
-  test("applies the shared gap to motivation-letter content geometry", () => {
-    expect(letterCanvas).toContain("chrome.headerGapMm ?? 12");
-    expect(letterCanvas).toContain("top: baseGeometry.content.top + headerGapMm");
-    expect(letterCanvas).toContain(
-      "height: Math.max(0, baseGeometry.content.height - headerGapMm)",
-    );
+  test("routes the shared gap through the motivation-letter geometry source of truth", () => {
+    expect(letterCanvas).toContain("headerGapMm: chrome.headerGapMm ?? 12");
+    expect(letterCanvas).not.toContain("const baseGeometry = letterPageGeometry");
+    expect(letterLayout).toContain("context.headerGapMm ?? 0");
+    expect(letterLayout).toContain("defaultTop + headerGapMm");
   });
 });
