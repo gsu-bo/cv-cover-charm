@@ -1,0 +1,55 @@
+name: Apply canonical Brief default
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - .github/scripts/apply-canonical-brief-default.py
+      - .github/workflows/canonical-brief-default.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Apply canonical neutral fallback
+        run: python .github/scripts/apply-canonical-brief-default.py
+
+      - name: Audit implicit renderer fallbacks
+        run: |
+          echo "Remaining renderer fallback candidates:"
+          grep -R -n -E 'TEMPLATES\[0\]|\?\? "modern"|\|\| "modern"|defaultTemplate|fallbackTemplate' src || true
+
+      - name: Format changed source and tests
+        run: npx --yes prettier@3.8.3 --write \
+          src/lib/dossier-default-presentation.ts \
+          src/default-config.ts \
+          src/lib/dossier-chrome.ts \
+          src/lib/template-chrome.ts \
+          src/components/cover/TemplatePicker.tsx \
+          src/components/letter/types.ts \
+          src/components/letter/LetterCanvas.tsx \
+          src/components/cv/layout.ts \
+          src/lib/dossier.ts \
+          src/lib/dossier-pdf-document.ts \
+          tests/unit/letter-brief-default.test.tsx \
+          tests/unit/dossier-canonical-default.test.ts
+
+      - name: Commit canonical fallback
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(dossier): canonicalize neutral Brief defaults"
+          git push origin HEAD:dev
