@@ -43,12 +43,11 @@ describe("shared dossier text alignment", () => {
     expect(sharedControl).toContain("TextAlignmentControlProps<T extends TextAlignment>");
   });
 
-  test("title page, motivation letter and CV all use the same visual control", () => {
-    expect(elementBar).toContain("<TextAlignmentControl");
+  test("body editors share the control while title-page alignment stays template-internal", () => {
+    expect(elementBar).not.toContain("<TextAlignmentControl");
+    expect(elementBar).not.toContain("TextAlignmentControl from");
     expect(letterEditor).toContain("<TextAlignmentControl");
     expect(cvPortal).toContain("<TextAlignmentControl");
-    expect(elementBar).not.toContain('(["left", "center", "right"] as const).map');
-    expect(elementBar).not.toContain("function AlignIcon");
     expect(coverTypes).toContain("align: TextAlignment");
   });
 

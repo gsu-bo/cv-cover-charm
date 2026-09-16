@@ -4,8 +4,6 @@ import { FONT_LABELS, FONT_STACKS, LIST_STYLES } from "./types";
 import { resolveLayout } from "./resolve";
 import { FONT, FRAME } from "@/default-config";
 import { PhotoControls } from "./PhotoControls";
-import { TextAlignmentControl } from "@/components/dossier/TextAlignmentControl";
-import type { TextAlignment } from "@/lib/text-alignment";
 
 type Props = {
   block: Block;
@@ -35,8 +33,7 @@ type Props = {
 };
 
 type Tab = "text" | "absatz" | "farbe" | "rahmen" | "bild" | "position" | "form";
-type LayeredStyle = Omit<BlockStyle, "align"> & {
-  align: TextAlignment;
+type LayeredStyle = BlockStyle & {
   layer?: "back" | "front";
 };
 
@@ -482,16 +479,6 @@ export function ElementBar({
 
         {tab === "absatz" && (
           <>
-            <Ctl label="Ausrichtung">
-              <TextAlignmentControl
-                value={st.align}
-                onChange={(align) =>
-                  onChange({ align } as unknown as Partial<BlockStyle>)
-                }
-                ariaLabel="Textausrichtung"
-              />
-            </Ctl>
-
             <Ctl label="Aufzählung">
               {LIST_STYLES.map((l) => (
                 <button
