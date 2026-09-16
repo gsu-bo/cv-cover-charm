@@ -67,7 +67,9 @@ function templateSectionToggle(page: Page) {
 }
 
 async function downloadCompleteDossier(page: Page) {
-  await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
+  // The home screen is SSR-visible before React has attached the card onClick.
+  // Waiting for network idle avoids racing the hydration boundary.
+  await page.goto(BASE_URL, { waitUntil: "networkidle" });
 
   const dossierCard = page
     .getByRole("button")
