@@ -45,6 +45,31 @@ function normalizeFreshWordRecipe(recipe: DossierDocxTemplateRecipe) {
   } satisfies DossierDocxTemplateRecipe;
 }
 
+function neonSurfaceShape(shape: DossierDocxRecipeShape): DossierDocxRecipeShape {
+  if (shape.id !== "neon-letter-card" && shape.id !== "neon-cv-card") return shape;
+
+  // LibreOffice 25.x can drop these page-sized VML roundrect surfaces when
+  // they sit over Neon's dark full-page VML background. A plain VML rect keeps
+  // the same white content surface, remains editable in Word, and renders
+  // consistently across Word/LibreOffice without changing the web/PDF design.
+  return { ...shape, kind: "rect" };
+}
+
+function normalizeLegacyWordRecipe(recipe: DossierDocxTemplateRecipe) {
+  if (recipe.templateId !== "neon") return recipe;
+  return {
+    ...recipe,
+    letter: {
+      ...recipe.letter,
+      shapes: recipe.letter.shapes.map(neonSurfaceShape),
+    },
+    cv: {
+      ...recipe.cv,
+      shapes: recipe.cv.shapes.map(neonSurfaceShape),
+    },
+  } satisfies DossierDocxTemplateRecipe;
+}
+
 const NORMALIZED_FRESH_DOSSIER_DOCX_RECIPES = Object.fromEntries(
   Object.entries(FRESH_DOSSIER_DOCX_RECIPES).map(([id, recipe]) => [
     id,
@@ -52,11 +77,18 @@ const NORMALIZED_FRESH_DOSSIER_DOCX_RECIPES = Object.fromEntries(
   ]),
 ) as Readonly<Record<string, DossierDocxTemplateRecipe>>;
 
+const NORMALIZED_LEGACY_EXTRA_DOCX_RECIPES = Object.fromEntries(
+  Object.entries(LEGACY_EXTRA_DOCX_RECIPES).map(([id, recipe]) => [
+    id,
+    normalizeLegacyWordRecipe(recipe),
+  ]),
+) as Readonly<Record<string, DossierDocxTemplateRecipe>>;
+
 export const ALL_DOSSIER_DOCX_TEMPLATE_RECIPES: Readonly<
   Record<string, DossierDocxTemplateRecipe>
 > = {
   ...DOSSIER_DOCX_TEMPLATE_RECIPES,
-  ...LEGACY_EXTRA_DOCX_RECIPES,
+  ...NORMALIZED_LEGACY_EXTRA_DOCX_RECIPES,
   ...NORMALIZED_FRESH_DOSSIER_DOCX_RECIPES,
 };
 
