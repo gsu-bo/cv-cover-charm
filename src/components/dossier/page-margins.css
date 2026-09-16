@@ -1,0 +1,11 @@
+/*
+ * User page-margin overrides are intentionally late and narrow. Renderer geometry
+ * still computes the template default; these rules make the chosen final content
+ * box authoritative in preview and PDF without moving template artwork/chrome.
+ */
+html[data-letter-page-margins="custom"] [data-letter-page] [data-letter-text-layer] {
+  left: var(--letter-page-margin-left) !important;
+  right: var(--letter-page-margin-right) !important;
+  top: var(--letter-page-margin-top) !important;
+  bottom: var(--letter-page-margin-bottom) !important;
+}

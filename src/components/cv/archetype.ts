@@ -7,6 +7,7 @@ import {
   dossierHeaderVisualHeightMmForOptions,
   type DossierChromeOptions,
 } from "@/lib/dossier-chrome";
+import { getDossierPageMargins } from "@/lib/dossier-page-margins";
 
 /**
  * Bauformen des Lebenslaufs.
@@ -161,7 +162,9 @@ export function cvSurface(
     };
   }
 
-  const box = cvContentBox(frame, pageIndex, layout, sidebarPct, chrome);
+  // Decorative paper geometry remains template-owned. User page margins move
+  // only the text/content box and must never drag a frame or paper surface.
+  const box = cvDefaultContentBox(frame, pageIndex, layout, sidebarPct, chrome);
 
   if (frame.id === "quiet") {
     const frameClearance = frame.borderInsetMm ? frame.borderInsetMm + 2 : 0;
@@ -188,11 +191,11 @@ export function headTopMm(frame: CvFrame, pageIndex: number): number {
 }
 
 /**
- * Textbereich einer CV-Seite. Kopf- und Fussabstand kommen aus derselben
- * Dossier-Einstellung wie im Motivationsschreiben. Strukturelle Seitenränder
- * von Karten/Rahmen bleiben zusätzlich erhalten.
+ * Bewährter Satzspiegel der gewählten CV-Vorlage. Diese Funktion ignoriert
+ * bewusst eigene Seitenränder und ist damit auch die Quelle für die vier
+ * Default-Werte im Editor.
  */
-export function cvContentBox(
+export function cvDefaultContentBox(
   frame: CvFrame,
   pageIndex: number,
   layout: CvRenderLayout,
@@ -229,6 +232,22 @@ export function cvContentBox(
   }
 
   return { left: MARGIN_X, right: MARGIN_X, top, bottom };
+}
+
+/**
+ * Textbereich einer CV-Seite. Ohne eigene Werte bleibt der bestehende
+ * vorlagenabhängige Satzspiegel exakt erhalten. Sobald der Nutzer einen Rand
+ * ändert, werden alle vier aktuellen Werte als bewusster Satzspiegel verwendet.
+ */
+export function cvContentBox(
+  frame: CvFrame,
+  pageIndex: number,
+  layout: CvRenderLayout,
+  sidebarPct?: number,
+  chrome: DossierChromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
+): CvContentBox {
+  const custom = getDossierPageMargins("cv");
+  return custom ?? cvDefaultContentBox(frame, pageIndex, layout, sidebarPct, chrome);
 }
 
 /**

@@ -10,6 +10,10 @@ import {
   type DossierChromeContact,
   type DossierChromeOptions,
 } from "@/lib/dossier-chrome";
+import {
+  getDossierPageMarginsSnapshot,
+  subscribeDossierPageMargins,
+} from "@/lib/dossier-page-margins";
 import { resolveTemplateChromeOptions } from "@/lib/template-chrome";
 import { CvTextAlignmentPortal } from "./CvTextAlignmentPortal";
 import {
@@ -86,6 +90,13 @@ export function CvCanvas({
     getCvTextAlignment,
     () => "left",
   );
+  // Page margins are stored outside the legacy CV JSON. Subscribing here keeps
+  // preview, pagination and hidden PDF canvases on one geometry path.
+  useSyncExternalStore(
+    subscribeDossierPageMargins,
+    getDossierPageMarginsSnapshot,
+    () => "{}",
+  );
   const localContact = useMemo(() => contactFromCv(props.data), [props.data]);
   const design = useMemo(() => cvDesignWithFullSectionRules(props.design), [props.design]);
   const resolvedChromeOptions = useMemo(
@@ -144,7 +155,14 @@ export function CvCanvas({
         chromeOptions={resolvedChromeOptions}
         chromeContact={chromeContact ?? localContact}
       />
-      {!props.exportMode ? <CvTextAlignmentPortal /> : null}
+      {!props.exportMode ? (
+        <CvTextAlignmentPortal
+          template={design.template}
+          sidebarPct={design.sidebarPct}
+          chromeOptions={resolvedChromeOptions}
+          accentColor={design.colors.accent ?? secondary}
+        />
+      ) : null}
     </div>
   );
 }

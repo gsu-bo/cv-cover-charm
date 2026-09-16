@@ -1,6 +1,9 @@
 import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";
-import type { LetterAlignment, LetterDesign } from "@/components/letter/types";
+import { DossierPageMarginsControl } from "@/components/dossier/DossierPageMarginsControl";
+import { letterPageGeometry } from "@/components/letter/layout-system";
+import { DEMO_LETTER, type LetterAlignment, type LetterDesign } from "@/components/letter/types";
 import type { DossierChromeOptions } from "@/lib/dossier-chrome";
+import type { DossierPageMargins } from "@/lib/dossier-page-margins";
 
 const buttonClass =
   "rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -38,6 +41,30 @@ function legacyChromePatch(patch: Partial<DossierChromeOptions>): Partial<Letter
   if (patch.borderWidthMm !== undefined) next.chromeBorderWidthMm = patch.borderWidthMm;
   if (patch.textFont !== undefined) next.chromeTextFont = patch.textFont;
   return next;
+}
+
+function currentLetterDefaultMargins(design: LetterDesign): DossierPageMargins {
+  if (typeof document !== "undefined") {
+    const layer = document.querySelector<HTMLElement>(
+      '[data-letter-page]:not([data-export-mode="true"]) [data-letter-text-layer], [data-letter-page] [data-letter-text-layer]',
+    );
+    const raw = layer?.dataset.letterContentBox;
+    if (raw) {
+      const [left, top, right, bottom] = raw.split(",").map(Number);
+      if ([left, top, right, bottom].every(Number.isFinite)) {
+        return { left, top, right, bottom };
+      }
+    }
+  }
+
+  const geometry = letterPageGeometry(DEMO_LETTER, design);
+  const headerGap = geometry.effectiveHeaderMode === "none" ? 0 : 12;
+  return {
+    left: geometry.content.left,
+    top: geometry.content.top + headerGap,
+    right: geometry.content.right,
+    bottom: geometry.content.bottom,
+  };
 }
 
 function AlignmentRow({
@@ -85,6 +112,9 @@ export function LetterLayoutControls({
   design: LetterDesign;
   onChange: (value: Partial<LetterDesign>) => void;
 }) {
+  const defaultMargins = currentLetterDefaultMargins(design);
+  const accentColor = design.colors.accent ?? design.colors.primary;
+
   return (
     <div className="grid gap-2.5">
       <DossierChromeControls
@@ -140,6 +170,13 @@ export function LetterLayoutControls({
           Trennlinie nach Titel / Betreff
         </label>
       </div>
+
+      <DossierPageMarginsControl
+        scope="letter"
+        defaultMargins={defaultMargins}
+        accentColor={accentColor}
+        onApplied={() => onChange({})}
+      />
     </div>
   );
 }

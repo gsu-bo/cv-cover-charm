@@ -1,5 +1,6 @@
 import type { TemplateId } from "@/components/cover/types";
 import { cvFrameFor } from "@/components/cv/archetype";
+import { getDossierPageMargins } from "@/lib/dossier-page-margins";
 import { freshLetterSpec } from "./fresh-letter-system";
 import "./fresh-letter-integrity.css";
 import {
@@ -205,14 +206,20 @@ export function letterPageGeometry(
   const headerMode = effectiveHeaderMode(design);
   const footerMode = effectiveFooterMode(design, finalPage);
   const footerHeight = letterFooterHeightMm(data, footerMode, design.footerHeightMm ?? null);
-  const insets = fresh ? { left: fresh.left, right: fresh.right } : CONTENT_INSETS[archetype];
-  const top = letterContentTopMm(design, pageIndex, headerMode);
-  const bottom =
+  const defaultInsets = fresh ? { left: fresh.left, right: fresh.right } : CONTENT_INSETS[archetype];
+  const defaultTop = letterContentTopMm(design, pageIndex, headerMode);
+  const defaultBottom =
     footerMode === "none"
       ? 10
       : footerMode === "attachments"
         ? footerHeight + 7
         : footerHeight + 14.6;
+  const customMargins = getDossierPageMargins("letter");
+  const insets = customMargins
+    ? { left: customMargins.left, right: customMargins.right }
+    : defaultInsets;
+  const top = customMargins?.top ?? defaultTop;
+  const bottom = customMargins?.bottom ?? defaultBottom;
   const width = LETTER_PAGE_MM.width - insets.left - insets.right;
   const height = LETTER_PAGE_MM.height - top - bottom;
   const showAttachments =
