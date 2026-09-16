@@ -54,6 +54,7 @@ export function Section({ title, open, onToggle, hint, action, children }: Props
           {marker ? (
             <span
               data-form-group-marker
+              aria-hidden="true"
               className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground"
             >
               {marker}
