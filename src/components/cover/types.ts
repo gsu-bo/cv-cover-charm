@@ -546,7 +546,7 @@ export const DEMO_DATA: CoverData = {
   nachname: "Müller",
   adresse: "Dorfstrasse 12",
   plzOrt: "4535 Hubersdorf",
-  telefon: "+41 79 123 45 67",
+  telefon: "079 123 45 67",
   email: "lea.mueller@example.ch",
   geburtsdatum: "14.03.2010",
   lehrbetrieb: "Beispiel AG",
