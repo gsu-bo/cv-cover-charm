@@ -6,7 +6,10 @@ import {
   cvFrameFor,
   cvSafePageMarginMinimums,
 } from "@/components/cv/archetype";
-import { letterPageGeometry } from "@/components/letter/layout-system";
+import {
+  letterPageGeometry,
+  letterSafePageMarginMinimums,
+} from "@/components/letter/layout-system";
 import { DEMO_LETTER, emptyLetterDesign } from "@/components/letter/types";
 import { DEFAULT_DOSSIER_CHROME_OPTIONS } from "@/lib/dossier-chrome";
 import { patchDossierDocxPageMarginsXml } from "@/lib/dossier-docx-page-margins";
@@ -32,6 +35,7 @@ const letterControls = read("src/components/letter/LetterLayoutControls.tsx");
 const letterLayout = read("src/components/letter/layout-system.ts");
 const project = read("src/lib/dossier-project.ts");
 const docxExport = read("src/lib/dossier-docx-export.ts");
+const docxMargins = read("src/lib/dossier-docx-page-margins.ts");
 const pageMarginsStore = read("src/lib/dossier-page-margins.ts");
 
 describe("configurable CV and motivation-letter page margins", () => {
@@ -116,6 +120,33 @@ describe("configurable CV and motivation-letter page margins", () => {
     ).toBe(110);
   });
 
+  test("motivation-letter custom margins protect header, footer and template structure", () => {
+    clearDossierPageMargins();
+    const design = { ...emptyLetterDesign(), headerMode: "contact" as const };
+    const minimums = letterSafePageMarginMinimums(DEMO_LETTER, design);
+    expect(minimums.top).toBe(27);
+    expect(minimums.bottom).toBeGreaterThanOrEqual(7.5);
+
+    setDossierPageMargins("letter", { top: 5, right: 5, bottom: 5, left: 5 });
+    const content = letterPageGeometry(DEMO_LETTER, design).content;
+    expect({
+      top: content.top,
+      right: content.right,
+      bottom: content.bottom,
+      left: content.left,
+    }).toEqual(minimums);
+    clearDossierPageMargins();
+  });
+
+  test("Warm compact masthead remains a hard first-page safety zone", () => {
+    const design = {
+      ...emptyLetterDesign(),
+      template: "freundlich" as const,
+      headerMode: "compact" as const,
+    };
+    expect(letterSafePageMarginMinimums(DEMO_LETTER, design).top).toBe(57);
+  });
+
   test("both editors expose the same secondary collapsed control", () => {
     expect(control).toContain("<details");
     expect(control).toContain("Seitenränder");
@@ -125,6 +156,7 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(cvPortal).toContain('<DossierPageMarginsControl\n          scope="cv"');
     expect(cvPortal).toContain("minimumMargins={minimumMargins}");
     expect(letterControls).toContain('<DossierPageMarginsControl\n        scope="letter"');
+    expect(letterControls).toContain("minimumMargins={minimumMargins}");
   });
 
   test("margin inputs keep a draft while typing and commit on blur or Enter", () => {
@@ -147,6 +179,7 @@ describe("configurable CV and motivation-letter page margins", () => {
   test("the margin override changes content geometry, not template artwork", () => {
     expect(cvCanvas).toContain("subscribeDossierPageMargins");
     expect(letterLayout).toContain('getDossierPageMargins("letter")');
+    expect(letterLayout).toContain("letterSafePageMarginMinimums(data, design, context)");
     expect(read("src/components/cv/archetype.ts")).toContain(
       "const box = cvDefaultContentBox(frame, pageIndex, layout, sidebarPct, chrome);",
     );
@@ -197,6 +230,11 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(patched).toContain(section(1, 2, 3, 4));
     expect(patched).toContain('w:top="1134" w:right="1191" w:bottom="1247" w:left="1304"');
     expect(patched).toContain('w:top="1361" w:right="1417" w:bottom="1474" w:left="1531"');
-    expect(docxExport).toContain("applyDossierPageMarginsToDocx(hyphenated)");
+    expect(docxMargins).toContain("resolveSafeDossierDocxPageMargins");
+    expect(docxMargins).toContain("clampDossierPageMarginsToMinimums(state.letter, minimums)");
+    expect(docxMargins).toContain("clampDossierPageMarginsToMinimums(state.cv, minimums)");
+    expect(docxMargins).toContain("letterSafePageMarginMinimums");
+    expect(docxMargins).toContain("cvSafePageMarginMinimums");
+    expect(docxExport).toContain("applyDossierPageMarginsToDocx(hyphenated, letter, cv)");
   });
 });
