@@ -10,6 +10,8 @@ import {
 import type { DossierDocxDocuments } from "@/lib/dossier-docx-template-types";
 import { dossierDocxTemplatePlan } from "@/lib/dossier-docx-family";
 import { applyLetterAlignmentToDocx } from "@/lib/dossier-docx-letter-alignment";
+import { applyDossierHyphenationToDocx } from "@/lib/dossier-docx-hyphenation";
+import { getDossierHyphenationEnabled } from "@/lib/dossier-hyphenation";
 import { downloadBlob } from "@/lib/download";
 
 export type { DossierDocxDocuments };
@@ -198,7 +200,13 @@ export async function createDossierDocxBlob(
     throw new Error("DOCX benötigt dieselbe aktive Vorlage in allen drei Dossierteilen.");
   }
   const blob = await profile.createBlob({ cover, letter, cv });
-  return applyLetterAlignmentToDocx(blob, letter);
+  const aligned = await applyLetterAlignmentToDocx(blob, letter);
+  return applyDossierHyphenationToDocx(
+    aligned,
+    letter,
+    cv,
+    getDossierHyphenationEnabled(),
+  );
 }
 
 export async function downloadDossierDocx(
