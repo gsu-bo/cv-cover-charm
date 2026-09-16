@@ -999,6 +999,7 @@ function Anschreiben() {
 
             <Section title="Layout" open={open.layout} onToggle={() => toggle("layout")}>
               <LetterLayoutControls
+                data={data}
                 design={design}
                 onChange={(value) => setDesign((current) => ({ ...current, ...value }))}
               />

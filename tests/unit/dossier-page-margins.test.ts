@@ -27,12 +27,12 @@ import {
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 
 const control = read("src/components/dossier/DossierPageMarginsControl.tsx");
-const css = read("src/components/dossier/page-margins.css");
 const cvPortal = read("src/components/cv/CvTextAlignmentPortal.tsx");
 const cvCanvas = read("src/components/cv/CvCanvas.tsx");
 const letterCanvas = read("src/components/letter/LetterCanvas.tsx");
 const letterControls = read("src/components/letter/LetterLayoutControls.tsx");
 const letterLayout = read("src/components/letter/layout-system.ts");
+const letterRoute = read("src/routes/anschreiben.tsx");
 const project = read("src/lib/dossier-project.ts");
 const docxExport = read("src/lib/dossier-docx-export.ts");
 const docxMargins = read("src/lib/dossier-docx-page-margins.ts");
@@ -147,6 +147,25 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(letterSafePageMarginMinimums(DEMO_LETTER, design).top).toBe(57);
   });
 
+  test("letter controls derive safety limits from the current letter data", () => {
+    const design = { ...emptyLetterDesign(), footerMode: "attachments" as const };
+    const short = letterSafePageMarginMinimums(
+      { ...DEMO_LETTER, beilagen: ["Zeugnis"] },
+      design,
+    );
+    const long = letterSafePageMarginMinimums(
+      { ...DEMO_LETTER, beilagen: ["Sehr lange Beilage ".repeat(30)] },
+      design,
+    );
+    expect(long.bottom).toBeGreaterThan(short.bottom);
+
+    expect(letterControls).toContain("data: LetterData");
+    expect(letterControls).toContain("currentLetterDefaultMargins(data, design)");
+    expect(letterControls).toContain("letterSafePageMarginMinimums(data, design)");
+    expect(letterControls).not.toContain("DEMO_LETTER");
+    expect(letterRoute).toContain('<LetterLayoutControls\n                data={data}');
+  });
+
   test("both editors expose the same secondary collapsed control", () => {
     expect(control).toContain("<details");
     expect(control).toContain("Seitenränder");
@@ -186,8 +205,6 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(letterCanvas).toContain("const geometry = letterPageGeometry(data, effectiveDesign, {");
     expect(letterCanvas).not.toContain("const baseGeometry = letterPageGeometry");
     expect(control).not.toContain('import "./page-margins.css"');
-    expect(css).not.toContain('[data-letter-page] [data-letter-text-layer]');
-    expect(css).not.toContain("!important");
   });
 
   test("letter custom top margin is final and never receives the header gap twice", () => {

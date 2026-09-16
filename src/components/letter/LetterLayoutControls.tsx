@@ -4,7 +4,7 @@ import {
   letterPageGeometry,
   letterSafePageMarginMinimums,
 } from "@/components/letter/layout-system";
-import { DEMO_LETTER, type LetterAlignment, type LetterDesign } from "@/components/letter/types";
+import type { LetterAlignment, LetterData, LetterDesign } from "@/components/letter/types";
 import type { DossierChromeOptions } from "@/lib/dossier-chrome";
 import type { DossierPageMargins } from "@/lib/dossier-page-margins";
 
@@ -46,7 +46,7 @@ function legacyChromePatch(patch: Partial<DossierChromeOptions>): Partial<Letter
   return next;
 }
 
-function currentLetterDefaultMargins(design: LetterDesign): DossierPageMargins {
+function currentLetterDefaultMargins(data: LetterData, design: LetterDesign): DossierPageMargins {
   if (typeof document !== "undefined") {
     const layer = document.querySelector<HTMLElement>(
       '[data-letter-page]:not([data-export-mode="true"]) [data-letter-text-layer], [data-letter-page] [data-letter-text-layer]',
@@ -60,7 +60,7 @@ function currentLetterDefaultMargins(design: LetterDesign): DossierPageMargins {
     }
   }
 
-  const geometry = letterPageGeometry(DEMO_LETTER, design);
+  const geometry = letterPageGeometry(data, design);
   const headerGap = geometry.effectiveHeaderMode === "none" ? 0 : 12;
   return {
     left: geometry.content.left,
@@ -109,14 +109,16 @@ function AlignmentRow({
 }
 
 export function LetterLayoutControls({
+  data,
   design,
   onChange,
 }: {
+  data: LetterData;
   design: LetterDesign;
   onChange: (value: Partial<LetterDesign>) => void;
 }) {
-  const defaultMargins = currentLetterDefaultMargins(design);
-  const minimumMargins = letterSafePageMarginMinimums(DEMO_LETTER, design);
+  const defaultMargins = currentLetterDefaultMargins(data, design);
+  const minimumMargins = letterSafePageMarginMinimums(data, design);
   const accentColor = design.colors.accent ?? design.colors.primary;
 
   return (
