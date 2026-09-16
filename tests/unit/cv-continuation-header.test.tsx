@@ -9,7 +9,7 @@ const contact = {
   address: "Bahnhofstrasse 42",
   place: "8000 Zürich",
   email: "lea@example.ch",
-  phone: "+41 79 123 45 67",
+  phone: "079 123 45 67",
 };
 
 const colors = {
@@ -49,21 +49,50 @@ describe("shared dossier continuation headers", () => {
       expect(html).not.toContain("Lea Müller");
       expect(html).not.toContain("8000 Zürich");
       expect(html).not.toContain("lea@example.ch");
-      expect(html).not.toContain("+41 79 123 45 67");
+      expect(html).not.toContain("079 123 45 67");
     }
   });
 
-  test("contact means the same compact identity header on continuation pages", () => {
+  test("contact defaults to a compact identity header on continuation pages", () => {
     for (const scope of ["cv", "letter"] as const) {
       const html = markup(scope, "contact");
 
+      expect(html).toContain('data-dossier-first-page-different="true"');
       expect(html).toContain("data-dossier-continuation-contact-header");
       expect(html).toContain("Lea Müller");
-      expect(html).toContain("8000 Zürich");
       expect(html).toContain("lea@example.ch");
-      expect(html).toContain("+41 79 123 45 67");
+      expect(html).toContain("079 123 45 67");
+      expect(html).not.toContain("8000 Zürich");
       expect(html).not.toContain("Bahnhofstrasse 42");
     }
+  });
+
+  test("turning first-page-different off repeats the selected contact header", () => {
+    const html = renderToStaticMarkup(
+      createElement(DossierHeaderFooterChrome, {
+        scope: "cv",
+        template: "klassisch",
+        colors,
+        contact,
+        pageIndex: 1,
+        options: {
+          ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+          headerMode: "contact",
+          headerDifferentFirstPage: false,
+          headerTextLayout: "stacked",
+          footerMode: "compact",
+        },
+      }),
+    );
+
+    expect(html).toContain('data-dossier-first-page-different="false"');
+    expect(html).toContain("data-dossier-integrated-contact");
+    expect(html).not.toContain("data-dossier-continuation-contact-header");
+    expect(html).toContain("Lea Müller");
+    expect(html).toContain("Bahnhofstrasse 42");
+    expect(html).toContain("8000 Zürich");
+    expect(html).toContain("lea@example.ch");
+    expect(html).toContain("079 123 45 67");
   });
 
   test("contact continuation respects the existing visibility switches", () => {
@@ -77,7 +106,6 @@ describe("shared dossier continuation headers", () => {
         options: {
           ...DEFAULT_DOSSIER_CHROME_OPTIONS,
           headerMode: "contact",
-          headerShowAddress: false,
           headerShowPhone: false,
           footerMode: "compact",
         },
@@ -87,7 +115,7 @@ describe("shared dossier continuation headers", () => {
     expect(html).toContain("Lea Müller");
     expect(html).toContain("lea@example.ch");
     expect(html).not.toContain("8000 Zürich");
-    expect(html).not.toContain("+41 79 123 45 67");
+    expect(html).not.toContain("079 123 45 67");
   });
 
   test("none removes the header in both documents", () => {
