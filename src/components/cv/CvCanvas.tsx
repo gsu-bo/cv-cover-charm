@@ -1,10 +1,21 @@
-import { useLayoutEffect, useMemo, type ComponentProps, type CSSProperties } from "react";
+import {
+  useLayoutEffect,
+  useMemo,
+  useSyncExternalStore,
+  type ComponentProps,
+  type CSSProperties,
+} from "react";
 import {
   DEFAULT_DOSSIER_CHROME_OPTIONS,
   type DossierChromeContact,
   type DossierChromeOptions,
 } from "@/lib/dossier-chrome";
 import { resolveTemplateChromeOptions } from "@/lib/template-chrome";
+import { CvTextAlignmentPortal } from "./CvTextAlignmentPortal";
+import {
+  getCvTextAlignment,
+  subscribeCvTextAlignment,
+} from "./text-alignment";
 import { cvContentBox, cvFrameFor } from "./archetype";
 import { CV_LAYOUT_EVENT } from "./layout";
 import { CvCanvas as BaseCvCanvas } from "./CvCanvasBase";
@@ -70,6 +81,11 @@ export function CvCanvas({
   chromeContact,
   ...props
 }: Props) {
+  const bodyAlignment = useSyncExternalStore(
+    subscribeCvTextAlignment,
+    getCvTextAlignment,
+    () => "left",
+  );
   const localContact = useMemo(() => contactFromCv(props.data), [props.data]);
   const design = useMemo(() => cvDesignWithFullSectionRules(props.design), [props.design]);
   const resolvedChromeOptions = useMemo(
@@ -120,7 +136,7 @@ export function CvCanvas({
   } as CSSProperties;
 
   return (
-    <div style={geometryStyle}>
+    <div style={geometryStyle} data-cv-body-align={bodyAlignment}>
       <BaseCvCanvas
         {...props}
         data={data}
@@ -128,6 +144,7 @@ export function CvCanvas({
         chromeOptions={resolvedChromeOptions}
         chromeContact={chromeContact ?? localContact}
       />
+      {!props.exportMode ? <CvTextAlignmentPortal /> : null}
     </div>
   );
 }

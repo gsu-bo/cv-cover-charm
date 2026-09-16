@@ -4,6 +4,8 @@ import { FONT_LABELS, FONT_STACKS, LIST_STYLES } from "./types";
 import { resolveLayout } from "./resolve";
 import { FONT, FRAME } from "@/default-config";
 import { PhotoControls } from "./PhotoControls";
+import { TextAlignmentControl } from "@/components/dossier/TextAlignmentControl";
+import type { TextAlignment } from "@/lib/text-alignment";
 
 type Props = {
   block: Block;
@@ -33,7 +35,10 @@ type Props = {
 };
 
 type Tab = "text" | "absatz" | "farbe" | "rahmen" | "bild" | "position" | "form";
-type LayeredStyle = BlockStyle & { layer?: "back" | "front" };
+type LayeredStyle = Omit<BlockStyle, "align"> & {
+  align: TextAlignment;
+  layer?: "back" | "front";
+};
 
 const TAB_LABELS: Record<Tab, string> = {
   text: "Text",
@@ -159,33 +164,6 @@ function resizeHeight(block: Block, nextH: number, lockRatio: boolean): Partial<
   if (ratio === null || nextH <= 0) return {};
   if (!lockRatio) return { ratio: nextH / Math.max(1, block.style.w) };
   return { w: Math.max(5, Math.min(A4_WIDTH_MM, nextH / Math.max(ratio, 0.001))) };
-}
-
-function AlignIcon({ dir }: { dir: "left" | "center" | "right" }) {
-  const lines: Record<typeof dir, number[][]> = {
-    left: [
-      [2, 12],
-      [2, 8],
-      [2, 12],
-    ],
-    center: [
-      [2, 12],
-      [4, 8],
-      [2, 12],
-    ],
-    right: [
-      [2, 12],
-      [6, 8],
-      [2, 12],
-    ],
-  };
-  return (
-    <svg width="14" height="12" viewBox="0 0 14 12" aria-hidden="true">
-      {lines[dir].map(([x, w], i) => (
-        <rect key={i} x={x} y={1 + i * 4} width={w} height="2" rx="1" fill="currentColor" />
-      ))}
-    </svg>
-  );
 }
 
 /**
@@ -505,17 +483,13 @@ export function ElementBar({
         {tab === "absatz" && (
           <>
             <Ctl label="Ausrichtung">
-              {(["left", "center", "right"] as const).map((a) => (
-                <button
-                  key={a}
-                  type="button"
-                  aria-label={`Ausrichtung ${a}`}
-                  className={toggle(st.align === a)}
-                  onClick={() => onChange({ align: a })}
-                >
-                  <AlignIcon dir={a} />
-                </button>
-              ))}
+              <TextAlignmentControl
+                value={st.align}
+                onChange={(align) =>
+                  onChange({ align } as unknown as Partial<BlockStyle>)
+                }
+                ariaLabel="Textausrichtung"
+              />
             </Ctl>
 
             <Ctl label="Aufzählung">

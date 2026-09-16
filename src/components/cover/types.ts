@@ -1,3 +1,5 @@
+import type { TextAlignment } from "@/lib/text-alignment";
+
 export type CoverData = {
   /** Zeile über dem Beruf, z. B. "Bewerbung um eine Lehrstelle als". */
   kicker: string;
@@ -100,7 +102,7 @@ export type BlockStyle = {
   size: number;
   /** Farbe: entweder ein Slot-Key ("accent") oder ein Hex-Wert. */
   color: string;
-  align: "left" | "center" | "right";
+  align: TextAlignment;
   weight: number;
   italic: boolean;
   underline: boolean;

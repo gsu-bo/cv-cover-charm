@@ -13,9 +13,16 @@ import {
   type CvPhotoPlacement,
 } from "./photo-place";
 import {
+  clearCvTextAlignment,
+  CV_TEXT_ALIGNMENT_STORAGE_KEY,
+  readPersistedCvTextAlignment,
+  setCvTextAlignment,
+} from "./text-alignment";
+import {
   normalizeDossierPhotoStyle,
   type DossierPhotoStyle,
 } from "@/lib/dossier-photo";
+import type { TextAlignment } from "@/lib/text-alignment";
 import {
   DEFAULT_CV_PLACEMENTS,
   type CvPlacementKey,
@@ -36,6 +43,7 @@ const PORTABLE_CV_STORAGE_KEYS = [
   PLACEMENT_KEY,
   PHOTO_KEY,
   PHOTO_PLACEMENT_KEY,
+  CV_TEXT_ALIGNMENT_STORAGE_KEY,
 ] as const;
 
 /**
@@ -50,6 +58,7 @@ export type PortableCvState = {
   placements?: Partial<CvPlacements>;
   photoStyle?: Partial<DossierPhotoStyle>;
   photoPlacement?: Partial<CvPhotoPlacement>;
+  textAlign?: TextAlignment;
 };
 
 const validLayout = (value: string | null): CvLayoutId | undefined => {
@@ -82,6 +91,7 @@ export function readPortableCvState(): PortableCvState | undefined {
     const placementsRaw = storage.getItem(PLACEMENT_KEY);
     const photoRaw = storage.getItem(PHOTO_KEY);
     const photoPlacementRaw = storage.getItem(PHOTO_PLACEMENT_KEY);
+    const textAlign = readPersistedCvTextAlignment();
     const sectionGapMm =
       sectionGapRaw === null ? null : normalizeCvSectionGapMm(sectionGapRaw);
 
@@ -126,6 +136,7 @@ export function readPortableCvState(): PortableCvState | undefined {
       ...(placements ? { placements } : {}),
       ...(photoStyle ? { photoStyle } : {}),
       ...(photoPlacement ? { photoPlacement } : {}),
+      ...(textAlign ? { textAlign } : {}),
     };
   } catch {
     return undefined;
@@ -141,6 +152,7 @@ export function clearPortableCvState() {
   } catch {
     // Blockierter Browser-Speicher darf den restlichen Import nicht abbrechen.
   }
+  clearCvTextAlignment();
 }
 
 /**
@@ -167,4 +179,5 @@ export function applyPortableCvState(state?: PortableCvState | null) {
   if (state.photoPlacement && typeof state.photoPlacement === "object") {
     setCvPhotoPlacement(state.photoPlacement);
   }
+  if (state.textAlign) setCvTextAlignment(state.textAlign);
 }

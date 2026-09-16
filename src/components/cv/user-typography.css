@@ -187,3 +187,24 @@ html[data-dossier-template]
   ) * {
   font-family: var(--dossier-font) !important;
 }
+
+/*
+ * One shared alignment contract for native CV prose. The wrapper lives outside
+ * the measured/exported pages, so the same value reaches editor preview, PDF
+ * capture and the vector text layer without touching names or section titles.
+ */
+[data-cv-body-align="left"] [data-cv-body] {
+  text-align: left !important;
+}
+
+[data-cv-body-align="center"] [data-cv-body] {
+  text-align: center !important;
+}
+
+[data-cv-body-align="right"] [data-cv-body] {
+  text-align: right !important;
+}
+
+[data-cv-body-align="justify"] [data-cv-body] {
+  text-align: justify !important;
+}

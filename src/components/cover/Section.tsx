@@ -39,6 +39,7 @@ export function Section({ title, open, onToggle, hint, action, children }: Props
   return (
     <section
       data-editor-section
+      data-editor-section-title={title}
       data-form-group={group}
       className="overflow-hidden rounded-lg border bg-background"
     >
@@ -88,7 +89,7 @@ export function Section({ title, open, onToggle, hint, action, children }: Props
         {action}
       </div>
       {open && (
-        <div id={id} className="border-t px-3 py-3 sm:px-4 sm:py-4">
+        <div id={id} data-editor-section-body className="border-t px-3 py-3 sm:px-4 sm:py-4">
           {children}
         </div>
       )}

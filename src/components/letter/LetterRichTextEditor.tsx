@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, List, Table2 } from "lucide-react";
+import { List, Table2 } from "lucide-react";
+import { TextAlignmentControl } from "@/components/dossier/TextAlignmentControl";
 import {
   letterRichHtml,
   letterTextAlign,
@@ -30,17 +31,6 @@ const LIST_OPTIONS: Array<{ value: LetterListStyle | "none"; marker: string; lab
   { value: "plus", marker: "+", label: "Plus" },
   { value: "dot", marker: "·", label: "Punkt zentriert" },
   { value: "none", marker: "", label: "Kein Zeichen" },
-];
-
-const ALIGN_OPTIONS: Array<{
-  value: LetterTextAlign;
-  label: string;
-  Icon: typeof AlignLeft;
-}> = [
-  { value: "left", label: "Linksbündig", Icon: AlignLeft },
-  { value: "center", label: "Zentriert", Icon: AlignCenter },
-  { value: "right", label: "Rechtsbündig", Icon: AlignRight },
-  { value: "justify", label: "Blocksatz", Icon: AlignJustify },
 ];
 
 const TABLE_GRID_SIZE = 8;
@@ -394,20 +384,11 @@ export function LetterRichTextEditor({
         </button>
 
         <span aria-hidden="true" className="mx-0.5 h-7 w-px self-center bg-border" />
-        {ALIGN_OPTIONS.map(({ value, label, Icon }) => (
-          <button
-            key={value}
-            type="button"
-            className={`${toolClass} flex items-center justify-center px-2 ${toolbar.align === value ? activeToolClass : ""}`}
-            aria-label={label}
-            aria-pressed={toolbar.align === value}
-            title={label}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => setAlignment(value)}
-          >
-            <Icon className="h-4 w-4" />
-          </button>
-        ))}
+        <TextAlignmentControl
+          value={toolbar.align}
+          onChange={setAlignment}
+          ariaLabel="Textausrichtung"
+        />
 
         <span aria-hidden="true" className="mx-0.5 h-7 w-px self-center bg-border" />
         {([1, 2, 3] as const).map((count) => (
