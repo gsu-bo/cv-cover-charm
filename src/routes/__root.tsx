@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import editorActionMenuCss from "../components/dossier/editor-action-menu.css?url";
 import humanPolishCss from "../components/dossier/human-polish.css?url";
 import letterAlignmentCss from "../components/letter/letter-alignment.css?url";
+import { DossierHyphenationBridge } from "../components/dossier/DossierHyphenationControl";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -158,6 +159,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <DossierHyphenationBridge />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
