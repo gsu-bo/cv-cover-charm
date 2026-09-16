@@ -6,6 +6,7 @@ import {
   patchDossierChrome,
   setDossierChromeSync,
   subscribeDossierChrome,
+  type DossierChromeInlineSeparator,
   type DossierChromeOptions,
   type DossierChromeScope,
   type DossierFooterMode,
@@ -160,6 +161,7 @@ export function DossierChromeControls({
         ? "contact-inline"
         : "contact-stacked"
       : options.headerMode;
+  const headerInlineSeparator = options.headerInlineSeparator ?? "icons";
 
   // The shared model calls the rich footer "details". The letter UI historically
   // exposed the same behavior as "attachments"; keeping that form value avoids
@@ -325,6 +327,9 @@ export function DossierChromeControls({
                     headerMode: "contact",
                     headerTextLayout: value === "contact-inline" ? "inline" : "stacked",
                     headerHeightMm: null,
+                    ...(value === "contact-inline" && options.headerInlineSeparator == null
+                      ? { headerInlineSeparator: "icons" as DossierChromeInlineSeparator }
+                      : {}),
                   });
                   return;
                 }
@@ -344,8 +349,8 @@ export function DossierChromeControls({
 
           <span className="text-[11px] leading-relaxed text-muted-foreground">
             Kompakt zeigt nur das Designband. Die Kontaktvarianten integrieren Name, Adresse/Wohnort,
-            Telefon und E-Mail direkt in den farbigen Header; waagrecht werden die Angaben mit ·
-            getrennt.
+            Telefon und E-Mail direkt in den farbigen Header. Bei der waagrechten Variante kannst du
+            die Trennung unten auswählen.
           </span>
 
           {scope === "letter" || options.headerMode === "contact" ? (
@@ -430,21 +435,49 @@ export function DossierChromeControls({
               </label>
 
               {options.headerMode === "contact" ? (
-                <div
-                  data-dossier-header-fields
-                  className="grid grid-cols-2 gap-2 rounded-md border bg-muted/30 p-2.5"
-                >
-                  {contactOptions.map(([key, label, checked]) => (
-                    <label key={key} className="flex items-center gap-2 text-xs">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(event) => patchOptions({ [key]: event.target.checked })}
-                      />
-                      {label} integrieren
+                <>
+                  <div
+                    data-dossier-header-fields
+                    className="grid grid-cols-2 gap-2 rounded-md border bg-muted/30 p-2.5"
+                  >
+                    {contactOptions.map(([key, label, checked]) => (
+                      <label key={key} className="flex items-center gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(event) => patchOptions({ [key]: event.target.checked })}
+                        />
+                        {label} integrieren
+                      </label>
+                    ))}
+                  </div>
+
+                  {options.headerTextLayout === "inline" ? (
+                    <label className="block text-xs font-medium">
+                      Trennung der Angaben
+                      <select
+                        data-dossier-header-inline-separator-control
+                        value={headerInlineSeparator}
+                        onChange={(event) =>
+                          patchOptions({
+                            headerInlineSeparator: event.target.value as DossierChromeInlineSeparator,
+                          })
+                        }
+                        className={selectClass}
+                      >
+                        <option value="dot">Mittelpunkt ·</option>
+                        <option value="icons">Symbole: Handy + Brief</option>
+                        <option value="slash">Schrägstrich /</option>
+                        <option value="pipe">Senkrechter Strich |</option>
+                        <option value="space">Leerraum (5 Leerzeichen)</option>
+                      </select>
+                      <span className="mt-1 block text-[11px] font-normal leading-relaxed text-muted-foreground">
+                        Symbole setzt vor Telefon und E-Mail feine einfarbige Icons; die übrigen
+                        Angaben bleiben ruhig mit Mittelpunkt getrennt.
+                      </span>
                     </label>
-                  ))}
-                </div>
+                  ) : null}
+                </>
               ) : null}
 
               <BackgroundControl
