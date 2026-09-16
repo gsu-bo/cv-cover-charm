@@ -1,6 +1,10 @@
 import { FONT_LABELS, TEMPLATES, type FontKey, type TemplateId } from "@/components/cover/types";
 import { LETTER_STORAGE_KEY } from "@/lib/dossier-project";
-import type { DossierChromeState, DossierChromeTextLayout } from "@/lib/dossier-chrome";
+import type {
+  DossierChromeInlineSeparator,
+  DossierChromeState,
+  DossierChromeTextLayout,
+} from "@/lib/dossier-chrome";
 
 export type LetterAlignment = "left" | "right";
 export type LetterTemplateId = "brief" | TemplateId;
@@ -71,6 +75,7 @@ export type LetterDesign = {
   headerShowEmail?: boolean;
   headerHeightMm?: number | null;
   headerTextLayout?: DossierChromeTextLayout;
+  headerInlineSeparator?: DossierChromeInlineSeparator;
   headerBackgroundColor?: string | null;
   headerGradientColor?: string | null;
   /** @deprecated Legacy-/SSR-Kompatibilität. Live ist DossierChromeState kanonisch. */
@@ -101,7 +106,7 @@ export const DEMO_LETTER: LetterData = {
   absenderName: "Lea Müller",
   absenderAdresse: "Dorfstrasse 12",
   absenderPlzOrt: "4535 Hubersdorf",
-  absenderTelefon: "+41 79 123 45 67",
+  absenderTelefon: "079 123 45 67",
   absenderEmail: "lea.mueller@example.ch",
   empfaengerFirma: "Beispiel AG",
   empfaengerName: "Herr Thomas Weber",
@@ -178,6 +183,16 @@ function normalizedColor(value: unknown): string | null {
     : null;
 }
 
+function normalizedHeaderInlineSeparator(value: unknown): DossierChromeInlineSeparator {
+  return value === "dot" ||
+    value === "icons" ||
+    value === "slash" ||
+    value === "pipe" ||
+    value === "space"
+    ? value
+    : "icons";
+}
+
 export function emptyLetterDesign(): LetterDesign {
   const template: LetterTemplateId = "brief";
   return {
@@ -198,6 +213,7 @@ export function emptyLetterDesign(): LetterDesign {
     headerShowEmail: true,
     headerHeightMm: null,
     headerTextLayout: "stacked",
+    headerInlineSeparator: "icons",
     headerBackgroundColor: null,
     headerGradientColor: null,
     footerMode: "compact",
@@ -267,6 +283,7 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
     headerShowEmail: incoming.headerShowEmail !== false,
     headerHeightMm: normalizedMm(incoming.headerHeightMm),
     headerTextLayout: incoming.headerTextLayout === "inline" ? "inline" : "stacked",
+    headerInlineSeparator: normalizedHeaderInlineSeparator(incoming.headerInlineSeparator),
     headerBackgroundColor: normalizedColor(incoming.headerBackgroundColor),
     headerGradientColor: normalizedColor(incoming.headerGradientColor),
     footerMode,
