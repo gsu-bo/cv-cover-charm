@@ -53,4 +53,17 @@ describe("Fresh DOCX recipe registry", () => {
       expect((recipe?.cv as LightSurface)?.contentSurface).toBe("light");
     }
   });
+
+  test("Orbit Word motifs preserve circular rings instead of rectangular frames", () => {
+    const orbit = dossierDocxTemplateRecipe("orbit");
+    expect(orbit).not.toBeNull();
+
+    for (const page of [orbit?.letter, orbit?.cv]) {
+      const rings = page?.shapes.filter((shape) => shape.id.includes("-ring")) ?? [];
+      expect(rings).toHaveLength(4);
+      expect(rings.every((shape) => shape.kind === "oval")).toBe(true);
+      expect(rings.filter((shape) => shape.color === "paper")).toHaveLength(2);
+      expect(rings.some((shape) => shape.kind === "frame")).toBe(false);
+    }
+  });
 });
