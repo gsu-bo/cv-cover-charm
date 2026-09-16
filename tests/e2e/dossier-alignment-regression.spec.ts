@@ -155,6 +155,16 @@ async function expectAlignmentControlIsBodyOnly(page: Page) {
   await expect(control.locator('button[data-alignment="right"]')).toHaveCount(0);
 }
 
+async function openCvAlignmentControl(page: Page) {
+  const section = page.locator('[data-editor-section-title="Schrift und Layout"]');
+  await expect(section).toBeVisible();
+  const toggle = section.locator("[data-editor-section-toggle]");
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  await expect(section.locator("[data-editor-section-body]")).toBeVisible();
+  await expect(section.locator("[data-cv-text-alignment-control]")).toBeVisible();
+  await expectAlignmentControlIsBodyOnly(page);
+}
+
 test.describe("body alignment Web/PDF parity", () => {
   test.setTimeout(180_000);
 
@@ -185,7 +195,7 @@ test.describe("body alignment Web/PDF parity", () => {
       page,
     }) => {
       await seedCv(page, align);
-      await expectAlignmentControlIsBodyOnly(page);
+      await openCvAlignmentControl(page);
 
       const previewCanvas = page
         .locator('[data-dossier-document="cv"][data-export-mode="false"]')
