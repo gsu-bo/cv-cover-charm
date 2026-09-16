@@ -128,19 +128,9 @@ export function LetterCanvas({
     }),
     [chrome, design],
   );
-  const baseGeometry = letterPageGeometry(data, effectiveDesign);
-  const headerGapMm =
-    baseGeometry.effectiveHeaderMode === "none"
-      ? 0
-      : Math.min(40, Math.max(0, chrome.headerGapMm ?? 12));
-  const geometry = {
-    ...baseGeometry,
-    content: {
-      ...baseGeometry.content,
-      top: baseGeometry.content.top + headerGapMm,
-      height: Math.max(0, baseGeometry.content.height - headerGapMm),
-    },
-  };
+  const geometry = letterPageGeometry(data, effectiveDesign, {
+    headerGapMm: chrome.headerGapMm ?? 12,
+  });
   const contentWidthMm = geometry.content.width;
   const sourcePalette = cvPalette(design.colors);
   const palette =

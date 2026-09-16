@@ -1,11 +1,8 @@
 /*
- * User page-margin overrides are intentionally late and narrow. Renderer geometry
- * still computes the template default; these rules make the chosen final content
- * box authoritative in preview and PDF without moving template artwork/chrome.
+ * Page-margin geometry is owned by the document renderers.
+ *
+ * Keep this stylesheet intentionally rule-free: the visible letter/PDF layout,
+ * its data-letter-content-box metadata and overflow/preflight calculations must
+ * all read the same JavaScript geometry instead of being corrected afterwards
+ * with CSS !important overrides.
  */
-html[data-letter-page-margins="custom"] [data-letter-page] [data-letter-text-layer] {
-  left: var(--letter-page-margin-left) !important;
-  right: var(--letter-page-margin-right) !important;
-  top: var(--letter-page-margin-top) !important;
-  bottom: var(--letter-page-margin-bottom) !important;
-}

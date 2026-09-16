@@ -25,6 +25,8 @@ export type LetterPageContext = {
   pageIndex?: number;
   /** Attachments belong only on the final page of a multi-page letter. */
   finalPage?: boolean;
+  /** Additional template-owned whitespace after the header. Ignored once the user owns the page margins. */
+  headerGapMm?: number;
 };
 
 type MmRect = {
@@ -206,7 +208,9 @@ export function letterPageGeometry(
   const headerMode = effectiveHeaderMode(design);
   const footerMode = effectiveFooterMode(design, finalPage);
   const footerHeight = letterFooterHeightMm(data, footerMode, design.footerHeightMm ?? null);
-  const defaultInsets = fresh ? { left: fresh.left, right: fresh.right } : CONTENT_INSETS[archetype];
+  const defaultInsets = fresh
+    ? { left: fresh.left, right: fresh.right }
+    : CONTENT_INSETS[archetype];
   const defaultTop = letterContentTopMm(design, pageIndex, headerMode);
   const defaultBottom =
     footerMode === "none"
@@ -215,10 +219,14 @@ export function letterPageGeometry(
         ? footerHeight + 7
         : footerHeight + 14.6;
   const customMargins = getDossierPageMargins("letter");
+  const headerGapMm =
+    customMargins || headerMode === "none"
+      ? 0
+      : Math.min(40, Math.max(0, context.headerGapMm ?? 0));
   const insets = customMargins
     ? { left: customMargins.left, right: customMargins.right }
     : defaultInsets;
-  const top = customMargins?.top ?? defaultTop;
+  const top = customMargins?.top ?? defaultTop + headerGapMm;
   const bottom = customMargins?.bottom ?? defaultBottom;
   const width = LETTER_PAGE_MM.width - insets.left - insets.right;
   const height = LETTER_PAGE_MM.height - top - bottom;

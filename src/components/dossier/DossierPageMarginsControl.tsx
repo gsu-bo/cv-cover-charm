@@ -11,7 +11,6 @@ import {
   type DossierPageMarginScope,
   type DossierPageMargins,
 } from "@/lib/dossier-page-margins";
-import "./page-margins.css";
 
 const SIDES: Array<{ key: keyof DossierPageMargins; label: string }> = [
   { key: "top", label: "Oben" },
