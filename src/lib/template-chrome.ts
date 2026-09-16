@@ -1,4 +1,9 @@
-import type { DossierChromeOptions, DossierHeaderMode } from "@/lib/dossier-chrome";
+import type {
+  DossierChromeOptions,
+  DossierFooterMode,
+  DossierHeaderMode,
+} from "@/lib/dossier-chrome";
+import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
 
 /**
  * Most dossier templates read better with the quiet 3 mm signature band. Only
@@ -51,7 +56,17 @@ const AUTO_GRADIENT_CONTACT_TEMPLATES = new Set([
  * replace that paired design.
  */
 export function defaultHeaderModeForTemplate(template: string): DossierHeaderMode {
+  if (template === CANONICAL_DOSSIER_PRESENTATION.template) {
+    return CANONICAL_DOSSIER_PRESENTATION.letter.headerMode;
+  }
   return CONTACT_HEADER_DEFAULT_TEMPLATES.has(template) ? "contact" : "compact";
+}
+
+/** Footer mode written when a template is deliberately selected. */
+export function defaultFooterModeForTemplate(template: string): DossierFooterMode {
+  return template === CANONICAL_DOSSIER_PRESENTATION.template
+    ? CANONICAL_DOSSIER_PRESENTATION.letter.footerMode
+    : "compact";
 }
 
 /**

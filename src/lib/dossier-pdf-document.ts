@@ -17,6 +17,7 @@ import {
   type LetterDesign,
 } from "@/components/letter/types";
 import { emptyCoverDraft } from "@/lib/dossier";
+import { DEFAULTS } from "@/default-config";
 
 export type CoverPdfDocument = {
   template: TemplateId;
@@ -65,10 +66,16 @@ const EMPTY_COVER_DATA: CoverData = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === "object" && !Array.isArray(value);
 
-const defaultColors = (template: TemplateId): Record<string, string> => {
-  const definition = TEMPLATES.find((candidate) => candidate.id === template) ?? TEMPLATES[0];
-  return Object.fromEntries(definition.slots.map((slot) => [slot.key, slot.default]));
+const templateDefinition = (template: TemplateId) => {
+  const definition =
+    TEMPLATES.find((candidate) => candidate.id === template) ??
+    TEMPLATES.find((candidate) => candidate.id === DEFAULTS.TEMPLATE);
+  if (!definition) throw new Error("Canonical dossier template is missing");
+  return definition;
 };
+
+const defaultColors = (template: TemplateId): Record<string, string> =>
+  Object.fromEntries(templateDefinition(template).slots.map((slot) => [slot.key, slot.default]));
 
 export function coverPdfHasContent(data: CoverData, customs: CustomField[] = []): boolean {
   const fields = [
@@ -145,8 +152,8 @@ export function coverPdfDocumentFromSaved(raw: unknown): CoverPdfDocument | null
   const template =
     typeof raw.template === "string" && TEMPLATES.some((item) => item.id === raw.template)
       ? (raw.template as TemplateId)
-      : TEMPLATES[0].id;
-  const definition = TEMPLATES.find((item) => item.id === template) ?? TEMPLATES[0];
+      : DEFAULTS.TEMPLATE;
+  const definition = templateDefinition(template);
   const data = {
     ...EMPTY_COVER_DATA,
     ...(raw.data as Partial<CoverData>),

@@ -1,4 +1,5 @@
 import { FONT_LABELS, type FontKey } from "@/components/cover/types";
+import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
 
 export type DossierChromeScope = "cv" | "letter";
 export type DossierHeaderMode = "compact" | "contact" | "none";
@@ -12,7 +13,7 @@ export type DossierChromeOptions = {
   headerShowAddress: boolean;
   headerShowPhone: boolean;
   headerShowEmail: boolean;
-  /** Word-like first-page behavior. Follow-up pages use a compact identity header by default. */
+  /** Word-like first-page behavior for templates that explicitly use shared chrome. */
   headerDifferentFirstPage?: boolean;
   headerHeightMm: number | null;
   /** Additional whitespace between the shared header zone and document content. */
@@ -66,7 +67,7 @@ const LETTER_STORAGE_KEY = "anschreiben:v1";
 const EVENT = "bewerbungsdossier-chrome-change";
 
 export const DEFAULT_DOSSIER_CHROME_OPTIONS: DossierChromeOptions = {
-  headerMode: "contact",
+  headerMode: CANONICAL_DOSSIER_PRESENTATION.letter.headerMode,
   headerShowName: true,
   headerShowAddress: true,
   headerShowPhone: true,
@@ -80,7 +81,7 @@ export const DEFAULT_DOSSIER_CHROME_OPTIONS: DossierChromeOptions = {
   headerInlineSeparator: "icons",
   headerBackgroundColor: null,
   headerGradientColor: null,
-  footerMode: "compact",
+  footerMode: CANONICAL_DOSSIER_PRESENTATION.letter.footerMode,
   footerHeightMm: null,
   footerContentOffsetYMm: 0,
   footerTextLayout: "inline",

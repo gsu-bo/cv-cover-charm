@@ -78,21 +78,7 @@ function resolveLetterChrome(
   chromeOptions?: DossierChromeOptions,
 ): DossierChromeOptions {
   const requested = chromeOptions ?? legacyChromeFromDesign(design);
-  const plainBriefDefault =
-    design.template === "brief" &&
-    design.headerMode === "none" &&
-    requested.headerMode === "contact";
-  const effectiveRequested = plainBriefDefault
-    ? {
-        ...requested,
-        headerMode: "none" as const,
-        headerHeightMm: null,
-        headerBackgroundColor: null,
-        headerGradientColor: null,
-      }
-    : requested;
-
-  return resolveTemplateChromeOptions(design.template, design.colors, effectiveRequested);
+  return resolveTemplateChromeOptions(design.template, design.colors, requested);
 }
 
 export function LetterCanvas({

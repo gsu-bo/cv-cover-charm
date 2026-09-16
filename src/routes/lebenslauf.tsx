@@ -111,7 +111,7 @@ import {
   readStoredDossierPart,
   storeDossierProject,
 } from "@/lib/dossier-project";
-import { PDF, PREVIEW, SHAPE } from "@/default-config";
+import { DEFAULTS, PDF, PREVIEW, SHAPE } from "@/default-config";
 import {
   describe,
   formatWhen,
@@ -161,7 +161,8 @@ const DEFAULT_BG_OPACITY = 0.25;
 const LEGACY_DEFAULT_BG_OPACITIES = [0.06, 0.12];
 
 function defaultColors(template: TemplateId): Record<string, string> {
-  const t = TEMPLATES.find((x) => x.id === template) ?? TEMPLATES[0];
+  const t =
+    TEMPLATES.find((x) => x.id === template) ?? TEMPLATES.find((x) => x.id === DEFAULTS.TEMPLATE)!;
   return Object.fromEntries(t.slots.map((s) => [s.key, s.default]));
 }
 
@@ -342,7 +343,9 @@ function Lebenslauf() {
     setData((d) => ({ ...d, person: { ...d.person, ...p } }));
 
   const activeTemplate = useMemo(
-    () => TEMPLATES.find((t) => t.id === design.template) ?? TEMPLATES[0],
+    () =>
+      TEMPLATES.find((t) => t.id === design.template) ??
+      TEMPLATES.find((t) => t.id === DEFAULTS.TEMPLATE)!,
     [design.template],
   );
 

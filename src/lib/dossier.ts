@@ -81,8 +81,16 @@ export function coverDraftFingerprint(draft: CoverDraft | null): string | null {
   return (hash >>> 0).toString(36);
 }
 
+function templateDefinition(template: TemplateId) {
+  const definition =
+    TEMPLATES.find((candidate) => candidate.id === template) ??
+    TEMPLATES.find((candidate) => candidate.id === DEFAULTS.TEMPLATE);
+  if (!definition) throw new Error("Canonical dossier template is missing");
+  return definition;
+}
+
 function defaultColors(template: TemplateId): Record<string, string> {
-  const t = TEMPLATES.find((x) => x.id === template) ?? TEMPLATES[0];
+  const t = templateDefinition(template);
   return Object.fromEntries(t.slots.map((s) => [s.key, s.default]));
 }
 
@@ -222,7 +230,8 @@ export function readCoverDraft(): CoverDraft | null {
   if (!p) return null;
 
   try {
-    const templateDef = TEMPLATES.find((t) => t.id === p.template) ?? TEMPLATES[0];
+    const templateDef =
+      TEMPLATES.find((t) => t.id === p.template) ?? templateDefinition(DEFAULTS.TEMPLATE);
     const template = templateDef.id;
     const d = p.data ?? {};
     const coverData = coverDataFromRaw(d);

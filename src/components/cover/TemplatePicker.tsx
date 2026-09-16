@@ -4,11 +4,9 @@ import { TEMPLATES } from "./types";
 import { freshFamilyForTemplate } from "./fresh-templates";
 import { applyDossierTheme } from "@/lib/dossier-theme";
 import { familyForTemplate } from "@/lib/dossier-family";
+import { DOSSIER_CHROME_STORAGE_KEY, patchDossierChrome } from "@/lib/dossier-chrome";
 import {
-  DOSSIER_CHROME_STORAGE_KEY,
-  patchDossierChrome,
-} from "@/lib/dossier-chrome";
-import {
+  defaultFooterModeForTemplate,
   defaultHeaderGapMmForTemplate,
   defaultHeaderModeForTemplate,
 } from "@/lib/template-chrome";
@@ -128,10 +126,11 @@ function mirrorHint(layout: CvLayoutId): string {
 
 function applyTemplateHeaderDefault(template: TemplateId) {
   const headerMode = defaultHeaderModeForTemplate(template);
+  const footerMode = defaultFooterModeForTemplate(template);
   const headerGapMm = defaultHeaderGapMmForTemplate(template);
   const cvOnly = window.location.pathname.includes("lebenslauf");
-  patchDossierChrome("cv", { headerMode, headerGapMm });
-  if (!cvOnly) patchDossierChrome("letter", { headerMode, headerGapMm });
+  patchDossierChrome("cv", { headerMode, footerMode, headerGapMm });
+  if (!cvOnly) patchDossierChrome("letter", { headerMode, footerMode, headerGapMm });
 }
 
 export function TemplatePicker({ value, onChange }: Props) {
@@ -151,8 +150,8 @@ export function TemplatePicker({ value, onChange }: Props) {
     applyDossierTheme(value, freshFamilyForTemplate(value) ?? familyForTemplate(value));
   }, [value]);
 
-  // Brand-new dossiers start on Modern. Establish its template default before
-  // parent autosave effects can create a draft key. Existing canonical chrome
+  // Brand-new dossiers start on the canonical Brief fallback. Establish its
+  // neutral chrome before parent autosave effects can create a draft key. Existing canonical chrome
   // or legacy drafts remain authoritative and are never overwritten here.
   useLayoutEffect(() => {
     try {

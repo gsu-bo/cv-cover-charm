@@ -1,3 +1,6 @@
+import type { TemplateId } from "@/components/cover/types";
+import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
+
 /**
  * Zentrale Voreinstellungen des Titelblatt-Generators.
  *
@@ -41,7 +44,7 @@ export const DEFAULTS = {
   /** Ort für die "Ort, Datum"-Zeile. Leer lassen für kein Vorbelegen. */
   LOCATION: "Hubersdorf",
   /** Vorlage, die beim ersten Öffnen gewählt ist. */
-  TEMPLATE: "modern",
+  TEMPLATE: CANONICAL_DOSSIER_PRESENTATION.template as TemplateId,
   /**
    * Zeile über dem Beruf. Im Formular überschreibbar – hier steht nur, was
    * beim leeren Formular drinsteht.

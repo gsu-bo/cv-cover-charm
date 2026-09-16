@@ -1,4 +1,5 @@
 import type { TemplateId } from "@/components/cover/types";
+import { DEFAULTS } from "@/default-config";
 
 export type DossierFamilyId = "classic" | "modern" | "executive" | "editorial";
 
@@ -51,6 +52,7 @@ export const DOSSIER_FAMILIES: DossierFamily[] = [
  * historical Modern fallback.
  */
 const TEMPLATE_FAMILY: Record<string, DossierFamilyId> = {
+  brief: "classic",
   klassisch: "editorial",
   modern: "modern",
   freundlich: "editorial",
@@ -103,7 +105,9 @@ const TEMPLATE_FAMILY: Record<string, DossierFamilyId> = {
 };
 
 export function familyForTemplate(template: TemplateId): DossierFamilyId {
-  return TEMPLATE_FAMILY[template as string] ?? "modern";
+  return (
+    TEMPLATE_FAMILY[template as string] ?? TEMPLATE_FAMILY[DEFAULTS.TEMPLATE as string] ?? "classic"
+  );
 }
 
 export function templatesForFamily(family: DossierFamilyId): TemplateId[] {
@@ -128,7 +132,7 @@ function apply(family: DossierFamilyId) {
  * Jetzt gibt es eine Quelle: die Vorlage. Ein früher gespeicherter Wert wird
  * absichtlich nicht mehr gelesen, sonst überstimmte er die Vorlage weiterhin.
  */
-export function getDossierFamily(template: TemplateId = "modern"): DossierFamilyId {
+export function getDossierFamily(template: TemplateId = DEFAULTS.TEMPLATE): DossierFamilyId {
   const family = familyForTemplate(template);
   apply(family);
   return family;

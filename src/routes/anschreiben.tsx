@@ -16,6 +16,7 @@ import {
   type Snapshot,
 } from "@/lib/history";
 import { FONT_LABELS, TEMPLATES, type FontKey } from "@/components/cover/types";
+import { DEFAULTS } from "@/default-config";
 import { ResizableEditorPanel } from "@/components/dossier/ResizableEditorPanel";
 import { SaveStatus, type SaveState } from "@/components/dossier/SaveStatus";
 import { LetterCanvas } from "@/components/letter/LetterCanvas";
@@ -335,7 +336,9 @@ function Anschreiben() {
     () =>
       design.template === "brief"
         ? null
-        : (TEMPLATES.find((candidate) => candidate.id === design.template) ?? TEMPLATES[0]),
+        : (TEMPLATES.find((candidate) => candidate.id === design.template) ??
+          TEMPLATES.find((candidate) => candidate.id === DEFAULTS.TEMPLATE) ??
+          null),
     [design.template],
   );
 

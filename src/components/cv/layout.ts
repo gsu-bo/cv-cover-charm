@@ -1,3 +1,5 @@
+import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
+
 export type CvLayoutId = "classic" | "modern" | "minimal" | "timeline" | "executive" | "editorial";
 export type CvRenderLayoutId = "classic" | "modern";
 
@@ -41,7 +43,7 @@ const STORAGE_KEY = "lebenslauf:layout:v1";
 const MIRROR_STORAGE_KEY = "lebenslauf:layout-mirror:v1";
 const SECTION_GAP_STORAGE_KEY = "lebenslauf:section-gap:v1";
 export const CV_LAYOUT_EVENT = "lebenslauf-layout-change";
-const DEFAULT_LAYOUT: CvLayoutId = "classic";
+const DEFAULT_LAYOUT: CvLayoutId = CANONICAL_DOSSIER_PRESENTATION.cv.layout;
 
 /**
  * Globaler vertikaler Rubrik-Abstand. `null` bedeutet: die jeweilige Vorlage

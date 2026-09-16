@@ -1,5 +1,6 @@
 import { FONT_LABELS, TEMPLATES, type FontKey, type TemplateId } from "@/components/cover/types";
 import { LETTER_STORAGE_KEY } from "@/lib/dossier-project";
+import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
 import type {
   DossierChromeInlineSeparator,
   DossierChromeState,
@@ -162,7 +163,12 @@ export function defaultLetterColors(template: LetterTemplateId): Record<string, 
       cvHeading: "#111111",
     };
   }
-  const definition = TEMPLATES.find((candidate) => candidate.id === template) ?? TEMPLATES[0];
+  const definition =
+    TEMPLATES.find((candidate) => candidate.id === template) ??
+    TEMPLATES.find(
+      (candidate) => candidate.id === (CANONICAL_DOSSIER_PRESENTATION.template as TemplateId),
+    );
+  if (!definition) return defaultLetterColors("brief");
   return Object.fromEntries(definition.slots.map((slot) => [slot.key, slot.default]));
 }
 
@@ -195,7 +201,7 @@ function normalizedHeaderInlineSeparator(value: unknown): DossierChromeInlineSep
 }
 
 export function emptyLetterDesign(): LetterDesign {
-  const template: LetterTemplateId = "brief";
+  const template: LetterTemplateId = CANONICAL_DOSSIER_PRESENTATION.template;
   return {
     template,
     colors: defaultLetterColors(template),
@@ -207,7 +213,7 @@ export function emptyLetterDesign(): LetterDesign {
     ruleAfterSender: false,
     ruleAfterRecipient: false,
     ruleAfterSubject: false,
-    headerMode: "none",
+    headerMode: CANONICAL_DOSSIER_PRESENTATION.letter.headerMode,
     headerShowName: true,
     headerShowAddress: true,
     headerShowPhone: true,
@@ -218,7 +224,7 @@ export function emptyLetterDesign(): LetterDesign {
     headerInlineSeparator: "icons",
     headerBackgroundColor: null,
     headerGradientColor: null,
-    footerMode: "compact",
+    footerMode: CANONICAL_DOSSIER_PRESENTATION.letter.footerMode,
     footerHeightMm: null,
     footerTextLayout: "inline",
     footerBackgroundColor: null,
