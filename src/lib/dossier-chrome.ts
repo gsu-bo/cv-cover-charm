@@ -12,6 +12,8 @@ export type DossierChromeOptions = {
   headerShowAddress: boolean;
   headerShowPhone: boolean;
   headerShowEmail: boolean;
+  /** Word-like first-page behavior. Follow-up pages use a compact identity header by default. */
+  headerDifferentFirstPage?: boolean;
   headerHeightMm: number | null;
   /** Additional whitespace between the shared header zone and document content. */
   headerGapMm?: number;
@@ -69,6 +71,7 @@ export const DEFAULT_DOSSIER_CHROME_OPTIONS: DossierChromeOptions = {
   headerShowAddress: true,
   headerShowPhone: true,
   headerShowEmail: true,
+  headerDifferentFirstPage: true,
   headerHeightMm: null,
   headerGapMm: 12,
   headerContentOffsetYMm: 0,
@@ -159,6 +162,10 @@ function normalizeOptions(
     headerShowAddress: value.headerShowAddress !== false,
     headerShowPhone: value.headerShowPhone !== false,
     headerShowEmail: value.headerShowEmail !== false,
+    headerDifferentFirstPage:
+      typeof value.headerDifferentFirstPage === "boolean"
+        ? value.headerDifferentFirstPage
+        : (fallback.headerDifferentFirstPage ?? true),
     headerHeightMm: normalizedMm(value.headerHeightMm, 1, 40),
     headerGapMm: normalizedMm(value.headerGapMm, 0, 40) ?? fallback.headerGapMm ?? 12,
     headerContentOffsetYMm: normalizedOffsetMm(
@@ -213,6 +220,7 @@ function optionsFromSavedLetter(storage: Storage): DossierChromeOptions | null {
       headerShowAddress: design.headerShowAddress,
       headerShowPhone: design.headerShowPhone,
       headerShowEmail: design.headerShowEmail,
+      headerDifferentFirstPage: design.headerDifferentFirstPage,
       headerHeightMm: design.headerHeightMm,
       headerGapMm: design.headerGapMm,
       headerTextLayout: design.headerTextLayout,
@@ -360,6 +368,7 @@ function mirrorLegacyLetterDesign(next: DossierChromeState) {
       design.headerShowAddress === options.headerShowAddress &&
       design.headerShowPhone === options.headerShowPhone &&
       design.headerShowEmail === options.headerShowEmail &&
+      design.headerDifferentFirstPage === (options.headerDifferentFirstPage ?? true) &&
       design.headerHeightMm === options.headerHeightMm &&
       design.headerGapMm === (options.headerGapMm ?? 12) &&
       design.headerTextLayout === options.headerTextLayout &&
@@ -386,6 +395,7 @@ function mirrorLegacyLetterDesign(next: DossierChromeState) {
         headerShowAddress: options.headerShowAddress,
         headerShowPhone: options.headerShowPhone,
         headerShowEmail: options.headerShowEmail,
+        headerDifferentFirstPage: options.headerDifferentFirstPage ?? true,
         headerHeightMm: options.headerHeightMm,
         headerGapMm: options.headerGapMm ?? 12,
         headerTextLayout: options.headerTextLayout,
@@ -548,7 +558,7 @@ export function effectiveDossierHeaderModeForOptions(
   pageIndex = 0,
 ): DossierHeaderMode {
   const requested = options.headerMode;
-  if (pageIndex === 0) return requested;
+  if (pageIndex === 0 || options.headerDifferentFirstPage === false) return requested;
   return requested === "none" ? "none" : "compact";
 }
 
@@ -559,7 +569,11 @@ export function dossierHeaderVisualHeightMmForOptions(
   if (options.headerMode === "none") return 0;
 
   const custom = options.headerHeightMm;
-  if (pageIndex > 0 && options.headerMode === "contact") {
+  if (
+    pageIndex > 0 &&
+    options.headerDifferentFirstPage !== false &&
+    options.headerMode === "contact"
+  ) {
     return custom === null ? 8 : Math.min(18, Math.max(5, custom));
   }
 
@@ -578,7 +592,7 @@ export function dossierHeaderContentTopMmForOptions(
 
   const height = dossierHeaderVisualHeightMmForOptions(options, pageIndex);
   const gap = Math.min(40, Math.max(0, options.headerGapMm ?? 12));
-  if (pageIndex > 0) {
+  if (pageIndex > 0 && options.headerDifferentFirstPage !== false) {
     const base =
       options.headerMode === "contact" ? Math.max(18, height + 10) : Math.max(18, height + 15);
     return base + gap;
