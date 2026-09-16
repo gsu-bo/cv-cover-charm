@@ -203,7 +203,7 @@ test.describe("body alignment Web/PDF parity", () => {
       await expect(previewCanvas).toBeVisible();
       await expect(previewCanvas.locator("..")).toHaveAttribute("data-cv-body-align", align);
       const previewBody = previewCanvas
-        .locator("[data-cv-body]")
+        .locator("[data-cv-body]:visible")
         .filter({ hasText: "CV-ALIGNMENT-PROBE" })
         .first();
       await expect(previewBody).toBeVisible();
