@@ -10,6 +10,12 @@ import {
   readPortableDossierChromeState,
   type DossierChromeState,
 } from "@/lib/dossier-chrome";
+import {
+  applyPortableDossierHyphenationState,
+  normalizeDossierHyphenationState,
+  readPortableDossierHyphenationState,
+  type DossierHyphenationState,
+} from "@/lib/dossier-hyphenation";
 
 export const COVER_STORAGE_KEY = "titelblatt:v3";
 export const LETTER_STORAGE_KEY = "anschreiben:v1";
@@ -17,7 +23,7 @@ export const CV_STORAGE_KEY = "lebenslauf:v1";
 
 export const DOSSIER_PROJECT_KIND = "cv-cover-charm-dossier";
 /**
- * `letter`, `chrome` and the optional CV portable state are additive extensions
+ * `letter`, `chrome`, `hyphenation` and the optional CV portable state are additive extensions
  * of version 1. Older project files therefore stay readable without migration.
  */
 export const DOSSIER_PROJECT_VERSION = 1;
@@ -30,6 +36,7 @@ export type DossierProject = {
   letter?: Record<string, unknown>;
   cv?: Record<string, unknown>;
   chrome?: DossierChromeState;
+  hyphenation?: DossierHyphenationState;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -71,6 +78,7 @@ export function createDossierProject(parts: {
   const letter = parts.letter ?? readStoredDossierPart(LETTER_STORAGE_KEY);
   const cv = portableCv(parts.cv);
   const chrome = readPortableDossierChromeState();
+  const hyphenation = readPortableDossierHyphenationState();
   return {
     kind: DOSSIER_PROJECT_KIND,
     version: DOSSIER_PROJECT_VERSION,
@@ -79,6 +87,7 @@ export function createDossierProject(parts: {
     ...(letter ? { letter } : {}),
     ...(cv ? { cv } : {}),
     chrome,
+    hyphenation,
   };
 }
 
@@ -91,6 +100,10 @@ export function parseDossierProject(value: unknown): DossierProject | null {
   const letter = isRecord(value.letter) && isRecord(value.letter.data) ? value.letter : undefined;
   const cv = isRecord(value.cv) && isRecord(value.cv.data) ? value.cv : undefined;
   const chrome = isRecord(value.chrome) ? normalizeDossierChromeState(value.chrome) : undefined;
+  const hyphenation =
+    isRecord(value.hyphenation) || typeof value.hyphenation === "boolean"
+      ? normalizeDossierHyphenationState(value.hyphenation)
+      : undefined;
 
   return {
     kind: DOSSIER_PROJECT_KIND,
@@ -100,6 +113,7 @@ export function parseDossierProject(value: unknown): DossierProject | null {
     ...(letter ? { letter } : {}),
     ...(cv ? { cv } : {}),
     ...(chrome ? { chrome } : {}),
+    ...(hyphenation ? { hyphenation } : {}),
   };
 }
 
@@ -127,6 +141,7 @@ export function storeDossierProject(project: DossierProject): {
     // Eingebettete Chrome-Kopien einzelner Dokumente dürfen das hingegen nicht.
     applyPortableDossierChromeState(project.chrome, { replaceExisting: true });
   }
+  if (project.hyphenation) applyPortableDossierHyphenationState(project.hyphenation);
   return { cover: !!project.cover, letter: !!project.letter, cv: !!project.cv };
 }
 
@@ -152,5 +167,6 @@ export function replaceDossierProject(project: DossierProject): {
   if (!project.chrome) {
     applyPortableDossierChromeState(normalizeDossierChromeState(null), { replaceExisting: true });
   }
+  if (!project.hyphenation) applyPortableDossierHyphenationState(null);
   return restored;
 }
