@@ -24,6 +24,7 @@ import {
 
 describe("canonical neutral dossier fallback", () => {
   test("one contract owns the fresh template and neutral chrome", () => {
+    // Compile-time release guard: Brief must stay a real TemplateId, never a cast-only pseudo-id.
     const typedDefault: TemplateId = DEFAULTS.TEMPLATE;
     expect(CANONICAL_DOSSIER_PRESENTATION.template).toBe("brief");
     expect(typedDefault).toBe("brief");
