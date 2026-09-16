@@ -73,6 +73,26 @@ function legacyChromeFromDesign(design: LetterDesign): DossierChromeOptions {
   };
 }
 
+function resolveLetterChrome(
+  design: LetterDesign,
+  chromeOptions?: DossierChromeOptions,
+): DossierChromeOptions {
+  const requested = chromeOptions ?? legacyChromeFromDesign(design);
+  const plainBriefDefault =
+    design.template === "brief" && design.headerMode === "none" && requested.headerMode === "contact";
+  const effectiveRequested = plainBriefDefault
+    ? {
+        ...requested,
+        headerMode: "none" as const,
+        headerHeightMm: null,
+        headerBackgroundColor: null,
+        headerGradientColor: null,
+      }
+    : requested;
+
+  return resolveTemplateChromeOptions(design.template, design.colors, effectiveRequested);
+}
+
 export function LetterCanvas({
   data,
   design,
@@ -94,11 +114,7 @@ export function LetterCanvas({
   onImageRemove?: (id: string) => void;
   ariaLabel?: string;
 }) {
-  const chrome = resolveTemplateChromeOptions(
-    design.template,
-    design.colors,
-    chromeOptions ?? legacyChromeFromDesign(design),
-  );
+  const chrome = resolveLetterChrome(design, chromeOptions);
   const effectiveDesign = useMemo<LetterDesign>(
     () => ({
       ...design,
