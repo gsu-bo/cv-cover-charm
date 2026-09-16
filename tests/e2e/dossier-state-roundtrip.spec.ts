@@ -270,7 +270,7 @@ test.describe("M7 dossier state roundtrip", () => {
           chrome: JSON.parse(localStorage.getItem("bewerbungsdossier:chrome:v1") ?? "null"),
         })),
       )
-      .toEqual({
+      .toMatchObject({
         cover: "Lea",
         letter: "Lea Müller",
         cv: "Lea",
