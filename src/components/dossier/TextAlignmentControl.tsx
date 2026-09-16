@@ -19,10 +19,12 @@ export function TextAlignmentControl({
   value,
   onChange,
   ariaLabel = "Textausrichtung",
+  alignments = TEXT_ALIGNMENTS,
 }: {
   value: TextAlignment | null;
   onChange: (value: TextAlignment) => void;
   ariaLabel?: string;
+  alignments?: readonly TextAlignment[];
 }) {
   return (
     <div
@@ -31,18 +33,19 @@ export function TextAlignmentControl({
       role="group"
       aria-label={ariaLabel}
     >
-      {TEXT_ALIGNMENTS.map((alignment, index) => {
+      {alignments.map((alignment, index) => {
         const Icon = ICONS[alignment];
         const active = value === alignment;
         return (
           <button
             key={alignment}
             type="button"
+            data-alignment={alignment}
             aria-label={LABELS[alignment]}
             aria-pressed={active}
             title={LABELS[alignment]}
             className={`inline-flex h-8 min-w-8 items-center justify-center px-2 transition-colors focus:outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring ${
-              index < TEXT_ALIGNMENTS.length - 1 ? "border-r border-input" : ""
+              index < alignments.length - 1 ? "border-r border-input" : ""
             } ${
               active
                 ? "bg-primary text-primary-foreground hover:bg-primary/90"

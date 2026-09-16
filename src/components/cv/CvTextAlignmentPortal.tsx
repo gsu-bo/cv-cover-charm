@@ -74,6 +74,7 @@ export function CvTextAlignmentPortal({
           value={alignment}
           onChange={setCvTextAlignment}
           ariaLabel="Ausrichtung des Lebenslauf-Fliesstexts"
+          alignments={["left", "justify"] as const}
         />
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           Gilt für CV-Inhalte und Beschreibungen. Name und Rubriktitel behalten ihre eigene

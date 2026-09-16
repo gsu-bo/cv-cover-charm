@@ -29,3 +29,17 @@
 [data-letter-pdf-richtext] > :is(div, p)[data-align="justify"] {
   text-align: justify;
 }
+
+/*
+ * Body prose intentionally exposes only the two useful choices. The shared
+ * four-way control stays intact for title-page layout work, while the letter
+ * toolbar shows the same compact Links/Blocksatz subset as the CV editor.
+ */
+div:has(> [data-text-alignment-control]):has(+ .relative [data-letter-rich-editor])
+  [data-text-alignment-control]
+  > button[data-alignment="center"],
+div:has(> [data-text-alignment-control]):has(+ .relative [data-letter-rich-editor])
+  [data-text-alignment-control]
+  > button[data-alignment="right"] {
+  display: none;
+}
