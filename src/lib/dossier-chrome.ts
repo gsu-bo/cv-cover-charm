@@ -4,6 +4,7 @@ export type DossierChromeScope = "cv" | "letter";
 export type DossierHeaderMode = "compact" | "contact" | "none";
 export type DossierFooterMode = "compact" | "details" | "none";
 export type DossierChromeTextLayout = "stacked" | "inline";
+export type DossierChromeInlineSeparator = "dot" | "icons" | "slash" | "pipe" | "space";
 
 export type DossierChromeOptions = {
   headerMode: DossierHeaderMode;
@@ -19,6 +20,8 @@ export type DossierChromeOptions = {
   /** Motivation-letter-only recipient nudge. Ignored by CV rendering. */
   letterRecipientOffsetYMm?: number;
   headerTextLayout: DossierChromeTextLayout;
+  /** Visual separator used by the horizontal contact header. */
+  headerInlineSeparator?: DossierChromeInlineSeparator;
   headerBackgroundColor: string | null;
   headerGradientColor: string | null;
   footerMode: DossierFooterMode;
@@ -71,6 +74,7 @@ export const DEFAULT_DOSSIER_CHROME_OPTIONS: DossierChromeOptions = {
   headerContentOffsetYMm: 0,
   letterRecipientOffsetYMm: 0,
   headerTextLayout: "stacked",
+  headerInlineSeparator: "icons",
   headerBackgroundColor: null,
   headerGradientColor: null,
   footerMode: "compact",
@@ -126,6 +130,19 @@ function normalizedBorderWidth(value: unknown, fallback: number): number {
   return normalized ?? fallback;
 }
 
+function normalizedHeaderInlineSeparator(
+  value: unknown,
+  fallback: DossierChromeInlineSeparator = "icons",
+): DossierChromeInlineSeparator {
+  return value === "dot" ||
+    value === "icons" ||
+    value === "slash" ||
+    value === "pipe" ||
+    value === "space"
+    ? value
+    : fallback;
+}
+
 function normalizeOptions(
   value: unknown,
   fallback = DEFAULT_DOSSIER_CHROME_OPTIONS,
@@ -157,6 +174,10 @@ function normalizeOptions(
       fallback.letterRecipientOffsetYMm ?? 0,
     ),
     headerTextLayout: value.headerTextLayout === "inline" ? "inline" : "stacked",
+    headerInlineSeparator: normalizedHeaderInlineSeparator(
+      value.headerInlineSeparator,
+      fallback.headerInlineSeparator ?? "icons",
+    ),
     headerBackgroundColor: normalizedColor(value.headerBackgroundColor),
     headerGradientColor: normalizedColor(value.headerGradientColor),
     footerMode:
@@ -195,6 +216,7 @@ function optionsFromSavedLetter(storage: Storage): DossierChromeOptions | null {
       headerHeightMm: design.headerHeightMm,
       headerGapMm: design.headerGapMm,
       headerTextLayout: design.headerTextLayout,
+      headerInlineSeparator: design.headerInlineSeparator,
       headerBackgroundColor: design.headerBackgroundColor,
       headerGradientColor: design.headerGradientColor,
       footerMode: design.footerMode === "attachments" ? "details" : design.footerMode,
@@ -341,6 +363,7 @@ function mirrorLegacyLetterDesign(next: DossierChromeState) {
       design.headerHeightMm === options.headerHeightMm &&
       design.headerGapMm === (options.headerGapMm ?? 12) &&
       design.headerTextLayout === options.headerTextLayout &&
+      design.headerInlineSeparator === (options.headerInlineSeparator ?? "icons") &&
       design.headerBackgroundColor === options.headerBackgroundColor &&
       design.headerGradientColor === options.headerGradientColor &&
       design.footerMode === footerMode &&
@@ -366,6 +389,7 @@ function mirrorLegacyLetterDesign(next: DossierChromeState) {
         headerHeightMm: options.headerHeightMm,
         headerGapMm: options.headerGapMm ?? 12,
         headerTextLayout: options.headerTextLayout,
+        headerInlineSeparator: options.headerInlineSeparator ?? "icons",
         headerBackgroundColor: options.headerBackgroundColor,
         headerGradientColor: options.headerGradientColor,
         footerMode,
