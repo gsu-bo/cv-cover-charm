@@ -1,0 +1,55 @@
+name: Fix Brief chrome defaults
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - .github/scripts/fix-brief-chrome-defaults.py
+      - .github/workflows/fix-brief-chrome-defaults.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Apply semantic/technical default split
+        run: python .github/scripts/fix-brief-chrome-defaults.py
+
+      - name: Format changed files
+        run: >-
+          npx --yes prettier@3.8.3 --write
+          src/lib/dossier-chrome.ts
+          tests/unit/dossier-chrome-sync.test.ts
+          tests/unit/dossier-page-margins.test.ts
+          tests/unit/template-chrome.test.ts
+          tests/unit/templatefix-edge-consistency.test.ts
+          tests/unit/dossier-canonical-default.test.ts
+
+      - name: Verify focused unit tests
+        run: |
+          bun install --frozen-lockfile
+          bun test \
+            tests/unit/dossier-chrome-sync.test.ts \
+            tests/unit/dossier-page-margins.test.ts \
+            tests/unit/dossier-sheet-background.test.tsx \
+            tests/unit/template-chrome.test.ts \
+            tests/unit/templatefix-edge-consistency.test.ts \
+            tests/unit/dossier-canonical-default.test.ts
+
+      - name: Commit correction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(dossier): separate Brief state from template chrome defaults"
+          git push origin HEAD:dev
