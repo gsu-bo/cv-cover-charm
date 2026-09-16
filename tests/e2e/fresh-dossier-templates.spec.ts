@@ -312,7 +312,10 @@ test.describe("Fresh dossier templates", () => {
   test("all live Fresh templates are selectable", async ({ page }) => {
     await page.goto(`${BASE_URL}/titelblatt`, { waitUntil: "domcontentloaded" });
     await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();
-    const templateSection = page.getByRole("button", { name: /^Vorlage(?:\s|$)/ }).first();
+    const templateSection = page
+      .locator("[data-editor-section-toggle]")
+      .filter({ hasText: "Vorlage" })
+      .first();
     await expect(templateSection).toBeVisible();
     if ((await templateSection.getAttribute("aria-expanded")) !== "true") {
       await templateSection.click();
