@@ -11,6 +11,7 @@ import { DEMO_LETTER, emptyLetterDesign } from "@/components/letter/types";
 import { DEFAULT_DOSSIER_CHROME_OPTIONS } from "@/lib/dossier-chrome";
 import { patchDossierDocxPageMarginsXml } from "@/lib/dossier-docx-page-margins";
 import {
+  DOSSIER_PAGE_MARGIN_HARD_MAX_MM,
   DOSSIER_PAGE_MARGIN_MAX_MM,
   DOSSIER_PAGE_MARGIN_MIN_MM,
   clampDossierPageMarginsToMinimums,
@@ -95,6 +96,24 @@ describe("configurable CV and motivation-letter page margins", () => {
         DEFAULT_DOSSIER_CHROME_OPTIONS,
       ),
     ).toEqual({ top: 27, right: 15, bottom: 15, left: 15 });
+  });
+
+  test("wide structural sidebars can still be enlarged above their safe minimum", () => {
+    const minimums = cvSafePageMarginMinimums(
+      cvFrameFor("klassisch"),
+      0,
+      "modern",
+      0.42,
+      DEFAULT_DOSSIER_CHROME_OPTIONS,
+    );
+    expect(minimums.left).toBe(96);
+    expect(DOSSIER_PAGE_MARGIN_HARD_MAX_MM).toBe(120);
+    expect(
+      clampDossierPageMarginsToMinimums(
+        { top: 30, right: 20, bottom: 20, left: 110 },
+        minimums,
+      )?.left,
+    ).toBe(110);
   });
 
   test("both editors expose the same secondary collapsed control", () => {

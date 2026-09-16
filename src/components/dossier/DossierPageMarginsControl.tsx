@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
+  DOSSIER_PAGE_MARGIN_HARD_MAX_MM,
   DOSSIER_PAGE_MARGIN_MAX_MM,
   DOSSIER_PAGE_MARGIN_MIN_MM,
   applyDossierPageMarginsToDocument,
@@ -64,13 +65,10 @@ export function DossierPageMarginsControl({
     [minimumMargins],
   );
   const defaults = useMemo(
-    () =>
-      clampDossierPageMarginsToMinimums(defaultMargins, minimums) ?? defaultMargins,
+    () => clampDossierPageMarginsToMinimums(defaultMargins, minimums) ?? defaultMargins,
     [defaultMargins, minimums],
   );
-  const safeCustom = custom
-    ? clampDossierPageMarginsToMinimums(custom, minimums)
-    : null;
+  const safeCustom = custom ? clampDossierPageMarginsToMinimums(custom, minimums) : null;
   const values = safeCustom ?? defaults;
   const [draft, setDraft] = useState(() => asDraft(values));
 
@@ -150,7 +148,11 @@ export function DossierPageMarginsControl({
                 <input
                   type="number"
                   min={minimums[key]}
-                  max={Math.max(DOSSIER_PAGE_MARGIN_MAX_MM, minimums[key])}
+                  max={
+                    minimums[key] > DOSSIER_PAGE_MARGIN_MAX_MM
+                      ? DOSSIER_PAGE_MARGIN_HARD_MAX_MM
+                      : DOSSIER_PAGE_MARGIN_MAX_MM
+                  }
                   step={0.5}
                   value={draft[key]}
                   onChange={(event) =>

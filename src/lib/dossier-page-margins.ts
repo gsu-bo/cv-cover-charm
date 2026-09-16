@@ -13,7 +13,7 @@ export const DOSSIER_PAGE_MARGINS_STORAGE_KEY = "bewerbungsdossier:page-margins:
 export const DOSSIER_PAGE_MARGINS_EVENT = "bewerbungsdossier-page-margins-change";
 export const DOSSIER_PAGE_MARGIN_MIN_MM = 5;
 export const DOSSIER_PAGE_MARGIN_MAX_MM = 80;
-const DOSSIER_PAGE_MARGIN_STORAGE_MAX_MM = 120;
+export const DOSSIER_PAGE_MARGIN_HARD_MAX_MM = 120;
 
 let memoryRaw = "{}";
 
@@ -34,7 +34,7 @@ const normalizedMinimumSide = (value: unknown): number => {
   return roundHalfMm(
     Math.max(
       DOSSIER_PAGE_MARGIN_MIN_MM,
-      Math.min(DOSSIER_PAGE_MARGIN_STORAGE_MAX_MM, numeric),
+      Math.min(DOSSIER_PAGE_MARGIN_HARD_MAX_MM, numeric),
     ),
   );
 };
@@ -58,7 +58,7 @@ export function normalizeDossierPageMargins(value: unknown): DossierPageMargins 
 }
 
 function normalizeStoredDossierPageMargins(value: unknown): DossierPageMargins | null {
-  return normalizeDossierPageMarginsWithMax(value, DOSSIER_PAGE_MARGIN_STORAGE_MAX_MM);
+  return normalizeDossierPageMarginsWithMax(value, DOSSIER_PAGE_MARGIN_HARD_MAX_MM);
 }
 
 export function clampDossierPageMarginsToMinimums(
@@ -69,10 +69,7 @@ export function clampDossierPageMarginsToMinimums(
   const incoming = value as Partial<DossierPageMargins>;
   const clampSide = (side: keyof DossierPageMargins): number | null => {
     const minimum = normalizedMinimumSide(minimums[side]);
-    const normalized = normalizedSide(
-      incoming[side],
-      Math.max(DOSSIER_PAGE_MARGIN_MAX_MM, minimum),
-    );
+    const normalized = normalizedSide(incoming[side], DOSSIER_PAGE_MARGIN_HARD_MAX_MM);
     return normalized === null ? null : roundHalfMm(Math.max(normalized, minimum));
   };
   const top = clampSide("top");
