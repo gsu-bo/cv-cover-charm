@@ -13,26 +13,72 @@ export const DOSSIER_PAGE_MARGINS_STORAGE_KEY = "bewerbungsdossier:page-margins:
 export const DOSSIER_PAGE_MARGINS_EVENT = "bewerbungsdossier-page-margins-change";
 export const DOSSIER_PAGE_MARGIN_MIN_MM = 5;
 export const DOSSIER_PAGE_MARGIN_MAX_MM = 80;
+const DOSSIER_PAGE_MARGIN_STORAGE_MAX_MM = 120;
 
 let memoryRaw = "{}";
 
 const roundHalfMm = (value: number) => Math.round(value * 2) / 2;
 
-const normalizedSide = (value: unknown): number | null => {
+const normalizedSide = (
+  value: unknown,
+  max = DOSSIER_PAGE_MARGIN_MAX_MM,
+): number | null => {
   const numeric = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(numeric)) return null;
+  return roundHalfMm(Math.max(DOSSIER_PAGE_MARGIN_MIN_MM, Math.min(max, numeric)));
+};
+
+const normalizedMinimumSide = (value: unknown): number => {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) return DOSSIER_PAGE_MARGIN_MIN_MM;
   return roundHalfMm(
-    Math.max(DOSSIER_PAGE_MARGIN_MIN_MM, Math.min(DOSSIER_PAGE_MARGIN_MAX_MM, numeric)),
+    Math.max(
+      DOSSIER_PAGE_MARGIN_MIN_MM,
+      Math.min(DOSSIER_PAGE_MARGIN_STORAGE_MAX_MM, numeric),
+    ),
   );
 };
 
-export function normalizeDossierPageMargins(value: unknown): DossierPageMargins | null {
+function normalizeDossierPageMarginsWithMax(
+  value: unknown,
+  max: number,
+): DossierPageMargins | null {
   if (!value || typeof value !== "object") return null;
   const incoming = value as Partial<DossierPageMargins>;
-  const top = normalizedSide(incoming.top);
-  const right = normalizedSide(incoming.right);
-  const bottom = normalizedSide(incoming.bottom);
-  const left = normalizedSide(incoming.left);
+  const top = normalizedSide(incoming.top, max);
+  const right = normalizedSide(incoming.right, max);
+  const bottom = normalizedSide(incoming.bottom, max);
+  const left = normalizedSide(incoming.left, max);
+  if (top === null || right === null || bottom === null || left === null) return null;
+  return { top, right, bottom, left };
+}
+
+export function normalizeDossierPageMargins(value: unknown): DossierPageMargins | null {
+  return normalizeDossierPageMarginsWithMax(value, DOSSIER_PAGE_MARGIN_MAX_MM);
+}
+
+function normalizeStoredDossierPageMargins(value: unknown): DossierPageMargins | null {
+  return normalizeDossierPageMarginsWithMax(value, DOSSIER_PAGE_MARGIN_STORAGE_MAX_MM);
+}
+
+export function clampDossierPageMarginsToMinimums(
+  value: unknown,
+  minimums: Partial<DossierPageMargins>,
+): DossierPageMargins | null {
+  if (!value || typeof value !== "object") return null;
+  const incoming = value as Partial<DossierPageMargins>;
+  const clampSide = (side: keyof DossierPageMargins): number | null => {
+    const minimum = normalizedMinimumSide(minimums[side]);
+    const normalized = normalizedSide(
+      incoming[side],
+      Math.max(DOSSIER_PAGE_MARGIN_MAX_MM, minimum),
+    );
+    return normalized === null ? null : roundHalfMm(Math.max(normalized, minimum));
+  };
+  const top = clampSide("top");
+  const right = clampSide("right");
+  const bottom = clampSide("bottom");
+  const left = clampSide("left");
   if (top === null || right === null || bottom === null || left === null) return null;
   return { top, right, bottom, left };
 }
@@ -40,8 +86,8 @@ export function normalizeDossierPageMargins(value: unknown): DossierPageMargins 
 export function normalizeDossierPageMarginsState(value: unknown): DossierPageMarginsState {
   if (!value || typeof value !== "object") return {};
   const incoming = value as DossierPageMarginsState;
-  const cv = normalizeDossierPageMargins(incoming.cv);
-  const letter = normalizeDossierPageMargins(incoming.letter);
+  const cv = normalizeStoredDossierPageMargins(incoming.cv);
+  const letter = normalizeStoredDossierPageMargins(incoming.letter);
   return {
     ...(cv ? { cv } : {}),
     ...(letter ? { letter } : {}),
@@ -79,12 +125,7 @@ export function getDossierPageMarginsState(): DossierPageMarginsState {
 }
 
 export function getDossierPageMargins(scope: DossierPageMarginScope): DossierPageMargins | null {
-  const state = stateFromSnapshot();
-  // Renderers read this function even when the collapsed control itself has not
-  // mounted yet. Keeping the CSS mirror in sync here guarantees that a restored
-  // project has the same final letter content box before the first export.
-  applyDossierPageMarginsToDocument(state);
-  return state[scope] ?? null;
+  return stateFromSnapshot()[scope] ?? null;
 }
 
 function writeState(state: DossierPageMarginsState) {
@@ -111,7 +152,7 @@ export function setDossierPageMargins(
 ) {
   const current = stateFromSnapshot();
   const next = { ...current };
-  const normalized = normalizeDossierPageMargins(value);
+  const normalized = normalizeStoredDossierPageMargins(value);
   if (normalized) next[scope] = normalized;
   else delete next[scope];
   writeState(next);

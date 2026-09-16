@@ -7,6 +7,7 @@ import type { DossierChromeOptions } from "@/lib/dossier-chrome";
 import {
   cvDefaultContentBox,
   cvFrameFor,
+  cvSafePageMarginMinimums,
   type CvRenderLayout,
 } from "@/components/cv/archetype";
 import { getCvLayout, subscribeCvLayout } from "@/components/cv/layout";
@@ -41,9 +42,14 @@ export function CvTextAlignmentPortal({
     () => "classic",
   );
   const [target, setTarget] = useState<HTMLElement | null>(null);
+  const frame = useMemo(() => cvFrameFor(template), [template]);
   const defaultMargins = useMemo(
-    () => cvDefaultContentBox(cvFrameFor(template), 0, layout, sidebarPct, chromeOptions),
-    [chromeOptions, layout, sidebarPct, template],
+    () => cvDefaultContentBox(frame, 0, layout, sidebarPct, chromeOptions),
+    [chromeOptions, frame, layout, sidebarPct],
+  );
+  const minimumMargins = useMemo(
+    () => cvSafePageMarginMinimums(frame, 0, layout, sidebarPct, chromeOptions),
+    [chromeOptions, frame, layout, sidebarPct],
   );
 
   useEffect(() => {
@@ -79,6 +85,7 @@ export function CvTextAlignmentPortal({
         <DossierPageMarginsControl
           scope="cv"
           defaultMargins={defaultMargins}
+          minimumMargins={minimumMargins}
           accentColor={accentColor}
         />
       </div>

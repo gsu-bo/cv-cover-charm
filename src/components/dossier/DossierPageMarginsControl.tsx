@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   DOSSIER_PAGE_MARGIN_MAX_MM,
   DOSSIER_PAGE_MARGIN_MIN_MM,
   applyDossierPageMarginsToDocument,
+  clampDossierPageMarginsToMinimums,
   getDossierPageMargins,
   getDossierPageMarginsSnapshot,
-  normalizeDossierPageMargins,
   setDossierPageMargins,
   subscribeDossierPageMargins,
   type DossierPageMarginScope,
@@ -19,14 +19,33 @@ const SIDES: Array<{ key: keyof DossierPageMargins; label: string }> = [
   { key: "left", label: "Links" },
 ];
 
+const GLOBAL_MINIMUMS: DossierPageMargins = {
+  top: DOSSIER_PAGE_MARGIN_MIN_MM,
+  right: DOSSIER_PAGE_MARGIN_MIN_MM,
+  bottom: DOSSIER_PAGE_MARGIN_MIN_MM,
+  left: DOSSIER_PAGE_MARGIN_MIN_MM,
+};
+
+const asDraft = (margins: DossierPageMargins) => ({
+  top: String(margins.top),
+  right: String(margins.right),
+  bottom: String(margins.bottom),
+  left: String(margins.left),
+});
+
+const sameMargins = (a: DossierPageMargins, b: DossierPageMargins) =>
+  SIDES.every(({ key }) => a[key] === b[key]);
+
 export function DossierPageMarginsControl({
   scope,
   defaultMargins,
+  minimumMargins,
   accentColor,
   onApplied,
 }: {
   scope: DossierPageMarginScope;
   defaultMargins: DossierPageMargins;
+  minimumMargins?: DossierPageMargins;
   accentColor?: string;
   onApplied?: () => void;
 }) {
@@ -36,24 +55,62 @@ export function DossierPageMarginsControl({
     () => "{}",
   );
   const custom = getDossierPageMargins(scope);
-  const defaults = useMemo(
-    () => normalizeDossierPageMargins(defaultMargins) ?? defaultMargins,
-    [defaultMargins],
+  const minimums = useMemo(
+    () =>
+      clampDossierPageMarginsToMinimums(
+        GLOBAL_MINIMUMS,
+        minimumMargins ?? GLOBAL_MINIMUMS,
+      ) ?? GLOBAL_MINIMUMS,
+    [minimumMargins],
   );
-  const values = custom ?? defaults;
+  const defaults = useMemo(
+    () =>
+      clampDossierPageMarginsToMinimums(defaultMargins, minimums) ?? defaultMargins,
+    [defaultMargins, minimums],
+  );
+  const safeCustom = custom
+    ? clampDossierPageMarginsToMinimums(custom, minimums)
+    : null;
+  const values = safeCustom ?? defaults;
+  const [draft, setDraft] = useState(() => asDraft(values));
 
   useEffect(() => {
     applyDossierPageMarginsToDocument();
   }, []);
 
-  const change = (side: keyof DossierPageMargins, raw: string) => {
+  useEffect(() => {
+    setDraft(asDraft(values));
+  }, [values.bottom, values.left, values.right, values.top]);
+
+  useEffect(() => {
+    if (!custom || !safeCustom || sameMargins(custom, safeCustom)) return;
+    setDossierPageMargins(scope, safeCustom);
+    onApplied?.();
+  }, [custom, onApplied, safeCustom, scope]);
+
+  const commit = (side: keyof DossierPageMargins) => {
+    const raw = draft[side].trim();
+    if (!raw) {
+      setDraft(asDraft(values));
+      return;
+    }
     const numeric = Number(raw);
-    if (!Number.isFinite(numeric)) return;
-    const next = normalizeDossierPageMargins({
-      ...(custom ?? defaults),
-      [side]: numeric,
-    });
-    if (!next) return;
+    if (!Number.isFinite(numeric)) {
+      setDraft(asDraft(values));
+      return;
+    }
+    const next = clampDossierPageMarginsToMinimums(
+      {
+        ...(safeCustom ?? defaults),
+        [side]: numeric,
+      },
+      minimums,
+    );
+    if (!next) {
+      setDraft(asDraft(values));
+      return;
+    }
+    setDraft(asDraft(next));
     setDossierPageMargins(scope, next);
     onApplied?.();
   };
@@ -92,11 +149,21 @@ export function DossierPageMarginsControl({
               <span className="relative">
                 <input
                   type="number"
-                  min={DOSSIER_PAGE_MARGIN_MIN_MM}
-                  max={DOSSIER_PAGE_MARGIN_MAX_MM}
+                  min={minimums[key]}
+                  max={Math.max(DOSSIER_PAGE_MARGIN_MAX_MM, minimums[key])}
                   step={0.5}
-                  value={values[key]}
-                  onChange={(event) => change(key, event.target.value)}
+                  value={draft[key]}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, [key]: event.target.value }))
+                  }
+                  onBlur={() => commit(key)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.currentTarget.blur();
+                    if (event.key === "Escape") {
+                      setDraft(asDraft(values));
+                      event.currentTarget.blur();
+                    }
+                  }}
                   className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 pr-8 text-xs outline-none focus:ring-2 focus:ring-ring"
                   aria-label={`Seitenrand ${label} in Millimetern`}
                 />
@@ -110,6 +177,7 @@ export function DossierPageMarginsControl({
 
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           Ohne eigene Werte bleibt die bewährte Geometrie der gewählten Vorlage unverändert.
+          Mindestwerte schützen Header, Footer und tragende Vorlagenelemente.
         </p>
 
         {custom ? (

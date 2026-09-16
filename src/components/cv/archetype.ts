@@ -7,7 +7,12 @@ import {
   dossierHeaderVisualHeightMmForOptions,
   type DossierChromeOptions,
 } from "@/lib/dossier-chrome";
-import { getDossierPageMargins } from "@/lib/dossier-page-margins";
+import {
+  DOSSIER_PAGE_MARGIN_MIN_MM,
+  clampDossierPageMarginsToMinimums,
+  getDossierPageMargins,
+  type DossierPageMargins,
+} from "@/lib/dossier-page-margins";
 
 /**
  * Bauformen des Lebenslaufs.
@@ -135,6 +140,7 @@ export function sidebarWidthMm(frame: CvFrame, layout: CvRenderLayout, sidebarPc
 }
 
 const SURFACE_PAD = 5;
+const roundHalfMm = (value: number) => Math.round(value * 2) / 2;
 
 /**
  * Die gemeinsame Dossier-Chrome besitzt ab jetzt die Kopf-/Fusszone. Die
@@ -235,9 +241,61 @@ export function cvDefaultContentBox(
 }
 
 /**
+ * Harte Sicherheitszone für eigene CV-Seitenränder. Sie ist absichtlich kleiner
+ * als der bewährte Vorlagen-Satzspiegel, damit Nutzer Luft reduzieren können,
+ * schützt aber Header/Footer, echte Sidebars sowie Card-/Rahmenkanten.
+ */
+export function cvSafePageMarginMinimums(
+  frame: CvFrame,
+  pageIndex: number,
+  layout: CvRenderLayout,
+  sidebarPct?: number,
+  chrome: DossierChromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
+): DossierPageMargins {
+  const floor = DOSSIER_PAGE_MARGIN_MIN_MM;
+  const header = dossierHeaderVisualHeightMmForOptions(chrome, pageIndex);
+  const footer = dossierFooterVisualHeightMmForOptions(chrome);
+  const top = roundHalfMm(Math.max(floor, header > 0 ? header + 5 : floor));
+  const bottom = roundHalfMm(Math.max(floor, footer > 0 ? footer + 5 : floor));
+  const side = sidebarWidthMm(frame, layout, sidebarPct);
+
+  if (frame.id === "card") {
+    const edge = frame.cardInsetMm + 7;
+    return {
+      left: roundHalfMm(side > 0 ? frame.cardInsetMm + side + GAP : edge),
+      right: roundHalfMm(edge),
+      top: roundHalfMm(Math.max(top, edge)),
+      bottom: roundHalfMm(Math.max(bottom, edge)),
+    };
+  }
+
+  if (frame.id === "quiet" && frame.borderInsetMm > 0) {
+    const edge = frame.borderInsetMm + 5;
+    return {
+      left: roundHalfMm(Math.max(edge, side > 0 ? side + GAP : edge)),
+      right: roundHalfMm(edge),
+      top: roundHalfMm(Math.max(top, edge)),
+      bottom: roundHalfMm(Math.max(bottom, edge)),
+    };
+  }
+
+  if (side > 0) {
+    return {
+      left: roundHalfMm(side + GAP),
+      right: floor,
+      top,
+      bottom,
+    };
+  }
+
+  return { left: floor, right: floor, top, bottom };
+}
+
+/**
  * Textbereich einer CV-Seite. Ohne eigene Werte bleibt der bestehende
- * vorlagenabhängige Satzspiegel exakt erhalten. Sobald der Nutzer einen Rand
- * ändert, werden alle vier aktuellen Werte als bewusster Satzspiegel verwendet.
+ * vorlagenabhängige Satzspiegel exakt erhalten. Eigene Werte dürfen Luft
+ * reduzieren, werden aber gegen die vorlagen-/chrome-spezifische Sicherheitszone
+ * geklemmt, damit Inhalt nie hinter tragende Flächen rutscht.
  */
 export function cvContentBox(
   frame: CvFrame,
@@ -246,8 +304,15 @@ export function cvContentBox(
   sidebarPct?: number,
   chrome: DossierChromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
 ): CvContentBox {
+  const defaults = cvDefaultContentBox(frame, pageIndex, layout, sidebarPct, chrome);
   const custom = getDossierPageMargins("cv");
-  return custom ?? cvDefaultContentBox(frame, pageIndex, layout, sidebarPct, chrome);
+  if (!custom) return defaults;
+  return (
+    clampDossierPageMarginsToMinimums(
+      custom,
+      cvSafePageMarginMinimums(frame, pageIndex, layout, sidebarPct, chrome),
+    ) ?? defaults
+  );
 }
 
 /**
