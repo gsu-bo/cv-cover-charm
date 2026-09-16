@@ -84,8 +84,20 @@ async function seedCv(page: Page) {
 const previewCv = (page: Page) =>
   page.locator('[data-dossier-document="cv"][data-export-mode="false"]').first();
 
-const cvControls = (page: Page) =>
-  page.locator('[data-dossier-chrome-host] [data-dossier-chrome-controls="cv"]');
+async function openCvChrome(page: Page) {
+  await page.locator('button[data-editor-ready="true"]').waitFor({ state: "visible" });
+  const header = page
+    .locator("[data-editor-section-toggle]")
+    .filter({ hasText: "Header & Footer" })
+    .first();
+  await expect(header).toBeVisible();
+  if ((await header.getAttribute("aria-expanded")) !== "true") await header.click();
+  await expect(header).toHaveAttribute("aria-expanded", "true");
+  const controls = page.locator('[data-dossier-chrome-controls="cv"]');
+  await expect(controls).toHaveCount(1);
+  await expect(controls).toBeVisible();
+  return controls;
+}
 
 async function openLetterLayout(page: Page) {
   await page.locator('button[data-editor-ready="true"]').waitFor({ state: "visible" });
@@ -110,12 +122,10 @@ test.describe("shared CV / motivation-letter chrome", () => {
   }) => {
     await seedCv(page);
 
-    const controls = cvControls(page);
-    await expect(controls).toHaveCount(1);
-    await expect(controls).toBeVisible();
+    const controls = await openCvChrome(page);
     await expect(controls.locator("[data-dossier-chrome-sync]")).toBeChecked();
 
-    await controls.locator("[data-cv-header-mode-control]").selectOption("contact");
+    await controls.locator("[data-cv-header-mode-control]").selectOption("contact-stacked");
     await expect
       .poll(() =>
         page.evaluate(
@@ -214,8 +224,8 @@ test.describe("shared CV / motivation-letter chrome", () => {
     await page.reload({ waitUntil: "domcontentloaded" });
 
     const cv = previewCv(page);
-    const controls = cvControls(page);
-    await controls.locator("[data-cv-header-mode-control]").selectOption("contact");
+    const controls = await openCvChrome(page);
+    await controls.locator("[data-cv-header-mode-control]").selectOption("contact-stacked");
     await expect(cv.locator("[data-dossier-integrated-contact]").first()).toContainText(
       "Lea Müller",
     );
@@ -239,7 +249,7 @@ test.describe("shared CV / motivation-letter chrome", () => {
       "contact",
     );
 
-    const cvControlsAfterSplit = cvControls(page);
+    const cvControlsAfterSplit = await openCvChrome(page);
     await cvControlsAfterSplit.locator("[data-dossier-chrome-sync]").check();
     await expect
       .poll(() =>
@@ -292,8 +302,7 @@ test.describe("shared CV / motivation-letter chrome", () => {
     await expect.poll(bodyText).toContain("14.03.2010");
     await expect.poll(bodyText).toContain("Schweiz");
 
-    const controls = cvControls(page);
-    await expect(controls).toHaveCount(1);
+    const controls = await openCvChrome(page);
     await controls.getByLabel("E-Mail integrieren").uncheck();
     await expect(integrated).not.toContainText("chrome-test@example.ch");
     await expect.poll(bodyText).toContain("chrome-test@example.ch");
