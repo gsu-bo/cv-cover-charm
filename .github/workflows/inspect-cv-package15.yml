@@ -1,0 +1,36 @@
+name: Inspect CV Package 1.5
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - ".github/workflows/inspect-cv-package15.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+      - name: Locate legacy controls and state consumers
+        shell: bash
+        run: |
+          echo '=== mirror/photo references ==='
+          rg -n 'Spiegel|Datumsseite|setCvLayoutMirror|getCvLayoutMirror|layout-mirror|photo-place|place\.mode|sidebarPhoto|modernHeader' src tests || true
+          echo '=== classic header ==='
+          line=$(rg -n 'const classicHeader' src/components/cv/CvCanvasBase.tsx | head -1 | cut -d: -f1)
+          sed -n "$((line-10)),$((line+110))p" src/components/cv/CvCanvasBase.tsx
+          echo '=== modern header/sidebar ==='
+          line=$(rg -n 'const modernHeader' src/components/cv/CvCanvasBase.tsx | head -1 | cut -d: -f1)
+          sed -n "$((line-20)),$((line+90))p" src/components/cv/CvCanvasBase.tsx
+          line=$(rg -n 'const sidebarPhoto' src/components/cv/CvCanvasBase.tsx | head -1 | cut -d: -f1)
+          sed -n "$((line-25)),$((line+100))p" src/components/cv/CvCanvasBase.tsx
+          echo '=== DOCX CV header ==='
+          line=$(rg -n 'function cvPage' src/lib/dossier-docx.ts | head -1 | cut -d: -f1)
+          sed -n "$line,$((line+120))p" src/lib/dossier-docx.ts
