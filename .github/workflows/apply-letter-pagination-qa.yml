@@ -59,6 +59,21 @@ jobs:
           count = text.count(old)
           if count != 1:
               raise RuntimeError(f"dossier-regression.spec.ts: expected one old block-count assertion, found {count}")
+          text = text.replace(old, new, 1)
+
+          old = '''    const saved = await page.evaluate(
+              () => JSON.parse(localStorage.getItem("anschreiben:v1") ?? "{}").data?.richTextHtml ?? "",
+            );'''
+          new = '''    const readSavedRichText = () =>
+              page.evaluate(
+                () => JSON.parse(localStorage.getItem("anschreiben:v1") ?? "{}").data?.richTextHtml ?? "",
+              );
+            await expect.poll(readSavedRichText).toContain('data-columns="2"');
+            await expect.poll(readSavedRichText).toContain("<table data-letter-table>");
+            const saved = await readSavedRichText();'''
+          count = text.count(old)
+          if count != 1:
+              raise RuntimeError(f"dossier-regression.spec.ts: expected one immediate richtext read, found {count}")
           regression.write_text(text.replace(old, new, 1), encoding="utf-8")
           PY
 
