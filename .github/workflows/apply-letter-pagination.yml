@@ -7,6 +7,7 @@ on:
     paths:
       - "scripts/apply-letter-pagination.py"
       - "scripts/fix-pagination-test.py"
+      - "scripts/fix-pagination-unit.py"
       - ".github/workflows/apply-letter-pagination.yml"
 
 permissions:
@@ -34,6 +35,7 @@ jobs:
         run: |
           python3 scripts/apply-letter-pagination.py
           python3 scripts/fix-pagination-test.py
+          python3 scripts/fix-pagination-unit.py
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -56,6 +58,8 @@ jobs:
           src/components/letter/letter-pagination.css
           src/components/letter/layout-system.ts
           tests/e2e/dossier-letter-preflight.spec.ts
+          tests/unit/letter-preflight.test.ts
+          tests/unit/letter-preflight-export-geometry.test.ts
 
       - name: TypeScript
         run: bun run typecheck
@@ -81,7 +85,9 @@ jobs:
             src/components/letter/letter-pagination.ts \
             src/components/letter/letter-pagination.css \
             src/components/letter/layout-system.ts \
-            tests/e2e/dossier-letter-preflight.spec.ts
+            tests/e2e/dossier-letter-preflight.spec.ts \
+            tests/unit/letter-preflight.test.ts \
+            tests/unit/letter-preflight-export-geometry.test.ts
           if git diff --cached --quiet; then
             echo "No pagination consumer changes to commit"
             exit 0
