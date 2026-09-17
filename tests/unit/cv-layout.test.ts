@@ -89,9 +89,10 @@ describe("CV rubric layout", () => {
     expect(normalizeCvSectionGapMm(99)).toBe(CV_SECTION_GAP_MAX_MM);
   });
 
-  test("Kolumne keeps Sidebar even when another template stored Standard", () => {
-    expect(resolveCvLayoutChoice("terracotta", "classic")).toBe("modern");
-    expect(resolveCvLayoutChoice("terracotta", "editorial")).toBe("modern");
+  test("Kolumne defaults to Sidebar and preserves explicit saved layouts", () => {
+    expect(resolveCvLayoutChoice("terracotta", null)).toBe("modern");
+    expect(resolveCvLayoutChoice("terracotta", "classic")).toBe("classic");
+    expect(resolveCvLayoutChoice("terracotta", "editorial")).toBe("editorial");
     expect(resolveCvLayoutChoice("modern", "editorial")).toBe("editorial");
   });
 });

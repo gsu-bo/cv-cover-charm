@@ -1,3 +1,4 @@
+import { defaultHeaderModeForTemplate, defaultFooterModeForTemplate } from "@/lib/template-chrome";
 import { FONT_LABELS, type FontKey } from "@/components/cover/types";
 import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
 
@@ -200,7 +201,11 @@ function normalizeOptions(
     headerBackgroundColor: normalizedColor(value.headerBackgroundColor),
     headerGradientColor: normalizedColor(value.headerGradientColor),
     footerMode:
-      value.footerMode === "details" || value.footerMode === "none" ? value.footerMode : "compact",
+      value.footerMode === "details" ||
+      value.footerMode === "none" ||
+      value.footerMode === "compact"
+        ? value.footerMode
+        : fallback.footerMode,
     footerHeightMm: normalizedMm(value.footerHeightMm, 1, 40),
     footerContentOffsetYMm: normalizedOffsetMm(
       value.footerContentOffsetYMm,
@@ -227,7 +232,8 @@ function optionsFromSavedLetter(storage: Storage): DossierChromeOptions | null {
     if (!isRecord(parsed) || !isRecord(parsed.design)) return null;
     const design = parsed.design;
     return normalizeOptions({
-      headerMode: design.headerMode,
+      headerMode:
+        design.headerMode ?? defaultHeaderModeForTemplate(String(design.template ?? "brief")),
       headerShowName: design.headerShowName,
       headerShowAddress: design.headerShowAddress,
       headerShowPhone: design.headerShowPhone,
@@ -239,7 +245,10 @@ function optionsFromSavedLetter(storage: Storage): DossierChromeOptions | null {
       headerInlineSeparator: design.headerInlineSeparator,
       headerBackgroundColor: design.headerBackgroundColor,
       headerGradientColor: design.headerGradientColor,
-      footerMode: design.footerMode === "attachments" ? "details" : design.footerMode,
+      footerMode:
+        design.footerMode === "attachments"
+          ? "details"
+          : (design.footerMode ?? defaultFooterModeForTemplate(String(design.template ?? "brief"))),
       footerHeightMm: design.footerHeightMm,
       footerTextLayout: design.footerTextLayout,
       footerBackgroundColor: design.footerBackgroundColor,
@@ -565,13 +574,21 @@ export function applyPortableDossierChromeState(
   store(normalizeDossierChromeState(value));
 }
 
+/** Contact remains contact on continuation pages; only its visual treatment reduces. */
 export function effectiveDossierHeaderModeForOptions(
   options: DossierChromeOptions,
-  pageIndex = 0,
+  _pageIndex = 0,
 ): DossierHeaderMode {
-  const requested = options.headerMode;
-  if (pageIndex === 0 || options.headerDifferentFirstPage === false) return requested;
-  return requested === "none" ? "none" : "compact";
+  return options.headerMode;
+}
+
+export function hasReducedContinuationHeader(
+  options: { headerMode?: string; headerDifferentFirstPage?: boolean },
+  pageIndex: number,
+): boolean {
+  return (
+    pageIndex > 0 && options.headerDifferentFirstPage !== false && options.headerMode === "contact"
+  );
 }
 
 export function dossierHeaderVisualHeightMmForOptions(
@@ -581,11 +598,7 @@ export function dossierHeaderVisualHeightMmForOptions(
   if (options.headerMode === "none") return 0;
 
   const custom = options.headerHeightMm;
-  if (
-    pageIndex > 0 &&
-    options.headerDifferentFirstPage !== false &&
-    options.headerMode === "contact"
-  ) {
+  if (hasReducedContinuationHeader(options, pageIndex)) {
     return custom === null ? 8 : Math.min(18, Math.max(5, custom));
   }
 

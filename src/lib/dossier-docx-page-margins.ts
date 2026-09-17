@@ -1,11 +1,8 @@
 import { cvFrameFor, cvSafePageMarginMinimums } from "@/components/cv/archetype";
-import { getCvLayout } from "@/components/cv/layout";
+import { getCvLayoutChoiceForTemplate } from "@/components/cv/layout";
 import { letterSafePageMarginMinimums } from "@/components/letter/layout-system";
 import type { LetterDesign } from "@/components/letter/types";
-import {
-  getDossierChromeOptions,
-  type DossierChromeOptions,
-} from "@/lib/dossier-chrome";
+import { getDossierChromeOptions, type DossierChromeOptions } from "@/lib/dossier-chrome";
 import type { CvPdfDocument, LetterPdfDocument } from "@/lib/dossier-pdf-document";
 import {
   clampDossierPageMarginsToMinimums,
@@ -78,10 +75,7 @@ function maximumMargins(...values: DossierPageMargins[]): DossierPageMargins {
   }));
 }
 
-function letterDesignForChrome(
-  design: LetterDesign,
-  chrome: DossierChromeOptions,
-): LetterDesign {
+function letterDesignForChrome(design: LetterDesign, chrome: DossierChromeOptions): LetterDesign {
   return {
     ...design,
     headerMode: chrome.headerMode,
@@ -131,7 +125,8 @@ export function resolveSafeDossierDocxPageMargins(
       getDossierChromeOptions("cv"),
     );
     const frame = cvFrameFor(cv.design.template);
-    const layout = cv.design.template === "terracotta" ? "modern" : getCvLayout();
+    const layout =
+      getCvLayoutChoiceForTemplate(cv.design.template) === "modern" ? "modern" : "classic";
     const minimums = maximumMargins(
       cvSafePageMarginMinimums(frame, 0, layout, cv.design.sidebarPct, chrome),
       cvSafePageMarginMinimums(frame, 1, layout, cv.design.sidebarPct, chrome),
@@ -148,10 +143,7 @@ export function resolveSafeDossierDocxPageMargins(
  * sections. Earlier sections belong to the cover and stay untouched. Matching
  * tolerates sectPr attributes and both compact/expanded pgMar serialization.
  */
-export function patchDossierDocxPageMarginsXml(
-  source: string,
-  state: DossierPageMarginsState,
-) {
+export function patchDossierDocxPageMarginsXml(source: string, state: DossierPageMarginsState) {
   const sectionCount = [...source.matchAll(SECTION_PATTERN)].length;
   if (sectionCount < 3) return source;
 

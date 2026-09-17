@@ -51,6 +51,9 @@ test.describe("shared CV and motivation-letter font", () => {
           },
           design: {
             template: "brief",
+            // This test exercises contact typography, so select it explicitly.
+            // An absent choice now correctly inherits neutral Brief.
+            headerMode: "contact",
             colors: { bg: "#ffffff", primary: "#111111", accent: "#111111" },
           },
         }),

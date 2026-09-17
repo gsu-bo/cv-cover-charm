@@ -213,9 +213,9 @@ describe("generic DOCX export profiles", () => {
 describe("DOCX family fallback coverage", () => {
   test("classifies all 39 selectable templates with an individual safety valve", () => {
     expect(Object.keys(DOSSIER_DOCX_TEMPLATE_PLANS)).toHaveLength(39);
-    expect(Object.values(DOSSIER_DOCX_TEMPLATE_PLANS).every((plan) => plan.fallback === "individual")).toBe(
-      true,
-    );
+    expect(
+      Object.values(DOSSIER_DOCX_TEMPLATE_PLANS).every((plan) => plan.fallback === "individual"),
+    ).toBe(true);
     expect(DOSSIER_DOCX_TEMPLATE_PLANS.warm4).toBeUndefined();
     expect(DOSSIER_DOCX_TEMPLATE_PLANS.warm5).toBeUndefined();
   });
@@ -279,5 +279,45 @@ describe("shared stored-DOCX transform core", () => {
 
     expect(new TextDecoder().decode(document?.bytes)).toBe("<w:document>NEU</w:document>");
     expect(new TextDecoder().decode(styles?.bytes)).toBe("<w:styles/>");
+  });
+});
+
+describe("resolved Word section chrome", () => {
+  test("explicit modes preserve contact visibility, neutral borders and attachments", async () => {
+    const { applyDossierChromeToDocx } = await import("../../src/lib/dossier-docx-chrome");
+    const { resolveDossierChromeSnapshot } = await import("../../src/lib/dossier-resolved-chrome");
+    const { DEFAULT_DOSSIER_CHROME_STATE } = await import("../../src/lib/dossier-chrome");
+    const docs = documents("brief");
+    const source = await resolveDossierDocxProfile(docs.cover, docs.letter, docs.cv)!.createBlob(
+      docs,
+    );
+    for (const mode of ["none", "compact", "contact"] as const) {
+      const state = structuredClone(DEFAULT_DOSSIER_CHROME_STATE);
+      for (const scope of ["shared", "letter", "cv"] as const) {
+        Object.assign(state[scope], {
+          headerMode: mode,
+          headerShowName: false,
+          headerShowAddress: false,
+          footerMode: mode === "contact" ? "details" : mode,
+        });
+      }
+      const output = await applyDossierChromeToDocx(
+        source,
+        docs,
+        resolveDossierChromeSnapshot(docs, state),
+      );
+      const entries = readStoredDocxEntries(new Uint8Array(await output.arrayBuffer()));
+      const xml = (name: string) =>
+        new TextDecoder().decode(entries.find((entry) => entry.name === name)!.bytes);
+      const header = xml("word/header-letter-first.xml");
+      expect(header.includes("<v:rect")).toBe(mode !== "none");
+      expect(header.includes("lea@example.ch")).toBe(mode === "contact");
+      expect(header).not.toContain("Lea Müller");
+      expect(header).not.toContain("Dorfstrasse");
+      expect(xml("word/footer-letter-first.xml").includes("Beilagen")).toBe(mode === "contact");
+      expect(xml("word/document.xml")).not.toContain("<w:pgBorders");
+      if (process.env.DOCX_CHROME_QA_DIR)
+        await Bun.write(`${process.env.DOCX_CHROME_QA_DIR}/brief-${mode}.docx`, output);
+    }
   });
 });

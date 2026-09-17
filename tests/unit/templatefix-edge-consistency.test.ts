@@ -20,12 +20,12 @@ const legacyCss = readFileSync(
 );
 
 describe("Fresh 19-22 dossier rebuild", () => {
-  test("unsaved CVs default to Standard while Kolumne always keeps Sidebar", () => {
+  test("unsaved CVs default to Standard with a Sidebar default for Kolumne", () => {
     expect(layout).toContain(
       "const DEFAULT_LAYOUT: CvLayoutId = CANONICAL_DOSSIER_PRESENTATION.cv.layout;",
     );
     expect(layout).toContain('return template === "terracotta" ? "modern" : DEFAULT_LAYOUT;');
-    expect(layout).toContain('if (template === "terracotta") return "modern";');
+    expect(layout).not.toContain('if (template === "terracotta") return "modern";');
     expect(layout).toContain("return valid(saved) ? saved : fallback;");
   });
 

@@ -1,3 +1,4 @@
+import { cvBodyData } from "@/lib/dossier-body-contact";
 import {
   useLayoutEffect,
   useMemo,
@@ -16,10 +17,7 @@ import {
 } from "@/lib/dossier-page-margins";
 import { resolveTemplateChromeOptions } from "@/lib/template-chrome";
 import { CvTextAlignmentPortal } from "./CvTextAlignmentPortal";
-import {
-  getCvTextAlignment,
-  subscribeCvTextAlignment,
-} from "./text-alignment";
+import { getCvTextAlignment, subscribeCvTextAlignment } from "./text-alignment";
 import { cvContentBox, cvFrameFor } from "./archetype";
 import { CV_LAYOUT_EVENT } from "./layout";
 import { CvCanvas as BaseCvCanvas } from "./CvCanvasBase";
@@ -63,22 +61,6 @@ function contactFromCv(data: CvData): DossierChromeContact {
   };
 }
 
-function cvBodyData(data: CvData, options: DossierChromeOptions): CvData {
-  if (options.headerMode !== "contact") return data;
-  const person = data.person;
-  const hasName = !!(person.vorname?.trim() || person.nachname?.trim());
-  return {
-    ...data,
-    person: {
-      ...person,
-      ...(options.headerShowName && hasName ? { vorname: "\u200b", nachname: "" } : {}),
-      ...(options.headerShowAddress ? { adresse: "", plzOrt: "" } : {}),
-      ...(options.headerShowPhone ? { telefon: "" } : {}),
-      ...(options.headerShowEmail ? { email: "" } : {}),
-    },
-  };
-}
-
 /** Pure snapshot adapter: no dossier-chrome store reads happen below the route/editor boundary. */
 export function CvCanvas({
   chromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
@@ -92,11 +74,7 @@ export function CvCanvas({
   );
   // Page margins are stored outside the legacy CV JSON. Subscribing here keeps
   // preview, pagination and hidden PDF canvases on one geometry path.
-  useSyncExternalStore(
-    subscribeDossierPageMargins,
-    getDossierPageMarginsSnapshot,
-    () => "{}",
-  );
+  useSyncExternalStore(subscribeDossierPageMargins, getDossierPageMarginsSnapshot, () => "{}");
   const localContact = useMemo(() => contactFromCv(props.data), [props.data]);
   const design = useMemo(() => cvDesignWithFullSectionRules(props.design), [props.design]);
   const resolvedChromeOptions = useMemo(

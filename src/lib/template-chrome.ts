@@ -1,8 +1,4 @@
-import type {
-  DossierChromeOptions,
-  DossierFooterMode,
-  DossierHeaderMode,
-} from "@/lib/dossier-chrome";
+import type { DossierChromeOptions, DossierHeaderMode } from "@/lib/dossier-chrome";
 import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
 
 /**
@@ -49,11 +45,9 @@ const AUTO_GRADIENT_CONTACT_TEMPLATES = new Set([
 /**
  * Header mode chosen when a template is selected for the first time.
  *
- * This is a default, not a renderer override for ordinary templates. Warm 1 is
- * the one deliberate exception: its reviewed dossier has a custom 52 mm sender
- * masthead on the motivation letter and only the quiet continuation edge on the
- * CV. Both are driven by compact mode, so the generic contact masthead must not
- * replace that paired design.
+ * Selection defaults are written only when a template is deliberately selected.
+ * Warm's default compact mode drives its 52 mm letter masthead and quiet CV edge.
+ * An explicit contact or none choice must remain authoritative afterwards.
  */
 export function defaultHeaderModeForTemplate(template: string): DossierHeaderMode {
   if (template === CANONICAL_DOSSIER_PRESENTATION.template) {
@@ -63,7 +57,7 @@ export function defaultHeaderModeForTemplate(template: string): DossierHeaderMod
 }
 
 /** Footer mode written when a template is deliberately selected. */
-export function defaultFooterModeForTemplate(template: string): DossierFooterMode {
+export function defaultFooterModeForTemplate(template: string): "none" | "compact" {
   return template === CANONICAL_DOSSIER_PRESENTATION.template
     ? CANONICAL_DOSSIER_PRESENTATION.letter.footerMode
     : "compact";
@@ -96,22 +90,8 @@ export function resolveTemplateChromeOptions(
   const primary = colors.primary ?? colors.ink ?? "#334155";
   const secondary = colors.secondary ?? colors.accent ?? primary;
 
-  // Warm 1 is a paired, reviewed dossier composition rather than a generic
-  // contact-header template. The motivation letter's compact mode renders the
-  // deep 52 mm teal/mustard masthead, while the CV's compact mode renders the
-  // thin teal continuation edge. Treat a generic contact request as that Warm
-  // composition so live preview and generated PDF cannot drift apart. Reset a
-  // contact-specific custom height as well; otherwise e.g. 22 mm would become
-  // an 18 mm "compact" stripe instead of the intended 3 mm CV edge.
-  const resolvedOptions: DossierChromeOptions =
-    template === "freundlich" && options.headerMode === "contact"
-      ? {
-          ...options,
-          headerMode: "compact",
-          headerHeightMm: null,
-          headerGapMm: defaultHeaderGapMmForTemplate(template),
-        }
-      : options;
+  // Modes and geometry are resolved user intent. Template styling must not replace them.
+  const resolvedOptions = options;
 
   if (
     resolvedOptions.headerMode === "contact" &&

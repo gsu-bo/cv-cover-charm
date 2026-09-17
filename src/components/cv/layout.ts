@@ -74,30 +74,27 @@ export function defaultCvLayoutForTemplate(template?: string | null): CvLayoutId
   return template === "terracotta" ? "modern" : DEFAULT_LAYOUT;
 }
 
-/**
- * Kolumne is the one template whose identity depends on the sidebar actually
- * carrying content. A global layout choice persisted from another template
- * must not turn its 70 mm rail into an empty decorative slab. Treat Sidebar as
- * part of the template contract; other templates keep the user's saved choice.
- */
+/** Explicit saved layouts win over template-owned defaults. */
 export function resolveCvLayoutChoice(
   template: string | null | undefined,
   saved: string | null,
 ): CvLayoutId {
-  if (template === "terracotta") return "modern";
   const fallback = defaultCvLayoutForTemplate(template);
   return valid(saved) ? saved : fallback;
 }
 
-function readChoice(): CvLayoutId {
-  const template =
-    typeof document === "undefined" ? null : document.documentElement.dataset.dossierTemplate;
+export function getCvLayoutChoiceForTemplate(template?: string | null): CvLayoutId {
   if (typeof window === "undefined") return resolveCvLayoutChoice(template, null);
   try {
     return resolveCvLayoutChoice(template, window.localStorage.getItem(STORAGE_KEY));
   } catch {
     return resolveCvLayoutChoice(template, null);
   }
+}
+function readChoice(): CvLayoutId {
+  return getCvLayoutChoiceForTemplate(
+    typeof document === "undefined" ? null : document.documentElement.dataset.dossierTemplate,
+  );
 }
 
 function readMirror(): boolean {

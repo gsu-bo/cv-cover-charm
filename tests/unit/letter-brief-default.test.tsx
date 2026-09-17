@@ -53,8 +53,12 @@ describe("plain letter default", () => {
     expect(markup).toContain('data-letter-header-mode="contact"');
   });
 
-  test("legacy saved letters without a header mode keep their historical contact header", () => {
+  test("missing saved modes inherit Brief while explicit legacy settings remain supported", () => {
     const normalized = normalizeLetterDesign({ template: "brief", colors: {}, font: "freundlich" });
-    expect(normalized.headerMode).toBe("contact");
+    expect(normalized.headerMode).toBe("none");
+    expect(
+      normalizeLetterDesign({ template: "brief", headerMode: "contact", footerMode: "compact" })
+        .headerMode,
+    ).toBe("contact");
   });
 });

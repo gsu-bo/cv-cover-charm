@@ -2,6 +2,7 @@ import { Mail, Smartphone } from "lucide-react";
 import { FONT_STACKS } from "@/components/cover/types";
 import { cvPalette, onColorRoles } from "@/components/cv/palette";
 import {
+  hasReducedContinuationHeader,
   dossierFooterVisualHeightMmForOptions,
   dossierHeaderVisualHeightMmForOptions,
   type DossierChromeContact,
@@ -102,11 +103,7 @@ function InlineContactSeparator({
 
   if (style === "space") {
     return (
-      <span
-        aria-hidden="true"
-        className="shrink-0"
-        style={{ width: compact ? "3.5ch" : "5ch" }}
-      />
+      <span aria-hidden="true" className="shrink-0" style={{ width: compact ? "3.5ch" : "5ch" }} />
     );
   }
 
@@ -161,7 +158,7 @@ export function DossierHeaderFooterChrome({
       : options;
   const headerMode = options.headerMode;
   const differentFirstPage = options.headerDifferentFirstPage !== false;
-  const continuationContact = pageIndex > 0 && differentFirstPage && headerMode === "contact";
+  const continuationContact = hasReducedContinuationHeader(options, pageIndex);
   const sourcePalette = cvPalette(colors);
   const primary =
     template === "brief"
@@ -171,7 +168,10 @@ export function DossierHeaderFooterChrome({
     template === "brief" ? "#4b5563" : (colors.accent ?? colors.secondary ?? sourcePalette.accent);
   const headerBackground = visualOptions.headerBackgroundColor ?? primary;
   const footerBackground = visualOptions.footerBackgroundColor ?? secondary;
-  const headerRoles = onColorRoles(headerBackground, visualOptions.headerGradientColor ?? secondary);
+  const headerRoles = onColorRoles(
+    headerBackground,
+    visualOptions.headerGradientColor ?? secondary,
+  );
   const footerRoles = onColorRoles(footerBackground, visualOptions.footerGradientColor ?? primary);
   const headerSurface = surfaceBackground(headerBackground, visualOptions.headerGradientColor);
   const footerSurface = surfaceBackground(footerBackground, visualOptions.footerGradientColor);

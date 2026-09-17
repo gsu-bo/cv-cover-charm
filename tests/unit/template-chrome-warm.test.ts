@@ -18,7 +18,7 @@ describe("Warm 1 dossier chrome", () => {
     expect(defaultHeaderGapMmForTemplate("freundlich")).toBe(12);
   });
 
-  test("maps a generic contact header back to the reviewed Warm composition", () => {
+  test("preserves an explicit contact header and user geometry", () => {
     const resolved = resolveTemplateChromeOptions("freundlich", warmColors, {
       ...DEFAULT_DOSSIER_CHROME_OPTIONS,
       headerMode: "contact",
@@ -26,9 +26,9 @@ describe("Warm 1 dossier chrome", () => {
       headerGapMm: 4,
     });
 
-    expect(resolved.headerMode).toBe("compact");
-    expect(resolved.headerHeightMm).toBeNull();
-    expect(resolved.headerGapMm).toBe(12);
+    expect(resolved.headerMode).toBe("contact");
+    expect(resolved.headerHeightMm).toBe(22);
+    expect(resolved.headerGapMm).toBe(4);
   });
 
   test("still respects an explicit no-header choice", () => {

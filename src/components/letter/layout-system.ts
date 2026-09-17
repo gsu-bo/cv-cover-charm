@@ -1,5 +1,6 @@
+import { hasReducedContinuationHeader } from "@/lib/dossier-chrome";
 import type { TemplateId } from "@/components/cover/types";
-import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
+import { defaultHeaderModeForTemplate, defaultFooterModeForTemplate } from "@/lib/template-chrome";
 import { cvFrameFor } from "@/components/cv/archetype";
 import {
   DOSSIER_PAGE_MARGIN_MIN_MM,
@@ -147,34 +148,18 @@ export function letterFooterHeightMm(
   return Math.min(30, 7 + visualLineCount * 3.8);
 }
 
-function effectiveHeaderMode(design: LetterDesign, pageIndex: number): LetterHeaderMode {
-  // Explicit legacy/user choices always win. Only an actually missing choice may
-  // consume the semantic Brief contract.
-  if (design.headerMode) return design.headerMode;
-  if (design.template === CANONICAL_DOSSIER_PRESENTATION.template) {
-    return pageIndex > 0
-      ? CANONICAL_DOSSIER_PRESENTATION.letter.continuationHeaderMode
-      : CANONICAL_DOSSIER_PRESENTATION.letter.headerMode;
-  }
-  // Established template compatibility remains intentionally compact here.
-  return "compact";
+function effectiveHeaderMode(design: LetterDesign, _pageIndex: number): LetterHeaderMode {
+  return design.headerMode ?? defaultHeaderModeForTemplate(design.template);
 }
 
 function effectiveFooterMode(
   design: LetterDesign,
   finalPage: boolean,
-  pageIndex: number,
+  _pageIndex: number,
 ): LetterFooterMode {
-  const requested =
-    design.footerMode ??
-    (design.template === CANONICAL_DOSSIER_PRESENTATION.template
-      ? pageIndex > 0
-        ? CANONICAL_DOSSIER_PRESENTATION.letter.continuationFooterMode
-        : CANONICAL_DOSSIER_PRESENTATION.letter.footerMode
-      : "compact");
+  const requested = design.footerMode ?? defaultFooterModeForTemplate(design.template);
   // Attachment lists belong on the final page only. Earlier pages keep the compact band.
-  if (requested === "attachments" && !finalPage) return "compact";
-  return requested;
+  return requested === "attachments" && !finalPage ? "compact" : (requested as LetterFooterMode);
 }
 
 function letterHeaderVisualHeightMm(
@@ -184,7 +169,7 @@ function letterHeaderVisualHeightMm(
 ): number {
   if (mode === "none") return 0;
   const custom = design.headerHeightMm;
-  if (pageIndex > 0 && mode === "contact") {
+  if (hasReducedContinuationHeader({ ...design, headerMode: mode }, pageIndex)) {
     return custom === null || custom === undefined ? 8 : Math.min(18, Math.max(5, custom));
   }
   if (mode === "contact") {
@@ -209,7 +194,7 @@ function letterContentTopMm(
   }
 
   const height = letterHeaderVisualHeightMm(design, pageIndex, mode);
-  if (pageIndex > 0) {
+  if (pageIndex > 0 && design.headerDifferentFirstPage !== false) {
     return mode === "contact" ? Math.max(18, height + 10) : Math.max(18, height + 15);
   }
   return mode === "contact" ? Math.max(18, height + 9) : Math.max(18, height + 18);
@@ -287,16 +272,8 @@ export function letterPageGeometry(
   const fresh = freshLetterSpec(design.template);
   const archetype = fresh?.archetype ?? letterArchetypeFor(design.template);
   const freshTemplate = fresh !== null;
-  const requestedHeaderMode =
-    design.headerMode ??
-    (design.template === CANONICAL_DOSSIER_PRESENTATION.template
-      ? CANONICAL_DOSSIER_PRESENTATION.letter.headerMode
-      : "compact");
-  const requestedFooterMode =
-    design.footerMode ??
-    (design.template === CANONICAL_DOSSIER_PRESENTATION.template
-      ? CANONICAL_DOSSIER_PRESENTATION.letter.footerMode
-      : "compact");
+  const requestedHeaderMode = design.headerMode ?? defaultHeaderModeForTemplate(design.template);
+  const requestedFooterMode = design.footerMode ?? defaultFooterModeForTemplate(design.template);
   const headerMode = effectiveHeaderMode(design, pageIndex);
   const footerMode = effectiveFooterMode(design, finalPage, pageIndex);
   const footerHeight = letterFooterHeightMm(data, footerMode, design.footerHeightMm ?? null);

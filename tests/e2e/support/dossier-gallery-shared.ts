@@ -1,3 +1,4 @@
+import { defaultCvLayoutForTemplate } from "../../../src/components/cv/layout";
 import { expect, type Page } from "@playwright/test";
 import { FRESH_TEMPLATE_REGISTRY } from "../../../src/components/cover/fresh-template-registry";
 import { TEMPLATES, type TemplateId } from "../../../src/components/cover/types";
@@ -7,6 +8,7 @@ import { CV_TEXT_ALIGNMENT_STORAGE_KEY } from "../../../src/components/cv/text-a
 import {
   defaultHeaderGapMmForTemplate,
   defaultHeaderModeForTemplate,
+  defaultFooterModeForTemplate,
 } from "../../../src/lib/template-chrome";
 
 export const BASE_URL = "http://127.0.0.1:4173";
@@ -194,13 +196,11 @@ export function assertGalleryCatalog() {
   expect(Math.ceil(GALLERY_CASES.length / GALLERY_BATCH_SIZE)).toBe(GALLERY_BATCH_COUNT);
 }
 
-export async function applyGalleryCase(
-  page: Page,
-  stored: CanonicalDossier,
-  item: GalleryCase,
-) {
+export async function applyGalleryCase(page: Page, stored: CanonicalDossier, item: GalleryCase) {
   const headerMode = defaultHeaderModeForTemplate(item.coverTemplate);
   const headerGapMm = defaultHeaderGapMmForTemplate(item.coverTemplate);
+  const footerMode = defaultFooterModeForTemplate(item.coverTemplate);
+  const cvLayout = defaultCvLayoutForTemplate(item.cvTemplate);
   const galleryBaseChrome = stored.chrome ?? DEFAULT_DOSSIER_CHROME_STATE;
 
   // Never write the next fixture while an editor from the previous case is
@@ -216,6 +216,8 @@ export async function applyGalleryCase(
       cvTemplate,
       headerMode,
       headerGapMm,
+      footerMode,
+      cvLayout,
       chromeStorageKey,
     }) => {
       const cover = structuredClone(base.cover);
@@ -248,6 +250,11 @@ export async function applyGalleryCase(
       chrome.letter.headerMode = headerMode;
       chrome.letter.headerGapMm = headerGapMm;
       letter.design.headerMode = headerMode;
+      letter.design.footerMode = footerMode;
+      chrome.shared.footerMode = footerMode;
+      chrome.cv.footerMode = footerMode;
+      chrome.letter.footerMode = footerMode;
+      localStorage.setItem("lebenslauf:layout:v1", cvLayout);
 
       localStorage.setItem("titelblatt:v3", JSON.stringify(cover));
       localStorage.setItem("anschreiben:v1", JSON.stringify(letter));
@@ -262,6 +269,8 @@ export async function applyGalleryCase(
       cvTemplate: item.cvTemplate,
       headerMode,
       headerGapMm,
+      footerMode,
+      cvLayout,
       chromeStorageKey: CHROME_STORAGE_KEY,
     },
   );

@@ -1,3 +1,4 @@
+import { defaultHeaderModeForTemplate, defaultFooterModeForTemplate } from "@/lib/template-chrome";
 import { FONT_LABELS, TEMPLATES, type FontKey, type TemplateId } from "@/components/cover/types";
 import { LETTER_STORAGE_KEY } from "@/lib/dossier-project";
 import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
@@ -266,11 +267,13 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
     incoming.headerMode === "contact" ||
     incoming.headerMode === "none"
       ? incoming.headerMode
-      : "contact";
+      : defaultHeaderModeForTemplate(template);
   const footerMode: LetterFooterMode =
-    incoming.footerMode === "attachments" || incoming.footerMode === "none"
+    incoming.footerMode === "attachments" ||
+    incoming.footerMode === "none" ||
+    incoming.footerMode === "compact"
       ? incoming.footerMode
-      : "compact";
+      : (defaultFooterModeForTemplate(template) as LetterFooterMode);
   return {
     template,
     colors,

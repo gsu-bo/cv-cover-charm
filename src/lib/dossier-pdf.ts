@@ -207,6 +207,11 @@ function addLetterTextLayer(pdf: JsPdf, page: HTMLElement) {
   const font = pdfFontFor(page);
 
   for (const element of page.querySelectorAll<HTMLElement>("[data-letter-pdf-text]")) {
+    // Chrome uses the browser's measured runs so narrow labels are not rewrapped.
+    if (element.closest("[data-dossier-chrome]")) {
+      addRichLetterText(pdf, page, element, font, mmX, mmY);
+      continue;
+    }
     const text = letterText(element);
     if (!text) continue;
     const rect = element.getBoundingClientRect();

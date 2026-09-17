@@ -70,19 +70,10 @@ describe("compact letter presentation", () => {
       expect(compact).toContain('data-letter-header-mode="compact"');
       expect(compact).toContain('data-letter-section="sender"');
 
-      if (template === "freundlich") {
-        // Warm deliberately maps generic contact mode back to its reviewed
-        // compact contract: the letter gets the 52 mm teal/gold masthead while
-        // the CV keeps the quiet continuation edge from the GOLD PDF.
-        expect(contact).toContain('data-letter-header-mode="compact"');
-        expect(contact).toContain("data-letter-warm-sender");
-        expect(contact).not.toContain("data-letter-integrated-contact");
-      } else {
-        expect(contact).toContain('data-letter-header-mode="contact"');
-        expect(contact).toContain("data-letter-integrated-contact");
-        expect(contact).not.toContain('data-letter-section="sender"');
-        expect(contact).toContain("top:43mm");
-      }
+      expect(contact).toContain('data-letter-header-mode="contact"');
+      expect(contact).toContain("data-letter-integrated-contact");
+      expect(contact).not.toContain('data-letter-section="sender"');
+      expect(contact).toContain("top:43mm");
 
       expect(none).toContain('data-letter-header-mode="none"');
       expect(none).not.toContain("data-letter-integrated-contact");
@@ -190,7 +181,7 @@ describe("compact letter presentation", () => {
       colors: defaultLetterColors("modern"),
       font: "freundlich",
     });
-    expect(legacy.headerMode).toBe("contact");
+    expect(legacy.headerMode).toBe("compact");
     expect(legacy.headerShowName).toBe(true);
     expect(legacy.headerShowAddress).toBe(true);
     expect(legacy.headerShowPhone).toBe(true);

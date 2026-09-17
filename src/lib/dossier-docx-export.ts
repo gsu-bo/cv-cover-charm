@@ -1,3 +1,7 @@
+import { getDossierChromeState } from "@/lib/dossier-chrome";
+import { cvBodyData } from "@/lib/dossier-body-contact";
+import { resolveDossierChromeSnapshot } from "@/lib/dossier-resolved-chrome";
+import { applyDossierChromeToDocx } from "@/lib/dossier-docx-chrome";
 import type {
   CoverPdfDocument,
   CvPdfDocument,
@@ -104,9 +108,7 @@ export const DOSSIER_DOCX_PROFILES: readonly DossierDocxProfile[] = [
   },
 ] as const;
 
-export const DOSSIER_DOCX_SUPPORTED_LABELS = DOSSIER_DOCX_PROFILES.map(
-  (profile) => profile.label,
-);
+export const DOSSIER_DOCX_SUPPORTED_LABELS = DOSSIER_DOCX_PROFILES.map((profile) => profile.label);
 
 const REVIEWED_TEMPLATE_IDS = new Set(DOSSIER_DOCX_PROFILES.map((profile) => profile.templateId));
 const RETIRED_RECIPE_LABELS: Readonly<Record<string, string>> = {
@@ -160,10 +162,8 @@ function resolveFamilyFallbackProfile(
     },
     supports: supportsTemplate(templateId),
     createBlob: async ({ cover: nextCover, letter: nextLetter, cv: nextCv }) => {
-      const {
-        createGenericFamilyDossierDocxBlob,
-        genericFamilyDossierDocxSupported,
-      } = await import("@/lib/dossier-docx-family-renderer");
+      const { createGenericFamilyDossierDocxBlob, genericFamilyDossierDocxSupported } =
+        await import("@/lib/dossier-docx-family-renderer");
       if (!genericFamilyDossierDocxSupported(nextCover, nextLetter, nextCv)) {
         throw new Error(`Kein DOCX-Family-Fallback für ${templateId}.`);
       }
@@ -201,7 +201,12 @@ export async function createDossierDocxBlob(
   if (!profile) {
     throw new Error("DOCX benötigt dieselbe aktive Vorlage in allen drei Dossierteilen.");
   }
-  const blob = await profile.createBlob({ cover, letter, cv });
+  const resolved = resolveDossierChromeSnapshot({ cover, letter, cv }, getDossierChromeState());
+  const blob = await profile.createBlob({
+    cover,
+    letter,
+    cv: { ...cv, data: cvBodyData(cv.data, resolved.cv.options) },
+  });
   const letterAligned = await applyLetterAlignmentToDocx(blob, letter);
   const aligned = await applyCvTextAlignmentToDocx(letterAligned, cv);
   const hyphenated = await applyDossierHyphenationToDocx(
@@ -210,7 +215,8 @@ export async function createDossierDocxBlob(
     cv,
     getDossierHyphenationEnabled(),
   );
-  return applyDossierPageMarginsToDocx(hyphenated, letter, cv);
+  const margined = await applyDossierPageMarginsToDocx(hyphenated, letter, cv);
+  return applyDossierChromeToDocx(margined, { cover, letter, cv }, resolved);
 }
 
 export async function downloadDossierDocx(

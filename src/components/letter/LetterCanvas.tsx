@@ -4,8 +4,11 @@ import { cvPalette, onColorRoles } from "@/components/cv/palette";
 import { DossierHeaderFooterChrome } from "@/components/dossier/DossierHeaderFooterChrome";
 import type { DossierChromeContact, DossierChromeOptions } from "@/lib/dossier-chrome";
 import { effectiveDossierFont } from "@/lib/dossier-theme";
-import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
-import { resolveTemplateChromeOptions } from "@/lib/template-chrome";
+import {
+  defaultHeaderModeForTemplate,
+  defaultFooterModeForTemplate,
+  resolveTemplateChromeOptions,
+} from "@/lib/template-chrome";
 import { letterPageGeometry, visibleLetterAttachments } from "./layout-system";
 import type { LetterData, LetterDesign, LetterFlowImage } from "./types";
 import { letterRichHtml, plainTextToRichHtml } from "./rich-text";
@@ -47,11 +50,8 @@ function Separator({ color, marker }: { color: string; marker: string }) {
 /** Legacy/SSR adapter only. Live DossierChromeState is the single source of truth. */
 function legacyChromeFromDesign(design: LetterDesign): DossierChromeOptions {
   return {
-    headerMode:
-      design.headerMode ??
-      (design.template === CANONICAL_DOSSIER_PRESENTATION.template
-        ? CANONICAL_DOSSIER_PRESENTATION.letter.headerMode
-        : "contact"),
+    headerMode: design.headerMode ?? defaultHeaderModeForTemplate(design.template),
+    headerDifferentFirstPage: design.headerDifferentFirstPage,
     headerShowName: design.headerShowName !== false,
     headerShowAddress: design.headerShowAddress !== false,
     headerShowPhone: design.headerShowPhone !== false,
@@ -68,9 +68,7 @@ function legacyChromeFromDesign(design: LetterDesign): DossierChromeOptions {
           ? "none"
           : design.footerMode === "compact"
             ? "compact"
-            : design.template === CANONICAL_DOSSIER_PRESENTATION.template
-              ? CANONICAL_DOSSIER_PRESENTATION.letter.footerMode
-              : "compact",
+            : defaultFooterModeForTemplate(design.template),
     footerHeightMm: design.footerHeightMm ?? null,
     footerTextLayout: design.footerTextLayout === "stacked" ? "stacked" : "inline",
     footerBackgroundColor: design.footerBackgroundColor ?? null,
@@ -116,6 +114,7 @@ export function LetterCanvas({
     () => ({
       ...design,
       headerMode: chrome.headerMode,
+      headerDifferentFirstPage: chrome.headerDifferentFirstPage,
       headerShowName: chrome.headerShowName,
       headerShowAddress: chrome.headerShowAddress,
       headerShowPhone: chrome.headerShowPhone,
