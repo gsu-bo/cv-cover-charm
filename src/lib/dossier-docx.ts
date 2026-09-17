@@ -1,5 +1,10 @@
 import { coverAttachmentValues } from "@/components/cover/types";
 import { CV_SECTION_LABELS, entryFilled, type CvData, type CvEntry } from "@/components/cv/types";
+import {
+  DEFAULT_LETTER_CLOSING_GAP_MM,
+  DEFAULT_LETTER_SIGNATURE_GAP_MM,
+  normalizeLetterSpacingMm,
+} from "@/components/letter/types";
 import type { CoverPdfDocument, CvPdfDocument, LetterPdfDocument } from "@/lib/dossier-pdf-document";
 import { downloadBlob } from "@/lib/download";
 
@@ -306,7 +311,11 @@ function letterPage(document: LetterPdfDocument, images: EmbeddedImage[]) {
     ...flowImages.map((image, index) =>
       paragraphRuns([imageRun(image, 34, 34, 10 + index)], { align: "right", before: 2, after: 2 }),
     ),
-    paragraph(data.gruss, { size: 10.5, before: 5, after: 8 }),
+    paragraph(data.gruss, {
+      size: 10.5,
+      before: normalizeLetterSpacingMm(data.grussAbstandMm, DEFAULT_LETTER_CLOSING_GAP_MM),
+      after: normalizeLetterSpacingMm(data.unterschriftAbstandMm, DEFAULT_LETTER_SIGNATURE_GAP_MM),
+    }),
     paragraph(data.unterschrift || data.absenderName, { size: 10.5, bold: true }),
     data.showBeilagen !== false && (data.beilagen ?? []).some((item) => item.trim())
       ? [

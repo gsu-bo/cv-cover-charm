@@ -49,6 +49,10 @@ export type LetterData = {
   richTextHtml?: string;
   gruss: string;
   unterschrift: string;
+  /** Abstand zwischen Brieftext und Grussformel in mm. */
+  grussAbstandMm?: number;
+  /** Freier Platz zwischen Grussformel und gedrucktem Namen in mm. */
+  unterschriftAbstandMm?: number;
   /** Optionale frei platzierbare Fotos/Bilder. Alte Entwürfe ohne Feld bleiben kompatibel. */
   images?: LetterFlowImage[];
   /** Beilagen am Ende des Motivationsschreibens. */
@@ -108,6 +112,22 @@ export type SavedLetter = {
 export { LETTER_STORAGE_KEY };
 
 export const DEFAULT_LETTER_BEILAGEN = ["Lebenslauf", "Zeugnis"] as const;
+export const DEFAULT_LETTER_CLOSING_GAP_MM = 9;
+export const DEFAULT_LETTER_SIGNATURE_GAP_MM = 9;
+export const MAX_LETTER_SIGNATURE_SPACING_MM = 50;
+
+/** Hält frei eingegebene Briefabstände in einem druckbaren Bereich. */
+export function normalizeLetterSpacingMm(
+  value: unknown,
+  fallback = DEFAULT_LETTER_CLOSING_GAP_MM,
+): number {
+  const normalizedFallback = Number.isFinite(fallback)
+    ? Math.min(MAX_LETTER_SIGNATURE_SPACING_MM, Math.max(0, fallback))
+    : DEFAULT_LETTER_CLOSING_GAP_MM;
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.min(MAX_LETTER_SIGNATURE_SPACING_MM, Math.max(0, Math.round(value * 10) / 10))
+    : normalizedFallback;
+}
 
 /**
  * Brief keeps its historic standalone font control. Designed templates inherit
