@@ -986,7 +986,13 @@ export function CvCanvas({
       node: (
         <div
           data-cv-header
-          style={{ display: "flex", gap: "7mm", alignItems: "flex-start", marginBottom: "3.2mm" }}
+          style={{
+            display: "flex",
+            flexDirection: design.template === "brief" ? "row-reverse" : undefined,
+            gap: "7mm",
+            alignItems: "flex-start",
+            marginBottom: "3.2mm",
+          }}
         >
           {autoPhoto && (
             <div
@@ -1187,7 +1193,7 @@ export function CvCanvas({
     })
     .join("|");
   const chromeShape = `${chromeOptions.headerMode}|${chromeOptions.footerMode}|${chromeOptions.headerShowName ? 1 : 0}|${chromeOptions.headerShowAddress ? 1 : 0}|${chromeOptions.headerShowPhone ? 1 : 0}|${chromeOptions.headerShowEmail ? 1 : 0}`;
-  const shape = `${chromeShape}|${layoutChoice}|${layout}|${frame.id}|${design.font ?? "template"}|${placementShape}|${sectionLayoutShape}|${rows
+  const shape = `${chromeShape}|photo:${place.mode}|${layoutChoice}|${layout}|${frame.id}|${design.font ?? "template"}|${placementShape}|${sectionLayoutShape}|${rows
     .map((row) => `${row.id}:${row.minPage ?? "auto"}`)
     .join("|")}`;
 

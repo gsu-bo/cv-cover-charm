@@ -269,3 +269,11 @@ html[data-cv-mirrored="true"][data-cv-variant="editorial"]
     outline: none !important;
   }
 }
+
+/* Package 1: Brief/Standard defaults to photo right; mirrored still flips that default. */
+html[data-cv-mirrored="true"]
+  [data-dossier-document="cv"][data-cv-template="brief"][data-cv-layout="classic"]
+  [data-cv-page="0"]
+  [data-cv-header] {
+  flex-direction: row !important;
+}
