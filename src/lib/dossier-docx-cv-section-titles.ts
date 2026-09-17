@@ -24,6 +24,19 @@ function wordColor(value: string | undefined) {
   return /^[0-9a-f]{6}$/i.test(normalized) ? normalized.toUpperCase() : null;
 }
 
+function hasExplicitSectionTitleOverride(design: CvDesign) {
+  return (
+    (typeof design.sectionTitleFontSizePx === "number" && Number.isFinite(design.sectionTitleFontSizePx)) ||
+    !!wordColor(design.sectionTitleColor) ||
+    design.sectionTitleBold !== undefined ||
+    design.sectionTitleItalic !== undefined ||
+    design.sectionTitleUnderline !== undefined ||
+    (typeof design.sectionTitleMarginBottomPx === "number" &&
+      Number.isFinite(design.sectionTitleMarginBottomPx)) ||
+    design.headingRule === "none"
+  );
+}
+
 function sectionLabels(data: CvData) {
   const labels = (Object.keys(CV_SECTION_LABELS) as CvSectionKey[]).map(
     (key) => data.labels?.[key]?.trim() || CV_SECTION_LABELS[key],
@@ -148,8 +161,9 @@ function patchHeadingTable(table: string, design: CvDesign) {
     typeof design.sectionTitleMarginBottomPx === "number" &&
     Number.isFinite(design.sectionTitleMarginBottomPx)
   ) {
+    const margin = design.sectionTitleMarginBottomPx;
     next = next.replace(/<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g, (paragraph) =>
-      patchParagraphSpacing(paragraph, design.sectionTitleMarginBottomPx!),
+      patchParagraphSpacing(paragraph, margin),
     );
   }
   if (design.headingRule === "none") {
@@ -182,6 +196,8 @@ export function applyCvSectionTitleStyleToDocumentXml(
   source: string,
   cv: Pick<CvPdfDocument, "data" | "design">,
 ) {
+  if (!hasExplicitSectionTitleOverride(cv.design)) return source;
+
   const headings = headingTextSet(cv.data);
   if (!headings.size) return source;
 
