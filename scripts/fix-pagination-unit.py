@@ -21,6 +21,28 @@ def replace_all(path: str, old: str, new: str) -> None:
 
 replace_once(
     "src/lib/dossier-pdf.ts",
+    '  if (rootOrPage.matches("[data-letter-page]")) return [rootOrPage];\n',
+    '  if (rootOrPage.matches?.("[data-letter-page]")) return [rootOrPage];\n',
+)
+replace_once(
+    "src/lib/dossier-pdf.ts",
+    '    const documentRoot = rootOrPage.matches("[data-letter-document-root]")\n',
+    '    const documentRoot = rootOrPage.matches?.("[data-letter-document-root]")\n',
+)
+replace_once(
+    "src/lib/dossier-pdf.ts",
+    '    const pages = Array.from(rootOrPage.querySelectorAll<HTMLElement>("[data-letter-page]"));\n',
+    '    const pages =\n'
+    '      typeof rootOrPage.querySelectorAll === "function"\n'
+    '        ? Array.from(rootOrPage.querySelectorAll<HTMLElement>("[data-letter-page]"))\n'
+    '        : [];\n'
+    '    if (!pages.length && typeof rootOrPage.querySelector === "function") {\n'
+    '      const single = rootOrPage.querySelector<HTMLElement>("[data-letter-page]");\n'
+    '      if (single) pages.push(single);\n'
+    '    }\n',
+)
+replace_once(
+    "src/lib/dossier-pdf.ts",
     '  const pageNumber = Number(overflowing.dataset.letterPageIndex ?? "0") + 1;\n',
     '  const pageNumber = Number(overflowing.dataset?.letterPageIndex ?? "0") + 1;\n',
 )
