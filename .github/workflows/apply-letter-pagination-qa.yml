@@ -61,20 +61,21 @@ jobs:
               raise RuntimeError(f"dossier-regression.spec.ts: expected one old block-count assertion, found {count}")
           text = text.replace(old, new, 1)
 
-          old = '''    const saved = await page.evaluate(
-              () => JSON.parse(localStorage.getItem("anschreiben:v1") ?? "{}").data?.richTextHtml ?? "",
-            );'''
-          new = '''    const readSavedRichText = () =>
+          start_marker = '    const saved = await page.evaluate('
+          end_marker = '    expect(saved).toContain("<strong>");'
+          start = text.find(start_marker)
+          end = text.find(end_marker, start)
+          if start < 0 or end < 0:
+              raise RuntimeError("dossier-regression.spec.ts: could not locate immediate richtext read")
+          replacement = '''    const readSavedRichText = () =>
               page.evaluate(
                 () => JSON.parse(localStorage.getItem("anschreiben:v1") ?? "{}").data?.richTextHtml ?? "",
               );
             await expect.poll(readSavedRichText).toContain('data-columns="2"');
             await expect.poll(readSavedRichText).toContain("<table data-letter-table>");
-            const saved = await readSavedRichText();'''
-          count = text.count(old)
-          if count != 1:
-              raise RuntimeError(f"dossier-regression.spec.ts: expected one immediate richtext read, found {count}")
-          regression.write_text(text.replace(old, new, 1), encoding="utf-8")
+            const saved = await readSavedRichText();
+          '''
+          regression.write_text(text[:start] + replacement + text[end:], encoding="utf-8")
           PY
 
       - name: Setup Bun
