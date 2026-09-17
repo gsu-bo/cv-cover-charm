@@ -58,13 +58,15 @@ function rangeIntersects(range: Range, node: Node): boolean {
   }
 }
 
-function existingSelectedBlocks(editor: HTMLElement, range: Range): HTMLElement[] {
+function editableBlocks(editor: HTMLElement): HTMLElement[] {
   return Array.from(editor.children).filter(
     (child): child is HTMLElement =>
-      child instanceof HTMLElement &&
-      ["div", "p"].includes(child.tagName.toLowerCase()) &&
-      rangeIntersects(range, child),
+      child instanceof HTMLElement && ["div", "p"].includes(child.tagName.toLowerCase()),
   );
+}
+
+function existingSelectedBlocks(editor: HTMLElement, range: Range): HTMLElement[] {
+  return editableBlocks(editor).filter((child) => rangeIntersects(range, child));
 }
 
 function ensureSelectedBlocks(editor: HTMLElement, range: Range): HTMLElement[] {
@@ -261,8 +263,20 @@ export function LetterRichTextEditor({
 
   const setAlignment = (align: LetterTextAlign) => {
     const editor = editorRef.current;
+    if (!editor) return;
+
+    // A toolbar click before the user has placed a caret has no current
+    // paragraph. In that common case, treat alignment as a whole-letter
+    // action instead of silently doing nothing.
+    if (!savedRangeRef.current) {
+      for (const block of editableBlocks(editor)) block.dataset.align = align;
+      emit();
+      setToolbar((current) => ({ ...current, align }));
+      return;
+    }
+
     const range = restoreRange();
-    if (!editor || !range) return;
+    if (!range) return;
     const blocks = ensureSelectedBlocks(editor, range);
     for (const block of blocks) block.dataset.align = align;
     emit();

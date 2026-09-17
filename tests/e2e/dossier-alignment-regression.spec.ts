@@ -168,6 +168,35 @@ async function openCvAlignmentControl(page: Page) {
 test.describe("body alignment Web/PDF parity", () => {
   test.setTimeout(180_000);
 
+  test("motivation letter alignment buttons update the whole body without a prior text selection", async ({
+    page,
+  }) => {
+    const marker = await seedLetter(page, "justify");
+    const control = page.locator("[data-text-alignment-control]").first();
+    const previewBlock = page
+      .locator('[data-letter-pdf-richtext="body"] > :is(div, p)')
+      .filter({ hasText: marker })
+      .first();
+
+    await control.locator('button[data-alignment="left"]').click();
+    await expect(control.locator('button[data-alignment="left"]')).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect
+      .poll(() => previewBlock.evaluate((node) => getComputedStyle(node).textAlign))
+      .toBe("left");
+
+    await control.locator('button[data-alignment="justify"]').click();
+    await expect(control.locator('button[data-alignment="justify"]')).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect
+      .poll(() => previewBlock.evaluate((node) => getComputedStyle(node).textAlign))
+      .toBe("justify");
+  });
+
   for (const align of BODY_ALIGNMENTS) {
     test(`motivation letter ${align}: preview and generated PDF use the same body state`, async ({
       page,
