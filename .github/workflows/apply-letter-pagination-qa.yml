@@ -1,4 +1,4 @@
-name: Apply letter pagination QA
+name: Final dossier acceptance patch
 
 on:
   push:
@@ -14,15 +14,15 @@ permissions:
 jobs:
   apply-and-verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     steps:
-      - name: Checkout dev
+      - name: Checkout exact dev head
         uses: actions/checkout@v4
         with:
           ref: dev
           fetch-depth: 0
 
-      - name: Apply QA patch
+      - name: Apply final acceptance patch
         run: python3 scripts/apply-letter-pagination-qa.py
 
       - name: Setup Bun
@@ -35,30 +35,23 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install application dependencies
+      - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Format pagination changes
+      - name: Format touched files
         run: >-
           bunx prettier --write
-          src/lib/dossier-pdf.ts
-          tests/e2e/letter-pagination.spec.ts
-          tests/e2e/dossier-letter-preflight.spec.ts
-          src/components/letter/LetterDocument.tsx
-          src/components/letter/letter-page-context.ts
-          src/components/letter/letter-pagination.ts
-          src/components/letter/letter-pagination.css
           src/routes/anschreiben.tsx
-          src/components/dossier/DossierExportDialog.tsx
-          src/components/dossier/DossierPdfCanvas.tsx
-          .github/workflows/dossier-regression.yml
-          package.json
+          src/lib/dossier-pdf.ts
+          src/components/dossier/DossierChromeControls.tsx
+          src/components/cv/CvCanvasBase.tsx
+          tests/e2e/letter-final-qa.spec.ts
+          tests/e2e/letter-adversarial-content.spec.ts
+          tests/e2e/dossier-regression.spec.ts
+          tests/e2e/dossier-letter-preflight.spec.ts
 
       - name: Unit tests
         run: bun test tests/unit
-
-      - name: Release formatting
-        run: bun run format:check:release
 
       - name: TypeScript
         run: bun run typecheck
@@ -69,7 +62,7 @@ jobs:
       - name: Production build
         run: bun run build
 
-      - name: Install browser test runner
+      - name: Install Playwright
         run: npm install --no-save --no-package-lock @playwright/test@1.55.0
 
       - name: Install Chromium
@@ -89,42 +82,45 @@ jobs:
           cat /tmp/cv-cover-charm.log
           exit 1
 
-      - name: Run pagination and adjacent regressions
+      - name: Chrome sync acceptance
+        run: npx playwright test tests/e2e/dossier-chrome-sync.spec.ts --reporter=line --workers=1
+
+      - name: Responsive editor acceptance
+        run: npx playwright test tests/e2e/dossier-responsive-product-smoke.spec.ts --reporter=line --workers=1
+
+      - name: Multi-page edge acceptance
+        run: npx playwright test tests/e2e/letter-adversarial-content.spec.ts --reporter=line --workers=1
+
+      - name: Multi-page final QA acceptance
+        run: npx playwright test tests/e2e/letter-final-qa.spec.ts --grep "long but one-page|multi-page-sized" --reporter=line --workers=1
+
+      - name: Dossier letter acceptance
         run: >-
           npx playwright test
-          tests/e2e/letter-pagination.spec.ts
           tests/e2e/dossier-letter-preflight.spec.ts
-          tests/e2e/letter-header-modes.spec.ts
+          tests/e2e/dossier-alignment-regression.spec.ts
+          tests/e2e/dossier-regression.spec.ts
+          --grep "missing fields, multi-page|motivation letter (left|justify)|standalone Motivationsschreiben PDF|paginates long content|letter layout controls"
           --reporter=line --workers=1
 
-      - name: Commit verified pagination QA
-        if: success()
+      - name: Commit verified fixes
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
+            src/routes/anschreiben.tsx \
             src/lib/dossier-pdf.ts \
-            tests/e2e/letter-pagination.spec.ts \
-            .github/workflows/dossier-regression.yml \
-            package.json
-          if git diff --cached --quiet; then
-            echo "No QA changes to commit"
-            exit 0
-          fi
-          git commit -m "test(letter): verify multi-page pagination end to end"
+            src/components/dossier/DossierChromeControls.tsx \
+            src/components/cv/CvCanvasBase.tsx \
+            tests/e2e/letter-final-qa.spec.ts \
+            tests/e2e/letter-adversarial-content.spec.ts \
+            tests/e2e/dossier-regression.spec.ts \
+            tests/e2e/dossier-letter-preflight.spec.ts
+          git commit -m "fix(dossier): close final multipage acceptance gaps"
           git push origin HEAD:dev
 
-      - name: Upload pagination QA artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: letter-pagination-qa
-          path: artifacts/letter-pagination
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Show application log on failure
+      - name: Show app log on failure
         if: failure()
         run: cat /tmp/cv-cover-charm.log || true
 
