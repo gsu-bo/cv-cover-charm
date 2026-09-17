@@ -10,7 +10,14 @@ import {
   resolveTemplateChromeOptions,
 } from "@/lib/template-chrome";
 import { letterPageGeometry, visibleLetterAttachments } from "./layout-system";
-import type { LetterData, LetterDesign, LetterFlowImage } from "./types";
+import {
+  DEFAULT_LETTER_CLOSING_GAP_MM,
+  DEFAULT_LETTER_SIGNATURE_GAP_MM,
+  normalizeLetterSpacingMm,
+  type LetterData,
+  type LetterDesign,
+  type LetterFlowImage,
+} from "./types";
 import { letterRichHtml, plainTextToRichHtml } from "./rich-text";
 import { LetterFlowImages } from "./LetterFlowImages";
 import { LetterSheetBackground } from "./LetterSheetBackground";
@@ -191,6 +198,11 @@ export function LetterCanvas({
   const beilagen = visibleLetterAttachments(data);
   const showBeilagen = data.showBeilagen !== false && beilagen.length > 0;
   const showBeilagenInBody = showBeilagen && geometry.requestedFooterMode !== "attachments";
+  const closingGapMm = normalizeLetterSpacingMm(data.grussAbstandMm, DEFAULT_LETTER_CLOSING_GAP_MM);
+  const signatureGapMm = normalizeLetterSpacingMm(
+    data.unterschriftAbstandMm,
+    DEFAULT_LETTER_SIGNATURE_GAP_MM,
+  );
   const placeholder =
     "Hier entsteht dein persönliches Motivationsschreiben. Erkläre, weshalb du dich für diesen Beruf und diesen Lehrbetrieb interessierst und was du mitbringst.";
   const bodyHtml = data.richTextHtml?.trim()
@@ -401,11 +413,19 @@ export function LetterCanvas({
               dangerouslySetInnerHTML={{ __html: bodyHtml }}
             />
 
-            <div className="mt-[9mm]">
+            <div
+              data-letter-closing-gap-mm={closingGapMm}
+              style={{ marginTop: `${closingGapMm}mm` }}
+            >
               <div data-letter-pdf-text="closing">
                 {data.gruss || (exportMode ? "" : "Freundliche Grüsse")}
               </div>
-              <div data-letter-pdf-text="signature" className="mt-[9mm] font-medium">
+              <div
+                data-letter-pdf-text="signature"
+                data-letter-signature-gap-mm={signatureGapMm}
+                className="font-medium"
+                style={{ marginTop: `${signatureGapMm}mm` }}
+              >
                 {data.unterschrift || data.absenderName}
               </div>
             </div>

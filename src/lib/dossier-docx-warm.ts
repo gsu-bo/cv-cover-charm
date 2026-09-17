@@ -1,5 +1,10 @@
 import { coverAttachmentValues } from "@/components/cover/types";
 import { CV_SECTION_LABELS, entryFilled, type CvData, type CvEntry } from "@/components/cv/types";
+import {
+  DEFAULT_LETTER_CLOSING_GAP_MM,
+  DEFAULT_LETTER_SIGNATURE_GAP_MM,
+  normalizeLetterSpacingMm,
+} from "@/components/letter/types";
 import type {
   CoverPdfDocument,
   CvPdfDocument,
@@ -333,7 +338,12 @@ function letterPage(document: LetterPdfDocument) {
     paragraph(data.betreff, { size: 12, bold: true, color: palette.ink, before: 7, after: 8, keepNext: true }),
     paragraph(data.anrede, { size: 10.5, color: palette.ink, after: 5, keepNext: true }),
     ...bodyParagraphs.map((text) => paragraph(text, { size: 10.5, color: palette.ink, after: 4.5, line: 1.48 })),
-    paragraph(data.gruss, { size: 10.5, color: palette.ink, before: 5, after: 8 }),
+    paragraph(data.gruss, {
+      size: 10.5,
+      color: palette.ink,
+      before: normalizeLetterSpacingMm(data.grussAbstandMm, DEFAULT_LETTER_CLOSING_GAP_MM),
+      after: normalizeLetterSpacingMm(data.unterschriftAbstandMm, DEFAULT_LETTER_SIGNATURE_GAP_MM),
+    }),
     paragraph(data.unterschrift || data.absenderName, { size: 10.5, bold: true, color: palette.ink }),
     data.showBeilagen !== false && (data.beilagen ?? []).some((item) => item.trim())
       ? [

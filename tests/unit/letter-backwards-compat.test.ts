@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { EMPTY_LETTER, normalizeLetterDesign } from "@/components/letter/types";
+import {
+  EMPTY_LETTER,
+  normalizeLetterDesign,
+  normalizeLetterSpacingMm,
+} from "@/components/letter/types";
 
 describe("M7 legacy motivation-letter compatibility", () => {
   test("old designs without header/footer fields receive current safe defaults", () => {
@@ -51,6 +55,8 @@ describe("M7 legacy motivation-letter compatibility", () => {
     expect(restored.images).toEqual([]);
     expect(restored.showBeilagen).toBe(true);
     expect(restored.beilagen).toEqual(["Lebenslauf", "Zeugnis"]);
+    expect(normalizeLetterSpacingMm(restored.grussAbstandMm)).toBe(9);
+    expect(normalizeLetterSpacingMm(restored.unterschriftAbstandMm)).toBe(9);
   });
 
   test("explicit modern header/footer choices remain unchanged", () => {
