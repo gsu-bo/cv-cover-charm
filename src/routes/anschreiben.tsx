@@ -39,13 +39,17 @@ import {
 } from "@/components/letter/dossier-transfer";
 import {
   DEFAULT_LETTER_BEILAGEN,
+  DEFAULT_LETTER_CLOSING_GAP_MM,
+  DEFAULT_LETTER_SIGNATURE_GAP_MM,
   DEMO_LETTER,
   EMPTY_LETTER,
   LETTER_STORAGE_KEY,
+  MAX_LETTER_SIGNATURE_SPACING_MM,
   defaultLetterColors,
   emptyLetterDesign,
   letterAttachmentValues,
   letterFontSelection,
+  normalizeLetterSpacingMm,
   normalizeLetterDesign,
   withLetterFontSelection,
   type LetterData,
@@ -120,6 +124,41 @@ function Field({
         placeholder={placeholder}
         className={inputClass}
       />
+    </label>
+  );
+}
+
+function MillimeterField({
+  label,
+  value,
+  fallback,
+  onChange,
+}: {
+  label: string;
+  value: number | undefined;
+  fallback: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="block text-xs font-medium text-foreground">
+      {label}
+      <span className="relative block">
+        <input
+          type="number"
+          inputMode="decimal"
+          min={0}
+          max={MAX_LETTER_SIGNATURE_SPACING_MM}
+          step={1}
+          value={normalizeLetterSpacingMm(value, fallback)}
+          onChange={(event) =>
+            onChange(normalizeLetterSpacingMm(event.currentTarget.valueAsNumber, fallback))
+          }
+          className={`${inputClass} pr-11`}
+        />
+        <span className="pointer-events-none absolute bottom-2 right-3 text-xs text-muted-foreground">
+          mm
+        </span>
+      </span>
     </label>
   );
 }
@@ -919,6 +958,20 @@ function Anschreiben() {
                   value={data.unterschrift}
                   onChange={(value) => patch({ unterschrift: value })}
                 />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <MillimeterField
+                    label="Abstand vor Gruss"
+                    value={data.grussAbstandMm}
+                    fallback={DEFAULT_LETTER_CLOSING_GAP_MM}
+                    onChange={(value) => patch({ grussAbstandMm: value })}
+                  />
+                  <MillimeterField
+                    label="Platz für Unterschrift"
+                    value={data.unterschriftAbstandMm}
+                    fallback={DEFAULT_LETTER_SIGNATURE_GAP_MM}
+                    onChange={(value) => patch({ unterschriftAbstandMm: value })}
+                  />
+                </div>
               </div>
             </Section>
 
