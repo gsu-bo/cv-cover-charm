@@ -1,0 +1,117 @@
+name: Apply CV Package 1
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - "scripts/apply-cv-package1.py"
+      - ".github/workflows/apply-cv-package1.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Apply Package 1 patch
+        run: python3 scripts/apply-cv-package1.py
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Format Package 1 files
+        run: >-
+          bunx prettier --write
+          src/lib/dossier-body-contact.ts
+          src/components/cv/CvCanvasBase.tsx
+          src/components/cv/layout-options.css
+          tests/unit/cv-top-area-package1.test.ts
+          tests/e2e/cv-top-area-package1.spec.ts
+
+      - name: Targeted Package 1 unit tests
+        run: bun test tests/unit/cv-top-area-package1.test.ts
+
+      - name: Unit regression suite
+        run: bun test tests/unit
+
+      - name: TypeScript
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Production build
+        run: bun run build
+
+      - name: Install browser test runner
+        run: npm install --no-save --no-package-lock @playwright/test@1.55.0
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start application
+        shell: bash
+        run: |
+          bun run dev -- --host 127.0.0.1 --port 4173 > /tmp/cv-cover-charm-package1.log 2>&1 &
+          echo $! > /tmp/cv-cover-charm-package1.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/lebenslauf > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/cv-cover-charm-package1.log
+          exit 1
+
+      - name: Focused CV top-area browser QA
+        run: npx playwright test tests/e2e/cv-top-area-package1.spec.ts --reporter=line --workers=1
+
+      - name: Commit verified Package 1
+        if: success()
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/lib/dossier-body-contact.ts \
+            src/components/cv/CvCanvasBase.tsx \
+            src/components/cv/layout-options.css \
+            tests/unit/cv-top-area-package1.test.ts \
+            tests/e2e/cv-top-area-package1.spec.ts
+          if git diff --cached --quiet; then
+            echo "No Package 1 changes to commit"
+            exit 0
+          fi
+          git commit -m "fix(cv): stabilize top-area identity and photo modes"
+          git push origin HEAD:dev
+
+      - name: Show application log on failure
+        if: failure()
+        run: cat /tmp/cv-cover-charm-package1.log || true
+
+      - name: Stop application
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/cv-cover-charm-package1.pid ]; then
+            kill "$(cat /tmp/cv-cover-charm-package1.pid)" || true
+          fi
