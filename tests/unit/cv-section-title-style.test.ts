@@ -28,6 +28,11 @@ const documentXml = `<?xml version="1.0"?><w:document><w:body>
 </w:tr></w:tbl>
 </w:body></w:document>`;
 
+const documentXmlWithoutRule = documentXml.replace(
+  '<w:pBdr><w:bottom w:val="single" w:sz="8" w:color="0F766E"/></w:pBdr>',
+  "",
+);
+
 describe("CV rubric title styling", () => {
   test("explicit text overrides beat DOCX template defaults and line none stays independent", () => {
     const xml = applyCvSectionTitleStyleToDocumentXml(
@@ -71,6 +76,23 @@ describe("CV rubric title styling", () => {
     expect(xml).toContain('<w:u w:val="none"/>');
     expect(xml).toContain("<w:pBdr>");
     expect(xml).toContain('w:color="AABBCC"');
+  });
+
+  test("explicit full creates a Word rubric rule when the template has none", () => {
+    const xml = applyCvSectionTitleStyleToDocumentXml(
+      documentXmlWithoutRule,
+      cvWith({
+        ...baseDesign,
+        colors: { accent: "#445566" },
+        headingRule: "full",
+      }),
+    );
+
+    expect(xml).toContain("<w:pBdr>");
+    expect(xml).toContain(
+      '<w:bottom w:val="single" w:sz="8" w:space="1" w:color="445566"/>',
+    );
+    expect(xml.match(/<w:bottom\b/g)?.length).toBe(1);
   });
 
   test("missing rubric overrides preserve the DOCX template exactly", () => {
