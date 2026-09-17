@@ -23,52 +23,7 @@ jobs:
           fetch-depth: 0
 
       - name: Apply final acceptance patch
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path("scripts/apply-letter-pagination-qa.py")
-          text = path.read_text(encoding="utf-8")
-          text = text.replace(
-              "const style = getComputedStyle(element);",
-              "const style = window.getComputedStyle(element);",
-          )
-          text = text.replace(
-              '''  await expect(preview).toBeVisible();
-          await expect(exported).toHaveCount(1);
-          return { preview, exported };''',
-              '''  await expect(preview).toBeVisible();
-          await expect(exported).toHaveCount(1);
-          await page.evaluate(
-            () =>
-              new Promise<void>((resolve) =>
-                requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-              ),
-          );
-          return { preview, exported, download };''',
-          )
-          text = text.replace(
-              '''  await expect.poll(() => exported.count(), { timeout: 20_000 }).toBeGreaterThan(0);
-          return { preview, exported };''',
-              '''  await expect.poll(() => exported.count(), { timeout: 20_000 }).toBeGreaterThan(0);
-          await page.evaluate(
-            () =>
-              new Promise<void>((resolve) =>
-                requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-              ),
-          );
-          return { preview, exported, download };''',
-          )
-          text = text.replace(
-              '''const { exported } = await seedLetter(page, {
-                body: HUGE_BODY,
-                footerMode: "attachments",
-                attachments: ["Lebenslauf", "Zeugnisse"],
-              });''',
-              '''const { exported } = await seedLetter(page, payload({ body: HUGE_BODY }));''',
-          )
-          path.write_text(text, encoding="utf-8")
-          PY
-          python3 scripts/apply-letter-pagination-qa.py
+        run: python3 scripts/apply-letter-pagination-qa.py
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -148,12 +103,26 @@ jobs:
           --grep "missing fields, multi-page|motivation letter (left|justify)|standalone Motivationsschreiben PDF|paginates long content|letter layout controls"
           --reporter=line --workers=1
 
-      - name: Commit verified fixes
+      - name: Commit verified fixes and remove temporary patch runners
         shell: bash
         run: |
+          git fetch origin dev
+          if [ "$(git rev-parse origin/dev)" != "$GITHUB_SHA" ]; then
+            echo "dev moved while final acceptance was running; refusing to overwrite newer work"
+            exit 1
+          fi
+
+          rm -f \
+            .github/workflows/apply-letter-pagination-qa.yml \
+            .github/workflows/apply-letter-pagination.yml \
+            scripts/apply-letter-pagination-qa.py \
+            scripts/apply-letter-pagination.py \
+            scripts/fix-pagination-test.py \
+            scripts/fix-pagination-unit.py
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
+          git add -A -- \
             src/routes/anschreiben.tsx \
             src/lib/dossier-pdf.ts \
             src/components/dossier/DossierChromeControls.tsx \
@@ -161,7 +130,13 @@ jobs:
             tests/e2e/letter-final-qa.spec.ts \
             tests/e2e/letter-adversarial-content.spec.ts \
             tests/e2e/dossier-regression.spec.ts \
-            tests/e2e/dossier-letter-preflight.spec.ts
+            tests/e2e/dossier-letter-preflight.spec.ts \
+            .github/workflows/apply-letter-pagination-qa.yml \
+            .github/workflows/apply-letter-pagination.yml \
+            scripts/apply-letter-pagination-qa.py \
+            scripts/apply-letter-pagination.py \
+            scripts/fix-pagination-test.py \
+            scripts/fix-pagination-unit.py
           git commit -m "fix(dossier): close final multipage acceptance gaps"
           git push origin HEAD:dev
 

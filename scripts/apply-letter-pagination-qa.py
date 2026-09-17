@@ -14,37 +14,46 @@ def replace_once(path: str, old: str, new: str) -> None:
     text = read(path)
     count = text.count(old)
     if count != 1:
-        raise RuntimeError(f"{path}: expected exactly one match, found {count}: {old[:100]!r}")
+        raise RuntimeError(f"{path}: expected exactly one match, found {count}: {old[:120]!r}")
     write(path, text.replace(old, new, 1))
 
 
 def regex_once(path: str, pattern: str, replacement: str) -> None:
     text = read(path)
-    next_text, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+    next_text, count = re.subn(pattern, lambda _: replacement, text, count=1, flags=re.S)
     if count != 1:
-        raise RuntimeError(f"{path}: expected one regex match, found {count}: {pattern[:100]!r}")
+        raise RuntimeError(f"{path}: expected one regex match, found {count}: {pattern[:120]!r}")
     write(path, next_text)
 
 
-# 1) Editor readiness is hydration readiness, not autosave activity.
+# 1) Editor readiness means React/storage hydration is complete, not that autosave happened once.
 replace_once(
     "src/routes/anschreiben.tsx",
     'data-editor-ready={saveState === "idle" ? "false" : "true"}',
     'data-editor-ready={hydrated ? "true" : "false"}',
 )
 
-# 2) Native PDF text must not resurrect CSS-hidden continuation fields.
+# 2) Native PDF text must not resurrect CSS-hidden elements.
 replace_once(
     "src/lib/dossier-pdf.ts",
-    "    const rect = element.getBoundingClientRect();\n    const style = getComputedStyle(element);",
-    "    const rect = element.getBoundingClientRect();\n    if (rect.width <= 0 || rect.height <= 0) continue;\n    const style = getComputedStyle(element);",
+    '''    const text = letterText(element);
+    if (!text) continue;
+    const rect = element.getBoundingClientRect();
+    const style = window.getComputedStyle(element);''',
+    '''    const text = letterText(element);
+    if (!text) continue;
+    const rect = element.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) continue;
+    const style = window.getComputedStyle(element);''',
 )
 
-# 3) Sync remains controllable even when both surfaces are neutral/off.
+# 3) Sync must remain controllable even when both header and footer are off.
 chrome = "src/components/dossier/DossierChromeControls.tsx"
 replace_once(
     chrome,
-    "  const footerMax = options.footerMode === \"details\" ? 40 : 18;\n\n  return (",
+    '''  const footerMax = options.footerMode === "details" ? 40 : 18;
+
+  return (''',
     '''  const footerMax = options.footerMode === "details" ? 40 : 18;
   const syncControl = (
     <div className="flex items-start gap-2">
@@ -74,14 +83,30 @@ replace_once(
 
   return (''',
 )
-regex_once(
-    chrome,
-    r'''\n      <div className="flex items-start gap-2">\n        <input\n          id=\{`dossier-chrome-sync-\$\{scope\}`\}.*?\n      </div>\n\n        <label className="block text-xs font-medium">\n          Schrift in Header &amp; Footer''',
-    '''\n        <label className="block text-xs font-medium">\n          Schrift in Header &amp; Footer''',
+text = read(chrome)
+sync_start = text.find(
+    '\n      <div className="flex items-start gap-2">\n'
+    '        <input\n'
+    '          id={`dossier-chrome-sync-${scope}`}'
 )
-replace_once(chrome, "\n        {hasChromeSurface ? (", "\n        {syncControl}\n        {hasChromeSurface ? (")
+font_marker = (
+    '\n        <label className="block text-xs font-medium">\n'
+    '          Schrift in Header &amp; Footer'
+)
+if sync_start < 0:
+    raise RuntimeError(f"{chrome}: current in-branch sync block not found")
+font_start = text.find(font_marker, sync_start)
+if font_start < 0:
+    raise RuntimeError(f"{chrome}: font marker after sync block not found")
+text = text[:sync_start] + text[font_start:]
+write(chrome, text)
+replace_once(
+    chrome,
+    "\n        {hasChromeSurface ? (",
+    "\n        {syncControl}\n        {hasChromeSurface ? (",
+)
 
-# 4) A contact header owns the fields explicitly integrated into it exactly once.
+# 4) A first-page contact header owns exactly the contact fields it integrates.
 cv = "src/components/cv/CvCanvasBase.tsx"
 replace_once(
     cv,
@@ -102,7 +127,8 @@ replace_once(
   const angaben = [''',
     '''  const p = data.person;
   const name = [p.vorname, p.nachname].filter(Boolean).join(" ");
-  const firstPageContactHeader = effectiveDossierHeaderModeForOptions(chromeOptions, 0) === "contact";
+  const firstPageContactHeader =
+    effectiveDossierHeaderModeForOptions(chromeOptions, 0) === "contact";
   const bodyName = firstPageContactHeader && chromeOptions.headerShowName ? "" : name;
   const bodyAdresse =
     firstPageContactHeader && chromeOptions.headerShowAddress
@@ -114,55 +140,65 @@ replace_once(
   const kontaktZeilen = [bodyAdresse, bodyKontakt].filter(Boolean);
   const angaben = [''',
 )
-# First-page name renderers may stay structurally present, but must not duplicate an integrated name.
 text = read(cv)
-count = text.count('{name || "Dein Name"}')
-if count != 4:
-    raise RuntimeError(f"{cv}: expected four first-page name expressions, found {count}")
-text = text.replace('{name || "Dein Name"}', '{bodyName || (firstPageContactHeader ? "" : "Dein Name")}')
+name_expression = '{name || "Dein Name"}'
+name_count = text.count(name_expression)
+if name_count != 4:
+    raise RuntimeError(f"{cv}: expected four first-page name expressions, found {name_count}")
+text = text.replace(
+    name_expression,
+    '{bodyName || (firstPageContactHeader ? "" : "Dein Name")}',
+)
 write(cv, text)
 replace_once(
     cv,
-    "      !!(p.adresse || p.plzOrt || p.telefon || p.email || p.geburtsdatum || p.nationalitaet);",
-    "      !!(bodyAdresse || bodyPhone || bodyEmail || p.geburtsdatum || p.nationalitaet);",
+    '''      !!(p.adresse || p.plzOrt || p.telefon || p.email || p.geburtsdatum || p.nationalitaet);''',
+    '''      !!(bodyAdresse || bodyPhone || bodyEmail || p.geburtsdatum || p.nationalitaet);''',
 )
-replace_once(cv, "                    {p.adresse && <div>{p.adresse}</div>}", "                    {!chromeOptions.headerShowAddress || !firstPageContactHeader ? (p.adresse ? <div>{p.adresse}</div> : null) : null}")
-replace_once(cv, "                    {p.plzOrt && <div>{p.plzOrt}</div>}", "                    {!chromeOptions.headerShowAddress || !firstPageContactHeader ? (p.plzOrt ? <div>{p.plzOrt}</div> : null) : null}")
 replace_once(
     cv,
-    '''                    {p.telefon && (
+    '''                    {p.adresse && <div>{p.adresse}</div>}
+                    {p.plzOrt && <div>{p.plzOrt}</div>}
+                    {p.telefon && (
                       <div style={{ marginTop: sidePlan.compact ? "1mm" : "1.7mm" }}>
                         {p.telefon}
                       </div>
-                    )}''',
-    '''                    {(!firstPageContactHeader || !chromeOptions.headerShowPhone) && p.telefon && (
+                    )}
+                    {p.email && <div>{p.email}</div>}''',
+    '''                    {(!firstPageContactHeader || !chromeOptions.headerShowAddress) &&
+                      p.adresse && <div>{p.adresse}</div>}
+                    {(!firstPageContactHeader || !chromeOptions.headerShowAddress) &&
+                      p.plzOrt && <div>{p.plzOrt}</div>}
+                    {(!firstPageContactHeader || !chromeOptions.headerShowPhone) && p.telefon && (
                       <div style={{ marginTop: sidePlan.compact ? "1mm" : "1.7mm" }}>
                         {p.telefon}
                       </div>
+                    )}
+                    {(!firstPageContactHeader || !chromeOptions.headerShowEmail) && p.email && (
+                      <div>{p.email}</div>
                     )}''',
 )
-replace_once(cv, "                    {p.email && <div>{p.email}</div>}", "                    {(!firstPageContactHeader || !chromeOptions.headerShowEmail) && p.email && <div>{p.email}</div>}")
 
-# 5) Tests must assert the new multi-page truth, not the retired one-page blocker.
+# 5) QA must assert the new multi-page truth instead of the retired one-page blocker.
 finalqa = "tests/e2e/letter-final-qa.spec.ts"
 replace_once(
     finalqa,
     '''  await expect(preview).toBeVisible();
   await expect(exported).toHaveCount(1);
-  await doubleFrame(page);''',
+  await doubleFrame(page);
+  return { preview, exported };''',
     '''  await expect(preview).toBeVisible();
   await expect(page.locator("main [data-letter-document-root]")).toHaveAttribute(
     "data-letter-pagination-ready",
     "true",
     { timeout: 20_000 },
   );
-  await expect(page.locator("[data-letter-standalone-export] [data-letter-document-root]")).toHaveAttribute(
-    "data-letter-pagination-ready",
-    "true",
-    { timeout: 20_000 },
-  );
+  await expect(
+    page.locator("[data-letter-standalone-export] [data-letter-document-root]"),
+  ).toHaveAttribute("data-letter-pagination-ready", "true", { timeout: 20_000 });
   await expect.poll(() => exported.count(), { timeout: 20_000 }).toBeGreaterThan(0);
-  await doubleFrame(page);''',
+  await doubleFrame(page);
+  return { preview, exported };''',
 )
 regex_once(
     finalqa,
@@ -197,7 +233,9 @@ regex_once(
     const download = page.getByRole("button", { name: "Download", exact: true });
     await download.click();
     await expect(
-      page.locator("[data-editor-action-menu] button").filter({ hasText: "Nur Motivationsschreiben als PDF" }),
+      page.locator("[data-editor-action-menu] button").filter({
+        hasText: "Nur Motivationsschreiben als PDF",
+      }),
     ).toBeEnabled();
   });
 });''',
@@ -208,30 +246,24 @@ replace_once(
     adversarial,
     '''  await expect(preview).toBeVisible();
   await expect(exported).toHaveCount(1);
-  return { preview, exported };''',
+  await page.evaluate(''',
     '''  await expect(preview).toBeVisible();
   await expect(page.locator("main [data-letter-document-root]")).toHaveAttribute(
     "data-letter-pagination-ready",
     "true",
     { timeout: 20_000 },
   );
-  await expect(page.locator("[data-letter-standalone-export] [data-letter-document-root]")).toHaveAttribute(
-    "data-letter-pagination-ready",
-    "true",
-    { timeout: 20_000 },
-  );
+  await expect(
+    page.locator("[data-letter-standalone-export] [data-letter-document-root]"),
+  ).toHaveAttribute("data-letter-pagination-ready", "true", { timeout: 20_000 });
   await expect.poll(() => exported.count(), { timeout: 20_000 }).toBeGreaterThan(0);
-  return { preview, exported };''',
+  await page.evaluate(''',
 )
 regex_once(
     adversarial,
-    r'''  test\("deliberately too-long content is clearly blocked instead of silently exported", async \(\{\n    page,\n  \}\) => \{.*?\n  \}\);\n\}\);''',
+    r'''  test\("deliberately too-long content is clearly blocked instead of silently exported", async \(\{ page \}\) => \{.*?\n  \}\);\n\}\);''',
     '''  test("deliberately long content paginates safely instead of clipping", async ({ page }) => {
-    const { exported } = await seedLetter(page, {
-      body: HUGE_BODY,
-      footerMode: "attachments",
-      attachments: ["Lebenslauf", "Zeugnisse"],
-    });
+    const { exported } = await seedLetter(page, payload({ body: HUGE_BODY }));
 
     await expect.poll(() => exported.count(), { timeout: 20_000 }).toBeGreaterThan(1);
     await expect(page.getByRole("alert")).toHaveCount(0);
@@ -243,11 +275,8 @@ regex_once(
     );
     expect(overflow).toBe(false);
 
-    const download = page.getByRole("button", { name: "Download", exact: true });
-    await download.click();
-    await expect(
-      page.locator("[data-editor-action-menu] button").filter({ hasText: "Nur Motivationsschreiben als PDF" }),
-    ).toBeEnabled();
+    const button = await clickDownloadPdf(page);
+    await expect(button).toBeEnabled();
   });
 });''',
 )
@@ -269,7 +298,9 @@ regex_once(
     const body = page.getByRole("textbox", { name: "Brieftext" });
     const root = page.locator("main [data-letter-document-root]");
     const pages = root.locator("[data-letter-document-pages] [data-letter-page]");
-    await expect(root).toHaveAttribute("data-letter-pagination-ready", "true", { timeout: 20_000 });
+    await expect(root).toHaveAttribute("data-letter-pagination-ready", "true", {
+      timeout: 20_000,
+    });
 
     await body.fill(
       Array.from(
@@ -283,10 +314,14 @@ regex_once(
     const downloadToggle = page.getByRole("button", { name: "Download", exact: true });
     await downloadToggle.click();
     await expect(
-      page.locator("[data-editor-action-menu] button").filter({ hasText: "Nur Motivationsschreiben als PDF" }),
+      page.locator("[data-editor-action-menu] button").filter({
+        hasText: "Nur Motivationsschreiben als PDF",
+      }),
     ).toBeEnabled();
 
-    await body.fill("Ich interessiere mich sehr für die Lehrstelle und freue mich auf ein Gespräch.");
+    await body.fill(
+      "Ich interessiere mich sehr für die Lehrstelle und freue mich auf ein Gespräch.",
+    );
     await expect.poll(() => pages.count(), { timeout: 20_000 }).toBe(1);
     await expect(page.getByRole("alert")).toHaveCount(0);
   });
