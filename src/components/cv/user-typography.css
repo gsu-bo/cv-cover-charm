@@ -122,10 +122,14 @@ html[data-dossier-template][data-dossier-template][data-dossier-template]
  * chooses "Ganze Breite". The adapter marks only that explicit choice, so the
  * rule can outrank template polish without turning a template default into a
  * permanent user override.
+ *
+ * The marker belongs to CvCanvas' outer display-contents wrapper; the semantic
+ * document node is inside it. Keep that ancestor order explicit here so the
+ * same contract applies to editor preview, measurement and hidden PDF canvas.
  */
 html[data-dossier-template][data-dossier-template][data-dossier-template]
-  [data-dossier-document="cv"][data-dossier-document="cv"]
   [data-cv-user-heading-rule="full"][data-cv-user-heading-rule="full"]
+  [data-dossier-document="cv"][data-dossier-document="cv"]
   :is([data-cv-page], [data-cv-measure-page])
   [data-cv-accent="section"] {
   display: block !important;
