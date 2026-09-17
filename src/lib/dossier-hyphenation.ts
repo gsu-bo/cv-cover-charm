@@ -6,37 +6,27 @@ export type DossierHyphenationState = {
 export const DOSSIER_HYPHENATION_STORAGE_KEY = "bewerbungsdossier:hyphenation:v1";
 export const DEFAULT_DOSSIER_HYPHENATION_STATE: DossierHyphenationState = {
   version: 1,
-  enabled: true,
+  enabled: false,
 };
 
 const EVENT = "bewerbungsdossier-hyphenation-change";
 let cached: DossierHyphenationState | null = null;
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  !!value && typeof value === "object" && !Array.isArray(value);
+const disabledState = (): DossierHyphenationState => ({
+  ...DEFAULT_DOSSIER_HYPHENATION_STATE,
+});
 
-export function normalizeDossierHyphenationState(value: unknown): DossierHyphenationState {
-  if (typeof value === "boolean") return { version: 1, enabled: value };
-  if (!isRecord(value)) return { ...DEFAULT_DOSSIER_HYPHENATION_STATE };
-  return {
-    version: 1,
-    enabled: typeof value.enabled === "boolean" ? value.enabled : true,
-  };
+/** Automatic hyphenation is retired; legacy/project values are intentionally ignored. */
+export function normalizeDossierHyphenationState(_value: unknown): DossierHyphenationState {
+  return disabledState();
 }
 
 function read(): DossierHyphenationState {
-  if (typeof window === "undefined") return { ...DEFAULT_DOSSIER_HYPHENATION_STATE };
-  try {
-    const raw = window.localStorage?.getItem(DOSSIER_HYPHENATION_STORAGE_KEY);
-    return raw
-      ? normalizeDossierHyphenationState(JSON.parse(raw))
-      : { ...DEFAULT_DOSSIER_HYPHENATION_STATE };
-  } catch {
-    return { ...DEFAULT_DOSSIER_HYPHENATION_STATE };
-  }
+  return disabledState();
 }
 
-function store(next: DossierHyphenationState) {
+function storeDisabled() {
+  const next = disabledState();
   cached = next;
   if (typeof window !== "undefined") {
     try {
@@ -56,11 +46,11 @@ export function getDossierHyphenationState(): DossierHyphenationState {
 }
 
 export function getDossierHyphenationEnabled(): boolean {
-  return getDossierHyphenationState().enabled;
+  return false;
 }
 
-export function setDossierHyphenationEnabled(enabled: boolean) {
-  store({ version: 1, enabled });
+export function setDossierHyphenationEnabled(_enabled: boolean) {
+  storeDisabled();
 }
 
 export function subscribeDossierHyphenation(onChange: () => void) {
@@ -70,7 +60,7 @@ export function subscribeDossierHyphenation(onChange: () => void) {
   const local = () => onChange();
   const storage = (event: StorageEvent) => {
     if (event.key !== DOSSIER_HYPHENATION_STORAGE_KEY) return;
-    cached = read();
+    cached = disabledState();
     onChange();
   };
   window.addEventListener(EVENT, local);
@@ -82,9 +72,9 @@ export function subscribeDossierHyphenation(onChange: () => void) {
 }
 
 export function readPortableDossierHyphenationState(): DossierHyphenationState {
-  return getDossierHyphenationState();
+  return disabledState();
 }
 
-export function applyPortableDossierHyphenationState(value: unknown) {
-  store(normalizeDossierHyphenationState(value));
+export function applyPortableDossierHyphenationState(_value: unknown) {
+  storeDisabled();
 }
