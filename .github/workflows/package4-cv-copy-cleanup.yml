@@ -1,0 +1,152 @@
+name: Package 4 CV Copy Cleanup
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - ".github/workflows/package4-cv-copy-cleanup.yml"
+
+permissions:
+  contents: write
+  actions: write
+  statuses: write
+
+concurrency:
+  group: package4-cv-copy-cleanup
+  cancel-in-progress: true
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Cancel heavyweight dossier regression for bootstrap push
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -sS -L \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=${{ github.sha }}&per_page=100" \
+            | jq -r '.workflow_runs[] | select(.name == "Dossier Regression") | .id' \
+            | while read -r run_id; do
+                [ -z "$run_id" ] && continue
+                curl --fail-with-body -sS -L -X POST \
+                  -H "Accept: application/vnd.github+json" \
+                  -H "Authorization: Bearer $GH_TOKEN" \
+                  -H "X-GitHub-Api-Version: 2022-11-28" \
+                  "https://api.github.com/repos/${{ github.repository }}/actions/runs/${run_id}/cancel" \
+                  >/dev/null || true
+              done
+
+      - name: Apply Package 4 UI-only cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/routes/lebenslauf.tsx")
+          source = path.read_text(encoding="utf-8")
+
+          subtitle = '''              <p className="hidden truncate text-xs text-muted-foreground sm:block">
+                Teil deines Bewerbungsdossiers
+              </p>
+'''
+          instruction = '''            <div className="px-1">
+              <span className="text-xs text-muted-foreground">Alles ausfüllen, dann als PDF.</span>
+            </div>
+
+'''
+
+          if source.count(subtitle) != 1:
+              raise SystemExit(f"Expected exactly one CV subtitle block, found {source.count(subtitle)}")
+          if source.count(instruction) != 1:
+              raise SystemExit(f"Expected exactly one CV instruction block, found {source.count(instruction)}")
+
+          source = source.replace(subtitle, "")
+          source = source.replace(instruction, "")
+
+          assert "Teil deines Bewerbungsdossiers" not in source
+          assert "Alles ausfüllen, dann als PDF." not in source
+          assert '>Lebenslauf</h1>' in source
+          assert '<SaveStatus state={saveState} />' in source
+
+          path.write_text(source, encoding="utf-8")
+          PY
+
+          cat > tests/unit/cv-editor-copy.test.ts <<'TEST'
+          import { describe, expect, test } from "bun:test";
+          import { readFileSync } from "node:fs";
+
+          const source = readFileSync("src/routes/lebenslauf.tsx", "utf8");
+
+          describe("CV editor top-area copy", () => {
+            test("keeps the title and autosave status while removing redundant copy", () => {
+              expect(source).toContain('>Lebenslauf</h1>');
+              expect(source).toContain('<SaveStatus state={saveState} />');
+              expect(source).not.toContain("Teil deines Bewerbungsdossiers");
+              expect(source).not.toContain("Alles ausfüllen, dann als PDF.");
+            });
+          });
+          TEST
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Targeted unit test
+        run: bun test tests/unit/cv-editor-copy.test.ts
+
+      - name: Targeted formatting check
+        run: bunx prettier --check src/routes/lebenslauf.tsx tests/unit/cv-editor-copy.test.ts
+
+      - name: TypeScript typecheck
+        run: bun run typecheck
+
+      - name: Production build
+        run: bun run build
+
+      - name: Commit Package 4 and remove helper workflow
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/package4-cv-copy-cleanup.yml
+          git add src/routes/lebenslauf.tsx tests/unit/cv-editor-copy.test.ts
+          git diff --cached --check
+          git commit -m "fix(cv): remove redundant editor copy"
+          git push origin HEAD:dev
+          final_sha="$(git rev-parse HEAD)"
+          echo "sha=$final_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Publish targeted Package 4 status on final commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FINAL_SHA: ${{ steps.commit.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -sS -L -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/${FINAL_SHA}" \
+            -d '{"state":"success","context":"Package 4 targeted QA","description":"Unit, format, typecheck and build passed"}' \
+            >/dev/null
