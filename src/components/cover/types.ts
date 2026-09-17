@@ -48,6 +48,15 @@ export const EMPTY_META: PdfMeta = { title: "", author: "", subject: "", keyword
 
 export const DEFAULT_COVER_BEILAGEN = ["Motivationsschreiben", "Lebenslauf", "Zeugnis"] as const;
 
+/**
+ * Alte Entwürfe ohne Beilagenfeld erhalten weiterhin die bisherigen Vorgaben.
+ * Ein ausdrücklich gespeichertes leeres Array bleibt dagegen leer, damit alle
+ * Einträge im Editor entfernt werden können.
+ */
+export function coverAttachmentValues(data: Pick<CoverData, "beilagen">): string[] {
+  return Array.isArray(data.beilagen) ? [...data.beilagen] : [...DEFAULT_COVER_BEILAGEN];
+}
+
 export type ColorSlot = {
   key: string;
   label: string;

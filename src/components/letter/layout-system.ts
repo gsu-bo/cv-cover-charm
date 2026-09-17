@@ -12,7 +12,7 @@ import { freshLetterSpec } from "./fresh-letter-system";
 import { letterPaginationPageContext } from "./letter-page-context";
 import "./fresh-letter-integrity.css";
 import {
-  DEFAULT_LETTER_BEILAGEN,
+  letterAttachmentValues,
   type LetterData,
   type LetterDesign,
   type LetterFooterMode,
@@ -120,7 +120,7 @@ export function letterArchetypeFor(template: LetterTemplateId): LetterArchetype 
 }
 
 export function visibleLetterAttachments(data: LetterData): string[] {
-  const values = data.beilagen?.length ? data.beilagen : [...DEFAULT_LETTER_BEILAGEN];
+  const values = letterAttachmentValues(data);
   return values.filter((value) => value.trim());
 }
 

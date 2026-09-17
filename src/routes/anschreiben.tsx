@@ -17,6 +17,7 @@ import {
 import { FONT_LABELS, TEMPLATES, type FontKey } from "@/components/cover/types";
 import { DEFAULTS } from "@/default-config";
 import { ResizableEditorPanel } from "@/components/dossier/ResizableEditorPanel";
+import { AttachmentListEditor } from "@/components/dossier/AttachmentListEditor";
 import { SaveStatus, type SaveState } from "@/components/dossier/SaveStatus";
 import { LetterDocument, type LetterPaginationState } from "@/components/letter/LetterDocument";
 import { LetterLayoutControls } from "@/components/letter/LetterLayoutControls";
@@ -43,7 +44,10 @@ import {
   LETTER_STORAGE_KEY,
   defaultLetterColors,
   emptyLetterDesign,
+  letterAttachmentValues,
+  letterFontSelection,
   normalizeLetterDesign,
+  withLetterFontSelection,
   type LetterData,
   type LetterDesign,
   type LetterFlowImage,
@@ -998,20 +1002,10 @@ function Anschreiben() {
                   />
                   <span>Im Motivationsschreiben anzeigen</span>
                 </label>
-                {DEFAULT_LETTER_BEILAGEN.map((fallback, index) => (
-                  <Field
-                    key={index}
-                    label={`Beilage ${index + 1}`}
-                    value={data.beilagen?.[index] ?? fallback}
-                    onChange={(value) => {
-                      const next = DEFAULT_LETTER_BEILAGEN.map(
-                        (entryFallback, entryIndex) => data.beilagen?.[entryIndex] ?? entryFallback,
-                      );
-                      next[index] = value;
-                      patch({ beilagen: next });
-                    }}
-                  />
-                ))}
+                <AttachmentListEditor
+                  values={letterAttachmentValues(data)}
+                  onChange={(beilagen) => patch({ beilagen })}
+                />
               </div>
             </Section>
 
@@ -1053,12 +1047,21 @@ function Anschreiben() {
               <label className="block text-xs font-medium">
                 Schriftart
                 <select
-                  value={design.font}
-                  onChange={(event) =>
-                    setDesign((current) => ({ ...current, font: event.target.value as FontKey }))
-                  }
+                  value={letterFontSelection(design)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setDesign((current) =>
+                      withLetterFontSelection(
+                        current,
+                        value === "template" ? "template" : (value as FontKey),
+                      ),
+                    );
+                  }}
                   className={inputClass}
                 >
+                  {design.template !== "brief" ? (
+                    <option value="template">Passend zur Vorlage</option>
+                  ) : null}
                   {Object.entries(FONT_LABELS).map(([key, label]) => (
                     <option key={key} value={key}>
                       {label}
