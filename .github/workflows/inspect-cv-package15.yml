@@ -50,6 +50,42 @@ jobs:
               '''  const layoutChoice = useSyncExternalStore<CvLayoutId>(\n    subscribeCvLayoutChoice,\n    getCvLayoutChoice,\n    () => "classic",\n  );''',
           )
 
+          # Exact source matching was the only failure mode in the previous
+          # attempts. Keep exact matching first, then tolerate indentation-only
+          # drift while still requiring every non-whitespace line to match.
+          old_helper = '''def replace(path: str, old: str, new: str):
+    p = Path(path)
+    text = p.read_text()
+    if old not in text:
+        raise SystemExit(f"expected snippet missing in {path}: {old[:100]!r}")
+    p.write_text(text.replace(old, new, 1))
+'''
+          new_helper = '''def replace(path: str, old: str, new: str):
+    import re
+    p = Path(path)
+    text = p.read_text()
+    if old in text:
+        p.write_text(text.replace(old, new, 1))
+        return
+
+    lines = old.splitlines()
+    parts = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            parts.append(r"[ \\t]*")
+        else:
+            parts.append(r"[ \\t]*" + re.escape(stripped) + r"[ \\t]*")
+    pattern = r"\\n".join(parts)
+    match = re.search(pattern, text)
+    if not match:
+        raise SystemExit(f"expected snippet missing in {path}: {old[:100]!r}")
+    p.write_text(text[:match.start()] + new + text[match.end():])
+'''
+          if old_helper not in patch:
+              raise SystemExit("prepared patch helper could not be hardened")
+          patch = patch.replace(old_helper, new_helper, 1)
+
           Path("/tmp/package15_patch.py").write_text(patch)
           PY
           python /tmp/package15_patch.py
