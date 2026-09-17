@@ -83,6 +83,11 @@ jobs:
           Path("/tmp/package15_patch.py").write_text(patch)
           PY
           python /tmp/package15_patch.py
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("src/components/cv/layout-options.css")
+          p.write_text(p.read_text().rstrip() + "\n")
+          PY
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
