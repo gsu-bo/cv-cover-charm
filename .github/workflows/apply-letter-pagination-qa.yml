@@ -32,6 +32,40 @@ jobs:
               "const style = getComputedStyle(element);",
               "const style = window.getComputedStyle(element);",
           )
+          text = text.replace(
+              '''  await expect(preview).toBeVisible();
+          await expect(exported).toHaveCount(1);
+          return { preview, exported };''',
+              '''  await expect(preview).toBeVisible();
+          await expect(exported).toHaveCount(1);
+          await page.evaluate(
+            () =>
+              new Promise<void>((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+              ),
+          );
+          return { preview, exported, download };''',
+          )
+          text = text.replace(
+              '''  await expect.poll(() => exported.count(), { timeout: 20_000 }).toBeGreaterThan(0);
+          return { preview, exported };''',
+              '''  await expect.poll(() => exported.count(), { timeout: 20_000 }).toBeGreaterThan(0);
+          await page.evaluate(
+            () =>
+              new Promise<void>((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+              ),
+          );
+          return { preview, exported, download };''',
+          )
+          text = text.replace(
+              '''const { exported } = await seedLetter(page, {
+                body: HUGE_BODY,
+                footerMode: "attachments",
+                attachments: ["Lebenslauf", "Zeugnisse"],
+              });''',
+              '''const { exported } = await seedLetter(page, payload({ body: HUGE_BODY }));''',
+          )
           path.write_text(text, encoding="utf-8")
           PY
           python3 scripts/apply-letter-pagination-qa.py
