@@ -1,0 +1,690 @@
+name: Apply Package 2
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - .github/workflows/apply-package2.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-package2-dev
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 2
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify Package 1.5 baseline
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD^)" = "20abe5b37ecb2ee6697608ce66596251c0a22e25"
+      - name: Apply Package 2
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          def load(path):
+              return Path(path).read_text()
+
+          def save(path, text):
+              Path(path).write_text(text)
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected 1 match, found {count}")
+              return text.replace(old, new, 1)
+
+          path = "src/lib/dossier-chrome.ts"
+          s = load(path)
+          s = replace_once(
+              s,
+              'const isRecord = (value: unknown): value is Record<string, unknown> =>\n  !!value && typeof value === "object" && !Array.isArray(value);\n',
+              'const isRecord = (value: unknown): value is Record<string, unknown> =>\n  !!value && typeof value === "object" && !Array.isArray(value);\nconst hasOwn = (value: Record<string, unknown>, key: string) =>\n  Object.prototype.hasOwnProperty.call(value, key);\n',
+              "dossier-chrome hasOwn",
+          )
+          s = replace_once(
+              s,
+              '  /** Word-like first-page behavior for templates that explicitly use shared chrome. */\n  headerDifferentFirstPage?: boolean;\n  headerHeightMm: number | null;\n',
+              '  /** Word-like first-page behavior for templates that explicitly use shared chrome. */\n  headerDifferentFirstPage?: boolean;\n  /** Explicit page-2+ header. Missing means the exact legacy continuation behavior. */\n  headerContinuationMode?: DossierHeaderMode;\n  headerHeightMm: number | null;\n',
+              "dossier-chrome type",
+          )
+          s = replace_once(
+              s,
+              '    headerDifferentFirstPage:\n      typeof value.headerDifferentFirstPage === "boolean"\n        ? value.headerDifferentFirstPage\n        : (fallback.headerDifferentFirstPage ?? true),\n    headerHeightMm: normalizedMm(value.headerHeightMm, 1, 40),\n',
+              '    headerDifferentFirstPage:\n      typeof value.headerDifferentFirstPage === "boolean"\n        ? value.headerDifferentFirstPage\n        : (fallback.headerDifferentFirstPage ?? true),\n    headerContinuationMode: hasOwn(value, "headerContinuationMode")\n      ? value.headerContinuationMode === "compact" ||\n        value.headerContinuationMode === "contact" ||\n        value.headerContinuationMode === "none"\n        ? value.headerContinuationMode\n        : undefined\n      : fallback.headerContinuationMode,\n    headerHeightMm: normalizedMm(value.headerHeightMm, 1, 40),\n',
+              "dossier-chrome normalize continuation",
+          )
+          s = replace_once(
+              s,
+              '      headerDifferentFirstPage: design.headerDifferentFirstPage,\n      headerHeightMm: design.headerHeightMm,\n',
+              '      headerDifferentFirstPage: design.headerDifferentFirstPage,\n      headerContinuationMode: design.headerContinuationMode,\n      headerHeightMm: design.headerHeightMm,\n',
+              "dossier-chrome legacy load",
+          )
+          s = replace_once(
+              s,
+              '      design.headerDifferentFirstPage === (options.headerDifferentFirstPage ?? true) &&\n      design.headerHeightMm === options.headerHeightMm &&\n',
+              '      design.headerDifferentFirstPage === (options.headerDifferentFirstPage ?? true) &&\n      design.headerContinuationMode === options.headerContinuationMode &&\n      design.headerHeightMm === options.headerHeightMm &&\n',
+              "dossier-chrome legacy compare",
+          )
+          s = replace_once(
+              s,
+              '        headerDifferentFirstPage: options.headerDifferentFirstPage ?? true,\n        headerHeightMm: options.headerHeightMm,\n',
+              '        headerDifferentFirstPage: options.headerDifferentFirstPage ?? true,\n        headerContinuationMode: options.headerContinuationMode,\n        headerHeightMm: options.headerHeightMm,\n',
+              "dossier-chrome legacy mirror",
+          )
+          old_helpers = '''/** Contact remains contact on continuation pages; only its visual treatment reduces. */
+export function effectiveDossierHeaderModeForOptions(
+  options: DossierChromeOptions,
+  _pageIndex = 0,
+): DossierHeaderMode {
+  return options.headerMode;
+}
+
+export function hasReducedContinuationHeader(
+  options: { headerMode?: string; headerDifferentFirstPage?: boolean },
+  pageIndex: number,
+): boolean {
+  return (
+    pageIndex > 0 && options.headerDifferentFirstPage !== false && options.headerMode === "contact"
+  );
+}
+
+export function dossierHeaderVisualHeightMmForOptions(
+  options: DossierChromeOptions,
+  pageIndex = 0,
+): number {
+  if (options.headerMode === "none") return 0;
+
+  const custom = options.headerHeightMm;
+  if (hasReducedContinuationHeader(options, pageIndex)) {
+    return custom === null ? 8 : Math.min(18, Math.max(5, custom));
+  }
+
+  const mode = effectiveDossierHeaderModeForOptions(options, pageIndex);
+  if (mode === "contact") return custom === null ? 22 : Math.min(40, Math.max(10, custom));
+  if (mode === "compact") return custom === null ? 3 : Math.min(18, Math.max(1, custom));
+  return 0;
+}
+
+export function dossierHeaderContentTopMmForOptions(
+  options: DossierChromeOptions,
+  pageIndex = 0,
+): number {
+  const mode = effectiveDossierHeaderModeForOptions(options, pageIndex);
+  if (mode === "none") return pageIndex > 0 ? 16 : 18;
+
+  const height = dossierHeaderVisualHeightMmForOptions(options, pageIndex);
+  const gap = Math.min(40, Math.max(0, options.headerGapMm ?? 12));
+  if (pageIndex > 0 && options.headerDifferentFirstPage !== false) {
+    const base =
+      options.headerMode === "contact" ? Math.max(18, height + 10) : Math.max(18, height + 15);
+    return base + gap;
+  }
+  const base = mode === "contact" ? Math.max(18, height + 9) : Math.max(18, height + 18);
+  return base + gap;
+}
+'''
+          new_helpers = '''/**
+ * Resolve the semantic header for one page. An explicit continuation choice
+ * wins on page 2+, while old projects that do not contain the new field keep
+ * the historical reduced-contact continuation exactly as before.
+ */
+export function effectiveDossierHeaderModeForOptions(
+  options: DossierChromeOptions,
+  pageIndex = 0,
+): DossierHeaderMode {
+  if (
+    pageIndex > 0 &&
+    options.headerDifferentFirstPage !== false &&
+    options.headerContinuationMode !== undefined
+  ) {
+    return options.headerContinuationMode;
+  }
+  return options.headerMode;
+}
+
+export function hasReducedContinuationHeader(
+  options: {
+    headerMode?: string;
+    headerDifferentFirstPage?: boolean;
+    headerContinuationMode?: string;
+  },
+  pageIndex: number,
+): boolean {
+  return (
+    pageIndex > 0 &&
+    options.headerDifferentFirstPage !== false &&
+    options.headerContinuationMode === undefined &&
+    options.headerMode === "contact"
+  );
+}
+
+export function dossierHeaderVisualHeightMmForOptions(
+  options: DossierChromeOptions,
+  pageIndex = 0,
+): number {
+  const mode = effectiveDossierHeaderModeForOptions(options, pageIndex);
+  if (mode === "none") return 0;
+
+  const custom = options.headerHeightMm;
+  if (hasReducedContinuationHeader(options, pageIndex)) {
+    return custom === null ? 8 : Math.min(18, Math.max(5, custom));
+  }
+
+  if (mode === "contact") return custom === null ? 22 : Math.min(40, Math.max(10, custom));
+  if (mode === "compact") return custom === null ? 3 : Math.min(18, Math.max(1, custom));
+  return 0;
+}
+
+export function dossierHeaderContentTopMmForOptions(
+  options: DossierChromeOptions,
+  pageIndex = 0,
+): number {
+  const mode = effectiveDossierHeaderModeForOptions(options, pageIndex);
+  if (mode === "none") return pageIndex > 0 ? 16 : 18;
+
+  const height = dossierHeaderVisualHeightMmForOptions(options, pageIndex);
+  const gap = Math.min(40, Math.max(0, options.headerGapMm ?? 12));
+  if (pageIndex > 0 && options.headerDifferentFirstPage !== false) {
+    const base = mode === "contact" ? Math.max(18, height + 10) : Math.max(18, height + 15);
+    return base + gap;
+  }
+  const base = mode === "contact" ? Math.max(18, height + 9) : Math.max(18, height + 18);
+  return base + gap;
+}
+'''
+          s = replace_once(s, old_helpers, new_helpers, "dossier-chrome helpers")
+          save(path, s)
+
+          path = "src/components/dossier/DossierHeaderFooterChrome.tsx"
+          s = load(path)
+          s = replace_once(
+              s,
+              '  hasReducedContinuationHeader,\n  dossierFooterVisualHeightMmForOptions,\n',
+              '  effectiveDossierHeaderModeForOptions,\n  hasReducedContinuationHeader,\n  dossierFooterVisualHeightMmForOptions,\n',
+              "chrome renderer import",
+          )
+          s = replace_once(
+              s,
+              '''  const resolvedContact = contact;
+  // Contact-mode template gradients must render identically in motivation
+  // letter and CV. Compact snapshots stay untouched here: their document-level
+  // resolver (not this generic shared renderer) owns special treatments such as
+  // Modern's mirrored dark/pink pair, so explicit chrome snapshots remain authoritative.
+  const visualOptions =
+    options.headerMode === "contact"
+      ? resolveTemplateChromeOptions(template, colors, options)
+      : options;
+  const headerMode = options.headerMode;
+  const differentFirstPage = options.headerDifferentFirstPage !== false;
+''',
+              '''  const resolvedContact = contact;
+  const headerMode = effectiveDossierHeaderModeForOptions(options, pageIndex);
+  const differentFirstPage = options.headerDifferentFirstPage !== false;
+  // Keep document-level template styling stable for the footer, while allowing
+  // an explicitly selected continuation contact header to receive the same
+  // template-derived contact treatment as a first-page contact header.
+  const visualOptions =
+    options.headerMode === "contact"
+      ? resolveTemplateChromeOptions(template, colors, options)
+      : options;
+  const headerVisualOptions =
+    headerMode === options.headerMode
+      ? visualOptions
+      : headerMode === "contact"
+        ? resolveTemplateChromeOptions(template, colors, { ...options, headerMode })
+        : visualOptions;
+''',
+              "chrome renderer page mode",
+          )
+          s = replace_once(s, '  const headerBackground = visualOptions.headerBackgroundColor ?? primary;\n', '  const headerBackground = headerVisualOptions.headerBackgroundColor ?? primary;\n', "header bg")
+          s = replace_once(s, '    visualOptions.headerGradientColor ?? secondary,\n', '    headerVisualOptions.headerGradientColor ?? secondary,\n', "header roles")
+          s = replace_once(s, '  const headerSurface = surfaceBackground(headerBackground, visualOptions.headerGradientColor);\n', '  const headerSurface = surfaceBackground(headerBackground, headerVisualOptions.headerGradientColor);\n', "header surface")
+          s = replace_once(s, '      headerGradient: visualOptions.headerGradientColor,\n', '      headerGradient: headerVisualOptions.headerGradientColor,\n', "border gradient")
+          s = replace_once(
+              s,
+              '      data-dossier-header-mode={headerMode}\n      data-dossier-first-page-different={differentFirstPage ? "true" : "false"}\n',
+              '      data-dossier-header-mode={options.headerMode}\n      data-dossier-effective-header-mode={headerMode}\n      data-dossier-continuation-mode={\n        pageIndex > 0 && differentFirstPage\n          ? (options.headerContinuationMode ?? "legacy")\n          : undefined\n      }\n      data-dossier-first-page-different={differentFirstPage ? "true" : "false"}\n',
+              "renderer data attrs",
+          )
+          s = replace_once(s, '      data-letter-header-mode={letter ? headerMode : undefined}\n', '      data-letter-header-mode={letter ? options.headerMode : undefined}\n', "letter base mode")
+          save(path, s)
+
+          path = "src/components/dossier/DossierChromeControls.tsx"
+          s = load(path)
+          s = s.replace('import { DossierHyphenationControl } from "@/components/dossier/DossierHyphenationControl";\n', '')
+          start = s.index('function BackgroundControl({')
+          end = s.index('\nexport function DossierChromeControls', start)
+          background = r'''function BackgroundControl({
+  label,
+  color,
+  gradientColor,
+  fallback,
+  onColor,
+  onGradientColor,
+}: {
+  label: string;
+  color: string | null;
+  gradientColor: string | null;
+  fallback: string;
+  onColor: (value: string | null) => void;
+  onGradientColor: (value: string | null) => void;
+}) {
+  const custom = color !== null || gradientColor !== null;
+  const gradient = custom && gradientColor !== null;
+  return (
+    <div className="grid gap-2 rounded-md border bg-muted/20 p-2.5">
+      <label className="block text-xs font-medium">
+        {label}
+        <select
+          data-dossier-background-mode-control
+          value={custom ? "custom" : "template"}
+          onChange={(event) => {
+            if (event.target.value === "template") {
+              onColor(null);
+              onGradientColor(null);
+            } else {
+              onColor(color ?? fallback);
+            }
+          }}
+          className={selectClass}
+        >
+          <option value="template">Wie Vorlage</option>
+          <option value="custom">Eigene Farbe</option>
+        </select>
+      </label>
+
+      {custom ? (
+        <>
+          <div className="flex flex-wrap items-center gap-2 pl-1">
+            <span className="mr-auto text-xs text-muted-foreground">Erste Farbe</span>
+            <input
+              type="color"
+              value={color ?? fallback}
+              onChange={(event) => onColor(event.target.value)}
+              className="h-7 w-10 cursor-pointer rounded border border-input bg-background"
+              aria-label={`${label} erste Farbe`}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={gradient}
+              onChange={(event) => onGradientColor(event.target.checked ? "#ffffff" : null)}
+            />
+            Verlauf mit zweiter Farbe
+          </label>
+          {gradient ? (
+            <div className="flex items-center justify-between gap-2 pl-5">
+              <span className="text-[11px] text-muted-foreground">Zweite Farbe</span>
+              <input
+                type="color"
+                value={gradientColor ?? "#ffffff"}
+                onChange={(event) => onGradientColor(event.target.value)}
+                className="h-7 w-10 cursor-pointer rounded border border-input bg-background"
+                aria-label={`${label} zweite Verlaufsfarbe`}
+              />
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
+'''
+          s = s[:start] + background + s[end:]
+          s = replace_once(
+              s,
+              '  const headerInlineSeparator = options.headerInlineSeparator ?? "icons";\n',
+              '  const headerInlineSeparator = options.headerInlineSeparator ?? "icons";\n  const continuationHeaderControlValue = options.headerContinuationMode ?? "legacy";\n  const contactHeaderVisible =\n    options.headerMode === "contact" ||\n    (options.headerDifferentFirstPage !== false && options.headerContinuationMode === "contact");\n  const hasChromeSurface = options.headerMode !== "none" || options.footerMode !== "none";\n',
+              "controls derived state",
+          )
+          sync_start = s.index('      <div className="flex items-start gap-2">', s.index('  return ('))
+          sync_end_marker = '\n\n      <div className="mt-3 grid gap-3 border-t pt-3">'
+          sync_end = s.index(sync_end_marker, sync_start)
+          sync_block = s[sync_start:sync_end]
+          s = s[:sync_start] + s[sync_end + 2:]
+          s = s.replace('        <DossierHyphenationControl />\n\n', '', 1)
+          font_start = s.index('        <label className="block text-xs font-medium">\n          Schrift in Header &amp; Footer')
+          border_start = s.index('        <div\n          data-dossier-border-controls', font_start)
+          font_block = s[font_start:border_start].rstrip()
+          header_start = s.index('        <div className="grid gap-2 rounded-md border p-2.5">\n          <label className="block text-xs font-medium">\n            Header', border_start)
+          border_block = s[border_start:header_start].rstrip()
+          s = s[:font_start] + s[header_start:]
+
+          continuation_old = '''                  <label className="grid gap-1 rounded-md border bg-muted/20 p-2.5 text-xs">
+                    <span className="flex items-center gap-2 font-medium">
+                      <input
+                        data-dossier-header-different-first-page-control
+                        type="checkbox"
+                        checked={options.headerDifferentFirstPage !== false}
+                        onChange={(event) =>
+                          patchOptions({ headerDifferentFirstPage: event.target.checked })
+                        }
+                      />
+                      Erste Seite anders
+                    </span>
+                    <span className="pl-6 text-[11px] font-normal leading-relaxed text-muted-foreground">
+                      Auf Folgeseiten wird ein kompakter Header verwendet (Vorname Nachname · E-Mail ·
+                      Tel.).
+                    </span>
+                  </label>
+
+'''
+          s = replace_once(s, continuation_old, '', "old continuation ui")
+          anchor = '''          <span className="text-[11px] leading-relaxed text-muted-foreground">
+            Kompakt zeigt nur das Designband. Die Kontaktvarianten integrieren Name, Adresse/Wohnort,
+            Telefon und E-Mail direkt in den farbigen Header. Bei der waagrechten Variante kannst du
+            die Trennung unten auswählen.
+          </span>
+'''
+          continuation_new = anchor + '''
+          {options.headerMode !== "none" ? (
+            <div
+              data-dossier-continuation-settings
+              className="grid gap-2 rounded-md border bg-muted/20 p-2.5"
+            >
+              <label className="flex items-center gap-2 text-xs font-medium">
+                <input
+                  data-dossier-header-different-first-page-control
+                  type="checkbox"
+                  checked={options.headerDifferentFirstPage !== false}
+                  onChange={(event) =>
+                    patchOptions({ headerDifferentFirstPage: event.target.checked })
+                  }
+                />
+                Erste Seite anders
+              </label>
+              {options.headerDifferentFirstPage !== false ? (
+                <label className="block text-xs font-medium">
+                  Header ab Seite 2
+                  <select
+                    data-dossier-continuation-header-mode-control
+                    value={continuationHeaderControlValue}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      patchOptions({
+                        headerContinuationMode:
+                          value === "legacy" ? undefined : (value as DossierHeaderMode),
+                      });
+                    }}
+                    className={selectClass}
+                  >
+                    <option value="legacy">Automatisch wie bisher</option>
+                    <option value="compact">Header kompakt</option>
+                    <option value="contact">Kontaktdaten</option>
+                    <option value="none">Kein Header</option>
+                  </select>
+                  <span className="mt-1 block text-[11px] font-normal leading-relaxed text-muted-foreground">
+                    Alte Dossiers bleiben bei „Automatisch wie bisher“ unverändert. Eine bewusste
+                    Auswahl gilt nur für Seite 2 und folgende.
+                  </span>
+                </label>
+              ) : (
+                <span className="text-[11px] leading-relaxed text-muted-foreground">
+                  Derselbe Header wird auf allen Seiten verwendet. Die gespeicherte Folgeseitenwahl
+                  bleibt erhalten.
+                </span>
+              )}
+            </div>
+          ) : null}
+'''
+          s = replace_once(s, anchor, continuation_new, "continuation ui")
+          s = replace_once(s, '{options.headerMode === "contact" ? (', '{contactHeaderVisible ? (', "contact dependencies")
+          tail = '        </div>\n      </div>\n    </section>'
+          dependency_block = f'''        </div>\n\n        {{hasChromeSurface ? (\n          <>\n{sync_block}\n\n{font_block}\n\n{border_block}\n          </>\n        ) : (\n          <p\n            data-dossier-chrome-empty-note\n            className="rounded-md border border-dashed p-2.5 text-[11px] leading-relaxed text-muted-foreground"\n          >\n            Header und Footer sind deaktiviert. Zusätzliche Schrift- und Rahmenoptionen werden erst\n            eingeblendet, sobald eine Fläche aktiv ist.\n          </p>\n        )}}\n      </div>\n    </section>'''
+          s = replace_once(s, tail, dependency_block, "controls tail")
+          save(path, s)
+
+          path = "src/components/letter/LetterLayoutControls.tsx"
+          s = load(path)
+          s = replace_once(s, 'import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";\n', 'import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";\nimport { DossierHyphenationControl } from "@/components/dossier/DossierHyphenationControl";\n', "letter hyphenation import")
+          s = replace_once(s, '      <DossierPageMarginsControl\n        scope="letter"\n', '      <DossierHyphenationControl />\n\n      <DossierPageMarginsControl\n        scope="letter"\n', "letter hyphenation placement")
+          save(path, s)
+
+          path = "src/routes/lebenslauf.tsx"
+          s = load(path)
+          s = replace_once(s, 'import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";\n', 'import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";\nimport { DossierHyphenationControl } from "@/components/dossier/DossierHyphenationControl";\n', "cv hyphenation import")
+          section = s.index('title="Schrift und Layout"')
+          target = '<div className="flex flex-col gap-3">\n                  <label className="flex flex-col gap-1 text-xs">'
+          pos = s.index(target, section)
+          replacement = '<div className="flex flex-col gap-3">\n                  <DossierHyphenationControl />\n\n                  <label className="flex flex-col gap-1 text-xs">'
+          s = s[:pos] + replacement + s[pos + len(target):]
+          save(path, s)
+
+          path = "src/lib/dossier-docx-chrome.ts"
+          s = load(path)
+          s = replace_once(s, '  dossierHeaderVisualHeightMmForOptions,\n  dossierFooterVisualHeightMmForOptions,\n', '  dossierHeaderVisualHeightMmForOptions,\n  dossierFooterVisualHeightMmForOptions,\n  effectiveDossierHeaderModeForOptions,\n', "docx mode import")
+          old_header_start = s.index('function header(\n')
+          old_header_end = s.index('\nfunction footer(', old_header_start)
+          new_header = r'''type HeaderContactRow = {
+  key: "name" | "address" | "place" | "phone" | "email";
+  value: string;
+};
+
+function inlineHeaderText(
+  rows: HeaderContactRow[],
+  separator: DossierChromeOptions["headerInlineSeparator"] = "icons",
+) {
+  return rows
+    .map((row, index) => {
+      if (index === 0) return row.value;
+      if (separator === "icons" && row.key === "phone") return `  ☎ ${row.value}`;
+      if (separator === "icons" && row.key === "email") return `  ✉ ${row.value}`;
+      const joiner =
+        separator === "slash"
+          ? " / "
+          : separator === "pipe"
+            ? " | "
+            : separator === "space"
+              ? "     "
+              : " · ";
+      return `${joiner}${row.value}`;
+    })
+    .join("");
+}
+
+function header(
+  options: DossierChromeOptions,
+  contact: DossierChromeContact,
+  colors: Record<string, string>,
+  page: number,
+) {
+  const mode = effectiveDossierHeaderModeForOptions(options, page);
+  if (mode === "none") return part("header", "");
+  const background = color(
+    options.headerBackgroundColor ?? colors.primary ?? colors.accent,
+    "111111",
+  );
+  let body = band(
+    `semantic-header-${page}`,
+    background,
+    0,
+    dossierHeaderVisualHeightMmForOptions(options, page),
+  );
+  if (mode === "contact") {
+    const reduced = hasReducedContinuationHeader(options, page);
+    const rows = [
+      options.headerShowName && contact.name ? { key: "name", value: contact.name } : null,
+      !reduced && options.headerShowAddress && contact.address
+        ? { key: "address", value: contact.address }
+        : null,
+      !reduced && options.headerShowAddress && contact.place
+        ? { key: "place", value: contact.place }
+        : null,
+      options.headerShowPhone && contact.phone ? { key: "phone", value: contact.phone } : null,
+      options.headerShowEmail && contact.email ? { key: "email", value: contact.email } : null,
+    ].filter((row): row is HeaderContactRow => row !== null);
+    const inline = reduced || options.headerTextLayout === "inline";
+    const lines = inline
+      ? [inlineHeaderText(rows, options.headerInlineSeparator)]
+      : rows.map((row) => row.value);
+    body += lines
+      .map((line) =>
+        paragraph(
+          line,
+          ink(background),
+          !inline && options.headerShowName && line === contact.name,
+        ),
+      )
+      .join("");
+  }
+  return part("header", body);
+}
+'''
+          s = s[:old_header_start] + new_header + s[old_header_end:]
+          save(path, s)
+
+          Path("tests/unit/dossier-package2.test.tsx").write_text(r'''import { describe, expect, test } from "bun:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { DossierHeaderFooterChrome } from "../../src/components/dossier/DossierHeaderFooterChrome";
+import {
+  DEFAULT_DOSSIER_CHROME_OPTIONS,
+  effectiveDossierHeaderModeForOptions,
+  hasReducedContinuationHeader,
+  normalizeDossierChromeState,
+} from "../../src/lib/dossier-chrome";
+
+const contact = {
+  name: "Lea Müller",
+  address: "Bahnhofstrasse 42",
+  place: "8000 Zürich",
+  email: "lea@example.ch",
+  phone: "079 123 45 67",
+};
+const colors = { primary: "#173a5e", secondary: "#315d7d", accent: "#315d7d" };
+
+function markup(options: typeof DEFAULT_DOSSIER_CHROME_OPTIONS, pageIndex: number) {
+  return renderToStaticMarkup(
+    createElement(DossierHeaderFooterChrome, {
+      scope: "cv",
+      template: "klassisch",
+      colors,
+      contact,
+      pageIndex,
+      options,
+    }),
+  );
+}
+
+describe("Package 2 continuation header model", () => {
+  test("legacy JSON without continuation field preserves reduced contact behavior", () => {
+    const state = normalizeDossierChromeState({
+      sync: true,
+      shared: { ...DEFAULT_DOSSIER_CHROME_OPTIONS, headerMode: "contact" },
+    });
+    expect(state.shared.headerContinuationMode).toBeUndefined();
+    expect(hasReducedContinuationHeader(state.shared, 1)).toBe(true);
+    expect(effectiveDossierHeaderModeForOptions(state.shared, 1)).toBe("contact");
+  });
+
+  test("explicit continuation choices survive normalization", () => {
+    const state = normalizeDossierChromeState({
+      sync: true,
+      shared: {
+        ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+        headerMode: "contact",
+        headerContinuationMode: "compact",
+      },
+    });
+    expect(state.shared.headerContinuationMode).toBe("compact");
+    expect(effectiveDossierHeaderModeForOptions(state.shared, 1)).toBe("compact");
+    expect(hasReducedContinuationHeader(state.shared, 1)).toBe(false);
+  });
+
+  test("page 1 contact can switch to compact on page 2", () => {
+    const options = {
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      headerMode: "contact" as const,
+      headerContinuationMode: "compact" as const,
+    };
+    const html = markup(options, 1);
+    expect(html).toContain('data-dossier-effective-header-mode="compact"');
+    expect(html).toContain('data-dossier-continuation-mode="compact"');
+    expect(html).toContain("data-dossier-compact-header");
+    expect(html).not.toContain("data-dossier-continuation-contact-header");
+    expect(html).not.toContain("Lea Müller");
+  });
+
+  test("page 1 compact can switch to full contact on page 2", () => {
+    const options = {
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      headerMode: "compact" as const,
+      headerContinuationMode: "contact" as const,
+    };
+    const html = markup(options, 1);
+    expect(html).toContain('data-dossier-effective-header-mode="contact"');
+    expect(html).toContain("data-dossier-integrated-contact");
+    expect(html).toContain("Lea Müller");
+    expect(html).toContain("Bahnhofstrasse 42");
+    expect(html).toContain("8000 Zürich");
+  });
+
+  test("continuation header can be disabled independently", () => {
+    const options = {
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      headerMode: "contact" as const,
+      headerContinuationMode: "none" as const,
+    };
+    const html = markup(options, 1);
+    expect(html).toContain('data-dossier-effective-header-mode="none"');
+    expect(html).not.toContain("data-dossier-compact-header");
+    expect(html).not.toContain("data-dossier-integrated-contact");
+    expect(html).not.toContain("data-dossier-continuation-contact-header");
+  });
+
+  test("first-page-different off ignores but preserves the dormant continuation choice", () => {
+    const options = {
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      headerMode: "contact" as const,
+      headerContinuationMode: "none" as const,
+      headerDifferentFirstPage: false,
+    };
+    expect(effectiveDossierHeaderModeForOptions(options, 1)).toBe("contact");
+    expect(options.headerContinuationMode).toBe("none");
+    const html = markup(options, 1);
+    expect(html).toContain("data-dossier-integrated-contact");
+    expect(html).toContain("Bahnhofstrasse 42");
+  });
+});
+''')
+
+          Path(".github/workflows/apply-package2.yml").unlink()
+          PY
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Targeted Package 2 tests
+        run: >-
+          bun test
+          tests/unit/dossier-package2.test.tsx
+          tests/unit/cv-continuation-header.test.tsx
+          tests/unit/dossier-chrome-customization.test.tsx
+      - name: TypeScript
+        run: bun run typecheck
+      - name: Production build
+        run: bun run build
+      - name: Commit Package 2
+        shell: bash
+        run: |
+          git config user.name "modebrecht"
+          git config user.email "137332207+modebrecht@users.noreply.github.com"
+          git add -A
+          git diff --cached --stat
+          git commit -m "feat(dossier): add explicit continuation header controls"
+          git push origin HEAD:dev
