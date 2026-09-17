@@ -51,6 +51,15 @@ jobs:
           if count != 1:
               raise RuntimeError(f"anschreiben.tsx: expected one memo dependency list, found {count}")
           route.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          regression = Path("tests/e2e/dossier-regression.spec.ts")
+          text = regression.read_text(encoding="utf-8")
+          old = 'await expect(previewBlocks).toHaveCount(3);'
+          new = 'await expect(previewBlocks).toHaveCount(2);'
+          count = text.count(old)
+          if count != 1:
+              raise RuntimeError(f"dossier-regression.spec.ts: expected one old block-count assertion, found {count}")
+          regression.write_text(text.replace(old, new, 1), encoding="utf-8")
           PY
 
       - name: Setup Bun
