@@ -1,0 +1,87 @@
+name: Apply letter pagination consumers
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - "scripts/apply-letter-pagination.py"
+      - ".github/workflows/apply-letter-pagination.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Verify expected starting files
+        run: |
+          test -f src/routes/anschreiben.tsx
+          test -f src/lib/dossier-pdf.ts
+          test -f src/components/dossier/DossierExportDialog.tsx
+          test -f src/components/letter/LetterDocument.tsx
+
+      - name: Apply pagination consumer patch
+        run: python3 scripts/apply-letter-pagination.py
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Format changed pagination files
+        run: >-
+          bunx prettier --write
+          src/routes/anschreiben.tsx
+          src/lib/dossier-pdf.ts
+          src/components/dossier/DossierExportDialog.tsx
+          src/components/dossier/DossierPdfCanvas.tsx
+          src/components/letter/LetterDocument.tsx
+          src/components/letter/letter-page-context.ts
+          src/components/letter/letter-pagination.ts
+          src/components/letter/letter-pagination.css
+          src/components/letter/layout-system.ts
+          tests/e2e/dossier-letter-preflight.spec.ts
+
+      - name: TypeScript
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Unit tests
+        run: bun test tests/unit
+
+      - name: Commit consumer integration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/routes/anschreiben.tsx \
+            src/lib/dossier-pdf.ts \
+            src/components/dossier/DossierExportDialog.tsx \
+            src/components/dossier/DossierPdfCanvas.tsx \
+            src/components/letter/LetterDocument.tsx \
+            src/components/letter/letter-page-context.ts \
+            src/components/letter/letter-pagination.ts \
+            src/components/letter/letter-pagination.css \
+            src/components/letter/layout-system.ts \
+            tests/e2e/dossier-letter-preflight.spec.ts
+          if git diff --cached --quiet; then
+            echo "No pagination consumer changes to commit"
+            exit 0
+          fi
+          git commit -m "feat(letter): wire multi-page preview and PDF export"
+          git push origin HEAD:dev
