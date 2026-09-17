@@ -290,7 +290,10 @@ export type CvDesign = {
 export type CvHeadingRule = "none" | "short" | "full";
 
 export const CV_TYPE_DEFAULTS = {
-  headingRule: "full" as CvHeadingRule,
+  // Absence is the template default. The renderer normalises legacy/neutral
+  // presentation to a full semantic rule, while template CSS may still choose
+  // to hide that default. Only an explicit user "full" must override it.
+  headingRule: undefined as CvHeadingRule | undefined,
   titleScale: 1,
   headingScale: 1,
   bodyScale: 1,
