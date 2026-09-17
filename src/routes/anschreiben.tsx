@@ -905,7 +905,8 @@ function Anschreiben() {
                     />
                   </label>
                   <span className="text-[11px] leading-relaxed text-muted-foreground">
-                    Foto oder Bild frei platzieren · Text fliesst automatisch im Quadrat darum.
+                    Bild frei verschieben und proportional skalieren. Der Text weicht automatisch
+                    aus.
                   </span>
                 </div>
                 <Field
