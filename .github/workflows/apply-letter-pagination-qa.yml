@@ -45,6 +45,7 @@ jobs:
           src/lib/dossier-pdf.ts
           src/components/dossier/DossierChromeControls.tsx
           src/components/cv/CvCanvasBase.tsx
+          tests/e2e/dossier-chrome-sync.spec.ts
           tests/e2e/letter-final-qa.spec.ts
           tests/e2e/letter-adversarial-content.spec.ts
           tests/e2e/dossier-regression.spec.ts
@@ -127,6 +128,7 @@ jobs:
             src/lib/dossier-pdf.ts \
             src/components/dossier/DossierChromeControls.tsx \
             src/components/cv/CvCanvasBase.tsx \
+            tests/e2e/dossier-chrome-sync.spec.ts \
             tests/e2e/letter-final-qa.spec.ts \
             tests/e2e/letter-adversarial-content.spec.ts \
             tests/e2e/dossier-regression.spec.ts \

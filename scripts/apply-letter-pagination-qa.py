@@ -27,10 +27,22 @@ def regex_once(path: str, pattern: str, replacement: str) -> None:
 
 
 # 1) Editor readiness means React/storage hydration is complete, not that autosave happened once.
+route = "src/routes/anschreiben.tsx"
 replace_once(
-    "src/routes/anschreiben.tsx",
+    route,
     'data-editor-ready={saveState === "idle" ? "false" : "true"}',
     'data-editor-ready={hydrated ? "true" : "false"}',
+)
+
+# Pagination reports state back to this parent. Keep the synchronized dossier contact
+# referentially stable so that feedback renders do not cancel and restart measurement forever.
+replace_once(
+    route,
+    '  const chromeContact = chromeState.sync ? readDossierContact({ letter: data }) : undefined;',
+    '''  const chromeContact = useMemo(
+    () => (chromeState.sync ? readDossierContact({ letter: data }) : undefined),
+    [chromeState.sync, data, source],
+  );''',
 )
 
 # 2) Native PDF text must not resurrect CSS-hidden elements.
@@ -106,80 +118,37 @@ replace_once(
     "\n        {syncControl}\n        {hasChromeSurface ? (",
 )
 
-# 4) A first-page contact header owns exactly the contact fields it integrates.
+# 4) Reuse Package-1's canonical CV body-contact semantics: identity stays in the CV,
+# while address/phone/email already integrated into a contact header disappear from body copy.
 cv = "src/components/cv/CvCanvasBase.tsx"
 replace_once(
     cv,
     'import type { DossierChromeContact, DossierChromeOptions } from "@/lib/dossier-chrome";',
-    '''import {
-  effectiveDossierHeaderModeForOptions,
-  type DossierChromeContact,
-  type DossierChromeOptions,
-} from "@/lib/dossier-chrome";''',
+    '''import type { DossierChromeContact, DossierChromeOptions } from "@/lib/dossier-chrome";
+import { cvBodyData } from "@/lib/dossier-body-contact";''',
 )
 replace_once(
     cv,
     '''  const p = data.person;
-  const name = [p.vorname, p.nachname].filter(Boolean).join(" ");
-  const adresse = [p.adresse, p.plzOrt].filter(Boolean).join(" · ");
-  const kontakt = [p.telefon, p.email].filter(Boolean).join(" · ");
-  const kontaktZeilen = [adresse, kontakt].filter(Boolean);
-  const angaben = [''',
-    '''  const p = data.person;
-  const name = [p.vorname, p.nachname].filter(Boolean).join(" ");
-  const firstPageContactHeader =
-    effectiveDossierHeaderModeForOptions(chromeOptions, 0) === "contact";
-  const bodyName = firstPageContactHeader && chromeOptions.headerShowName ? "" : name;
-  const bodyAdresse =
-    firstPageContactHeader && chromeOptions.headerShowAddress
-      ? ""
-      : [p.adresse, p.plzOrt].filter(Boolean).join(" · ");
-  const bodyPhone = firstPageContactHeader && chromeOptions.headerShowPhone ? "" : p.telefon;
-  const bodyEmail = firstPageContactHeader && chromeOptions.headerShowEmail ? "" : p.email;
-  const bodyKontakt = [bodyPhone, bodyEmail].filter(Boolean).join(" · ");
-  const kontaktZeilen = [bodyAdresse, bodyKontakt].filter(Boolean);
-  const angaben = [''',
-)
-text = read(cv)
-name_expression = '{name || "Dein Name"}'
-name_count = text.count(name_expression)
-if name_count != 4:
-    raise RuntimeError(f"{cv}: expected four first-page name expressions, found {name_count}")
-text = text.replace(
-    name_expression,
-    '{bodyName || (firstPageContactHeader ? "" : "Dein Name")}',
-)
-write(cv, text)
-replace_once(
-    cv,
-    '''      !!(p.adresse || p.plzOrt || p.telefon || p.email || p.geburtsdatum || p.nationalitaet);''',
-    '''      !!(bodyAdresse || bodyPhone || bodyEmail || p.geburtsdatum || p.nationalitaet);''',
-)
-replace_once(
-    cv,
-    '''                    {p.adresse && <div>{p.adresse}</div>}
-                    {p.plzOrt && <div>{p.plzOrt}</div>}
-                    {p.telefon && (
-                      <div style={{ marginTop: sidePlan.compact ? "1mm" : "1.7mm" }}>
-                        {p.telefon}
-                      </div>
-                    )}
-                    {p.email && <div>{p.email}</div>}''',
-    '''                    {(!firstPageContactHeader || !chromeOptions.headerShowAddress) &&
-                      p.adresse && <div>{p.adresse}</div>}
-                    {(!firstPageContactHeader || !chromeOptions.headerShowAddress) &&
-                      p.plzOrt && <div>{p.plzOrt}</div>}
-                    {(!firstPageContactHeader || !chromeOptions.headerShowPhone) && p.telefon && (
-                      <div style={{ marginTop: sidePlan.compact ? "1mm" : "1.7mm" }}>
-                        {p.telefon}
-                      </div>
-                    )}
-                    {(!firstPageContactHeader || !chromeOptions.headerShowEmail) && p.email && (
-                      <div>{p.email}</div>
-                    )}''',
+  const name = [p.vorname, p.nachname].filter(Boolean).join(" ");''',
+    '''  const p = cvBodyData(data, chromeOptions).person;
+  const name = [p.vorname, p.nachname].filter(Boolean).join(" ");''',
 )
 
-# 5) QA must assert the new multi-page truth instead of the retired one-page blocker.
+# Package-1 explicitly keeps identity in the CV body even when the shared header repeats the name.
+chrome_e2e = "tests/e2e/dossier-chrome-sync.spec.ts"
+replace_once(
+    chrome_e2e,
+    '  test("CV contact header owns integrated fields exactly once and leaves unchecked fields in the body", async ({',
+    '  test("CV contact header owns contact fields exactly once while body identity stays visible", async ({',
+)
+replace_once(
+    chrome_e2e,
+    '    await expect.poll(bodyText).not.toContain("Lea Müller");',
+    '    await expect.poll(bodyText).toContain("Lea Müller");',
+)
+
+# 5) QA must assert the current multi-page behavior instead of the retired one-page blocker.
 finalqa = "tests/e2e/letter-final-qa.spec.ts"
 replace_once(
     finalqa,
