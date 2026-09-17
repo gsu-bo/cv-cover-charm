@@ -314,10 +314,107 @@ describe("resolved Word section chrome", () => {
       expect(header.includes("lea@example.ch")).toBe(mode === "contact");
       expect(header).not.toContain("Lea Müller");
       expect(header).not.toContain("Dorfstrasse");
-      expect(xml("word/footer-letter-first.xml").includes("Beilagen")).toBe(mode === "contact");
+      expect(xml("word/footer-letter-first.xml")).not.toContain("Beilagen");
+      expect(xml("word/document.xml").includes("semantic-footer-final")).toBe(mode === "contact");
+      expect(xml("word/document.xml")).toContain("Beilagen");
       expect(xml("word/document.xml")).not.toContain("<w:pgBorders");
       if (process.env.DOCX_CHROME_QA_DIR)
         await Bun.write(`${process.env.DOCX_CHROME_QA_DIR}/brief-${mode}.docx`, output);
     }
   });
+
+  test("Warm recipe surfaces follow resolved modes while native continuation chrome remains", async () => {
+    const { applyDossierChromeToDocx } = await import("../../src/lib/dossier-docx-chrome");
+    const { resolveDossierChromeSnapshot } = await import("../../src/lib/dossier-resolved-chrome");
+    const { DEFAULT_DOSSIER_CHROME_STATE } = await import("../../src/lib/dossier-chrome");
+    const docs = documents("freundlich");
+    const source = await resolveDossierDocxProfile(docs.cover, docs.letter, docs.cv)!.createBlob(
+      docs,
+    );
+    for (const mode of ["none", "compact", "contact"] as const) {
+      const state = structuredClone(DEFAULT_DOSSIER_CHROME_STATE);
+      for (const scope of ["shared", "letter", "cv"] as const) {
+        Object.assign(state[scope], { headerMode: mode, footerMode: "none" });
+      }
+      const output = await applyDossierChromeToDocx(
+        source,
+        docs,
+        resolveDossierChromeSnapshot(docs, state),
+      );
+      const entries = readStoredDocxEntries(new Uint8Array(await output.arrayBuffer()));
+      const xml = (name: string) =>
+        new TextDecoder().decode(entries.find((entry) => entry.name === name)!.bytes);
+      const documentXml = xml("word/document.xml");
+      expect(documentXml.includes('id="warm-letter-masthead"')).toBe(mode !== "none");
+      expect(documentXml.includes('id="warm-cv-top-band"')).toBe(mode !== "none");
+      expect(documentXml).not.toContain('id="warm-letter-footer"');
+      expect(documentXml).not.toContain('id="warm-cv-bottom-band"');
+      expect(xml("word/header-letter-first.xml").includes("<v:rect")).toBe(mode === "contact");
+      expect(xml("word/header-letter-default.xml").includes("<v:rect")).toBe(mode !== "none");
+      if (process.env.DOCX_WARM_CHROME_QA_DIR) {
+        await Bun.write(`${process.env.DOCX_WARM_CHROME_QA_DIR}/warm-${mode}.docx`, output);
+      }
+    }
+  });
+});
+
+test("Word Sidebar preserves editable content while populating the side column", async () => {
+  const { applyDossierDocxSidebar } = await import("../../src/lib/dossier-docx-layout");
+  const { DEFAULT_CV_PLACEMENTS } = await import("../../src/components/cv/types");
+  const docs = documents("terracotta");
+  const source = await resolveDossierDocxProfile(docs.cover, docs.letter, docs.cv)!.createBlob(
+    docs,
+  );
+  const output = await applyDossierDocxSidebar(source, docs.cv, DEFAULT_CV_PLACEMENTS);
+  const documentXml = async (blob: Blob) =>
+    new TextDecoder().decode(
+      readStoredDocxEntries(new Uint8Array(await blob.arrayBuffer())).find(
+        (entry) => entry.name === "word/document.xml",
+      )!.bytes,
+    );
+  const before = await documentXml(source),
+    after = await documentXml(output);
+  const words = (xml: string) =>
+    [...xml.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map((match) => match[1]).sort();
+  expect(words(after)).toEqual(words(before));
+  const cv = after.slice(after.indexOf('id="terracotta-cv-column"'));
+  expect(cv.indexOf("SPRACHEN")).toBeLessThan(cv.indexOf("SCHULBILDUNG"));
+  expect(cv).toContain("Dorfstrasse 12");
+  if (process.env.DOCX_SIDEBAR_QA_DIR)
+    await Bun.write(`${process.env.DOCX_SIDEBAR_QA_DIR}/kolumne.docx`, output);
+});
+
+test("Word details footer keeps attachments on the final flowed letter page", async () => {
+  const { applyDossierChromeToDocx } = await import("../../src/lib/dossier-docx-chrome");
+  const { resolveDossierChromeSnapshot } = await import("../../src/lib/dossier-resolved-chrome");
+  const { DEFAULT_DOSSIER_CHROME_STATE } = await import("../../src/lib/dossier-chrome");
+  const docs = documents("brief");
+  docs.letter.data.text = Array.from(
+    { length: 35 },
+    (_, index) =>
+      `Abschnitt ${index + 1}. Die Informatik begeistert mich. Ich arbeite gerne im Team und freue mich auf Ihre Rückmeldung.`,
+  ).join("\n\n");
+  docs.letter.data.beilagen = ["QA-FINAL-ATTACHMENT"];
+  const state = structuredClone(DEFAULT_DOSSIER_CHROME_STATE);
+  for (const scope of ["shared", "letter", "cv"] as const) {
+    Object.assign(state[scope], { headerMode: "contact", footerMode: "details" });
+  }
+  const source = await resolveDossierDocxProfile(docs.cover, docs.letter, docs.cv)!.createBlob(
+    docs,
+  );
+  const output = await applyDossierChromeToDocx(
+    source,
+    docs,
+    resolveDossierChromeSnapshot(docs, state),
+  );
+  const entries = readStoredDocxEntries(new Uint8Array(await output.arrayBuffer()));
+  const xml = (name: string) =>
+    new TextDecoder().decode(entries.find((entry) => entry.name === name)!.bytes);
+  expect(xml("word/document.xml")).toContain("QA-FINAL-ATTACHMENT");
+  expect(xml("word/footer-letter-first.xml")).not.toContain("QA-FINAL-ATTACHMENT");
+  expect(xml("word/footer-letter-default.xml")).not.toContain("QA-FINAL-ATTACHMENT");
+  expect(xml("word/footer-letter-default.xml")).toContain("semantic-footer");
+  if (process.env.DOCX_CONTINUATION_QA_DIR) {
+    await Bun.write(`${process.env.DOCX_CONTINUATION_QA_DIR}/brief-long.docx`, output);
+  }
 });

@@ -1,5 +1,6 @@
 import { defaultHeaderModeForTemplate, defaultFooterModeForTemplate } from "@/lib/template-chrome";
 import { FONT_LABELS, TEMPLATES, type FontKey, type TemplateId } from "@/components/cover/types";
+import { FRESH_TEMPLATE_REGISTRY } from "@/components/cover/fresh-template-registry";
 import { LETTER_STORAGE_KEY } from "@/lib/dossier-project";
 import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
 import type {
@@ -164,8 +165,10 @@ export function defaultLetterColors(template: LetterTemplateId): Record<string, 
       cvHeading: "#111111",
     };
   }
+  const templateId = String(template);
   const definition =
-    TEMPLATES.find((candidate) => candidate.id === template) ??
+    TEMPLATES.find((candidate) => String(candidate.id) === templateId) ??
+    FRESH_TEMPLATE_REGISTRY.find((candidate) => String(candidate.id) === templateId) ??
     TEMPLATES.find((candidate) => candidate.id === CANONICAL_DOSSIER_PRESENTATION.template);
   if (!definition) return defaultLetterColors("brief");
   return Object.fromEntries(definition.slots.map((slot) => [slot.key, slot.default]));
@@ -239,12 +242,15 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
   const fallback = emptyLetterDesign();
   if (!value || typeof value !== "object") return fallback;
   const incoming = value as Partial<LetterDesign>;
+  const incomingTemplate =
+    typeof incoming.template === "string" ? String(incoming.template) : undefined;
   const template: LetterTemplateId =
-    incoming.template === "brief"
+    incomingTemplate === "brief"
       ? "brief"
-      : typeof incoming.template === "string" &&
-          TEMPLATES.some((candidate) => candidate.id === incoming.template)
-        ? (incoming.template as TemplateId)
+      : incomingTemplate &&
+          (TEMPLATES.some((candidate) => String(candidate.id) === incomingTemplate) ||
+            FRESH_TEMPLATE_REGISTRY.some((candidate) => String(candidate.id) === incomingTemplate))
+        ? (incomingTemplate as TemplateId)
         : fallback.template;
   const font =
     typeof incoming.font === "string" && incoming.font in FONT_LABELS

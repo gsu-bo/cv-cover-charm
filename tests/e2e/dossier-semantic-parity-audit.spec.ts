@@ -38,6 +38,11 @@ const cases: { name: string; template: string; patch?: Partial<DossierChromeOpti
   },
   { name: "warm-default", template: "freundlich" },
   { name: "warm-contact", template: "freundlich", patch: { headerMode: "contact" } },
+  {
+    name: "warm-none",
+    template: "freundlich",
+    patch: { headerMode: "none", footerMode: "none" },
+  },
   { name: "kolumne-default", template: "terracotta" },
   { name: "neon-default", template: "neon" },
   { name: "studio-default", template: "studio" },
@@ -76,6 +81,13 @@ test("collect representative semantic parity specimens", async ({ page }) => {
       await page.evaluate(() => document.fonts.ready);
       const preview = page.locator(selector).first();
       await expect(preview).toBeVisible();
+      if (scope === "letter" && item.template === "freundlich") {
+        const ownsCompactMasthead =
+          item.patch?.headerMode !== "contact" && item.patch?.headerMode !== "none";
+        await expect(preview.locator("[data-letter-warm-band]")).toHaveCount(
+          ownsCompactMasthead ? 1 : 0,
+        );
+      }
       observations[scope] = await preview.evaluate((element) => ({
         layout: element.getAttribute("data-cv-layout"),
         chrome: [...element.querySelectorAll("[data-dossier-chrome]")].map((node) => ({
@@ -128,6 +140,10 @@ test("collect representative semantic parity specimens", async ({ page }) => {
         const xml = new TextDecoder().decode(
           entries.find((entry) => entry.name === "word/document.xml")!.bytes,
         );
+        if (item.template === "freundlich") {
+          const ownsWordHeaderSurface = item.patch?.headerMode !== "none";
+          expect(xml.includes('id="warm-letter-masthead"')).toBe(ownsWordHeaderSurface);
+        }
         observations.docx = {
           headerParts: entries
             .filter((entry) => /^word\/header/.test(entry.name))

@@ -5,7 +5,8 @@ import "@/components/dossier/edel-stationery.css";
 import "@/components/dossier/legacy-template-refinements.css";
 import "@/components/cover/templatefix-24-25.css";
 import { freshLetterSpec, type FreshLetterColorRole } from "./fresh-letter-system";
-import type { LetterTemplateId } from "./types";
+import type { LetterHeaderMode, LetterTemplateId } from "./types";
+import { defaultHeaderModeForTemplate } from "@/lib/template-chrome";
 import { WARM_FIRST_PAGE_HEADER_HEIGHT_MM } from "./warm-letter-layout";
 
 function pick(colors: Record<string, string>, ...keys: string[]): string {
@@ -31,9 +32,11 @@ function freshRoleColor(role: FreshLetterColorRole, colors: Record<string, strin
 function WarmLetterBackground({
   colors,
   pageIndex,
+  headerMode,
 }: {
   colors: Record<string, string>;
   pageIndex: number;
+  headerMode: LetterHeaderMode;
 }) {
   const palette = cvPalette(colors);
   const primary = pick(colors, "primary", "accent", "secondary", "ink");
@@ -48,16 +51,18 @@ function WarmLetterBackground({
       style={{ backgroundColor: palette.paper }}
       aria-hidden="true"
     >
-      <div
-        data-letter-warm-band
-        className="absolute inset-x-0 top-0"
-        style={{
-          height: firstPage ? `${WARM_FIRST_PAGE_HEADER_HEIGHT_MM}mm` : "14mm",
-          backgroundColor: primary,
-        }}
-      />
+      {headerMode === "compact" ? (
+        <div
+          data-letter-warm-band
+          className="absolute inset-x-0 top-0"
+          style={{
+            height: firstPage ? `${WARM_FIRST_PAGE_HEADER_HEIGHT_MM}mm` : "14mm",
+            backgroundColor: primary,
+          }}
+        />
+      ) : null}
 
-      {firstPage ? (
+      {firstPage && headerMode === "compact" ? (
         <>
           <div
             data-letter-warm-ring
@@ -244,17 +249,19 @@ export function LetterSheetBackground({
   template,
   colors,
   pageIndex = 0,
+  headerMode = defaultHeaderModeForTemplate(template),
 }: {
   template: LetterTemplateId;
   colors: Record<string, string>;
   pageIndex?: number;
+  headerMode?: LetterHeaderMode;
 }) {
   if (freshLetterSpec(template)) {
     return <FreshLetterBackground template={template} colors={colors} />;
   }
 
   if (template === "freundlich") {
-    return <WarmLetterBackground colors={colors} pageIndex={pageIndex} />;
+    return <WarmLetterBackground colors={colors} pageIndex={pageIndex} headerMode={headerMode} />;
   }
 
   if (template === "welle") {

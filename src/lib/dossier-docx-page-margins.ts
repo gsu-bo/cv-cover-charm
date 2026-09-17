@@ -11,6 +11,7 @@ import {
   type DossierPageMarginsState,
 } from "@/lib/dossier-page-margins";
 import { transformStoredDocxDocumentXml } from "@/lib/dossier-docx-package";
+import type { ResolvedDossierChrome } from "@/lib/dossier-resolved-chrome";
 import { resolveTemplateChromeOptions } from "@/lib/template-chrome";
 
 const MM_TO_TWIPS = 1440 / 25.4;
@@ -99,16 +100,22 @@ function letterDesignForChrome(design: LetterDesign, chrome: DossierChromeOption
 export function resolveSafeDossierDocxPageMargins(
   letter: LetterPdfDocument,
   cv: CvPdfDocument,
+  snapshot?: {
+    chrome: ResolvedDossierChrome;
+    cvLayout: ReturnType<typeof getCvLayoutChoiceForTemplate>;
+  },
 ): DossierPageMarginsState {
   const state = getDossierPageMarginsState();
   const result: DossierPageMarginsState = {};
 
   if (state.letter) {
-    const chrome = resolveTemplateChromeOptions(
-      letter.design.template,
-      letter.design.colors,
-      getDossierChromeOptions("letter"),
-    );
+    const chrome =
+      snapshot?.chrome.letter.options ??
+      resolveTemplateChromeOptions(
+        letter.design.template,
+        letter.design.colors,
+        getDossierChromeOptions("letter"),
+      );
     const design = letterDesignForChrome(letter.design, chrome);
     const minimums = maximumMargins(
       letterSafePageMarginMinimums(letter.data, design, { pageIndex: 0, finalPage: true }),
@@ -119,14 +126,18 @@ export function resolveSafeDossierDocxPageMargins(
   }
 
   if (state.cv) {
-    const chrome = resolveTemplateChromeOptions(
-      cv.design.template,
-      cv.design.colors,
-      getDossierChromeOptions("cv"),
-    );
+    const chrome =
+      snapshot?.chrome.cv.options ??
+      resolveTemplateChromeOptions(
+        cv.design.template,
+        cv.design.colors,
+        getDossierChromeOptions("cv"),
+      );
     const frame = cvFrameFor(cv.design.template);
     const layout =
-      getCvLayoutChoiceForTemplate(cv.design.template) === "modern" ? "modern" : "classic";
+      (snapshot?.cvLayout ?? getCvLayoutChoiceForTemplate(cv.design.template)) === "modern"
+        ? "modern"
+        : "classic";
     const minimums = maximumMargins(
       cvSafePageMarginMinimums(frame, 0, layout, cv.design.sidebarPct, chrome),
       cvSafePageMarginMinimums(frame, 1, layout, cv.design.sidebarPct, chrome),
@@ -157,8 +168,9 @@ export async function applyDossierPageMarginsToDocx(
   blob: Blob,
   letter: LetterPdfDocument,
   cv: CvPdfDocument,
+  snapshot?: Parameters<typeof resolveSafeDossierDocxPageMargins>[2],
 ) {
-  const state = resolveSafeDossierDocxPageMargins(letter, cv);
+  const state = resolveSafeDossierDocxPageMargins(letter, cv, snapshot);
   if (!state.letter && !state.cv) return blob;
   return transformStoredDocxDocumentXml(
     blob,

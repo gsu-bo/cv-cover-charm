@@ -276,6 +276,6 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(docxMargins).toContain("clampDossierPageMarginsToMinimums(state.cv, minimums)");
     expect(docxMargins).toContain("letterSafePageMarginMinimums");
     expect(docxMargins).toContain("cvSafePageMarginMinimums");
-    expect(docxExport).toContain("applyDossierPageMarginsToDocx(hyphenated, letter, cv)");
+    expect(docxExport).toContain("applyDossierPageMarginsToDocx(hyphenated, letter, cv, {");
   });
 });

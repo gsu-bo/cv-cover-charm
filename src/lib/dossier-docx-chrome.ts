@@ -27,7 +27,7 @@ function paragraph(text: string, foreground: string, bold = false) {
   return `<w:p><w:pPr><w:spacing w:after="0" w:line="200" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Cabin" w:hAnsi="Cabin"/><w:sz w:val="16"/><w:color w:val="${foreground}"/>${bold ? "<w:b/>" : ""}</w:rPr><w:t xml:space="preserve">${escape(text)}</w:t></w:r></w:p>`;
 }
 function band(id: string, background: string, y: number, height: number) {
-  return `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="1" w:lineRule="exact"/></w:pPr><w:r><w:pict><v:rect id="${id}" style="position:absolute;margin-left:0mm;margin-top:${y}mm;width:210mm;height:${height}mm;z-index:-1;mso-position-horizontal-relative:page;mso-position-vertical-relative:page" fillcolor="#${background}" stroked="f"/></w:pict></w:r></w:p>`;
+  return `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="1" w:lineRule="exact"/></w:pPr><w:r><w:pict><v:rect id="${id}" style="position:absolute;margin-left:0mm;margin-top:${y}mm;width:210mm;height:${height}mm;z-index:251658240;mso-position-horizontal-relative:page;mso-position-vertical-relative:page" fillcolor="#${background}" stroked="f"/></w:pict></w:r></w:p>`;
 }
 function part(kind: "header" | "footer", body: string) {
   const tag = kind === "header" ? "hdr" : "ftr";
@@ -85,6 +85,26 @@ function footer(options: DossierChromeOptions, colors: Record<string, string>, t
       (options.footerMode === "details" ? paragraph(text, ink(background)) : ""),
   );
 }
+function finalPageDetailsFooter(
+  options: DossierChromeOptions,
+  colors: Record<string, string>,
+  text: string,
+) {
+  if (!text) return "";
+  const background = color(
+    options.footerBackgroundColor ?? colors.accent ?? colors.secondary,
+    "4B5563",
+  );
+  const height = dossierFooterVisualHeightMmForOptions(options);
+  const foreground = ink(background);
+  return (
+    band("semantic-footer-final", background, 297 - height, height).replace(
+      "<v:rect ",
+      '<v:rect xmlns:v="urn:schemas-microsoft-com:vml" ',
+    ) +
+    `<w:p><w:pPr><w:framePr w:w="${twips(170)}" w:h="${twips(Math.max(4, height - 4))}" w:hAnchor="page" w:vAnchor="page" w:x="${twips(20)}" w:y="${twips(297 - height + 2)}" w:wrap="none" w:hRule="atLeast"/><w:spacing w:after="0" w:line="200" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Cabin" w:hAnsi="Cabin"/><w:sz w:val="16"/><w:color w:val="${foreground}"/></w:rPr><w:t xml:space="preserve">${escape(text)}</w:t></w:r></w:p>`
+  );
+}
 const paragraphText = (xml: string) =>
   [...xml.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map((match) => match[1]).join("");
 function removeText(source: string, text: string) {
@@ -100,6 +120,40 @@ function removeText(source: string, text: string) {
     removed = true;
     return '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="1" w:lineRule="exact"/></w:pPr></w:p>';
   });
+}
+
+/**
+ * The reviewed Warm recipe predates native Word header/footer parts, so its
+ * first-page masthead and edge footer still live in document.xml. Treat those
+ * named drawings as semantic surfaces here. The recipe's full-page paper sits
+ * above Word header/footer layers, so its masthead supplies the visible surface
+ * for compact/contact and its edge supplies compact. Native parts still own all
+ * text and continuation behavior. None removes the surface; details replaces
+ * the compact edge with its final-page semantic band.
+ */
+const WARM_RECIPE_SURFACES = {
+  letter: {
+    header: ["warm-letter-masthead", "warm-letter-ring", "warm-letter-orb"],
+    footer: ["warm-letter-footer"],
+  },
+  cv: {
+    header: ["warm-cv-top-band", "warm-cv-orb"],
+    footer: ["warm-cv-bottom-band"],
+  },
+} as const;
+
+function removeDrawingRuns(source: string, ids: readonly string[]) {
+  let result = source;
+  for (const id of ids) {
+    const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    result = result.replace(
+      new RegExp(
+        `<w:r><w:pict><v:(?:shape|rect|oval|roundrect)[^>]*\\bid="${escaped}"[\\s\\S]*?</w:pict></w:r>`,
+      ),
+      "",
+    );
+  }
+  return result;
 }
 
 /** Attach native Word section chrome after the established recipe pipeline. */
@@ -140,6 +194,16 @@ export async function applyDossierChromeToDocx(
       .replace(/<w:pgBorders\b[^>]*>[\s\S]*?<\/w:pgBorders>/g, "")
       .replace(/<w:(?:headerReference|footerReference|titlePg)\b[^>]*\/>/g, "");
     const references: string[] = [];
+    const warmRecipe = String(document.design.template) === "freundlich";
+    if (warmRecipe) {
+      const surfaces = WARM_RECIPE_SURFACES[scope];
+      if (options.footerMode !== "compact") {
+        content = removeDrawingRuns(content, surfaces.footer);
+      }
+      if (options.headerMode === "none") {
+        content = removeDrawingRuns(content, surfaces.header);
+      }
+    }
     for (const [kind, variant, page] of [
       ["header", "default", 1],
       ["header", "first", 0],
@@ -161,13 +225,21 @@ export async function applyDossierChromeToDocx(
       set(
         `word/${name}`,
         kind === "header"
-          ? header(
-              options,
-              contact,
+          ? warmRecipe && options.headerMode === "compact" && variant === "first"
+            ? part("header", "")
+            : header(
+                options,
+                contact,
+                document.design.colors,
+                options.headerDifferentFirstPage === false ? 0 : page,
+              )
+          : footer(
+              scope === "letter" && options.footerMode === "details"
+                ? { ...options, footerMode: "compact", footerHeightMm: null }
+                : options,
               document.design.colors,
-              options.headerDifferentFirstPage === false ? 0 : page,
-            )
-          : footer(options, document.design.colors, text),
+              scope === "letter" ? "" : text,
+            ),
       );
       rels = rels.replace(
         "</Relationships>",
@@ -207,6 +279,21 @@ export async function applyDossierChromeToDocx(
       content = removeText(content, "Beilagen");
       for (const value of documents.letter.data.beilagen ?? [])
         content = removeText(content, value);
+      const attachments = (documents.letter.data.beilagen ?? []).filter((value) => value.trim());
+      const finalFooter = finalPageDetailsFooter(
+        options,
+        document.design.colors,
+        attachments.length ? `Beilagen   ${attachments.join(" · ")}` : "",
+      );
+      // The section properties live inside the paragraph that follows the
+      // letter content. A page-anchored frame inserted immediately before that
+      // paragraph belongs to the final flowed letter page only; Word headers
+      // and footers still repeat their compact structural band on earlier pages.
+      const sectionParagraph = content.lastIndexOf("<w:p><w:pPr>");
+      if (finalFooter && sectionParagraph >= 0) {
+        content =
+          content.slice(0, sectionParagraph) + finalFooter + content.slice(sectionParagraph);
+      }
     }
     if (options.headerMode === "contact") {
       const minTop = twips(

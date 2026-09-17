@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DossierHeaderFooterChrome } from "../../src/components/dossier/DossierHeaderFooterChrome";
+import { LetterSheetBackground } from "../../src/components/letter/LetterSheetBackground";
 import {
   EMPTY_LETTER,
   emptyLetterDesign,
@@ -106,4 +107,19 @@ describe("header/footer semantic precedence", () => {
       }
     }
   });
+});
+
+test("Warm owns only its compact masthead while none/contact retain the paper", () => {
+  for (const headerMode of ["none", "compact", "contact"] as const) {
+    const html = renderToStaticMarkup(
+      createElement(LetterSheetBackground, {
+        template: "freundlich",
+        colors: { bg: "#fff9ef" },
+        headerMode,
+      }),
+    );
+    expect(html.includes("data-letter-warm-band")).toBe(headerMode === "compact");
+    expect(html.includes("data-letter-warm-ring")).toBe(headerMode === "compact");
+    expect(html).toContain('data-letter-background-variant="warm"');
+  }
 });

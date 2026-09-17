@@ -394,26 +394,6 @@ test.describe("M5 final letter QA", () => {
     for (const template of LETTER_STYLE_IDS) {
       const { preview, exported } = await seedLetter(page, { template, headerMode: "contact" });
 
-      if (template === "freundlich") {
-        // Warm 1 deliberately maps the generic contact request to its reviewed
-        // 52 mm compact masthead instead of rendering a second unrelated header.
-        const warmHeader = preview.locator("[data-letter-warm-sender]");
-        const recipient = preview.locator('[data-letter-section="recipient"]');
-        await expect(warmHeader).toBeVisible();
-        await expect(preview.locator("[data-letter-integrated-contact]")).toHaveCount(0);
-        const warmBox = await warmHeader.boundingBox();
-        const recipientBox = await recipient.boundingBox();
-        expect(warmBox).not.toBeNull();
-        expect(recipientBox).not.toBeNull();
-        expect(warmBox!.y + warmBox!.height).toBeLessThanOrEqual(recipientBox!.y + 1.5);
-        await assertHealthy(preview, exported, `${template}/contact-to-warm-compact`, {
-          template,
-          header: "compact",
-          footer: "compact",
-        });
-        continue;
-      }
-
       await expect(preview.locator("[data-letter-integrated-contact]")).toBeVisible();
       await assertHealthy(preview, exported, `${template}/contact`, {
         template,

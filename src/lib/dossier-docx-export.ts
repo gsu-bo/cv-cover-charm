@@ -1,5 +1,8 @@
 import { getDossierChromeState } from "@/lib/dossier-chrome";
 import { cvBodyData } from "@/lib/dossier-body-contact";
+import { getCvLayoutChoiceForTemplate } from "@/components/cv/layout";
+import { getCvPlacements } from "@/components/cv/placement";
+import { applyDossierDocxSidebar } from "@/lib/dossier-docx-layout";
 import { resolveDossierChromeSnapshot } from "@/lib/dossier-resolved-chrome";
 import { applyDossierChromeToDocx } from "@/lib/dossier-docx-chrome";
 import type {
@@ -202,12 +205,17 @@ export async function createDossierDocxBlob(
     throw new Error("DOCX benötigt dieselbe aktive Vorlage in allen drei Dossierteilen.");
   }
   const resolved = resolveDossierChromeSnapshot({ cover, letter, cv }, getDossierChromeState());
+  const bodyCv = { ...cv, data: cvBodyData(cv.data, resolved.cv.options) };
+  const layout = getCvLayoutChoiceForTemplate(cv.design.template);
+  const placements = { ...getCvPlacements() };
   const blob = await profile.createBlob({
     cover,
     letter,
-    cv: { ...cv, data: cvBodyData(cv.data, resolved.cv.options) },
+    cv: bodyCv,
   });
-  const letterAligned = await applyLetterAlignmentToDocx(blob, letter);
+  const laidOut =
+    layout === "modern" ? await applyDossierDocxSidebar(blob, bodyCv, placements) : blob;
+  const letterAligned = await applyLetterAlignmentToDocx(laidOut, letter);
   const aligned = await applyCvTextAlignmentToDocx(letterAligned, cv);
   const hyphenated = await applyDossierHyphenationToDocx(
     aligned,
@@ -215,7 +223,10 @@ export async function createDossierDocxBlob(
     cv,
     getDossierHyphenationEnabled(),
   );
-  const margined = await applyDossierPageMarginsToDocx(hyphenated, letter, cv);
+  const margined = await applyDossierPageMarginsToDocx(hyphenated, letter, cv, {
+    chrome: resolved,
+    cvLayout: layout,
+  });
   return applyDossierChromeToDocx(margined, { cover, letter, cv }, resolved);
 }
 

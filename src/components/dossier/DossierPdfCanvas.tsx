@@ -12,7 +12,7 @@ import {
 } from "@/lib/dossier-pdf-document";
 import { LETTER_STORAGE_KEY, readStoredDossierPart } from "@/lib/dossier-project";
 import { DEFAULT_DOSSIER_CHROME_STATE, type DossierChromeState } from "@/lib/dossier-chrome";
-import { resolveDossierContact } from "@/lib/dossier-contact";
+import { resolveDossierChromeSnapshot } from "@/lib/dossier-resolved-chrome";
 
 const ignoreSelection = () => {};
 const ignoreMove = () => {};
@@ -40,19 +40,14 @@ export const DossierPdfCanvas = forwardRef<
   },
   ref,
 ) {
-  const letterChromeOptions = chromeState.sync ? chromeState.shared : chromeState.letter;
-  const cvChromeOptions = chromeState.sync ? chromeState.shared : chromeState.cv;
   const storedLetter =
     letter === undefined
       ? letterPdfDocumentFromSaved(readStoredDossierPart(LETTER_STORAGE_KEY))
       : letter;
-  const sharedChromeContact = chromeState.sync
-    ? resolveDossierContact({
-        cover: cover?.data,
-        cv: cv?.data,
-        letter: storedLetter?.data,
-      })
-    : undefined;
+  const resolvedChrome = resolveDossierChromeSnapshot(
+    { cover, letter: storedLetter, cv },
+    chromeState,
+  );
 
   return (
     <div ref={ref}>
@@ -74,8 +69,8 @@ export const DossierPdfCanvas = forwardRef<
           <LetterCanvas
             data={storedLetter.data}
             design={storedLetter.design}
-            chromeOptions={letterChromeOptions}
-            chromeContact={sharedChromeContact}
+            chromeOptions={resolvedChrome.letter.options}
+            chromeContact={resolvedChrome.letter.contact}
             exportMode
           />
         </div>
@@ -84,8 +79,8 @@ export const DossierPdfCanvas = forwardRef<
         <CvCanvas
           data={cv.data}
           design={cv.design}
-          chromeOptions={cvChromeOptions}
-          chromeContact={sharedChromeContact}
+          chromeOptions={resolvedChrome.cv.options}
+          chromeContact={resolvedChrome.cv.contact}
           elements={cv.elements}
           elementStyles={cv.elementStyles}
           exportMode

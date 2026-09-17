@@ -242,6 +242,7 @@ export function LetterCanvas({
         template={design.template}
         colors={design.colors}
         pageIndex={geometry.pageIndex}
+        headerMode={geometry.effectiveHeaderMode}
       />
 
       <DossierHeaderFooterChrome
