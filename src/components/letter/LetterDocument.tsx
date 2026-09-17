@@ -37,7 +37,7 @@
   left: -40000px;
   top: 0;
   width: 794px;
-  opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   z-index: -1000;
 }

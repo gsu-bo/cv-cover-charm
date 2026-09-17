@@ -1,1091 +1,357 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { ColorChooser } from "@/components/cover/ColorChooser";
-import { ScaledPreview } from "@/components/cover/ScaledPreview";
-import { Section } from "@/components/cover/Section";
-import { ThemeToggle } from "@/components/cover/ThemeToggle";
-import { FileDown, History, RotateCcw, Sparkles } from "lucide-react";
-import { EditorMenuLabel } from "@/components/dossier/EditorMenuLabel";
-import { useForeignWrite, usePageVisible } from "@/lib/autosave";
+import { hasReducedContinuationHeader } from "@/lib/dossier-chrome";
+import type { TemplateId } from "@/components/cover/types";
+import { defaultHeaderModeForTemplate, defaultFooterModeForTemplate } from "@/lib/template-chrome";
+import { cvFrameFor } from "@/components/cv/archetype";
 import {
-  HISTORY_KEYS,
-  formatWhen,
-  hasContent,
-  pushSnapshot,
-  readHistory,
-  type Snapshot,
-} from "@/lib/history";
-import { FONT_LABELS, TEMPLATES, type FontKey } from "@/components/cover/types";
-import { DEFAULTS } from "@/default-config";
-import { ResizableEditorPanel } from "@/components/dossier/ResizableEditorPanel";
-import { SaveStatus, type SaveState } from "@/components/dossier/SaveStatus";
-import { LetterCanvas } from "@/components/letter/LetterCanvas";
-import { LetterLayoutControls } from "@/components/letter/LetterLayoutControls";
-import { LetterRichTextEditor } from "@/components/letter/LetterRichTextEditor";
-import { LetterTemplatePicker } from "@/components/letter/LetterTemplatePicker";
-import { downloadLetterPdf } from "@/lib/dossier-pdf";
-import { readPhoto } from "@/lib/image";
-import { readDossierContact } from "@/lib/dossier-contact";
-import {
-  DEFAULT_DOSSIER_CHROME_STATE,
-  applyPortableDossierChromeState,
-  getDossierChromeState,
-  subscribeDossierChrome,
-} from "@/lib/dossier-chrome";
-import {
-  mergeNonEmptyLetterData,
-  readLetterDossierSource,
-  type LetterDossierSource,
-} from "@/components/letter/dossier-transfer";
+  DOSSIER_PAGE_MARGIN_MIN_MM,
+  clampDossierPageMarginsToMinimums,
+  getDossierPageMargins,
+  type DossierPageMargins,
+} from "@/lib/dossier-page-margins";
+import { freshLetterSpec } from "./fresh-letter-system";
+import { letterPaginationPageContext } from "./letter-page-context";
+import "./fresh-letter-integrity.css";
 import {
   DEFAULT_LETTER_BEILAGEN,
-  DEMO_LETTER,
-  EMPTY_LETTER,
-  LETTER_STORAGE_KEY,
-  defaultLetterColors,
-  emptyLetterDesign,
-  normalizeLetterDesign,
   type LetterData,
   type LetterDesign,
-  type LetterFlowImage,
+  type LetterFooterMode,
+  type LetterHeaderMode,
   type LetterTemplateId,
-  type SavedLetter,
-} from "@/components/letter/types";
+} from "./types";
+import {
+  isWarmFirstPageCompactHeader,
+  WARM_FIRST_PAGE_HEADER_HEIGHT_MM,
+} from "./warm-letter-layout";
 
-export const Route = createFileRoute("/anschreiben")({
-  head: () => ({
-    meta: [
-      { title: "Motivationsschreiben für die Lehrstellenbewerbung" },
-      {
-        name: "description",
-        content:
-          "Persönliches Motivationsschreiben für deine Lehrstellenbewerbung – passend zu Titelblatt und Lebenslauf.",
-      },
-    ],
-  }),
-  component: Anschreiben,
-});
+export const LETTER_PAGE_MM = { width: 210, height: 297 } as const;
 
-const inputClass =
-  "mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
+export type LetterArchetype = "quiet" | "band" | "sidebar" | "frame" | "fresh";
 
-/** Standard-Anrede und -Gruss allein bedeuten noch nicht, dass der Brief begonnen wurde. */
-function letterHasStarted(data: LetterData): boolean {
-  return [
-    data.absenderName,
-    data.absenderAdresse,
-    data.absenderPlzOrt,
-    data.absenderTelefon,
-    data.absenderEmail,
-    data.empfaengerFirma,
-    data.empfaengerName,
-    data.empfaengerAdresse,
-    data.empfaengerPlzOrt,
-    data.ort,
-    data.datum,
-    data.betreff,
-    data.text,
-    data.richTextHtml,
-    data.unterschrift,
-  ].some((value) => !!value?.trim());
+export type LetterPageContext = {
+  /** Zero-based page index supplied by the shared letter-document paginator. */
+  pageIndex?: number;
+  /** Attachments belong only on the final page of a multi-page letter. */
+  finalPage?: boolean;
+  /** Additional template-owned whitespace after the header. Ignored once the user owns the page margins. */
+  headerGapMm?: number;
+};
+
+type MmRect = {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+};
+
+type MmBar = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+export type LetterPageGeometry = {
+  pageIndex: number;
+  firstPage: boolean;
+  finalPage: boolean;
+  archetype: LetterArchetype;
+  freshTemplate: boolean;
+  requestedHeaderMode: LetterHeaderMode;
+  effectiveHeaderMode: LetterHeaderMode;
+  requestedFooterMode: LetterFooterMode;
+  effectiveFooterMode: LetterFooterMode;
+  content: MmRect & { width: number; height: number };
+  header: {
+    contactHeight: number;
+    contactLeft: number;
+    contactRight: number;
+    contactTop: number;
+    contactMinHeight: number;
+    sidebarWidth: number;
+    compactTopBandHeight: number;
+    compactAccent: MmBar;
+    compactLineTop: number;
+    compactPill: MmBar | null;
+  };
+  footer: {
+    height: number;
+    contentLeft: number;
+    contentRight: number;
+    paddingY: number;
+    showAttachments: boolean;
+  };
+};
+
+/**
+ * Established templates remain archetype-based. Fresh templates own explicit
+ * left/right insets in fresh-letter-system.ts because their letter signatures
+ * are intentionally independent from CV geometry and from legacy `klassisch`
+ * fallback behaviour.
+ */
+const CONTENT_INSETS: Record<LetterArchetype, { left: number; right: number }> = {
+  quiet: { left: 24, right: 23 },
+  fresh: { left: 25, right: 24 },
+  band: { left: 24, right: 23 },
+  sidebar: { left: 30, right: 23 },
+  frame: { left: 27, right: 27 },
+};
+
+/**
+ * CV geometry is used only as a structural visual reference for established
+ * templates. Fresh templates are resolved first from their dedicated letter
+ * registry, so they can never silently inherit legacy CV dimensions.
+ */
+export function letterArchetypeFor(template: LetterTemplateId): LetterArchetype {
+  const fresh = freshLetterSpec(template);
+  if (fresh) return fresh.archetype;
+
+  if (template === "brief") return "quiet";
+
+  const reference = cvFrameFor(template as TemplateId);
+  const activeBand = reference.id === "band" && (reference.headFirstMm > 0 || reference.footMm > 0);
+
+  if (reference.id === "column") return "sidebar";
+  if (reference.id === "card" || reference.cardInsetMm > 0 || reference.borderInsetMm > 0) {
+    return "frame";
+  }
+  if (activeBand) return "band";
+  return "quiet";
 }
 
-function dossierHasMeaningfulSource(source: LetterDossierSource | null): boolean {
-  return !!source && (source.hasPersonal || source.hasApplication || source.hasDesign);
+export function visibleLetterAttachments(data: LetterData): string[] {
+  const values = data.beilagen?.length ? data.beilagen : [...DEFAULT_LETTER_BEILAGEN];
+  return values.filter((value) => value.trim());
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  type?: string;
-}) {
-  return (
-    <label className="block text-xs font-medium text-foreground">
-      {label}
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className={inputClass}
-      />
-    </label>
+export function letterFooterHeightMm(
+  data: LetterData,
+  mode: LetterFooterMode,
+  heightOverrideMm: number | null = null,
+): number {
+  if (mode === "none") return 0;
+  if (heightOverrideMm !== null && Number.isFinite(heightOverrideMm)) {
+    return mode === "compact"
+      ? Math.min(18, Math.max(1, heightOverrideMm))
+      : Math.min(40, Math.max(4, heightOverrideMm));
+  }
+  if (mode === "compact") return 2.4;
+
+  const attachments = data.showBeilagen !== false ? visibleLetterAttachments(data) : [];
+  if (!attachments.length) return 4;
+
+  // Footer text has roughly 140 mm usable width next to the heading. Reserve
+  // space for wrapped long attachment names instead of sizing by item count only.
+  const visualLineCount = attachments.reduce(
+    (sum, value) => sum + Math.max(1, Math.ceil(value.trim().length / 56)),
+    0,
   );
+  return Math.min(30, 7 + visualLineCount * 3.8);
 }
 
-function Anschreiben() {
-  const [data, setData] = useState<LetterData>(EMPTY_LETTER);
-  const [design, setDesign] = useState<LetterDesign>(emptyLetterDesign);
-  const chromeState = useSyncExternalStore(
-    subscribeDossierChrome,
-    getDossierChromeState,
-    () => DEFAULT_DOSSIER_CHROME_STATE,
-  );
-  const chromeOptions = chromeState.sync ? chromeState.shared : chromeState.letter;
-  const [hydrated, setHydrated] = useState(false);
-  const [saveState, setSaveState] = useState<SaveState>("idle");
-  const [panelOpen, setPanelOpen] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [confirmDemo, setConfirmDemo] = useState(false);
-  const [confirmWipe, setConfirmWipe] = useState(false);
-  const [history, setHistory] = useState<Snapshot[]>([]);
-  const [letterOverflow, setLetterOverflow] = useState(false);
-  const [pdfDownloading, setPdfDownloading] = useState(false);
-  const [pdfError, setPdfError] = useState<string | null>(null);
-  const [source, setSource] = useState<LetterDossierSource | null>(null);
-  const [transferNote, setTransferNote] = useState<{
-    kind: "ok" | "error";
-    text: string;
-  } | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const visible = usePageVisible();
-  const { markWritten, changedElsewhere } = useForeignWrite(LETTER_STORAGE_KEY);
-  const [takeover, setTakeover] = useState({
-    personal: true,
-    application: true,
-    design: true,
-  });
-  const [open, setOpen] = useState<Record<string, boolean>>({
-    uebernehmen: true,
-    absender: false,
-    empfaenger: false,
-    layout: false,
-    brief: true,
-    beilagen: false,
-    vorlage: false,
-    farben: false,
-    typo: false,
-  });
+function effectiveHeaderMode(design: LetterDesign, _pageIndex: number): LetterHeaderMode {
+  return design.headerMode ?? defaultHeaderModeForTemplate(design.template);
+}
 
-  const chromeContact = chromeState.sync ? readDossierContact({ letter: data }) : undefined;
+function effectiveFooterMode(
+  design: LetterDesign,
+  finalPage: boolean,
+  _pageIndex: number,
+): LetterFooterMode {
+  const requested = design.footerMode ?? defaultFooterModeForTemplate(design.template);
+  // Attachment lists belong on the final page only. Earlier pages keep the compact band.
+  return requested === "attachments" && !finalPage ? "compact" : (requested as LetterFooterMode);
+}
 
-  const refreshSource = useCallback(() => {
-    const next = readLetterDossierSource();
-    setSource(next);
-    return next;
-  }, []);
+function letterHeaderVisualHeightMm(
+  design: LetterDesign,
+  pageIndex: number,
+  mode: LetterHeaderMode,
+): number {
+  if (mode === "none") return 0;
+  const custom = design.headerHeightMm;
+  if (hasReducedContinuationHeader({ ...design, headerMode: mode }, pageIndex)) {
+    return custom === null || custom === undefined ? 8 : Math.min(18, Math.max(5, custom));
+  }
+  if (mode === "contact") {
+    return custom === null || custom === undefined ? 22 : Math.min(40, Math.max(10, custom));
+  }
+  return custom === null || custom === undefined ? 3 : Math.min(18, Math.max(1, custom));
+}
 
-  useEffect(() => {
-    const dossier = refreshSource();
-    setHistory(readHistory(HISTORY_KEYS.letter));
-    let nextData: LetterData = { ...EMPTY_LETTER };
-    let nextDesign: LetterDesign = emptyLetterDesign();
-    let savedDataLoaded = false;
+function letterContentTopMm(
+  design: LetterDesign,
+  pageIndex: number,
+  mode: LetterHeaderMode,
+): number {
+  if (mode === "none") return pageIndex > 0 ? 16 : 18;
 
-    try {
-      const raw = window.localStorage.getItem(LETTER_STORAGE_KEY);
-      if (raw) {
-        markWritten(raw);
-        const parsed = JSON.parse(raw) as Partial<SavedLetter>;
-        if (parsed.data && typeof parsed.data === "object") {
-          nextData = { ...EMPTY_LETTER, ...parsed.data };
-          savedDataLoaded = true;
-        }
-        if (parsed.design) nextDesign = normalizeLetterDesign(parsed.design);
-        setSaveState("saved");
-      }
-    } catch {
-      setSaveState("error");
-    }
+  // Warm's first page deliberately owns a 52 mm masthead. The old generic compact
+  // calculation started body flow around 21 mm and then visually dragged the sender
+  // upward with a transform. Reserve the real masthead instead so the sender can be
+  // centred inside it while recipient/body flow starts naturally below it.
+  if (isWarmFirstPageCompactHeader(design.template, mode, pageIndex)) {
+    return WARM_FIRST_PAGE_HEADER_HEIGHT_MM;
+  }
 
-    // Ein leerer Entwurf darf beim ersten Besuch gemeinsame Dossier-Daten nutzen.
-    // Die Quellpriorität steckt zentral in readLetterDossierSource: Titelblatt vor CV.
-    if ((!savedDataLoaded || !letterHasStarted(nextData)) && dossierHasMeaningfulSource(dossier)) {
-      const automatic: string[] = [];
-      if (dossier.hasPersonal) {
-        nextData = mergeNonEmptyLetterData(nextData, dossier.personalData);
-        automatic.push(
-          `persönliche Angaben${dossier.personalSource ? ` aus ${dossier.personalSource}` : ""}`,
-        );
-      }
-      if (dossier.hasApplication) {
-        nextData = mergeNonEmptyLetterData(nextData, dossier.applicationData);
-        automatic.push("Betriebsdaten aus Titelblatt");
-      }
-      if (dossier.design) {
-        nextDesign = { ...nextDesign, ...dossier.design };
-        automatic.push(`Design${dossier.designSource ? ` aus ${dossier.designSource}` : ""}`);
-      }
-      if (automatic.length) {
-        setTransferNote({
-          kind: "ok",
-          text: `Automatisch aus dem Dossier übernommen: ${automatic.join(", ")}.`,
-        });
-      }
-    }
+  const height = letterHeaderVisualHeightMm(design, pageIndex, mode);
+  if (pageIndex > 0 && design.headerDifferentFirstPage !== false) {
+    return mode === "contact" ? Math.max(18, height + 10) : Math.max(18, height + 15);
+  }
+  return mode === "contact" ? Math.max(18, height + 9) : Math.max(18, height + 18);
+}
 
-    setData(nextData);
-    setDesign(nextDesign);
-    setHydrated(true);
-  }, [refreshSource, markWritten]);
+const roundHalfMm = (value: number) => Math.round(value * 2) / 2;
 
-  useEffect(() => {
-    const refresh = () => refreshSource();
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === LETTER_STORAGE_KEY) return;
-      refresh();
-    };
-    window.addEventListener("focus", refresh);
-    window.addEventListener("storage", onStorage);
-    return () => {
-      window.removeEventListener("focus", refresh);
-      window.removeEventListener("storage", onStorage);
-    };
-  }, [refreshSource]);
+/**
+ * Hard collision minimums for custom motivation-letter margins. The values are
+ * intentionally smaller than the normal template text box where whitespace is
+ * optional, but they protect shared header/footer chrome and structural rails,
+ * frames and fresh-template edge motifs.
+ */
+export function letterSafePageMarginMinimums(
+  data: LetterData,
+  design: LetterDesign,
+  context: LetterPageContext = {},
+): DossierPageMargins {
+  const floor = DOSSIER_PAGE_MARGIN_MIN_MM;
+  const paginationContext = letterPaginationPageContext(design);
+  const pageIndex = Math.max(0, context.pageIndex ?? paginationContext?.pageIndex ?? 0);
+  const finalPage = context.finalPage ?? paginationContext?.finalPage ?? true;
+  const fresh = freshLetterSpec(design.template);
+  const archetype = fresh?.archetype ?? letterArchetypeFor(design.template);
+  const headerMode = effectiveHeaderMode(design, pageIndex);
+  const footerMode = effectiveFooterMode(design, finalPage, pageIndex);
+  const footerHeight = letterFooterHeightMm(data, footerMode, design.footerHeightMm ?? null);
 
-  // Ein zweiter Motivationsschreiben-Tab darf beim Zurückkehren nicht seinen
-  // älteren Zustand über den neueren Autosave schreiben. Im Hintergrund wird
-  // deshalb nicht gespeichert; bei Fokuswechsel gewinnt der frischere Key.
-  useEffect(() => {
-    if (!visible || !hydrated || !changedElsewhere()) return;
-    try {
-      const raw = window.localStorage.getItem(LETTER_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<SavedLetter>;
-      if (parsed.data && typeof parsed.data === "object") {
-        setData({ ...EMPTY_LETTER, ...parsed.data });
-      }
-      if (parsed.design) setDesign(normalizeLetterDesign(parsed.design));
-      markWritten(raw);
-      setHistory(readHistory(HISTORY_KEYS.letter));
-      setSaveState("saved");
-      setTransferNote({
-        kind: "ok",
-        text: "Neuerer Stand aus einem anderen Fenster geladen.",
-      });
-    } catch {
-      setSaveState("error");
-    }
-  }, [visible, hydrated, changedElsewhere, markWritten]);
+  let left = floor;
+  let right = floor;
+  let templateTop = floor;
+  let templateBottom = floor;
 
-  const snapshotPayload = useCallback(
-    (): SavedLetter => ({ version: 1, data, design }),
-    [data, design],
-  );
+  if (archetype === "sidebar") left = Math.max(left, 11);
+  if (archetype === "band") templateTop = Math.max(templateTop, 10);
+  if (archetype === "frame") {
+    left = Math.max(left, 15);
+    right = Math.max(right, 15);
+    templateTop = Math.max(templateTop, 15);
+    templateBottom = Math.max(templateBottom, 15);
+  }
 
-  const historyPayload = useCallback(
-    () => ({ ...snapshotPayload(), chrome: chromeState }) as unknown as Record<string, unknown>,
-    [snapshotPayload, chromeState],
-  );
+  if (fresh) {
+    // Fresh artwork is confined to the top safety zone or to full-height edge
+    // rails. Keep custom text margins clear of those structural motifs.
+    templateTop = Math.max(templateTop, 18);
+    const railRight = fresh.motifs.reduce((max, motif) => {
+      const fullHeightEdgeRail = motif.h >= LETTER_PAGE_MM.height * 0.5 && motif.x < 60;
+      return fullHeightEdgeRail ? Math.max(max, motif.x + motif.w) : max;
+    }, 0);
+    if (railRight > 0) left = Math.max(left, railRight + 5);
+  }
 
-  const keepSnapshot = useCallback(
-    (label: string, force = false) => {
-      const payload = historyPayload();
-      if (!hasContent(payload)) return;
-      setHistory(pushSnapshot(HISTORY_KEYS.letter, payload, label, force));
+  const headerHeight = isWarmFirstPageCompactHeader(design.template, headerMode, pageIndex)
+    ? WARM_FIRST_PAGE_HEADER_HEIGHT_MM
+    : letterHeaderVisualHeightMm(design, pageIndex, headerMode);
+  const top = Math.max(templateTop, headerMode === "none" ? floor : headerHeight + 5);
+  const bottom = Math.max(templateBottom, footerMode === "none" ? floor : footerHeight + 5);
+
+  return {
+    top: roundHalfMm(top),
+    right: roundHalfMm(right),
+    bottom: roundHalfMm(bottom),
+    left: roundHalfMm(left),
+  };
+}
+
+export function letterPageGeometry(
+  data: LetterData,
+  design: LetterDesign,
+  context: LetterPageContext = {},
+): LetterPageGeometry {
+  const paginationContext = letterPaginationPageContext(design);
+  const pageIndex = Math.max(0, context.pageIndex ?? paginationContext?.pageIndex ?? 0);
+  const firstPage = pageIndex === 0;
+  const finalPage = context.finalPage ?? paginationContext?.finalPage ?? true;
+  const fresh = freshLetterSpec(design.template);
+  const archetype = fresh?.archetype ?? letterArchetypeFor(design.template);
+  const freshTemplate = fresh !== null;
+  const requestedHeaderMode = design.headerMode ?? defaultHeaderModeForTemplate(design.template);
+  const requestedFooterMode = design.footerMode ?? defaultFooterModeForTemplate(design.template);
+  const headerMode = effectiveHeaderMode(design, pageIndex);
+  const footerMode = effectiveFooterMode(design, finalPage, pageIndex);
+  const footerHeight = letterFooterHeightMm(data, footerMode, design.footerHeightMm ?? null);
+  const defaultInsets = fresh
+    ? { left: fresh.left, right: fresh.right }
+    : CONTENT_INSETS[archetype];
+  const defaultTop = letterContentTopMm(design, pageIndex, headerMode);
+  const defaultBottom =
+    footerMode === "none"
+      ? 10
+      : footerMode === "attachments"
+        ? footerHeight + 7
+        : footerHeight + 14.6;
+  const storedCustomMargins = getDossierPageMargins("letter");
+  const customMargins = storedCustomMargins
+    ? clampDossierPageMarginsToMinimums(
+        storedCustomMargins,
+        letterSafePageMarginMinimums(data, design, context),
+      )
+    : null;
+  const headerGapMm =
+    customMargins || headerMode === "none"
+      ? 0
+      : Math.min(40, Math.max(0, context.headerGapMm ?? 0));
+  const insets = customMargins
+    ? { left: customMargins.left, right: customMargins.right }
+    : defaultInsets;
+  const top = customMargins?.top ?? defaultTop + headerGapMm;
+  const bottom = customMargins?.bottom ?? defaultBottom;
+  const width = LETTER_PAGE_MM.width - insets.left - insets.right;
+  const height = LETTER_PAGE_MM.height - top - bottom;
+  const showAttachments =
+    footerMode === "attachments" &&
+    finalPage &&
+    data.showBeilagen !== false &&
+    visibleLetterAttachments(data).length > 0;
+
+  return {
+    pageIndex,
+    firstPage,
+    finalPage,
+    archetype,
+    freshTemplate,
+    requestedHeaderMode,
+    effectiveHeaderMode: headerMode,
+    requestedFooterMode,
+    effectiveFooterMode: footerMode,
+    content: {
+      left: insets.left,
+      right: insets.right,
+      top,
+      bottom,
+      width,
+      height,
     },
-    [historyPayload],
-  );
-
-  useEffect(() => {
-    if (!hydrated || !visible) return;
-    setSaveState("saving");
-    const timer = window.setTimeout(() => {
-      try {
-        const saved = snapshotPayload();
-        const raw = JSON.stringify(saved);
-        window.localStorage.setItem(LETTER_STORAGE_KEY, raw);
-        markWritten(raw);
-        setSaveState("saved");
-        keepSnapshot("Automatisch");
-      } catch {
-        setSaveState("error");
-      }
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [hydrated, visible, snapshotPayload, markWritten, keepSnapshot]);
-
-  useEffect(() => {
-    if (!transferNote) return;
-    const timer = window.setTimeout(() => setTransferNote(null), 6000);
-    return () => window.clearTimeout(timer);
-  }, [transferNote]);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const close = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        setMenuOpen(false);
-        setHistoryOpen(false);
-        setConfirmDemo(false);
-        setConfirmWipe(false);
-      }
-    };
-    document.addEventListener("pointerdown", close);
-    return () => document.removeEventListener("pointerdown", close);
-  }, [menuOpen]);
-
-  useEffect(() => {
-    if (!menuOpen) {
-      setHistoryOpen(false);
-      setConfirmDemo(false);
-      setConfirmWipe(false);
-    }
-  }, [menuOpen]);
-
-  const template = useMemo(
-    () =>
-      design.template === "brief"
-        ? null
-        : (TEMPLATES.find((candidate) => candidate.id === design.template) ??
-          TEMPLATES.find((candidate) => candidate.id === DEFAULTS.TEMPLATE) ??
-          null),
-    [design.template],
-  );
-
-  const patch = (value: Partial<LetterData>) => setData((current) => ({ ...current, ...value }));
-
-  const addLetterImage = async (file?: File) => {
-    if (!file) return;
-    try {
-      const src = await readPhoto(file);
-      const image: LetterFlowImage = {
-        id: `letter-image-${Date.now()}`,
-        src,
-        side: "right",
-        topMm: 8,
-        widthMm: 34,
-        gapMm: 4,
-      };
-      setData((current) => ({ ...current, images: [...(current.images ?? []), image] }));
-    } catch {
-      setTransferNote({ kind: "error", text: "Foto oder Bild konnte nicht gelesen werden." });
-    }
+    header: {
+      contactHeight: letterHeaderVisualHeightMm(design, pageIndex, "contact"),
+      contactLeft: 24,
+      contactRight: 23,
+      contactTop: 3.1,
+      contactMinHeight: 15,
+      sidebarWidth: archetype === "sidebar" ? 6 : 0,
+      compactTopBandHeight: archetype === "band" ? 5 : 0,
+      // Global compact-header rule: decorative chrome must be edge-anchored and coherent.
+      // Detached mini-bars, hairlines and pills are forbidden for every template.
+      compactAccent: { left: 0, top: 0, width: 0, height: 0 },
+      compactLineTop: 0,
+      compactPill: null,
+    },
+    footer: {
+      height: footerHeight,
+      contentLeft: 24,
+      contentRight: 23,
+      paddingY: 2.2,
+      showAttachments,
+    },
   };
-
-  const patchLetterImage = (id: string, imagePatch: Partial<LetterFlowImage>) =>
-    setData((current) => ({
-      ...current,
-      images: (current.images ?? []).map((image) =>
-        image.id === id ? { ...image, ...imagePatch } : image,
-      ),
-    }));
-
-  const removeLetterImage = (id: string) =>
-    setData((current) => ({
-      ...current,
-      images: (current.images ?? []).filter((image) => image.id !== id),
-    }));
-
-  const toggle = (key: string) => setOpen((current) => ({ ...current, [key]: !current[key] }));
-
-  const changeTemplate = (next: LetterTemplateId) => {
-    setDesign((current) => ({
-      ...current,
-      template: next,
-      colors: defaultLetterColors(next),
-    }));
-  };
-
-  const downloadMotivationLetter = async () => {
-    if (pdfDownloading || letterOverflow || !letterHasStarted(data)) return;
-    setPdfError(null);
-    setPdfDownloading(true);
-    try {
-      const page = document.querySelector<HTMLElement>(
-        "[data-letter-standalone-export] [data-letter-page]",
-      );
-      if (!page) throw new Error("Exportansicht ist noch nicht bereit");
-      const namePart = data.absenderName
-        .trim()
-        .replace(/\s+/g, "-")
-        .replace(/[^A-Za-z0-9ÄÖÜäöüß_-]/g, "");
-      await downloadLetterPdf(page, `Motivationsschreiben-${namePart || "Bewerbung"}.pdf`, {
-        title: data.betreff || "Motivationsschreiben",
-        author: data.absenderName.trim(),
-        subject: "Motivationsschreiben",
-        keywords: "Bewerbung, Motivationsschreiben, Lehrstelle",
-      });
-    } catch (error) {
-      setPdfError(error instanceof Error ? error.message : "PDF konnte nicht erstellt werden.");
-    } finally {
-      setPdfDownloading(false);
-    }
-  };
-
-  const syncAllFromDossier = () => {
-    const dossier = refreshSource();
-    if (!dossierHasMeaningfulSource(dossier)) {
-      setTransferNote({
-        kind: "error",
-        text: "Im Titelblatt oder Lebenslauf sind noch keine übernehmbaren Angaben gespeichert.",
-      });
-      return;
-    }
-
-    const done: string[] = [];
-    if (dossier.hasPersonal) {
-      setData((current) => mergeNonEmptyLetterData(current, dossier.personalData));
-      done.push(
-        `persönliche Angaben${dossier.personalSource ? ` aus ${dossier.personalSource}` : ""}`,
-      );
-    }
-    if (dossier.hasApplication) {
-      setData((current) => mergeNonEmptyLetterData(current, dossier.applicationData));
-      done.push("Betriebsdaten aus Titelblatt");
-    }
-    if (dossier.design) {
-      setDesign((current) => ({ ...current, ...dossier.design! }));
-      done.push(`Design${dossier.designSource ? ` aus ${dossier.designSource}` : ""}`);
-    }
-
-    setTransferNote({
-      kind: "ok",
-      text: `Aus dem Dossier übernommen: ${done.join(", ")}. Dein Brieftext bleibt erhalten.`,
-    });
-  };
-
-  const syncFromDossier = () => {
-    const dossier = refreshSource();
-    const done: string[] = [];
-
-    if (takeover.personal && dossier.hasPersonal) {
-      setData((current) => mergeNonEmptyLetterData(current, dossier.personalData));
-      done.push("persönliche Angaben");
-    }
-    if (takeover.application && dossier.hasApplication) {
-      setData((current) => mergeNonEmptyLetterData(current, dossier.applicationData));
-      done.push("Betriebsdaten");
-    }
-    if (takeover.design && dossier.design) {
-      setDesign((current) => ({ ...current, ...dossier.design! }));
-      done.push("Design");
-    }
-
-    setTransferNote(
-      done.length
-        ? { kind: "ok", text: `Übernommen: ${done.join(", ")}. Dein Brieftext bleibt erhalten.` }
-        : {
-            kind: "error",
-            text: "Für die Auswahl gibt es noch keine gespeicherten Angaben im Dossier.",
-          },
-    );
-  };
-
-  const loadDemo = () => {
-    keepSnapshot("Vor den Beispieldaten", true);
-    setData({
-      ...DEMO_LETTER,
-      beilagen: [...(DEMO_LETTER.beilagen ?? DEFAULT_LETTER_BEILAGEN)],
-    });
-    setMenuOpen(false);
-    setConfirmDemo(false);
-    setTransferNote({ kind: "ok", text: "Beispieldaten eingefügt" });
-  };
-
-  const resetLetter = () => {
-    keepSnapshot("Vor dem Zurücksetzen", true);
-    setData({
-      ...EMPTY_LETTER,
-      images: [],
-      beilagen: [...DEFAULT_LETTER_BEILAGEN],
-    });
-    setDesign(emptyLetterDesign());
-    setPdfError(null);
-    setHistoryOpen(false);
-    setConfirmDemo(false);
-    setConfirmWipe(false);
-    setMenuOpen(false);
-    setTransferNote({
-      kind: "ok",
-      text: "Motivationsschreiben zurückgesetzt – frühere Stände im Menü oben rechts.",
-    });
-  };
-
-  const restoreSnapshot = (snap: Snapshot) => {
-    keepSnapshot("Vor dem Zurückholen", true);
-    const saved = snap.payload as Partial<SavedLetter>;
-    if (saved.data && typeof saved.data === "object") {
-      setData({ ...EMPTY_LETTER, ...saved.data });
-    }
-    if (saved.design) setDesign(normalizeLetterDesign(saved.design));
-    if (saved.chrome) applyPortableDossierChromeState(saved.chrome);
-    setMenuOpen(false);
-    setHistoryOpen(false);
-    setTransferNote({
-      kind: "ok",
-      text: `Stand von ${formatWhen(snap.at)} geladen.`,
-    });
-  };
-
-  const anySource = dossierHasMeaningfulSource(source);
-
-  return (
-    <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-background">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b px-3 sm:px-4">
-        <Link
-          to="/"
-          aria-label="Übersicht"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-input px-2.5 py-2 text-sm font-medium hover:bg-accent sm:px-3"
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
-            <path
-              d="M2.5 7.2 8 2.8l5.5 4.4v5.5a.8.8 0 0 1-.8.8H9.8V9.6H6.2v3.9H3.3a.8.8 0 0 1-.8-.8Z"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <span className="hidden sm:inline">Übersicht</span>
-        </Link>
-        <button
-          type="button"
-          onClick={() => setPanelOpen((value) => !value)}
-          className="rounded-md border px-2.5 py-1.5 text-xs font-medium sm:hidden"
-          aria-pressed={panelOpen}
-        >
-          Formular
-        </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-sm font-semibold sm:text-base">Motivationsschreiben</h1>
-        </div>
-        <SaveStatus state={saveState} />
-        <ThemeToggle />
-        <div className="relative" ref={menuRef}>
-          <button
-            type="button"
-            onClick={() => setMenuOpen((value) => !value)}
-            disabled={pdfDownloading}
-            aria-expanded={menuOpen}
-            data-editor-ready={saveState === "idle" ? "false" : "true"}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 sm:px-4"
-          >
-            {pdfDownloading ? "PDF…" : "Download"}
-            <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-              <path
-                d="M3 4.5l3 3 3-3"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-          {menuOpen ? (
-            <div
-              data-editor-action-menu
-              className="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-md border bg-popover shadow-lg"
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  void downloadMotivationLetter();
-                }}
-                disabled={letterOverflow || !letterHasStarted(data)}
-                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                <EditorMenuLabel icon={FileDown}>Nur Motivationsschreiben als PDF</EditorMenuLabel>
-                <span className="text-xs text-muted-foreground">.pdf</span>
-              </button>
-              {confirmDemo ? (
-                <div className="flex items-center gap-1 border-t bg-accent/40 px-3 py-2">
-                  <span className="mr-auto text-xs font-medium">Beispieldaten übernehmen?</span>
-                  <button
-                    type="button"
-                    onClick={loadDemo}
-                    className="rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-                  >
-                    Ja
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDemo(false)}
-                    className="rounded-md border border-input px-2 py-1 text-xs font-medium hover:bg-accent"
-                  >
-                    Nein
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setConfirmDemo(true);
-                    setConfirmWipe(false);
-                  }}
-                  className="flex w-full items-center border-t px-3 py-2 text-left text-sm hover:bg-accent"
-                >
-                  <EditorMenuLabel icon={Sparkles}>Beispieldaten übernehmen</EditorMenuLabel>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setHistoryOpen((value) => !value);
-                  setConfirmWipe(false);
-                }}
-                disabled={history.length === 0}
-                className="flex w-full items-center justify-between border-t px-3 py-2 text-left text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                <EditorMenuLabel icon={History}>Früheren Stand laden</EditorMenuLabel>
-                <span className="text-xs text-muted-foreground">{history.length}</span>
-              </button>
-              {historyOpen && history.length > 0 ? (
-                <div className="max-h-56 overflow-y-auto border-t bg-muted/20 p-1">
-                  {history.slice(0, 8).map((snap) => (
-                    <button
-                      key={snap.id}
-                      type="button"
-                      data-letter-history-item
-                      onClick={() => restoreSnapshot(snap)}
-                      className="flex w-full items-center justify-between gap-3 rounded px-2 py-2 text-left text-xs hover:bg-accent"
-                    >
-                      <span className="truncate font-medium">{snap.label}</span>
-                      <span className="shrink-0 text-muted-foreground">{formatWhen(snap.at)}</span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-              {confirmWipe ? (
-                <div className="flex items-center gap-1 border-t bg-destructive/5 px-3 py-2">
-                  <span className="mr-auto text-xs font-medium text-destructive">
-                    Motivationsschreiben wirklich zurücksetzen?
-                  </span>
-                  <button
-                    type="button"
-                    onClick={resetLetter}
-                    className="rounded-md bg-destructive px-2 py-1 text-xs font-medium text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Ja
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmWipe(false)}
-                    className="rounded-md border border-input px-2 py-1 text-xs hover:bg-accent"
-                  >
-                    Abbrechen
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setConfirmWipe(true);
-                    setConfirmDemo(false);
-                    setHistoryOpen(false);
-                  }}
-                  className="flex w-full items-center border-t px-3 py-2 text-left text-sm text-destructive hover:bg-destructive/10"
-                >
-                  <EditorMenuLabel icon={RotateCcw}>
-                    Motivationsschreiben zurücksetzen
-                  </EditorMenuLabel>
-                </button>
-              )}
-            </div>
-          ) : null}
-        </div>
-      </header>
-
-      <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        <ResizableEditorPanel open={panelOpen}>
-          <div className="flex flex-col gap-3 p-3 pb-12 sm:p-4">
-            <div className="rounded-lg border bg-background p-3 text-xs leading-relaxed text-muted-foreground">
-              Schreibe dein Motivationsschreiben hier. Das Layout bleibt bewusst ruhiger als beim
-              Lebenslauf, damit längerer Text gut lesbar bleibt.
-            </div>
-
-            {letterOverflow ? (
-              <div
-                role="alert"
-                className="rounded-lg border border-amber-300/80 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
-              >
-                <div className="font-semibold">Zu viel Text für eine Seite</div>
-                <div>Dein Motivationsschreiben passt nicht auf eine Seite. Kürze den Text.</div>
-              </div>
-            ) : null}
-
-            {pdfError ? (
-              <div
-                role="status"
-                className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"
-              >
-                {pdfError}
-              </div>
-            ) : null}
-
-            <Section
-              title="Vom Dossier übernehmen"
-              open={open.uebernehmen}
-              onToggle={() => toggle("uebernehmen")}
-              hint={anySource ? "bereit" : "nichts verfügbar"}
-            >
-              <div className="grid gap-3 rounded-md border border-dashed p-2.5">
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  Das Dossier nimmt persönliche Angaben bevorzugt vom Titelblatt, sonst aus dem
-                  Lebenslauf. Betriebsdaten kommen vom Titelblatt; Design vom Titelblatt, sonst aus
-                  dem Lebenslauf. Dein Brieftext wird nie überschrieben.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={syncAllFromDossier}
-                  disabled={!anySource}
-                  className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Alles übernehmen
-                </button>
-
-                <div className="grid gap-1 text-[11px] text-muted-foreground">
-                  <span>
-                    Persönliche Angaben: {source?.personalSource ?? "noch nicht verfügbar"}
-                  </span>
-                  <span>
-                    Betrieb und Bewerbung: {source?.applicationSource ?? "noch nicht verfügbar"}
-                  </span>
-                  <span>Design: {source?.designSource ?? "noch nicht verfügbar"}</span>
-                </div>
-
-                <details className="rounded-md border bg-background">
-                  <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium">
-                    Auswahl anpassen
-                  </summary>
-                  <div className="grid gap-2.5 border-t p-3">
-                    <label className="flex items-start gap-2 rounded-md border p-2.5 text-xs">
-                      <input
-                        type="checkbox"
-                        className="mt-0.5"
-                        checked={takeover.personal}
-                        disabled={!source?.hasPersonal}
-                        onChange={(event) =>
-                          setTakeover((current) => ({
-                            ...current,
-                            personal: event.target.checked,
-                          }))
-                        }
-                      />
-                      <span>
-                        <span className="block font-medium">Persönliche Angaben</span>
-                        <span className="text-muted-foreground">
-                          Name, Adresse und Kontakt
-                          {source?.personalSource
-                            ? ` · aus ${source.personalSource}`
-                            : " · noch leer"}
-                        </span>
-                      </span>
-                    </label>
-
-                    <label className="flex items-start gap-2 rounded-md border p-2.5 text-xs">
-                      <input
-                        type="checkbox"
-                        className="mt-0.5"
-                        checked={takeover.application}
-                        disabled={!source?.hasApplication}
-                        onChange={(event) =>
-                          setTakeover((current) => ({
-                            ...current,
-                            application: event.target.checked,
-                          }))
-                        }
-                      />
-                      <span>
-                        <span className="block font-medium">Betrieb und Bewerbung</span>
-                        <span className="text-muted-foreground">
-                          Empfänger, Ort, Datum und Betreff
-                          {source?.applicationSource
-                            ? ` · aus ${source.applicationSource}`
-                            : " · noch leer"}
-                        </span>
-                      </span>
-                    </label>
-
-                    <label className="flex items-start gap-2 rounded-md border p-2.5 text-xs">
-                      <input
-                        type="checkbox"
-                        className="mt-0.5"
-                        checked={takeover.design}
-                        disabled={!source?.hasDesign}
-                        onChange={(event) =>
-                          setTakeover((current) => ({ ...current, design: event.target.checked }))
-                        }
-                      />
-                      <span>
-                        <span className="block font-medium">Design</span>
-                        <span className="text-muted-foreground">
-                          Vorlage, Farben und Schrift
-                          {source?.designSource ? ` · aus ${source.designSource}` : " · noch leer"}
-                        </span>
-                      </span>
-                    </label>
-
-                    <button
-                      type="button"
-                      onClick={syncFromDossier}
-                      disabled={!anySource}
-                      className="mt-1 rounded-md border border-input px-3 py-2 text-xs font-semibold hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Auswahl übernehmen
-                    </button>
-                  </div>
-                </details>
-
-                {transferNote && (
-                  <div
-                    role="status"
-                    className={`rounded-md border px-3 py-2 text-xs ${
-                      transferNote.kind === "error"
-                        ? "border-destructive/40 text-destructive"
-                        : "border-border bg-muted/40 text-muted-foreground"
-                    }`}
-                  >
-                    {transferNote.text}
-                  </div>
-                )}
-              </div>
-            </Section>
-
-            <Section title="Briefinhalt" open={open.brief} onToggle={() => toggle("brief")}>
-              <div className="grid gap-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <Field label="Ort" value={data.ort} onChange={(value) => patch({ ort: value })} />
-                  <Field
-                    label="Datum"
-                    value={data.datum}
-                    onChange={(value) => patch({ datum: value })}
-                    placeholder="25.08.2026"
-                  />
-                </div>
-                <Field
-                  label="Titel / Betreff"
-                  value={data.betreff}
-                  onChange={(value) => patch({ betreff: value })}
-                  placeholder="Bewerbung um eine Lehrstelle als …"
-                />
-                <Field
-                  label="Anrede"
-                  value={data.anrede}
-                  onChange={(value) => patch({ anrede: value })}
-                />
-                <LetterRichTextEditor
-                  text={data.text}
-                  richTextHtml={data.richTextHtml}
-                  onChange={({ text, richTextHtml }) => patch({ text, richTextHtml })}
-                />
-                <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2.5">
-                  <label className="cursor-pointer rounded-md border border-input bg-background px-3 py-2 text-xs font-medium hover:bg-accent">
-                    + Foto
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(event) => {
-                        void addLetterImage(event.target.files?.[0]);
-                        event.target.value = "";
-                      }}
-                    />
-                  </label>
-                  <span className="text-[11px] leading-relaxed text-muted-foreground">
-                    Foto oder Bild frei platzieren · Text fliesst automatisch im Quadrat darum.
-                  </span>
-                </div>
-                <Field
-                  label="Grussformel"
-                  value={data.gruss}
-                  onChange={(value) => patch({ gruss: value })}
-                />
-                <Field
-                  label="Name unter der Unterschrift"
-                  value={data.unterschrift}
-                  onChange={(value) => patch({ unterschrift: value })}
-                />
-              </div>
-            </Section>
-
-            <Section
-              title="Meine Kontaktdaten"
-              open={open.absender}
-              onToggle={() => toggle("absender")}
-            >
-              <div className="grid gap-3">
-                <Field
-                  label="Vorname und Nachname"
-                  value={data.absenderName}
-                  onChange={(value) => patch({ absenderName: value })}
-                />
-                <Field
-                  label="Adresse"
-                  value={data.absenderAdresse}
-                  onChange={(value) => patch({ absenderAdresse: value })}
-                />
-                <Field
-                  label="PLZ und Ort"
-                  value={data.absenderPlzOrt}
-                  onChange={(value) => patch({ absenderPlzOrt: value })}
-                />
-                <Field
-                  label="Telefon"
-                  value={data.absenderTelefon}
-                  onChange={(value) => patch({ absenderTelefon: value })}
-                  type="tel"
-                />
-                <Field
-                  label="E-Mail"
-                  value={data.absenderEmail}
-                  onChange={(value) => patch({ absenderEmail: value })}
-                  type="email"
-                />
-              </div>
-            </Section>
-
-            <Section
-              title="Firma / Lehrbetrieb"
-              open={open.empfaenger}
-              onToggle={() => toggle("empfaenger")}
-            >
-              <div className="grid gap-3">
-                <Field
-                  label="Lehrbetrieb"
-                  value={data.empfaengerFirma}
-                  onChange={(value) => patch({ empfaengerFirma: value })}
-                />
-                <Field
-                  label="Ansprechperson"
-                  value={data.empfaengerName}
-                  onChange={(value) => patch({ empfaengerName: value })}
-                  placeholder="z. B. Frau Anna Muster"
-                />
-                <Field
-                  label="Adresse"
-                  value={data.empfaengerAdresse}
-                  onChange={(value) => patch({ empfaengerAdresse: value })}
-                />
-                <Field
-                  label="PLZ und Ort"
-                  value={data.empfaengerPlzOrt}
-                  onChange={(value) => patch({ empfaengerPlzOrt: value })}
-                />
-              </div>
-            </Section>
-
-            <Section
-              title="Beilagen"
-              open={open.beilagen}
-              onToggle={() => toggle("beilagen")}
-              hint={data.showBeilagen !== false ? "angezeigt" : "ausgeblendet"}
-            >
-              <div className="flex flex-col gap-3">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={data.showBeilagen !== false}
-                    onChange={(event) => patch({ showBeilagen: event.target.checked })}
-                  />
-                  <span>Im Motivationsschreiben anzeigen</span>
-                </label>
-                {DEFAULT_LETTER_BEILAGEN.map((fallback, index) => (
-                  <Field
-                    key={index}
-                    label={`Beilage ${index + 1}`}
-                    value={data.beilagen?.[index] ?? fallback}
-                    onChange={(value) => {
-                      const next = DEFAULT_LETTER_BEILAGEN.map(
-                        (entryFallback, entryIndex) => data.beilagen?.[entryIndex] ?? entryFallback,
-                      );
-                      next[index] = value;
-                      patch({ beilagen: next });
-                    }}
-                  />
-                ))}
-              </div>
-            </Section>
-
-            <Section title="Layout" open={open.layout} onToggle={() => toggle("layout")}>
-              <LetterLayoutControls
-                data={data}
-                design={design}
-                onChange={(value) => setDesign((current) => ({ ...current, ...value }))}
-              />
-            </Section>
-
-            <Section title="Vorlage" open={open.vorlage} onToggle={() => toggle("vorlage")}>
-              <LetterTemplatePicker value={design.template} onChange={changeTemplate} />
-            </Section>
-
-            {design.template !== "brief" && template ? (
-              <Section title="Farben" open={open.farben} onToggle={() => toggle("farben")}>
-                <ColorChooser
-                  slots={template.slots}
-                  colors={design.colors}
-                  onChange={(key, value) =>
-                    setDesign((current) => ({
-                      ...current,
-                      colors: { ...current.colors, [key]: value },
-                    }))
-                  }
-                  onApplyPalette={(colors) => setDesign((current) => ({ ...current, colors }))}
-                  onReset={() =>
-                    setDesign((current) => ({
-                      ...current,
-                      colors: defaultLetterColors(current.template),
-                    }))
-                  }
-                />
-              </Section>
-            ) : null}
-
-            <Section title="Schrift" open={open.typo} onToggle={() => toggle("typo")}>
-              <label className="block text-xs font-medium">
-                Schriftart
-                <select
-                  value={design.font}
-                  onChange={(event) =>
-                    setDesign((current) => ({ ...current, font: event.target.value as FontKey }))
-                  }
-                  className={inputClass}
-                >
-                  {Object.entries(FONT_LABELS).map(([key, label]) => (
-                    <option key={key} value={key}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </Section>
-          </div>
-        </ResizableEditorPanel>
-
-        <main className="min-w-0 flex-1 overflow-auto bg-muted/40 p-3 sm:p-6">
-          <div className="mx-auto w-full max-w-[980px] py-2 sm:py-4">
-            <ScaledPreview max={1}>
-              <LetterCanvas
-                data={data}
-                design={design}
-                chromeOptions={chromeOptions}
-                chromeContact={chromeContact}
-                onOverflowChange={setLetterOverflow}
-                onImageChange={patchLetterImage}
-                onImageRemove={removeLetterImage}
-              />
-            </ScaledPreview>
-          </div>
-        </main>
-
-        <div
-          data-letter-standalone-export
-          className="pointer-events-none fixed left-[-10000px] top-0"
-          aria-hidden="true"
-        >
-          <LetterCanvas
-            data={data}
-            design={design}
-            chromeOptions={chromeOptions}
-            chromeContact={chromeContact}
-            exportMode
-            ariaLabel="Exportansicht Motivationsschreiben"
-          />
-        </div>
-      </div>
-    </div>
-  );
 }
