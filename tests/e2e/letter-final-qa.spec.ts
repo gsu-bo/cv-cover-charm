@@ -196,10 +196,18 @@ async function seedLetter(
 
   const download = page.getByRole("button", { name: "Download", exact: true });
   await expect(download).toHaveAttribute("data-editor-ready", "true", { timeout: 15_000 });
-  const preview = page.getByLabel("Vorschau Motivationsschreiben");
+  const preview = page.locator("main [data-letter-document-root] [data-letter-page]").first();
   const exported = page.locator("[data-letter-standalone-export] [data-letter-page]");
   await expect(preview).toBeVisible();
-  await expect(exported).toHaveCount(1);
+  await expect(page.locator("main [data-letter-document-root]")).toHaveAttribute(
+    "data-letter-pagination-ready",
+    "true",
+    { timeout: 20_000 },
+  );
+  await expect(
+    page.locator("[data-letter-standalone-export] [data-letter-document-root]"),
+  ).toHaveAttribute("data-letter-pagination-ready", "true", { timeout: 20_000 });
+  await expect.poll(() => exported.count(), { timeout: 20_000 }).toBeGreaterThan(0);
   await doubleFrame(page);
   return { preview, exported };
 }
@@ -341,7 +349,7 @@ async function uiDefaultScreenshot(page: Page) {
   await download.click();
   await page.getByRole("button", { name: "Beispieldaten übernehmen", exact: true }).click();
   await page.getByRole("button", { name: "Ja", exact: true }).click();
-  const preview = page.getByLabel("Vorschau Motivationsschreiben");
+  const preview = page.locator("main [data-letter-document-root] [data-letter-page]").first();
   await expect(preview).toBeVisible();
   await doubleFrame(page);
   await settleVisualPreview(preview);
@@ -479,7 +487,7 @@ test.describe("M5 final letter QA", () => {
     ).toBeEnabled();
   });
 
-  test("multi-page-sized content is visibly blocked instead of producing a clipped PDF", async ({
+  test("multi-page-sized content paginates without clipping and remains exportable", async ({
     page,
   }) => {
     const multiPageBody = Array.from(
@@ -487,7 +495,7 @@ test.describe("M5 final letter QA", () => {
       (_, index) =>
         `Absatz ${index + 1}: Ich interessiere mich sehr für diesen Beruf und möchte meine Motivation, Zuverlässigkeit und Lernbereitschaft mit einem ausführlichen Beispiel aus Schule und Alltag zeigen.`,
     ).join("\n\n");
-    const { preview } = await seedLetter(page, {
+    const { exported } = await seedLetter(page, {
       template: "edge",
       headerMode: "contact",
       footerMode: "attachments",
@@ -495,22 +503,23 @@ test.describe("M5 final letter QA", () => {
       attachments: ["Lebenslauf", "Zeugnis"],
     });
 
-    await expect(page.getByRole("alert")).toContainText("Zu viel Text für eine Seite");
-    await expect(page.getByRole("alert")).toContainText(
-      "Dein Motivationsschreiben passt nicht auf eine Seite. Kürze den Text.",
+    await expect.poll(() => exported.count(), { timeout: 20_000 }).toBeGreaterThan(1);
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    const overflow = await exported.evaluateAll((pages) =>
+      pages.some((pageEl) => {
+        const textLayer = pageEl.querySelector<HTMLElement>("[data-letter-text-layer]");
+        return !!textLayer && textLayer.scrollHeight > textLayer.clientHeight + 1;
+      }),
     );
-    expect(
-      await preview
-        .locator("[data-letter-text-layer]")
-        .evaluate((element) => element.scrollHeight > element.clientHeight + 1),
-    ).toBe(true);
+    expect(overflow).toBe(false);
+    await expect(exported.last()).toContainText("Absatz 55:");
 
     const download = page.getByRole("button", { name: "Download", exact: true });
     await download.click();
-    const pdfButton = page
-      .locator("[data-editor-action-menu] button")
-      .filter({ hasText: "Nur Motivationsschreiben als PDF" });
-    await expect(pdfButton).toBeDisabled();
-    await expect(preview.locator('[data-letter-pdf-richtext="body"]')).toContainText("Absatz 55:");
+    await expect(
+      page.locator("[data-editor-action-menu] button").filter({
+        hasText: "Nur Motivationsschreiben als PDF",
+      }),
+    ).toBeEnabled();
   });
 });

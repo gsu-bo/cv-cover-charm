@@ -761,7 +761,7 @@ test.describe("M5.8 dossier regression", () => {
     expect(pdfSource).toContain("Guten Tag Herr Weber");
   });
 
-  test("Motivationsschreiben warns when its A4 text layer overflows and clears after shortening", async ({
+  test("Motivationsschreiben paginates long content and returns to one page after shortening", async ({
     page,
   }) => {
     await seedCoreDossier(page);
@@ -772,42 +772,34 @@ test.describe("M5.8 dossier regression", () => {
     );
 
     const body = page.getByRole("textbox", { name: "Brieftext" });
-    const alert = page.getByRole("alert");
-    const downloadToggle = page.getByRole("button", { name: "Download", exact: true });
-    await expect(downloadToggle).toHaveAttribute("data-editor-ready", "true");
-    const openPdfMenu = async () => {
-      if ((await downloadToggle.getAttribute("aria-expanded")) !== "true") {
-        await downloadToggle.click();
-      }
-      await expect(downloadToggle).toHaveAttribute("aria-expanded", "true");
-      return page
-        .locator("[data-editor-action-menu] button")
-        .filter({ hasText: "Nur Motivationsschreiben als PDF" });
-    };
-    await expect(alert).toHaveCount(0);
-    await expect(await openPdfMenu()).toBeEnabled();
+    const root = page.locator("main [data-letter-document-root]");
+    const pages = root.locator("[data-letter-document-pages] [data-letter-page]");
+    await expect(root).toHaveAttribute("data-letter-pagination-ready", "true", {
+      timeout: 20_000,
+    });
 
     await body.fill(
       Array.from(
         { length: 55 },
         (_, index) =>
           `Absatz ${index + 1}: Ich interessiere mich sehr für diesen Beruf und möchte meine Motivation, Zuverlässigkeit und Lernbereitschaft zeigen.`,
-      ).join("\n"),
+      ).join("\n\n"),
     );
-
-    await expect(alert).toContainText("Dein Motivationsschreiben passt nicht auf eine Seite");
-    await expect(await openPdfMenu()).toBeDisabled();
-    const overflowing = await page
-      .getByLabel("Vorschau Motivationsschreiben")
-      .locator("[data-letter-text-layer]")
-      .evaluate((element) => element.scrollHeight > element.clientHeight + 1);
-    expect(overflowing).toBe(true);
+    await expect.poll(() => pages.count(), { timeout: 20_000 }).toBeGreaterThan(1);
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    const downloadToggle = page.getByRole("button", { name: "Download", exact: true });
+    await downloadToggle.click();
+    await expect(
+      page.locator("[data-editor-action-menu] button").filter({
+        hasText: "Nur Motivationsschreiben als PDF",
+      }),
+    ).toBeEnabled();
 
     await body.fill(
       "Ich interessiere mich sehr für die Lehrstelle und freue mich auf ein Gespräch.",
     );
-    await expect(alert).toHaveCount(0);
-    await expect(await openPdfMenu()).toBeEnabled();
+    await expect.poll(() => pages.count(), { timeout: 20_000 }).toBe(1);
+    await expect(page.getByRole("alert")).toHaveCount(0);
   });
 
   test("letter layout controls and Word-like formatting persist", async ({ page }) => {
@@ -897,13 +889,13 @@ test.describe("M5.8 dossier regression", () => {
 
     await page.getByRole("button", { name: "Tabelle" }).click();
     await expect(page.getByRole("grid", { name: "Tabellengrösse auswählen" })).toBeVisible();
-    await page.getByRole("gridcell", { name: "Tabelle 2 × 3 einfügen" }).hover();
+    await page.getByRole("gridcell", { name: "Tabelle 2 × 3 einfügen" }).focus();
     await expect(page.getByText("2 × 3 Tabelle")).toBeVisible();
     await page.getByRole("gridcell", { name: "Tabelle 2 × 3 einfügen" }).click();
 
     const previewBody = preview.locator('[data-letter-pdf-richtext="body"]');
     const previewBlocks = previewBody.locator(":scope > div");
-    await expect(previewBlocks).toHaveCount(3);
+    await expect(previewBlocks).toHaveCount(2);
     await expect(previewBlocks.nth(0)).not.toHaveAttribute("data-columns", /.+/);
     await expect(previewBlocks.nth(0)).toHaveAttribute("data-list", "bullet");
     await expect(previewBlocks.nth(1)).toHaveAttribute("data-columns", "2");
@@ -936,9 +928,13 @@ test.describe("M5.8 dossier regression", () => {
         data: { text: "Absatz eins formatiert\nAbsatz zwei bleibt separat" },
       });
 
-    const saved = await page.evaluate(
-      () => JSON.parse(localStorage.getItem("anschreiben:v1") ?? "{}").data?.richTextHtml ?? "",
-    );
+    const readSavedRichText = () =>
+      page.evaluate(
+        () => JSON.parse(localStorage.getItem("anschreiben:v1") ?? "{}").data?.richTextHtml ?? "",
+      );
+    await expect.poll(readSavedRichText).toContain('data-columns="2"');
+    await expect.poll(readSavedRichText).toContain("<table data-letter-table>");
+    const saved = await readSavedRichText();
     expect(saved).toContain("<strong>");
     expect(saved).toContain("<em>");
     expect(saved).toContain("<u>");
@@ -1188,9 +1184,7 @@ test.describe("M5.8 dossier regression", () => {
     const coverBeilagenPanel = page.locator(`[id="${coverBeilagenPanelId}"]`);
     const coverBeilagenToggle = coverBeilagenPanel.getByLabel("Auf Titelblatt anzeigen");
     await expect(coverBeilagenToggle).toBeChecked();
-    await expect(page.locator('[data-block-id="beilagenTitel"]').first()).toContainText(
-      "Beilagen",
-    );
+    await expect(page.locator('[data-block-id="beilagenTitel"]').first()).toContainText("Beilagen");
     await expect(page.locator('[data-block-id="beilagen"]').first()).toContainText(
       "Motivationsschreiben",
     );

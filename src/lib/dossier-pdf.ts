@@ -215,6 +215,7 @@ function addLetterTextLayer(pdf: JsPdf, page: HTMLElement) {
     const text = letterText(element);
     if (!text) continue;
     const rect = element.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) continue;
     const style = window.getComputedStyle(element);
     const fontSizePx = Number.parseFloat(style.fontSize) || 14;
     const fontSizePt = fontSizePx * (72 / 96);

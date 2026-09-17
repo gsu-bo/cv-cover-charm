@@ -36,6 +36,7 @@ import {
 } from "./archetype";
 import { dossierThemeFor } from "@/lib/dossier-theme";
 import type { DossierChromeContact, DossierChromeOptions } from "@/lib/dossier-chrome";
+import { cvBodyData } from "@/lib/dossier-body-contact";
 import { dossierPhotoCropStyle, dossierPhotoRadius, dossierPhotoRatio } from "@/lib/dossier-photo";
 import { getCvPhotoStyle, subscribeCvPhotoStyle } from "./photo";
 import {
@@ -196,11 +197,11 @@ export function CvCanvas({
     getCvLayoutChoice,
     () => "classic",
   );
-const infoPosition = useSyncExternalStore(
-  subscribeCvLayout,
-  getCvInfoPosition,
-  () => "standard" as const,
-);
+  const infoPosition = useSyncExternalStore(
+    subscribeCvLayout,
+    getCvInfoPosition,
+    () => "standard" as const,
+  );
   const placements = useSyncExternalStore(
     subscribeCvPlacements,
     getCvPlacements,
@@ -329,7 +330,7 @@ const infoPosition = useSyncExternalStore(
     [design.template],
   );
 
-  const p = data.person;
+  const p = cvBodyData(data, chromeOptions).person;
   const name = [p.vorname, p.nachname].filter(Boolean).join(" ");
   const adresse = [p.adresse, p.plzOrt].filter(Boolean).join(" · ");
   const kontakt = [p.telefon, p.email].filter(Boolean).join(" · ");
@@ -913,19 +914,18 @@ const infoPosition = useSyncExternalStore(
             )}
             {angaben.length > 0 && (
               <div
-          data-cv-muted
-          data-cv-personal-info
-          style={{
-            marginTop: "1.35mm",
-            fontSize: pt(9.2),
-            color: pal.muted,
-            lineHeight: 1.35,
-            textAlign: infoMirrored ? "right" : "left",
-          }}
-        >
-          {angaben.join(" · ")}
-        </div>
-
+                data-cv-muted
+                data-cv-personal-info
+                style={{
+                  marginTop: "1.35mm",
+                  fontSize: pt(9.2),
+                  color: pal.muted,
+                  lineHeight: 1.35,
+                  textAlign: infoMirrored ? "right" : "left",
+                }}
+              >
+                {angaben.join(" · ")}
+              </div>
             )}
           </div>
         </div>
@@ -1093,19 +1093,18 @@ const infoPosition = useSyncExternalStore(
             )}
             {angaben.length > 0 && (
               <div
-          data-cv-muted
-          data-cv-personal-info
-          style={{
-            marginTop: "1.35mm",
-            fontSize: pt(9.2),
-            color: pal.muted,
-            lineHeight: 1.35,
-            textAlign: infoMirrored ? "right" : "left",
-          }}
-        >
-          {angaben.join(" · ")}
-        </div>
-
+                data-cv-muted
+                data-cv-personal-info
+                style={{
+                  marginTop: "1.35mm",
+                  fontSize: pt(9.2),
+                  color: pal.muted,
+                  lineHeight: 1.35,
+                  textAlign: infoMirrored ? "right" : "left",
+                }}
+              >
+                {angaben.join(" · ")}
+              </div>
             )}
           </div>
         </div>
@@ -1126,8 +1125,7 @@ const infoPosition = useSyncExternalStore(
           style={{
             marginBottom: "4.8mm",
             display: automaticPhotoInMain ? "flex" : undefined,
-            flexDirection:
-              automaticPhotoInMain && photoPosition === "left" ? "row-reverse" : "row",
+            flexDirection: automaticPhotoInMain && photoPosition === "left" ? "row-reverse" : "row",
             gap: automaticPhotoInMain ? "7mm" : undefined,
             alignItems: automaticPhotoInMain ? "flex-start" : undefined,
           }}

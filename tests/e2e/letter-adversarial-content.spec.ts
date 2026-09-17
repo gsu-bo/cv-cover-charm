@@ -104,10 +104,18 @@ async function seedLetter(page: Page, letter: ReturnType<typeof payload>) {
 
   const download = page.getByRole("button", { name: "Download", exact: true });
   await expect(download).toHaveAttribute("data-editor-ready", "true", { timeout: 15_000 });
-  const preview = page.getByLabel("Vorschau Motivationsschreiben");
+  const preview = page.locator("main [data-letter-document-root] [data-letter-page]").first();
   const exported = page.locator("[data-letter-standalone-export] [data-letter-page]");
   await expect(preview).toBeVisible();
-  await expect(exported).toHaveCount(1);
+  await expect(page.locator("main [data-letter-document-root]")).toHaveAttribute(
+    "data-letter-pagination-ready",
+    "true",
+    { timeout: 20_000 },
+  );
+  await expect(
+    page.locator("[data-letter-standalone-export] [data-letter-document-root]"),
+  ).toHaveAttribute("data-letter-pagination-ready", "true", { timeout: 20_000 });
+  await expect.poll(() => exported.count(), { timeout: 20_000 }).toBeGreaterThan(0);
   await page.evaluate(
     () =>
       new Promise<void>((resolve) =>
@@ -167,7 +175,9 @@ async function clickDownloadPdf(page: Page) {
 test.describe("M8 adversarial motivation-letter content", () => {
   test.setTimeout(90_000);
 
-  test("long international identity and contact values remain visible and inside A4", async ({ page }) => {
+  test("long international identity and contact values remain visible and inside A4", async ({
+    page,
+  }) => {
     const { preview, exported } = await seedLetter(
       page,
       payload({
@@ -176,8 +186,7 @@ test.describe("M8 adversarial motivation-letter content", () => {
           absenderAdresse: "Sehrlangebeispielstrasse 123a Hinterhaus",
           absenderPlzOrt: "4535 Hubersdorf bei Solothurn",
           absenderTelefon: "+41 79 123 45 67 / +41 32 765 43 21",
-          absenderEmail:
-            "lea.sophie.alexandra.mueller-winterberger-schneider@example-company.ch",
+          absenderEmail: "lea.sophie.alexandra.mueller-winterberger-schneider@example-company.ch",
           empfaengerFirma: "Beispiel Technologie und Dienstleistungen Schweiz AG",
           empfaengerName: "Frau Dr. Anna-Maria Muster-Winterberger",
           empfaengerAdresse: "Industriestrasse 123, Gebäude B, 4. Obergeschoss",
@@ -335,14 +344,20 @@ test.describe("M8 adversarial motivation-letter content", () => {
     await expectHealthy(preview, exported, "rich text and square-wrap image");
   });
 
-  test("deliberately too-long content is clearly blocked instead of silently exported", async ({ page }) => {
-    const { preview, exported } = await seedLetter(page, payload({ body: HUGE_BODY }));
-    await expect(preview).toBeVisible();
-    const problems = await geometryProblems(exported);
-    expect(problems.some((problem) => problem.includes("text"))).toBe(true);
+  test("deliberately long content paginates safely instead of clipping", async ({ page }) => {
+    const { exported } = await seedLetter(page, payload({ body: HUGE_BODY }));
+
+    await expect.poll(() => exported.count(), { timeout: 20_000 }).toBeGreaterThan(1);
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    const overflow = await exported.evaluateAll((pages) =>
+      pages.some((pageEl) => {
+        const textLayer = pageEl.querySelector<HTMLElement>("[data-letter-text-layer]");
+        return !!textLayer && textLayer.scrollHeight > textLayer.clientHeight + 1;
+      }),
+    );
+    expect(overflow).toBe(false);
 
     const button = await clickDownloadPdf(page);
-    await expect(button).toBeDisabled();
-    await expect(page.getByRole("alert")).toContainText("Zu viel Text für eine Seite");
+    await expect(button).toBeEnabled();
   });
 });

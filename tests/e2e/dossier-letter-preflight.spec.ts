@@ -212,7 +212,9 @@ test.describe("M1 dossier sending truth", () => {
     const multiPath = await multiDownload.path();
     expect(multiPath).not.toBeNull();
     expect((await stat(multiPath ?? "")).size).toBeGreaterThan(10_000);
-    await dialog.getByRole("button", { name: "Zurück zum Bearbeiten" }).click();
+    if (await dialog.isVisible()) {
+      await dialog.getByRole("button", { name: "Zurück zum Bearbeiten" }).click();
+    }
 
     await page.evaluate(
       ({ fittingBody, letterKey }) => {

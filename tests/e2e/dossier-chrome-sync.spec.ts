@@ -101,10 +101,7 @@ async function openCvChrome(page: Page) {
 
 async function openLetterLayout(page: Page) {
   await page.locator('button[data-editor-ready="true"]').waitFor({ state: "visible" });
-  const layout = page
-    .locator("[data-editor-section-toggle]")
-    .filter({ hasText: "Layout" })
-    .first();
+  const layout = page.locator("[data-editor-section-toggle]").filter({ hasText: "Layout" }).first();
   await expect(layout).toBeVisible();
   if ((await layout.getAttribute("aria-expanded")) !== "true") await layout.click();
   await expect(layout).toHaveAttribute("aria-expanded", "true");
@@ -271,7 +268,7 @@ test.describe("shared CV / motivation-letter chrome", () => {
     );
   });
 
-  test("CV contact header owns integrated fields exactly once and leaves unchecked fields in the body", async ({
+  test("CV contact header owns contact fields exactly once while body identity stays visible", async ({
     page,
   }) => {
     await seedCv(page);
@@ -295,7 +292,7 @@ test.describe("shared CV / motivation-letter chrome", () => {
           .map((part) => part.innerText)
           .join("\n"),
       );
-    await expect.poll(bodyText).not.toContain("Lea Müller");
+    await expect.poll(bodyText).toContain("Lea Müller");
     await expect.poll(bodyText).not.toContain("Uniqueweg 42");
     await expect.poll(bodyText).not.toContain("+41 79 555 44 33");
     await expect.poll(bodyText).not.toContain("chrome-test@example.ch");

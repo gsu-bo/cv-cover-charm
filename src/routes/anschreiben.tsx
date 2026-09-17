@@ -169,7 +169,10 @@ function Anschreiben() {
     typo: false,
   });
 
-  const chromeContact = chromeState.sync ? readDossierContact({ letter: data }) : undefined;
+  const chromeContact = useMemo(
+    () => (chromeState.sync ? readDossierContact({ letter: data }) : undefined),
+    [chromeState.sync, data],
+  );
 
   const refreshSource = useCallback(() => {
     const next = readLetterDossierSource();
@@ -567,7 +570,7 @@ function Anschreiben() {
             onClick={() => setMenuOpen((value) => !value)}
             disabled={pdfDownloading}
             aria-expanded={menuOpen}
-            data-editor-ready={saveState === "idle" ? "false" : "true"}
+            data-editor-ready={hydrated ? "true" : "false"}
             className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 sm:px-4"
           >
             {pdfDownloading ? "PDF…" : "Download"}
