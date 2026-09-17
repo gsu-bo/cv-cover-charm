@@ -291,9 +291,15 @@ function addLetterTextLayer(pdf: JsPdf, page: HTMLElement) {
   const font = pdfFontFor(page);
 
   for (const element of page.querySelectorAll<HTMLElement>("[data-letter-pdf-text]")) {
+    // Chrome uses the browser's measured runs so narrow labels are not rewrapped.
+    if (element.closest("[data-dossier-chrome]")) {
+      addRichLetterText(pdf, page, element, font, mmX, mmY);
+      continue;
+    }
     const text = letterText(element);
     if (!text) continue;
     const rect = element.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) continue;
     const style = window.getComputedStyle(element);
     const fontSizePx = Number.parseFloat(style.fontSize) || 14;
     const fontSizePt = fontSizePx * (72 / 96);
@@ -381,7 +387,43 @@ async function addRasterPage(
   );
 }
 
-/** Titelblatt bleibt Raster; Anschreiben und CV erhalten echte, sichtbare PDF-Textebenen. */
+/** Resolve the finished physical motivation-letter pages from the shared document paginator. */
+async function resolvedLetterPages(rootOrPage: HTMLElement): Promise<HTMLElement[]> {
+  if (rootOrPage.matches?.("[data-letter-page]")) return [rootOrPage];
+
+  for (let frame = 0; frame < 180; frame += 1) {
+    const documentRoot = rootOrPage.matches?.("[data-letter-document-root]")
+      ? rootOrPage
+      : rootOrPage.querySelector<HTMLElement>("[data-letter-document-root]");
+    const issue = documentRoot?.dataset.letterPaginationErrorMessage?.trim();
+    if (issue) throw new Error(issue);
+
+    const ready = !documentRoot || documentRoot.dataset.letterPaginationReady === "true";
+    const pages =
+      typeof rootOrPage.querySelectorAll === "function"
+        ? Array.from(rootOrPage.querySelectorAll<HTMLElement>("[data-letter-page]"))
+        : [];
+    if (!pages.length && typeof rootOrPage.querySelector === "function") {
+      const single = rootOrPage.querySelector<HTMLElement>("[data-letter-page]");
+      if (single) pages.push(single);
+    }
+    if (ready && pages.length) return pages;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  }
+
+  throw new Error("Motivationsschreiben-Seitenumbruch ist noch nicht bereit");
+}
+
+function assertLetterPagesFit(pages: HTMLElement[]) {
+  const overflowing = pages.find(letterPageOverflows);
+  if (!overflowing) return;
+  const pageNumber = Number(overflowing.dataset?.letterPageIndex ?? "0") + 1;
+  throw new Error(
+    `Motivationsschreiben Seite ${pageNumber} enthält Inhalt, der nicht sicher auf die Seite passt.`,
+  );
+}
+
+/** Titelblatt bleibt Raster; alle Anschreiben-Seiten und CV-Seiten erhalten echte Textlagen. */
 export async function downloadCombinedDossierPdf(
   root: HTMLElement,
   fileName: string,
@@ -392,18 +434,14 @@ export async function downloadCombinedDossierPdf(
 
   const cover = root.querySelector<HTMLElement>("[data-dossier-document='cover']");
   const letterRoot = root.querySelector<HTMLElement>("[data-dossier-document='letter']");
-  const letter = letterRoot?.querySelector<HTMLElement>("[data-letter-page]") ?? letterRoot;
   const cvPages = Array.from(root.querySelectorAll<HTMLElement>("[data-cv-page]"));
-  if (!cover || !letter || !cvPages.length) {
+  const letterPages = letterRoot ? await resolvedLetterPages(letterRoot) : [];
+  if (!cover || !letterPages.length || !cvPages.length) {
     throw new Error(
       "Dossier ist noch nicht vollständig: Titelblatt, Motivationsschreiben und Lebenslauf werden benötigt",
     );
   }
-  if (letterPageOverflows(letter)) {
-    throw new Error(
-      "Motivationsschreiben passt nicht auf eine Seite. Kürze den Text vor dem Dossier-Export.",
-    );
-  }
+  assertLetterPagesFit(letterPages);
 
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
     import("html2canvas-pro"),
@@ -420,9 +458,11 @@ export async function downloadCombinedDossierPdf(
   });
 
   await addRasterPage(pdf, html2canvas, cover);
-  pdf.addPage("a4", "portrait");
-  await addRasterPage(pdf, html2canvas, letter, true);
-  addLetterTextLayer(pdf, letter);
+  for (const letterPage of letterPages) {
+    pdf.addPage("a4", "portrait");
+    await addRasterPage(pdf, html2canvas, letterPage, true);
+    addLetterTextLayer(pdf, letterPage);
+  }
   for (const cvPage of cvPages) {
     pdf.addPage("a4", "portrait");
     // Keep the raster on exactly the same live CSS-zoom geometry that the native
@@ -435,23 +475,20 @@ export async function downloadCombinedDossierPdf(
   downloadBlob(pdf.output("blob"), fileName);
 }
 
-/** Exportiert nur das Motivationsschreiben als eine A4-Seite mit echter PDF-Textebene. */
+/** Exportiert sämtliche Seiten des Motivationsschreibens mit echter PDF-Textebene. */
 export async function downloadLetterPdf(
-  page: HTMLElement,
+  rootOrPage: HTMLElement,
   fileName: string,
   meta: DossierPdfMeta,
 ): Promise<void> {
   await document.fonts?.ready;
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-  if (!page.matches("[data-letter-page]")) {
+  const pages = await resolvedLetterPages(rootOrPage);
+  if (!pages.length) {
     throw new Error("Motivationsschreiben konnte nicht für den PDF-Export gefunden werden");
   }
-  if (letterPageOverflows(page)) {
-    throw new Error(
-      "Motivationsschreiben passt nicht auf eine Seite. Kürze den Text vor dem PDF-Export.",
-    );
-  }
+  assertLetterPagesFit(pages);
 
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
     import("html2canvas-pro"),
@@ -467,7 +504,10 @@ export async function downloadLetterPdf(
     creator: meta.author || "Motivationsschreiben",
   });
 
-  await addRasterPage(pdf, html2canvas, page, true);
-  addLetterTextLayer(pdf, page);
+  for (const [index, page] of pages.entries()) {
+    if (index) pdf.addPage("a4", "portrait");
+    await addRasterPage(pdf, html2canvas, page, true);
+    addLetterTextLayer(pdf, page);
+  }
   downloadBlob(pdf.output("blob"), fileName);
 }
