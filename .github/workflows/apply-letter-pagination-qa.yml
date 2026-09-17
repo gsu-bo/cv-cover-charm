@@ -39,9 +39,9 @@ jobs:
               old = 'const preview = page.getByLabel("Vorschau Motivationsschreiben");'
               new = 'const preview = page.locator("main [data-letter-document-root] [data-letter-page]").first();'
               count = text.count(old)
-              if count != 1:
-                  raise RuntimeError(f"{filename}: expected one preview locator, found {count}")
-              path.write_text(text.replace(old, new, 1), encoding="utf-8")
+              if count < 1:
+                  raise RuntimeError(f"{filename}: expected at least one preview locator")
+              path.write_text(text.replace(old, new), encoding="utf-8")
 
           route = Path("src/routes/anschreiben.tsx")
           text = route.read_text(encoding="utf-8")
