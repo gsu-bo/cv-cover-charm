@@ -6,6 +6,7 @@ on:
       - dev
     paths:
       - "scripts/apply-letter-pagination.py"
+      - "scripts/fix-pagination-test.py"
       - ".github/workflows/apply-letter-pagination.yml"
 
 permissions:
@@ -30,7 +31,9 @@ jobs:
           test -f src/components/letter/LetterDocument.tsx
 
       - name: Apply pagination consumer patch
-        run: python3 scripts/apply-letter-pagination.py
+        run: |
+          python3 scripts/apply-letter-pagination.py
+          python3 scripts/fix-pagination-test.py
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
