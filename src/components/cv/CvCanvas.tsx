@@ -125,7 +125,11 @@ export function CvCanvas({
   } as CSSProperties;
 
   return (
-    <div style={geometryStyle} data-cv-body-align={bodyAlignment}>
+    <div
+      style={geometryStyle}
+      data-cv-body-align={bodyAlignment}
+      data-cv-user-heading-rule={props.design.headingRule === "full" ? "full" : undefined}
+    >
       <BaseCvCanvas
         {...props}
         data={data}
