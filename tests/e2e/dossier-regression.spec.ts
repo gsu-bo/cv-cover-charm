@@ -881,11 +881,11 @@ test.describe("M5.8 dossier regression", () => {
     await page.getByRole("button", { name: "Bullet", exact: true }).click();
 
     await selectBlock(1);
-    await page.getByRole("button", { name: "2 Spalten" }).click();
-    await expect(page.getByRole("button", { name: "2 Spalten" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    const columnsSelect = page.getByRole("combobox", { name: "Anzahl Textspalten" });
+    await columnsSelect.selectOption("2");
+    await expect(columnsSelect).toHaveValue("2");
+    await expect(body.locator(":scope > div").nth(1)).toHaveCSS("column-count", "2");
+    await expect(body.locator(":scope > div").nth(1)).toHaveCSS("column-rule-style", "none");
 
     await page.getByRole("button", { name: "Tabelle" }).click();
     await expect(page.getByRole("grid", { name: "Tabellengrösse auswählen" })).toBeVisible();

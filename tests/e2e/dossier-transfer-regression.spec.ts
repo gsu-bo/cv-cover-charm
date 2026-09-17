@@ -400,6 +400,7 @@ test.describe("M7 dossier transfer regression", () => {
     const image = preview.locator('[data-letter-flow-image="letter-flow-1"]');
     await expect(image).toBeVisible();
     await expect(image).toHaveAttribute("data-wrap", "square");
+    await expect(image).toHaveAttribute("data-aspect", "original");
     await expect(image).toHaveAttribute("data-side", "right");
     expect(await image.evaluate((element) => getComputedStyle(element).cssFloat)).toBe("right");
 
@@ -420,9 +421,9 @@ test.describe("M7 dossier transfer regression", () => {
         page.evaluate(() => {
           const saved = JSON.parse(localStorage.getItem("anschreiben:v1") ?? "{}");
           const flow = saved.data?.images?.[0];
-          return { side: flow?.side, topMm: flow?.topMm };
+          return { side: flow?.side, topMm: flow?.topMm, xMm: flow?.xMm };
         }),
       )
-      .toMatchObject({ side: "left" });
+      .toMatchObject({ side: "left", xMm: expect.any(Number) });
   });
 });
