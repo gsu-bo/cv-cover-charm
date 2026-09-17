@@ -1,4 +1,4 @@
-name: Inspect CV Package 1.5
+name: Implement CV Package 1.5
 
 on:
   push:
@@ -7,30 +7,1109 @@ on:
       - ".github/workflows/inspect-cv-package15.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  implement:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           ref: dev
           fetch-depth: 0
-      - name: Locate legacy controls and state consumers
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Apply focused Package 1.5 patch
         shell: bash
         run: |
-          echo '=== mirror/photo references ==='
-          rg -n 'Spiegel|Datumsseite|setCvLayoutMirror|getCvLayoutMirror|layout-mirror|photo-place|place\.mode|sidebarPhoto|modernHeader' src tests || true
-          echo '=== classic header ==='
-          line=$(rg -n 'const classicHeader' src/components/cv/CvCanvasBase.tsx | head -1 | cut -d: -f1)
-          sed -n "$((line-10)),$((line+110))p" src/components/cv/CvCanvasBase.tsx
-          echo '=== modern header/sidebar ==='
-          line=$(rg -n 'const modernHeader' src/components/cv/CvCanvasBase.tsx | head -1 | cut -d: -f1)
-          sed -n "$((line-20)),$((line+90))p" src/components/cv/CvCanvasBase.tsx
-          line=$(rg -n 'const sidebarPhoto' src/components/cv/CvCanvasBase.tsx | head -1 | cut -d: -f1)
-          sed -n "$((line-25)),$((line+100))p" src/components/cv/CvCanvasBase.tsx
-          echo '=== DOCX CV header ==='
-          line=$(rg -n 'function cvPage' src/lib/dossier-docx.ts | head -1 | cut -d: -f1)
-          sed -n "$line,$((line+120))p" src/lib/dossier-docx.ts
+          python <<'PY'
+          from pathlib import Path
+
+          def replace(path: str, old: str, new: str):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f"expected snippet missing in {path}: {old[:100]!r}")
+              p.write_text(text.replace(old, new, 1))
+
+          # -----------------------------------------------------------------
+          # Authoritative photo placement: explicit left/right/free for new
+          # state, with legacy auto kept only as an appearance-preserving
+          # compatibility sentinel.
+          # -----------------------------------------------------------------
+          Path("src/components/cv/photo-place.ts").write_text(r'''/**
+           * Wo das Foto auf dem Blatt sitzt, wie gross es ist und welchen Rahmen es hat.
+           *
+           * Bewusst getrennt von `photo.ts`: dort steht der Ausschnitt *im* Bild (Form,
+           * Zoom, Bildmitte), hier die Platzierung *auf der Seite*. Der Ausschnitt wird
+           * mit dem Titelblatt geteilt, die Platzierung gilt nur für den Lebenslauf.
+           */
+
+          const STORAGE_KEY = "lebenslauf:photo-place:v1";
+          const EVENT = "lebenslauf-photo-place-change";
+
+          export type CvPhotoPosition = "left" | "right" | "free";
+          export type CvPhotoPlacement = {
+            /** `auto` ist nur noch Legacy-Fallback. Neue Auswahl speichert left/right/frei. */
+            mode: "auto" | "left" | "right" | "frei";
+            /** Abstand von der linken oberen Blattecke in mm (nur bei "frei"). */
+            xMm: number;
+            yMm: number;
+            /** Breite des Fotos in mm; die Höhe folgt der Rahmenform. */
+            widthMm: number;
+            /**
+             * Rahmenfarbe, oder null für die Farbe aus der Vorlage.
+             *
+             * Ob es überhaupt einen Rahmen gibt und wie dick er ist, steht weiterhin in
+             * `photo.ts` (`borderWidth`, 0 = kein Rahmen) – dieselbe Einstellung wie auf
+             * dem Titelblatt. Zwei Regler für dieselbe Stärke wären nur verwirrend.
+             */
+            frameColor: string | null;
+          };
+
+          export type CvPhotoPositionContext = {
+            template?: string | null;
+            layout: "classic" | "modern";
+            legacyMirrored: boolean;
+          };
+
+          /** A4 in mm – die Grenzen, innerhalb derer das Foto liegen darf. */
+          const SHEET_W = 210;
+          const SHEET_H = 297;
+          export const CV_PHOTO_MIN_MM = 15;
+          export const CV_PHOTO_MAX_MM = 90;
+
+          export const DEFAULT_CV_PHOTO_PLACEMENT: CvPhotoPlacement = {
+            // Template-aware default/legacy sentinel. UI never exposes "auto".
+            mode: "auto",
+            xMm: 150,
+            yMm: 20,
+            widthMm: 34,
+            frameColor: null,
+          };
+
+          const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+          const numberOr = (value: unknown, fallback: number) => {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? parsed : fallback;
+          };
+
+          /** Nimmt nur "#rgb"/"#rrggbb" an; alles andere fällt auf die Vorlage zurück. */
+          function colorOrNull(value: unknown): string | null {
+            return typeof value === "string" && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value.trim())
+              ? value.trim()
+              : null;
+          }
+
+          export function normalizeCvPhotoPlacement(
+            value?: Partial<CvPhotoPlacement> | null,
+          ): CvPhotoPlacement {
+            const widthMm = clamp(
+              numberOr(value?.widthMm, DEFAULT_CV_PHOTO_PLACEMENT.widthMm),
+              CV_PHOTO_MIN_MM,
+              CV_PHOTO_MAX_MM,
+            );
+            const mode =
+              value?.mode === "left" ||
+              value?.mode === "right" ||
+              value?.mode === "frei" ||
+              value?.mode === "auto"
+                ? value.mode
+                : DEFAULT_CV_PHOTO_PLACEMENT.mode;
+            return {
+              mode,
+              // Das Foto darf nicht komplett aus dem Blatt wandern; ein Rest bleibt sichtbar.
+              xMm: clamp(numberOr(value?.xMm, DEFAULT_CV_PHOTO_PLACEMENT.xMm), 0, SHEET_W - CV_PHOTO_MIN_MM),
+              yMm: clamp(numberOr(value?.yMm, DEFAULT_CV_PHOTO_PLACEMENT.yMm), 0, SHEET_H - CV_PHOTO_MIN_MM),
+              widthMm,
+              frameColor: colorOrNull(value?.frameColor),
+            };
+          }
+
+          /**
+           * Resolves the one physical photo side. `auto` exists only to reproduce old
+           * dossiers: Standard/Brief historically defaulted right, other classic
+           * templates left; the legacy mirror boolean flipped that side. Sidebar put
+           * the photo in the sidebar, which the legacy mirror moved as a whole.
+           */
+          export function resolveCvPhotoPosition(
+            place: Pick<CvPhotoPlacement, "mode">,
+            { template, layout, legacyMirrored }: CvPhotoPositionContext,
+          ): CvPhotoPosition {
+            if (place.mode === "left") return "left";
+            if (place.mode === "right") return "right";
+            if (place.mode === "frei") return "free";
+
+            if (layout === "modern") return legacyMirrored ? "right" : "left";
+            const normal: Exclude<CvPhotoPosition, "free"> = template === "brief" ? "right" : "left";
+            return legacyMirrored ? (normal === "left" ? "right" : "left") : normal;
+          }
+
+          /**
+           * Die Rahmenfarbe wird über eine CSS-Variable gesetzt, nicht im Renderer: die
+           * gemeinsame Regel in `layout-options.css` trägt `!important` und würde einen
+           * Inline-Wert sonst überstimmen.
+           */
+          function apply(place: CvPhotoPlacement) {
+            if (typeof document === "undefined") return;
+            const root = document.documentElement;
+            if (place.frameColor) root.style.setProperty("--cv-photo-border-color", place.frameColor);
+            else root.style.removeProperty("--cv-photo-border-color");
+          }
+
+          let cached: CvPhotoPlacement | null = null;
+
+          function read(): CvPhotoPlacement {
+            if (typeof window === "undefined") return DEFAULT_CV_PHOTO_PLACEMENT;
+            try {
+              const raw = window.localStorage.getItem(STORAGE_KEY);
+              if (!raw) return DEFAULT_CV_PHOTO_PLACEMENT;
+              return normalizeCvPhotoPlacement(JSON.parse(raw) as Partial<CvPhotoPlacement>);
+            } catch {
+              return DEFAULT_CV_PHOTO_PLACEMENT;
+            }
+          }
+
+          export function getCvPhotoPlacement(): CvPhotoPlacement {
+            if (!cached) cached = read();
+            apply(cached);
+            return cached;
+          }
+
+          export function setCvPhotoPlacement(patch: Partial<CvPhotoPlacement>) {
+            const next = normalizeCvPhotoPlacement({ ...getCvPhotoPlacement(), ...patch });
+            cached = next;
+            if (typeof window === "undefined") return;
+            try {
+              window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+            } catch {
+              // Die laufende Seite reagiert trotzdem über das Event.
+            }
+            apply(next);
+            window.dispatchEvent(new CustomEvent<CvPhotoPlacement>(EVENT, { detail: next }));
+          }
+
+          export function setCvPhotoPosition(position: CvPhotoPosition) {
+            setCvPhotoPlacement({ mode: position === "free" ? "frei" : position });
+          }
+
+          export function resetCvPhotoPlacement() {
+            setCvPhotoPlacement(DEFAULT_CV_PHOTO_PLACEMENT);
+          }
+
+          export function subscribeCvPhotoPlacement(onChange: () => void) {
+            if (typeof window === "undefined") return () => {};
+
+            const local = () => onChange();
+            const storage = (event: StorageEvent) => {
+              if (event.key !== STORAGE_KEY) return;
+              cached = read();
+              apply(cached);
+              onChange();
+            };
+
+            window.addEventListener(EVENT, local);
+            window.addEventListener("storage", storage);
+            return () => {
+              window.removeEventListener(EVENT, local);
+              window.removeEventListener("storage", storage);
+            };
+          }
+          '''.replace("          ", "", 1))
+
+          # -----------------------------------------------------------------
+          # Independent info/date side. New explicit state wins; legacy mirror
+          # remains fallback and compatibility input only.
+          # -----------------------------------------------------------------
+          replace(
+              "src/components/cv/layout.ts",
+              'export type CvRenderLayoutId = "classic" | "modern";\n',
+              'export type CvRenderLayoutId = "classic" | "modern";\nexport type CvInfoPosition = "standard" | "mirrored";\n',
+          )
+          replace(
+              "src/components/cv/layout.ts",
+              'const MIRROR_STORAGE_KEY = "lebenslauf:layout-mirror:v1";\n',
+              'const MIRROR_STORAGE_KEY = "lebenslauf:layout-mirror:v1";\nexport const CV_INFO_POSITION_STORAGE_KEY = "lebenslauf:info-position:v1";\n',
+          )
+          replace(
+              "src/components/cv/layout.ts",
+              '''function readMirror(): boolean {
+            if (typeof window === "undefined") return false;
+            try {
+              return window.localStorage.getItem(MIRROR_STORAGE_KEY) === "true";
+            } catch {
+              return false;
+            }
+          }
+''',
+              '''function readMirror(): boolean {
+            if (typeof window === "undefined") return false;
+            try {
+              return window.localStorage.getItem(MIRROR_STORAGE_KEY) === "true";
+            } catch {
+              return false;
+            }
+          }
+
+          function readInfoPosition(): CvInfoPosition | null {
+            if (typeof window === "undefined") return null;
+            try {
+              const value = window.localStorage.getItem(CV_INFO_POSITION_STORAGE_KEY);
+              return value === "standard" || value === "mirrored" ? value : null;
+            } catch {
+              return null;
+            }
+          }
+
+          export function resolveCvInfoPosition(
+            explicit: CvInfoPosition | null | undefined,
+            legacyMirrored: boolean,
+          ): CvInfoPosition {
+            return explicit === "standard" || explicit === "mirrored"
+              ? explicit
+              : legacyMirrored
+                ? "mirrored"
+                : "standard";
+          }
+''',
+          )
+          replace(
+              "src/components/cv/layout.ts",
+              '  root.dataset.cvVariant = canonical(choice);\n  root.dataset.cvMirrored = readMirror() ? "true" : "false";\n',
+              '  root.dataset.cvVariant = canonical(choice);\n  const infoPosition = resolveCvInfoPosition(readInfoPosition(), readMirror());\n  root.dataset.cvInfoPosition = infoPosition;\n  root.dataset.cvMirrored = infoPosition === "mirrored" ? "true" : "false";\n',
+          )
+          replace(
+              "src/components/cv/layout.ts",
+              '''/** Zweispalten-Aufbauten starten immer normal: Sidebar links, Main rechts. */
+          export function getCvLayoutMirror(): boolean {
+            return readMirror();
+          }
+''',
+              '''/** Legacy mirror value. New UI/state must use `getCvInfoPosition`. */
+          export function getCvLayoutMirror(): boolean {
+            return readMirror();
+          }
+
+          /** Explicit information/date-side choice, with legacy mirror as fallback. */
+          export function getCvInfoPosition(): CvInfoPosition {
+            return resolveCvInfoPosition(readInfoPosition(), readMirror());
+          }
+''',
+          )
+          replace(
+              "src/components/cv/layout.ts",
+              '''export function setCvLayoutMirror(mirrored: boolean) {
+            if (typeof window === "undefined") return;
+            try {
+              window.localStorage.setItem(MIRROR_STORAGE_KEY, mirrored ? "true" : "false");
+            } catch {
+              // Die laufende Seite reagiert trotzdem über das Event.
+            }
+            applyVariant(readChoice());
+            window.dispatchEvent(new CustomEvent(CV_LAYOUT_EVENT));
+          }
+''',
+              '''export function setCvLayoutMirror(mirrored: boolean) {
+            if (typeof window === "undefined") return;
+            try {
+              window.localStorage.setItem(MIRROR_STORAGE_KEY, mirrored ? "true" : "false");
+            } catch {
+              // Die laufende Seite reagiert trotzdem über das Event.
+            }
+            applyVariant(readChoice());
+            window.dispatchEvent(new CustomEvent(CV_LAYOUT_EVENT));
+          }
+
+          export function setCvInfoPosition(position: CvInfoPosition) {
+            if (typeof window === "undefined") return;
+            try {
+              window.localStorage.setItem(CV_INFO_POSITION_STORAGE_KEY, position);
+            } catch {
+              // Die laufende Seite reagiert trotzdem über das Event.
+            }
+            applyVariant(readChoice());
+            window.dispatchEvent(new CustomEvent(CV_LAYOUT_EVENT));
+          }
+''',
+          )
+          replace(
+              "src/components/cv/layout.ts",
+              '''      event.key === STORAGE_KEY ||
+                event.key === MIRROR_STORAGE_KEY ||
+                event.key === SECTION_GAP_STORAGE_KEY
+''',
+              '''      event.key === STORAGE_KEY ||
+                event.key === MIRROR_STORAGE_KEY ||
+                event.key === CV_INFO_POSITION_STORAGE_KEY ||
+                event.key === SECTION_GAP_STORAGE_KEY
+''',
+          )
+          replace(
+              "src/components/cv/layout.ts",
+              '/** Globaler Rubrik-Abstand teilt denselben Event-Stream wie die übrigen Aufbauoptionen. */\nexport const subscribeCvSectionGap = subscribeCvLayout;\n',
+              '/** Angaben-/Datumsseite teilt denselben Event-Stream wie der Aufbau. */\nexport const subscribeCvInfoPosition = subscribeCvLayout;\n/** Globaler Rubrik-Abstand teilt denselben Event-Stream wie die übrigen Aufbauoptionen. */\nexport const subscribeCvSectionGap = subscribeCvLayout;\n',
+          )
+
+          # -----------------------------------------------------------------
+          # Portable JSON sidecar: explicit info position is serialized. Old
+          # mirrored remains readable, but explicit info is applied afterwards.
+          # -----------------------------------------------------------------
+          replace(
+              "src/components/cv/portable-state.ts",
+              '''  normalizeCvSectionGapMm,
+            setCvLayout,
+            setCvLayoutMirror,
+            setCvSectionGapMm,
+            type CvLayoutId,
+''',
+              '''  CV_INFO_POSITION_STORAGE_KEY,
+            normalizeCvSectionGapMm,
+            setCvInfoPosition,
+            setCvLayout,
+            setCvLayoutMirror,
+            setCvSectionGapMm,
+            type CvInfoPosition,
+            type CvLayoutId,
+''',
+          )
+          replace(
+              "src/components/cv/portable-state.ts",
+              'const MIRROR_KEY = "lebenslauf:layout-mirror:v1";\n',
+              'const MIRROR_KEY = "lebenslauf:layout-mirror:v1";\nconst INFO_POSITION_KEY = CV_INFO_POSITION_STORAGE_KEY;\n',
+          )
+          replace(
+              "src/components/cv/portable-state.ts",
+              '  MIRROR_KEY,\n  SECTION_GAP_KEY,\n',
+              '  MIRROR_KEY,\n  INFO_POSITION_KEY,\n  SECTION_GAP_KEY,\n',
+          )
+          replace(
+              "src/components/cv/portable-state.ts",
+              '  mirrored?: boolean;\n  sectionGapMm?: number;\n',
+              '  mirrored?: boolean;\n  infoPosition?: CvInfoPosition;\n  sectionGapMm?: number;\n',
+          )
+          replace(
+              "src/components/cv/portable-state.ts",
+              '    const mirroredRaw = storage.getItem(MIRROR_KEY);\n    const sectionGapRaw = storage.getItem(SECTION_GAP_KEY);\n',
+              '    const mirroredRaw = storage.getItem(MIRROR_KEY);\n    const infoPositionRaw = storage.getItem(INFO_POSITION_KEY);\n    const infoPosition =\n      infoPositionRaw === "standard" || infoPositionRaw === "mirrored" ? infoPositionRaw : undefined;\n    const sectionGapRaw = storage.getItem(SECTION_GAP_KEY);\n',
+          )
+          replace(
+              "src/components/cv/portable-state.ts",
+              '      ...(mirroredRaw !== null ? { mirrored: mirroredRaw === "true" } : {}),\n      ...(sectionGapMm !== null ? { sectionGapMm } : {}),\n',
+              '      ...(mirroredRaw !== null ? { mirrored: mirroredRaw === "true" } : {}),\n      ...(infoPosition ? { infoPosition } : {}),\n      ...(sectionGapMm !== null ? { sectionGapMm } : {}),\n',
+          )
+          replace(
+              "src/components/cv/portable-state.ts",
+              '  if (typeof state.mirrored === "boolean") setCvLayoutMirror(state.mirrored);\n  if (typeof state.sectionGapMm === "number") setCvSectionGapMm(state.sectionGapMm);\n',
+              '  if (typeof state.mirrored === "boolean") setCvLayoutMirror(state.mirrored);\n  // New explicit state always wins over the legacy mirror fallback.\n  if (state.infoPosition === "standard" || state.infoPosition === "mirrored") {\n    setCvInfoPosition(state.infoPosition);\n  }\n  if (typeof state.sectionGapMm === "number") setCvSectionGapMm(state.sectionGapMm);\n',
+          )
+
+          # -----------------------------------------------------------------
+          # Editor UX: three-way photo choice + independent info/date choice.
+          # -----------------------------------------------------------------
+          replace(
+              "src/components/cv/CvForm.tsx",
+              '''  getCvLayout,
+            getCvSectionGapMm,
+            setCvSectionGapMm,
+            subscribeCvLayout,
+            subscribeCvSectionGap,
+''',
+              '''  getCvInfoPosition,
+            getCvLayout,
+            getCvLayoutMirror,
+            getCvSectionGapMm,
+            setCvInfoPosition,
+            setCvSectionGapMm,
+            subscribeCvInfoPosition,
+            subscribeCvLayout,
+            subscribeCvSectionGap,
+''',
+          )
+          replace(
+              "src/components/cv/CvForm.tsx",
+              '''  getCvPhotoPlacement,
+            resetCvPhotoPlacement,
+            setCvPhotoPlacement,
+            subscribeCvPhotoPlacement,
+''',
+              '''  getCvPhotoPlacement,
+            resetCvPhotoPlacement,
+            resolveCvPhotoPosition,
+            setCvPhotoPlacement,
+            setCvPhotoPosition,
+            subscribeCvPhotoPlacement,
+''',
+          )
+          old_controls = '''function CvPhotoPlaceControls({ borderWidth }: { borderWidth: number }) {
+            const place = useSyncExternalStore(
+              subscribeCvPhotoPlacement,
+              getCvPhotoPlacement,
+              () => DEFAULT_CV_PHOTO_PLACEMENT,
+            );
+            const free = place.mode === "frei";
+
+            return (
+              <div className="mt-3 flex flex-col gap-2 border-t pt-3">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Positionierung
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    className={free ? placeBtn : placeBtnOn}
+                    aria-pressed={!free}
+                    onClick={() => setCvPhotoPlacement({ mode: "auto" })}
+                  >
+                    Automatisch
+                  </button>
+                  <button
+                    type="button"
+                    className={free ? placeBtnOn : placeBtn}
+                    aria-pressed={free}
+                    onClick={() => setCvPhotoPlacement({ mode: "frei" })}
+                  >
+                    Frei platzieren
+                  </button>
+                </div>
+
+                {free ? (
+                  <>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[11px] text-muted-foreground">
+                        Breite {Math.round(place.widthMm)} mm
+                      </span>
+                      <input
+                        type="range"
+                        min={CV_PHOTO_MIN_MM}
+                        max={CV_PHOTO_MAX_MM}
+                        step={1}
+                        value={place.widthMm}
+                        onChange={(e) => setCvPhotoPlacement({ widthMm: Number(e.target.value) })}
+                        className="w-full accent-primary"
+                      />
+                    </label>
+                    <p className="text-[11px] leading-snug text-muted-foreground">
+                      In der Vorschau lässt sich das Foto mit der Maus ziehen; am Punkt unten rechts wird es
+                      grösser oder kleiner. Mit den Pfeiltasten geht es millimeterweise.
+                    </p>
+                    <button
+                      type="button"
+                      className="self-start text-[11px] text-muted-foreground underline hover:text-foreground"
+                      onClick={resetCvPhotoPlacement}
+                    >
+                      Platz zurücksetzen
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-[11px] leading-snug text-muted-foreground">
+                    Das Foto sitzt im Kopf bzw. in der Seitenspalte – je nach Aufbau.
+                  </p>
+                )}
+
+                {borderWidth > 0 && (
+                  <label className="flex items-center gap-2">
+                    <span className="text-[11px] text-muted-foreground">Rahmenfarbe</span>
+                    <input
+                      type="color"
+                      value={place.frameColor ?? "#000000"}
+                      onChange={(e) => setCvPhotoPlacement({ frameColor: e.target.value })}
+                      className="h-6 w-10 cursor-pointer rounded border border-input bg-background"
+                      aria-label="Rahmenfarbe"
+                    />
+                    {place.frameColor && (
+                      <button
+                        type="button"
+                        className="text-[11px] text-muted-foreground underline hover:text-foreground"
+                        onClick={() => setCvPhotoPlacement({ frameColor: null })}
+                      >
+                        wie Vorlage
+                      </button>
+                    )}
+                  </label>
+                )}
+              </div>
+            );
+          }
+'''
+          new_controls = '''function CvPhotoPlaceControls({ borderWidth }: { borderWidth: number }) {
+            const place = useSyncExternalStore(
+              subscribeCvPhotoPlacement,
+              getCvPhotoPlacement,
+              () => DEFAULT_CV_PHOTO_PLACEMENT,
+            );
+            const layout = useSyncExternalStore(subscribeCvLayout, getCvLayout, () => "classic");
+            const infoPosition = useSyncExternalStore(
+              subscribeCvInfoPosition,
+              getCvInfoPosition,
+              () => "standard",
+            );
+            const template =
+              typeof document === "undefined" ? "brief" : document.documentElement.dataset.dossierTemplate;
+            const photoPosition = resolveCvPhotoPosition(place, {
+              template,
+              layout,
+              legacyMirrored: getCvLayoutMirror(),
+            });
+            const free = photoPosition === "free";
+
+            return (
+              <div className="mt-3 flex flex-col gap-2 border-t pt-3">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Foto-Position
+                </span>
+                <div className="flex gap-1" role="group" aria-label="Foto-Position">
+                  {([
+                    ["left", "Links"],
+                    ["right", "Rechts"],
+                    ["free", "Frei positionierbar"],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={photoPosition === value ? placeBtnOn : placeBtn}
+                      aria-pressed={photoPosition === value}
+                      onClick={() => setCvPhotoPosition(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <span className="mt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Angaben &amp; Datumsseite
+                </span>
+                <div className="flex gap-1" role="group" aria-label="Angaben und Datumsseite">
+                  <button
+                    type="button"
+                    className={infoPosition === "standard" ? placeBtnOn : placeBtn}
+                    aria-pressed={infoPosition === "standard"}
+                    onClick={() => setCvInfoPosition("standard")}
+                  >
+                    Standard
+                  </button>
+                  <button
+                    type="button"
+                    className={infoPosition === "mirrored" ? placeBtnOn : placeBtn}
+                    aria-pressed={infoPosition === "mirrored"}
+                    onClick={() => setCvInfoPosition("mirrored")}
+                  >
+                    Spiegelverkehrt
+                  </button>
+                </div>
+
+                {free ? (
+                  <>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[11px] text-muted-foreground">
+                        Breite {Math.round(place.widthMm)} mm
+                      </span>
+                      <input
+                        type="range"
+                        min={CV_PHOTO_MIN_MM}
+                        max={CV_PHOTO_MAX_MM}
+                        step={1}
+                        value={place.widthMm}
+                        onChange={(e) => setCvPhotoPlacement({ widthMm: Number(e.target.value) })}
+                        className="w-full accent-primary"
+                      />
+                    </label>
+                    <p className="text-[11px] leading-snug text-muted-foreground">
+                      In der Vorschau lässt sich das Foto mit der Maus ziehen; am Punkt unten rechts wird es
+                      grösser oder kleiner. Mit den Pfeiltasten geht es millimeterweise.
+                    </p>
+                    <button
+                      type="button"
+                      className="self-start text-[11px] text-muted-foreground underline hover:text-foreground"
+                      onClick={resetCvPhotoPlacement}
+                    >
+                      Platz zurücksetzen
+                    </button>
+                  </>
+                ) : null}
+
+                {borderWidth > 0 && (
+                  <label className="flex items-center gap-2">
+                    <span className="text-[11px] text-muted-foreground">Rahmenfarbe</span>
+                    <input
+                      type="color"
+                      value={place.frameColor ?? "#000000"}
+                      onChange={(e) => setCvPhotoPlacement({ frameColor: e.target.value })}
+                      className="h-6 w-10 cursor-pointer rounded border border-input bg-background"
+                      aria-label="Rahmenfarbe"
+                    />
+                    {place.frameColor && (
+                      <button
+                        type="button"
+                        className="text-[11px] text-muted-foreground underline hover:text-foreground"
+                        onClick={() => setCvPhotoPlacement({ frameColor: null })}
+                      >
+                        wie Vorlage
+                      </button>
+                    )}
+                  </label>
+                )}
+              </div>
+            );
+          }
+'''
+          replace("src/components/cv/CvForm.tsx", old_controls, new_controls)
+
+          # -----------------------------------------------------------------
+          # Renderer: one logical photo. Classic uses explicit flex side;
+          # Sidebar uses the physical sidebar when it matches the requested
+          # side, otherwise the same photo renders in the main header.
+          # -----------------------------------------------------------------
+          replace(
+              "src/components/cv/CvCanvasBase.tsx",
+              '''  getCvLayout,
+            getCvLayoutChoice,
+            subscribeCvLayout,
+''',
+              '''  getCvInfoPosition,
+            getCvLayout,
+            getCvLayoutChoice,
+            getCvLayoutMirror,
+            subscribeCvLayout,
+''',
+          )
+          replace(
+              "src/components/cv/CvCanvasBase.tsx",
+              '''  getCvPhotoPlacement,
+            normalizeCvPhotoPlacement,
+            setCvPhotoPlacement,
+''',
+              '''  getCvPhotoPlacement,
+            normalizeCvPhotoPlacement,
+            resolveCvPhotoPosition,
+            setCvPhotoPlacement,
+''',
+          )
+          replace(
+              "src/components/cv/CvCanvasBase.tsx",
+              '''  const layoutChoice = useSyncExternalStore<CvLayoutId>(
+            subscribeCvLayoutChoice,
+            getCvLayoutChoice,
+            () => "classic",
+          );
+''',
+              '''  const layoutChoice = useSyncExternalStore<CvLayoutId>(
+            subscribeCvLayoutChoice,
+            getCvLayoutChoice,
+            () => "classic",
+          );
+          const infoPosition = useSyncExternalStore(
+            subscribeCvLayout,
+            getCvInfoPosition,
+            () => "standard" as const,
+          );
+''',
+          )
+          replace(
+              "src/components/cv/CvCanvasBase.tsx",
+              '''  const nameSize = smartNameSize(name, layout) * TYPE_BASE * titleScale;
+
+            /**
+             * Sitzt das Foto frei auf dem Blatt, gehört es nicht mehr in den Kopf oder in
+             * die Seitenspalte – sonst stünde es zweimal da.
+             */
+            const autoPhoto = !!p.foto && place.mode === "auto";
+            const freePhotoOn = !!p.foto && place.mode === "frei";
+''',
+              '''  const nameSize = smartNameSize(name, layout) * TYPE_BASE * titleScale;
+            const photoPosition = resolveCvPhotoPosition(place, {
+              template: design.template,
+              layout,
+              legacyMirrored: getCvLayoutMirror(),
+            });
+            const infoMirrored = infoPosition === "mirrored";
+            const sidebarPhysicalSide = infoMirrored ? "right" : "left";
+
+            /**
+             * Es gibt genau ein logisches Foto. Links/Rechts verwenden einen automatischen
+             * Slot, frei verwendet ausschliesslich den vorhandenen freien Renderer.
+             */
+            const autoPhoto = !!p.foto && photoPosition !== "free";
+            const freePhotoOn = !!p.foto && photoPosition === "free";
+            const automaticPhotoInSidebar =
+              autoPhoto &&
+              layout === "modern" &&
+              !personLayoutCustomized &&
+              photoPosition === sidebarPhysicalSide;
+            const automaticPhotoInMain =
+              autoPhoto &&
+              layout === "modern" &&
+              !personLayoutCustomized &&
+              photoPosition !== sidebarPhysicalSide;
+''',
+          )
+          replace(
+              "src/components/cv/CvCanvasBase.tsx",
+              '          style={{ display: "flex", gap: "7mm", alignItems: "flex-start", marginBottom: "3.2mm" }}\n',
+              '          style={{\n            display: "flex",\n            flexDirection: photoPosition === "right" ? "row-reverse" : "row",\n            gap: "7mm",\n            alignItems: "flex-start",\n            marginBottom: "3.2mm",\n          }}\n',
+          )
+          # First personal-info block (custom person layout).
+          replace(
+              "src/components/cv/CvCanvasBase.tsx",
+              '''              <div
+                    data-cv-muted
+                    style={{
+                      marginTop: "1.35mm",
+                      fontSize: pt(9.2),
+                      color: pal.muted,
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    {angaben.join(" · ")}
+                  </div>
+''',
+              '''              <div
+                    data-cv-muted
+                    data-cv-personal-info
+                    style={{
+                      marginTop: "1.35mm",
+                      fontSize: pt(9.2),
+                      color: pal.muted,
+                      lineHeight: 1.35,
+                      textAlign: infoMirrored ? "right" : "left",
+                    }}
+                  >
+                    {angaben.join(" · ")}
+                  </div>
+''',
+          )
+          replace(
+              "src/components/cv/CvCanvasBase.tsx",
+              '            flexDirection: design.template === "brief" ? "row-reverse" : undefined,\n',
+              '            flexDirection: photoPosition === "right" ? "row-reverse" : "row",\n',
+          )
+          # Second personal-info block (classic header).
+          replace(
+              "src/components/cv/CvCanvasBase.tsx",
+              '''              <div
+                    data-cv-muted
+                    style={{
+                      marginTop: "1.35mm",
+                      fontSize: pt(9.2),
+                      color: pal.muted,
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    {angaben.join(" · ")}
+                  </div>
+''',
+              '''              <div
+                    data-cv-muted
+                    data-cv-personal-info
+                    style={{
+                      marginTop: "1.35mm",
+                      fontSize: pt(9.2),
+                      color: pal.muted,
+                      lineHeight: 1.35,
+                      textAlign: infoMirrored ? "right" : "left",
+                    }}
+                  >
+                    {angaben.join(" · ")}
+                  </div>
+''',
+          )
+
+          old_modern = '''    const modernHeader: Row = {
+                id: "kopf-modern",
+                node: (
+                  <div data-cv-header style={{ marginBottom: "4.8mm" }}>
+                    {docTitle(pal.muted)}
+                    <div
+                      data-cv-name
+                      style={{
+                        fontSize: `${nameSize}pt`,
+                        fontWeight: 760,
+                        color: pal.ink,
+                        lineHeight: 1,
+                        letterSpacing: "-0.025em",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {name || "Dein Name"}
+                    </div>
+                    {p.untertitel && (
+                      <div
+                        data-cv-subtitle
+                        style={{
+                          marginTop: "1.4mm",
+                          fontSize: ptHead(11.5),
+                          fontWeight: 600,
+                          color: pal.accent,
+                          lineHeight: 1.25,
+                        }}
+                      >
+                        {p.untertitel}
+                      </div>
+                    )}
+                    <div
+                      data-cv-accent="header"
+                      style={{
+                        width: "24mm",
+                        height: "0.85mm",
+                        marginTop: "3.2mm",
+                        borderRadius: "999px",
+                        background: pal.accent,
+                      }}
+                    />
+                  </div>
+                ),
+              };
+              if (!nameInBand) rows.push(modernHeader);
+'''
+          new_modern = '''    const modernHeader: Row = {
+                id: "kopf-modern",
+                node: (
+                  <div
+                    data-cv-header
+                    style={{
+                      marginBottom: "4.8mm",
+                      display: automaticPhotoInMain ? "flex" : undefined,
+                      flexDirection:
+                        automaticPhotoInMain && photoPosition === "left" ? "row-reverse" : "row",
+                      gap: automaticPhotoInMain ? "7mm" : undefined,
+                      alignItems: automaticPhotoInMain ? "flex-start" : undefined,
+                    }}
+                  >
+                    {!nameInBand && (
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {docTitle(pal.muted)}
+                        <div
+                          data-cv-name
+                          style={{
+                            fontSize: `${nameSize}pt`,
+                            fontWeight: 760,
+                            color: pal.ink,
+                            lineHeight: 1,
+                            letterSpacing: "-0.025em",
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {name || "Dein Name"}
+                        </div>
+                        {p.untertitel && (
+                          <div
+                            data-cv-subtitle
+                            style={{
+                              marginTop: "1.4mm",
+                              fontSize: ptHead(11.5),
+                              fontWeight: 600,
+                              color: pal.accent,
+                              lineHeight: 1.25,
+                            }}
+                          >
+                            {p.untertitel}
+                          </div>
+                        )}
+                        <div
+                          data-cv-accent="header"
+                          style={{
+                            width: "24mm",
+                            height: "0.85mm",
+                            marginTop: "3.2mm",
+                            borderRadius: "999px",
+                            background: pal.accent,
+                          }}
+                        />
+                      </div>
+                    )}
+                    {automaticPhotoInMain && (
+                      <div
+                        data-cv-photo
+                        data-cv-photo-auto-main
+                        style={{
+                          position: "relative",
+                          width: `${PHOTO_MAIN_MM}mm`,
+                          height: `${PHOTO_MAIN_MM * dossierPhotoRatio(photoStyle.shape)}mm`,
+                          flexShrink: 0,
+                          overflow: "hidden",
+                          borderRadius: dossierPhotoRadius(photoStyle.shape),
+                          marginLeft: nameInBand && photoPosition === "right" ? "auto" : undefined,
+                          marginRight: nameInBand && photoPosition === "left" ? "auto" : undefined,
+                        }}
+                      >
+                        <img src={p.foto ?? undefined} alt="" style={dossierPhotoCropStyle(photoStyle)} />
+                      </div>
+                    )}
+                  </div>
+                ),
+              };
+              if (!nameInBand || automaticPhotoInMain) rows.push(modernHeader);
+'''
+          replace("src/components/cv/CvCanvasBase.tsx", old_modern, new_modern)
+          replace(
+              "src/components/cv/CvCanvasBase.tsx",
+              '          first && !autoPhoto\n',
+              '          first && !automaticPhotoInSidebar\n',
+          )
+          replace(
+              "src/components/cv/CvCanvasBase.tsx",
+              '    const sidebarPhoto = pageIndex === 0 && autoPhoto && !personLayoutCustomized;\n',
+              '    const sidebarPhoto = pageIndex === 0 && automaticPhotoInSidebar;\n',
+          )
+          replace(
+              "src/components/cv/CvCanvasBase.tsx",
+              '          left: `${photoBox.xMm}mm`,\n',
+              '          left: `${infoMirrored && layout === "modern" ? SHEET_W_MM - photoBox.xMm - photoBox.widthMm : photoBox.xMm}mm`,\n',
+          )
+          replace(
+              "src/components/cv/CvCanvasBase.tsx",
+              '  const shape = `${chromeShape}|photo:${place.mode}|${layoutChoice}|${layout}|${frame.id}|${design.font ?? "template"}|${placementShape}|${sectionLayoutShape}|${rows\n',
+              '  const shape = `${chromeShape}|photo:${photoPosition}|info:${infoPosition}|${layoutChoice}|${layout}|${frame.id}|${design.font ?? "template"}|${placementShape}|${sectionLayoutShape}|${rows\n',
+          )
+          replace(
+              "src/components/cv/CvCanvasBase.tsx",
+              '      data-cv-archetype={frame.id}\n      data-cv-band-head={frame.headFirstMm > 0 ? "true" : "false"}\n',
+              '      data-cv-archetype={frame.id}\n      data-cv-photo-position={photoPosition}\n      data-cv-info-position={infoPosition}\n      data-cv-band-head={frame.headFirstMm > 0 ? "true" : "false"}\n',
+          )
+
+          # Header flex no longer follows the old coupled mirror boolean. Rails
+          # and asymmetric info/date geometry keep using the effective info side.
+          replace(
+              "src/components/cv/layout-options.css",
+              '''/* Standard-Familie: Foto sowie Datums-/Sprachspalten tauschen die Seite. */
+          html[data-cv-mirrored="true"] [data-cv-layout="classic"] [data-cv-page="0"] [data-cv-header] {
+            flex-direction: row-reverse !important;
+          }
+
+''',
+              '''/* Datums-/Sprachspalten spiegeln; die Foto-Seite ist davon unabhängig. */
+''',
+          )
+          replace(
+              "src/components/cv/layout-options.css",
+              '''
+          /* Package 1: Brief/Standard defaults to photo right; mirrored still flips that default. */
+          html[data-cv-mirrored="true"]
+            [data-dossier-document="cv"][data-cv-template="brief"][data-cv-layout="classic"]
+            [data-cv-page="0"]
+            [data-cv-header] {
+            flex-direction: row !important;
+          }
+''',
+              '\n',
+          )
+
+          Path("tests/unit/cv-top-area-package15.test.ts").write_text(r'''import { describe, expect, test } from "bun:test";
+          import { resolveCvInfoPosition } from "../../src/components/cv/layout";
+          import {
+            normalizeCvPhotoPlacement,
+            resolveCvPhotoPosition,
+          } from "../../src/components/cv/photo-place";
+
+          describe("Package 1.5 CV top-area state", () => {
+            test("explicit photo positions are mutually exclusive and survive normalization", () => {
+              expect(normalizeCvPhotoPlacement({ mode: "left" }).mode).toBe("left");
+              expect(normalizeCvPhotoPlacement({ mode: "right" }).mode).toBe("right");
+              expect(normalizeCvPhotoPlacement({ mode: "frei" }).mode).toBe("frei");
+            });
+
+            test("legacy automatic Brief/Standard appearance maps right normally and left mirrored", () => {
+              const place = normalizeCvPhotoPlacement({ mode: "auto" });
+              expect(
+                resolveCvPhotoPosition(place, {
+                  template: "brief",
+                  layout: "classic",
+                  legacyMirrored: false,
+                }),
+              ).toBe("right");
+              expect(
+                resolveCvPhotoPosition(place, {
+                  template: "brief",
+                  layout: "classic",
+                  legacyMirrored: true,
+                }),
+              ).toBe("left");
+            });
+
+            test("legacy classic non-Brief and Sidebar mappings preserve their old visual side", () => {
+              const place = normalizeCvPhotoPlacement({ mode: "auto" });
+              expect(
+                resolveCvPhotoPosition(place, {
+                  template: "freundlich",
+                  layout: "classic",
+                  legacyMirrored: false,
+                }),
+              ).toBe("left");
+              expect(
+                resolveCvPhotoPosition(place, {
+                  template: "freundlich",
+                  layout: "classic",
+                  legacyMirrored: true,
+                }),
+              ).toBe("right");
+              expect(
+                resolveCvPhotoPosition(place, {
+                  template: "terracotta",
+                  layout: "modern",
+                  legacyMirrored: false,
+                }),
+              ).toBe("left");
+              expect(
+                resolveCvPhotoPosition(place, {
+                  template: "terracotta",
+                  layout: "modern",
+                  legacyMirrored: true,
+                }),
+              ).toBe("right");
+            });
+
+            test("explicit photo side ignores legacy mirror and free stays free", () => {
+              for (const legacyMirrored of [false, true]) {
+                expect(
+                  resolveCvPhotoPosition({ mode: "left" }, {
+                    template: "brief",
+                    layout: "classic",
+                    legacyMirrored,
+                  }),
+                ).toBe("left");
+                expect(
+                  resolveCvPhotoPosition({ mode: "right" }, {
+                    template: "brief",
+                    layout: "classic",
+                    legacyMirrored,
+                  }),
+                ).toBe("right");
+                expect(
+                  resolveCvPhotoPosition({ mode: "frei" }, {
+                    template: "brief",
+                    layout: "classic",
+                    legacyMirrored,
+                  }),
+                ).toBe("free");
+              }
+            });
+
+            test("new info position wins over legacy mirror fallback", () => {
+              expect(resolveCvInfoPosition(undefined, false)).toBe("standard");
+              expect(resolveCvInfoPosition(undefined, true)).toBe("mirrored");
+              expect(resolveCvInfoPosition("standard", true)).toBe("standard");
+              expect(resolveCvInfoPosition("mirrored", false)).toBe("mirrored");
+            });
+          });
+          '''.replace("          ", "", 1))
+          PY
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Targeted Package 1.5 checks
+        run: |
+          bun test tests/unit/cv-top-area-package15.test.ts tests/unit/cv-top-area-package1.test.ts tests/unit/cv-layout.test.ts
+          bun run typecheck
+          bun run build
+
+      - name: Commit focused Package 1.5 implementation
+        shell: bash
+        run: |
+          git config user.name "cv-package15-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/components/cv/photo-place.ts src/components/cv/layout.ts src/components/cv/portable-state.ts src/components/cv/CvForm.tsx src/components/cv/CvCanvasBase.tsx src/components/cv/layout-options.css tests/unit/cv-top-area-package15.test.ts
+          git diff --cached --check
+          git commit -m "feat(cv): decouple photo and info positioning"
+          git push origin HEAD:dev
