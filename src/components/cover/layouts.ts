@@ -1,7 +1,7 @@
 import { DEFAULTS } from "@/default-config";
 import { dossierDefaultFontKey } from "@/lib/dossier-theme";
 import type { Block, BlockStyle, ColorSlot, CoverData, CustomField, TemplateId } from "./types";
-import { DEFAULT_COVER_BEILAGEN } from "./types";
+import { coverAttachmentValues } from "./types";
 import { buildBlocks as buildBaseBlocks } from "./layouts-base";
 import type { StyleOverrides } from "./layouts-base";
 import { isFreshTemplate } from "./fresh-templates";
@@ -505,9 +505,7 @@ export function buildBlocks(
   );
 
   const companyVisible = data.showBetriebOnCover === true;
-  const beilagen = DEFAULT_COVER_BEILAGEN.map(
-    (fallback, index) => data.beilagen?.[index] ?? fallback,
-  ).filter((value) => value.trim());
+  const beilagen = coverAttachmentValues(data).filter((value) => value.trim());
   const beilagenVisible = data.showBeilagenOnCover !== false && beilagen.length > 0;
 
   // Ausblenden entfernt nur die Darstellung. Die Firmendaten bleiben im

@@ -1,4 +1,4 @@
-import { DEFAULT_COVER_BEILAGEN } from "@/components/cover/types";
+import { coverAttachmentValues } from "@/components/cover/types";
 import { CV_SECTION_LABELS, entryFilled, type CvData, type CvEntry } from "@/components/cv/types";
 import type { CoverPdfDocument, CvPdfDocument, LetterPdfDocument } from "@/lib/dossier-pdf-document";
 import { downloadBlob } from "@/lib/download";
@@ -174,9 +174,7 @@ function coverPage(document: CoverPdfDocument, images: EmbeddedImage[]) {
   const fullName = [data.vorname, data.nachname].filter(Boolean).join(" ");
   const placeDate = [data.ort, data.datum].filter(Boolean).join(", ");
   const contact = [data.adresse, data.plzOrt, data.telefon, data.email, data.geburtsdatum].filter(Boolean);
-  const attachments = DEFAULT_COVER_BEILAGEN.map(
-    (fallback, index) => data.beilagen?.[index] ?? fallback,
-  ).filter((value) => value.trim());
+  const attachments = coverAttachmentValues(data).filter((value) => value.trim());
   const kicker = (data.kicker || "Bewerbung um eine Lehrstelle als").toUpperCase();
   const eyebrow = (data.eyebrow || "Bewerbung").toUpperCase();
 

@@ -17,6 +17,7 @@ import {
 import { FONT_LABELS, TEMPLATES, type FontKey } from "@/components/cover/types";
 import { DEFAULTS } from "@/default-config";
 import { ResizableEditorPanel } from "@/components/dossier/ResizableEditorPanel";
+import { AttachmentListEditor } from "@/components/dossier/AttachmentListEditor";
 import { SaveStatus, type SaveState } from "@/components/dossier/SaveStatus";
 import { LetterDocument, type LetterPaginationState } from "@/components/letter/LetterDocument";
 import { LetterLayoutControls } from "@/components/letter/LetterLayoutControls";
@@ -43,6 +44,7 @@ import {
   LETTER_STORAGE_KEY,
   defaultLetterColors,
   emptyLetterDesign,
+  letterAttachmentValues,
   normalizeLetterDesign,
   type LetterData,
   type LetterDesign,
@@ -998,20 +1000,10 @@ function Anschreiben() {
                   />
                   <span>Im Motivationsschreiben anzeigen</span>
                 </label>
-                {DEFAULT_LETTER_BEILAGEN.map((fallback, index) => (
-                  <Field
-                    key={index}
-                    label={`Beilage ${index + 1}`}
-                    value={data.beilagen?.[index] ?? fallback}
-                    onChange={(value) => {
-                      const next = DEFAULT_LETTER_BEILAGEN.map(
-                        (entryFallback, entryIndex) => data.beilagen?.[entryIndex] ?? entryFallback,
-                      );
-                      next[index] = value;
-                      patch({ beilagen: next });
-                    }}
-                  />
-                ))}
+                <AttachmentListEditor
+                  values={letterAttachmentValues(data)}
+                  onChange={(beilagen) => patch({ beilagen })}
+                />
               </div>
             </Section>
 

@@ -106,6 +106,11 @@ export { LETTER_STORAGE_KEY };
 
 export const DEFAULT_LETTER_BEILAGEN = ["Lebenslauf", "Zeugnis"] as const;
 
+/** Fehlendes Feld migrieren, ein bewusst leeres Feld aber respektieren. */
+export function letterAttachmentValues(data: Pick<LetterData, "beilagen">): string[] {
+  return Array.isArray(data.beilagen) ? [...data.beilagen] : [...DEFAULT_LETTER_BEILAGEN];
+}
+
 export const DEMO_LETTER: LetterData = {
   absenderName: "Lea Müller",
   absenderAdresse: "Dorfstrasse 12",

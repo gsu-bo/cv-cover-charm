@@ -172,7 +172,7 @@ const prefill = (d: CoverData): CoverData => ({
   kicker: d.kicker || DEFAULTS.KICKER,
   showBetriebOnCover: d.showBetriebOnCover === true,
   showBeilagenOnCover: d.showBeilagenOnCover !== false,
-  beilagen: DEFAULT_COVER_BEILAGEN.map((fallback, index) => d.beilagen?.[index] ?? fallback),
+  beilagen: Array.isArray(d.beilagen) ? [...d.beilagen] : [...DEFAULT_COVER_BEILAGEN],
 });
 
 function defaultColors(templateId: TemplateId): Record<string, string> {
