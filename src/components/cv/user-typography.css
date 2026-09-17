@@ -117,6 +117,26 @@ html[data-dossier-template][data-dossier-template][data-dossier-template]
 }
 
 /*
+ * A template may intentionally hide its default separator (Glow and narrow
+ * sidebars are examples). That remains valid until the student explicitly
+ * chooses "Ganze Breite". The adapter marks only that explicit choice, so the
+ * rule can outrank template polish without turning a template default into a
+ * permanent user override.
+ */
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-dossier-document="cv"][data-dossier-document="cv"]
+  [data-cv-user-heading-rule="full"][data-cv-user-heading-rule="full"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-accent="section"] {
+  display: block !important;
+  width: auto !important;
+  max-width: none !important;
+  flex: 1 0 4mm !important;
+  min-width: 4mm !important;
+  margin-right: 0 !important;
+}
+
+/*
  * headingRule="none" does not render the semantic [data-cv-accent="section"]
  * node at all. A few legacy/template layouts additionally drew a border or
  * shadow on the heading row itself, which made "Keine" still look like a rule.
