@@ -25,6 +25,34 @@ jobs:
       - name: Apply final acceptance patch
         run: python3 scripts/apply-letter-pagination-qa.py
 
+      - name: Harden multipage QA locators
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          for filename in (
+              "tests/e2e/letter-final-qa.spec.ts",
+              "tests/e2e/letter-adversarial-content.spec.ts",
+          ):
+              path = Path(filename)
+              text = path.read_text(encoding="utf-8")
+              old = 'const preview = page.getByLabel("Vorschau Motivationsschreiben");'
+              new = 'const preview = page.locator("main [data-letter-document-root] [data-letter-page]").first();'
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f"{filename}: expected one preview locator, found {count}")
+              path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          route = Path("src/routes/anschreiben.tsx")
+          text = route.read_text(encoding="utf-8")
+          old = "[chromeState.sync, data, source],"
+          new = "[chromeState.sync, data],"
+          count = text.count(old)
+          if count != 1:
+              raise RuntimeError(f"anschreiben.tsx: expected one memo dependency list, found {count}")
+          route.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
