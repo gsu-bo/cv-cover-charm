@@ -23,7 +23,18 @@ jobs:
           fetch-depth: 0
 
       - name: Apply final acceptance patch
-        run: python3 scripts/apply-letter-pagination-qa.py
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("scripts/apply-letter-pagination-qa.py")
+          text = path.read_text(encoding="utf-8")
+          text = text.replace(
+              "const style = getComputedStyle(element);",
+              "const style = window.getComputedStyle(element);",
+          )
+          path.write_text(text, encoding="utf-8")
+          PY
+          python3 scripts/apply-letter-pagination-qa.py
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
