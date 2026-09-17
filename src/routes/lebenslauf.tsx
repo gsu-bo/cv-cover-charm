@@ -1154,9 +1154,6 @@ function Lebenslauf() {
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-sm font-semibold sm:text-base">Lebenslauf</h1>
             <div className="flex min-w-0 items-center gap-2">
-              <p className="hidden truncate text-xs text-muted-foreground sm:block">
-                Teil deines Bewerbungsdossiers
-              </p>
               <SaveStatus state={saveState} />
             </div>
           </div>
@@ -1429,10 +1426,6 @@ function Lebenslauf() {
       <div className="relative flex min-h-0 flex-1">
         <ResizableEditorPanel open={panelOpen}>
           <div className="flex w-[min(92vw,420px)] max-w-full flex-col gap-3 p-3 sm:w-full">
-            <div className="px-1">
-              <span className="text-xs text-muted-foreground">Alles ausfüllen, dann als PDF.</span>
-            </div>
-
             {layoutWarnings.length ? (
               <div
                 aria-live="polite"
