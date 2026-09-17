@@ -1,0 +1,47 @@
+/*
+ * Multi-page motivation-letter flow.
+ *
+ * LetterCanvas remains the renderer for one physical A4 page. LetterDocument
+ * supplies page-scoped body fragments and these selectors remove first-page
+ * semantic sections from continuation pages without creating a second visual
+ * implementation of the letter.
+ */
+[data-letter-continuation-page] [data-letter-section="sender"],
+[data-letter-continuation-page] [data-letter-section="recipient"],
+[data-letter-continuation-page] [data-letter-section="date"],
+[data-letter-continuation-page] [data-letter-pdf-text="subject"],
+[data-letter-continuation-page] [data-letter-pdf-text="subject"] + *,
+[data-letter-continuation-page] [data-letter-pdf-text="salutation"] {
+  display: none !important;
+}
+
+[data-letter-continuation-page]
+  [data-letter-text-layer]
+  > div:has(> [data-letter-pdf-text="subject"]) {
+  margin-top: 0 !important;
+}
+
+/* Closing, signature and body-owned attachments exist on the final page only. */
+[data-letter-nonfinal-page]
+  [data-letter-flow-zone]
+  > div:has(> [data-letter-pdf-text="closing"]),
+[data-letter-nonfinal-page]
+  [data-letter-flow-zone]
+  > div:has([data-letter-pdf-text="attachments-heading"]) {
+  display: none !important;
+}
+
+/* Measurement canvases are real-layout probes, never export pages. */
+[data-letter-pagination-measurements] {
+  position: fixed;
+  left: -40000px;
+  top: 0;
+  width: 794px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1000;
+}
+
+[data-letter-pagination-measurements] [data-letter-measurement-page] {
+  box-shadow: none !important;
+}

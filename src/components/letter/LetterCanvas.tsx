@@ -1,540 +1,428 @@
-import type { LetterFlowImage } from "./types";
+import { useEffect, useMemo, useRef } from "react";
+import { FONT_STACKS } from "@/components/cover/types";
+import { cvPalette, onColorRoles } from "@/components/cv/palette";
+import { DossierHeaderFooterChrome } from "@/components/dossier/DossierHeaderFooterChrome";
+import type { DossierChromeContact, DossierChromeOptions } from "@/lib/dossier-chrome";
+import { effectiveDossierFont } from "@/lib/dossier-theme";
+import {
+  defaultHeaderModeForTemplate,
+  defaultFooterModeForTemplate,
+  resolveTemplateChromeOptions,
+} from "@/lib/template-chrome";
+import { letterPageGeometry, visibleLetterAttachments } from "./layout-system";
+import type { LetterData, LetterDesign, LetterFlowImage } from "./types";
+import { letterRichHtml, plainTextToRichHtml } from "./rich-text";
+import { LetterFlowImages } from "./LetterFlowImages";
+import { LetterSheetBackground } from "./LetterSheetBackground";
+import {
+  isWarmFirstPageCompactHeader,
+  WARM_FIRST_PAGE_HEADER_HEIGHT_MM,
+} from "./warm-letter-layout";
 
-export type LetterPageFragment = {
-  pageIndex: number;
-  finalPage: boolean;
-  bodyHtml: string;
-  images: LetterFlowImage[];
-};
-
-export type LetterPaginationIssue = {
-  code: "measurement-failed" | "indivisible-block-too-tall" | "image-too-tall";
-  message: string;
-  blockType?: string;
-};
-
-export type LetterPaginationResult = {
-  pages: LetterPageFragment[];
-  issue: LetterPaginationIssue | null;
-};
-
-type BlockUnit = {
-  kind: "block";
-  html: string;
-  splittable: boolean;
-  label: string;
-};
-
-type TableRowUnit = {
-  kind: "table-row";
-  tableKey: string;
-  rowHtml: string;
-  label: string;
-};
-
-type PaginationUnit = BlockUnit | TableRowUnit;
-
-type ImagePlacement = {
-  image: LetterFlowImage;
-  pageIndex: number;
-  costPx: number;
-};
-
-const FIT_EPSILON_PX = 1;
-const EMPTY_BODY_HTML = '<div data-align="justify"><br></div>';
-
-function numericCss(value: string): number {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : 0;
+function Lines({
+  values,
+  align = "left",
+}: {
+  values: Array<string | undefined>;
+  align?: "left" | "right";
+}) {
+  const visible = values.filter((value): value is string => !!value?.trim());
+  if (!visible.length) return null;
+  return (
+    <div style={{ textAlign: align }}>
+      {visible.map((value, index) => (
+        <div key={`${value}-${index}`}>{value}</div>
+      ))}
+    </div>
+  );
 }
 
-function visibleElementRect(element: Element): DOMRect | null {
-  if (!(element instanceof HTMLElement)) return null;
-  const style = window.getComputedStyle(element);
-  if (style.display === "none" || style.visibility === "hidden") return null;
-  const rect = element.getBoundingClientRect();
-  return rect.width > 0 || rect.height > 0 ? rect : null;
+function Separator({ color, marker }: { color: string; marker: string }) {
+  return (
+    <hr
+      data-letter-pdf-rule={marker}
+      className="my-[4mm] border-0 border-t"
+      style={{ borderColor: color, opacity: 0.72 }}
+    />
+  );
 }
 
-function probe(root: HTMLElement, name: string): HTMLElement | null {
-  return root.querySelector<HTMLElement>(`[data-letter-pagination-probe="${name}"]`);
+/** Legacy/SSR adapter only. Live DossierChromeState is the single source of truth. */
+function legacyChromeFromDesign(design: LetterDesign): DossierChromeOptions {
+  return {
+    headerMode: design.headerMode ?? defaultHeaderModeForTemplate(design.template),
+    headerDifferentFirstPage: design.headerDifferentFirstPage,
+    headerShowName: design.headerShowName !== false,
+    headerShowAddress: design.headerShowAddress !== false,
+    headerShowPhone: design.headerShowPhone !== false,
+    headerShowEmail: design.headerShowEmail !== false,
+    headerHeightMm: design.headerHeightMm ?? null,
+    headerGapMm: 12,
+    headerTextLayout: design.headerTextLayout === "inline" ? "inline" : "stacked",
+    headerBackgroundColor: design.headerBackgroundColor ?? null,
+    headerGradientColor: design.headerGradientColor ?? null,
+    footerMode:
+      design.footerMode === "attachments"
+        ? "details"
+        : design.footerMode === "none"
+          ? "none"
+          : design.footerMode === "compact"
+            ? "compact"
+            : defaultFooterModeForTemplate(design.template),
+    footerHeightMm: design.footerHeightMm ?? null,
+    footerTextLayout: design.footerTextLayout === "stacked" ? "stacked" : "inline",
+    footerBackgroundColor: design.footerBackgroundColor ?? null,
+    footerGradientColor: design.footerGradientColor ?? null,
+    borderEnabled: design.chromeBorderEnabled === true,
+    borderColor: design.chromeBorderColor ?? null,
+    borderWidthMm: design.chromeBorderWidthMm ?? 0.6,
+    textFont: design.chromeTextFont ?? null,
+  };
 }
 
-function bodyCapacityPx(root: HTMLElement, name: string, finalPage: boolean): number | null {
-  const host = probe(root, name);
-  const layer = host?.querySelector<HTMLElement>("[data-letter-text-layer]");
-  const body = host?.querySelector<HTMLElement>("[data-letter-pdf-richtext='body']");
-  if (!host || !layer || !body) return null;
-
-  const layerRect = layer.getBoundingClientRect();
-  const bodyRect = body.getBoundingClientRect();
-  if (layerRect.height <= 0 || bodyRect.top < layerRect.top - FIT_EPSILON_PX) return null;
-
-  if (!finalPage) return Math.max(0, layerRect.bottom - bodyRect.top);
-
-  let tailBottom = bodyRect.bottom;
-  let sibling = body.nextElementSibling;
-  while (sibling) {
-    const rect = visibleElementRect(sibling);
-    if (rect) tailBottom = Math.max(tailBottom, rect.bottom);
-    sibling = sibling.nextElementSibling;
-  }
-
-  // The final probes contain one normal body line. Add the free area below the
-  // measured closing/signature/attachments tail to that measured body height.
-  return Math.max(0, bodyRect.height + (layerRect.bottom - tailBottom));
+function resolveLetterChrome(
+  design: LetterDesign,
+  chromeOptions?: DossierChromeOptions,
+): DossierChromeOptions {
+  const requested = chromeOptions ?? legacyChromeFromDesign(design);
+  return resolveTemplateChromeOptions(design.template, design.colors, requested);
 }
 
-function tableRows(table: HTMLTableElement, tableKey: string): TableRowUnit[] {
-  return Array.from(table.querySelectorAll<HTMLTableRowElement>(":scope > tbody > tr, :scope > tr")).map(
-    (row) => ({
-      kind: "table-row",
-      tableKey,
-      rowHtml: row.outerHTML,
-      label: "Tabellenzeile",
+export function LetterCanvas({
+  data,
+  design,
+  exportMode = false,
+  chromeOptions,
+  chromeContact,
+  onOverflowChange,
+  onImageChange,
+  onImageRemove,
+  ariaLabel = "Vorschau Motivationsschreiben",
+}: {
+  data: LetterData;
+  design: LetterDesign;
+  exportMode?: boolean;
+  chromeOptions?: DossierChromeOptions;
+  chromeContact?: DossierChromeContact;
+  onOverflowChange?: (overflow: boolean) => void;
+  onImageChange?: (id: string, patch: Partial<LetterFlowImage>) => void;
+  onImageRemove?: (id: string) => void;
+  ariaLabel?: string;
+}) {
+  const chrome = resolveLetterChrome(design, chromeOptions);
+  const effectiveDesign = useMemo<LetterDesign>(
+    () => ({
+      ...design,
+      headerMode: chrome.headerMode,
+      headerDifferentFirstPage: chrome.headerDifferentFirstPage,
+      headerShowName: chrome.headerShowName,
+      headerShowAddress: chrome.headerShowAddress,
+      headerShowPhone: chrome.headerShowPhone,
+      headerShowEmail: chrome.headerShowEmail,
+      headerHeightMm: chrome.headerHeightMm,
+      headerTextLayout: chrome.headerTextLayout,
+      headerBackgroundColor: chrome.headerBackgroundColor,
+      headerGradientColor: chrome.headerGradientColor,
+      footerMode:
+        chrome.footerMode === "details"
+          ? "attachments"
+          : chrome.footerMode === "none"
+            ? "none"
+            : "compact",
+      footerHeightMm: chrome.footerHeightMm,
+      footerTextLayout: chrome.footerTextLayout,
+      footerBackgroundColor: chrome.footerBackgroundColor,
+      footerGradientColor: chrome.footerGradientColor,
+      chromeBorderEnabled: chrome.borderEnabled,
+      chromeBorderColor: chrome.borderColor,
+      chromeBorderWidthMm: chrome.borderWidthMm,
+      chromeTextFont: chrome.textFont,
     }),
+    [chrome, design],
   );
-}
-
-function measuredUnits(sourceBody: HTMLElement): PaginationUnit[] {
-  const units: PaginationUnit[] = [];
-  Array.from(sourceBody.children).forEach((element, index) => {
-    if (!(element instanceof HTMLElement)) return;
-    if (element instanceof HTMLTableElement) {
-      units.push(...tableRows(element, `table-${index}`));
-      return;
-    }
-
-    const tag = element.tagName.toLowerCase();
-    const list = !!element.dataset.list;
-    const label =
-      tag === "hr"
-        ? "Trennlinie"
-        : list
-          ? "Listeneintrag"
-          : tag === "div" || tag === "p"
-            ? "Absatz"
-            : "Inhaltsblock";
-    units.push({
-      kind: "block",
-      html: element.outerHTML,
-      splittable: (tag === "div" || tag === "p") && !list,
-      label,
-    });
+  const geometry = letterPageGeometry(data, effectiveDesign, {
+    headerGapMm: chrome.headerGapMm ?? 12,
   });
-  return units;
-}
-
-function serializeUnits(units: PaginationUnit[]): string {
-  if (!units.length) return "";
-  let output = "";
-  let index = 0;
-
-  while (index < units.length) {
-    const unit = units[index];
-    if (unit.kind !== "table-row") {
-      output += unit.html;
-      index += 1;
-      continue;
-    }
-
-    const rows: string[] = [];
-    const tableKey = unit.tableKey;
-    while (index < units.length) {
-      const row = units[index];
-      if (row.kind !== "table-row" || row.tableKey !== tableKey) break;
-      rows.push(row.rowHtml);
-      index += 1;
-    }
-    output += `<table data-letter-table><tbody>${rows.join("")}</tbody></table>`;
-  }
-
-  return output;
-}
-
-function createHeightMeasurer(sourceBody: HTMLElement) {
-  const sourceRect = sourceBody.getBoundingClientRect();
-  const sourceStyle = window.getComputedStyle(sourceBody);
-  const sandbox = document.createElement("div");
-  sandbox.dataset.letterPdfRichtext = "pagination-measure";
-  sandbox.className = sourceBody.className;
-  Object.assign(sandbox.style, {
-    position: "fixed",
-    left: "-50000px",
-    top: "0",
-    width: `${sourceRect.width}px`,
-    height: "auto",
-    minHeight: "0",
-    maxHeight: "none",
-    overflow: "visible",
-    visibility: "hidden",
-    pointerEvents: "none",
-    fontFamily: sourceStyle.fontFamily,
-    fontSize: sourceStyle.fontSize,
-    fontWeight: sourceStyle.fontWeight,
-    fontStyle: sourceStyle.fontStyle,
-    lineHeight: sourceStyle.lineHeight,
-    letterSpacing: sourceStyle.letterSpacing,
-    color: sourceStyle.color,
-  });
-  document.body.appendChild(sandbox);
-
-  const measure = (html: string): number => {
-    if (!html.trim()) return 0;
-    sandbox.innerHTML = html;
-    const children = Array.from(sandbox.children).filter(
-      (child): child is HTMLElement => child instanceof HTMLElement,
-    );
-    if (!children.length) return 0;
-
-    let top = Number.POSITIVE_INFINITY;
-    let bottom = Number.NEGATIVE_INFINITY;
-    for (const child of children) {
-      const rect = child.getBoundingClientRect();
-      const style = window.getComputedStyle(child);
-      top = Math.min(top, rect.top - numericCss(style.marginTop));
-      bottom = Math.max(bottom, rect.bottom + numericCss(style.marginBottom));
-    }
-    return Number.isFinite(top) && Number.isFinite(bottom) ? Math.max(0, bottom - top) : 0;
-  };
-
-  return {
-    measure,
-    dispose: () => sandbox.remove(),
-  };
-}
-
-type SplitPoint = { node: Text; offset: number };
-
-function splitPoints(element: HTMLElement): SplitPoint[] {
-  const points: SplitPoint[] = [];
-  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-  let node = walker.nextNode();
-  while (node) {
-    const text = node as Text;
-    const value = text.nodeValue ?? "";
-    for (const match of value.matchAll(/\s+/g)) {
-      const offset = (match.index ?? 0) + match[0].length;
-      if (offset > 0 && offset < value.length) points.push({ node: text, offset });
-    }
-    if (value.length > 0) points.push({ node: text, offset: value.length });
-    node = walker.nextNode();
-  }
-  return points;
-}
-
-function splitElementAt(
-  element: HTMLElement,
-  point: SplitPoint,
-): { prefixHtml: string; suffixHtml: string } | null {
-  const prefixRange = document.createRange();
-  prefixRange.selectNodeContents(element);
-  prefixRange.setEnd(point.node, point.offset);
-  const suffixRange = document.createRange();
-  suffixRange.selectNodeContents(element);
-  suffixRange.setStart(point.node, point.offset);
-
-  const prefix = element.cloneNode(false) as HTMLElement;
-  const suffix = element.cloneNode(false) as HTMLElement;
-  prefix.appendChild(prefixRange.cloneContents());
-  suffix.appendChild(suffixRange.cloneContents());
-
-  if (!prefix.textContent?.trim() || !suffix.textContent?.trim()) return null;
-  return { prefixHtml: prefix.outerHTML, suffixHtml: suffix.outerHTML };
-}
-
-function splitBlockToFit(
-  unit: BlockUnit,
-  capacityPx: number,
-  measure: (html: string) => number,
-): { prefix: BlockUnit; suffix: BlockUnit } | null {
-  if (!unit.splittable || capacityPx <= FIT_EPSILON_PX) return null;
-
-  const template = document.createElement("template");
-  template.innerHTML = unit.html;
-  const element = template.content.firstElementChild;
-  if (!(element instanceof HTMLElement)) return null;
-  const points = splitPoints(element);
-  if (!points.length) return null;
-
-  let low = 0;
-  let high = points.length - 1;
-  let best: { prefixHtml: string; suffixHtml: string } | null = null;
-
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    const split = splitElementAt(element, points[mid]);
-    if (!split) {
-      high = mid - 1;
-      continue;
-    }
-    if (measure(split.prefixHtml) <= capacityPx + FIT_EPSILON_PX) {
-      best = split;
-      low = mid + 1;
-    } else {
-      high = mid - 1;
-    }
-  }
-
-  if (!best) return null;
-  return {
-    prefix: { ...unit, html: best.prefixHtml },
-    suffix: { ...unit, html: best.suffixHtml },
-  };
-}
-
-function issueForUnit(unit: PaginationUnit): LetterPaginationIssue {
-  return {
-    code: "indivisible-block-too-tall",
-    blockType: unit.label,
-    message:
-      unit.kind === "table-row"
-        ? "Eine Tabellenzeile ist höher als der nutzbare Seitenbereich und kann nicht sicher geteilt werden. Verkleinere den Inhalt dieser Zeile."
-        : `${unit.label} ist höher als der nutzbare Seitenbereich und kann nicht sicher geteilt werden. Teile oder verkleinere diesen Inhalt.`,
-  };
-}
-
-function takePage(
-  source: PaginationUnit[],
-  capacityPx: number,
-  measure: (html: string) => number,
-): { taken: PaginationUnit[]; remaining: PaginationUnit[]; issue: LetterPaginationIssue | null } {
-  const remaining = [...source];
-  const taken: PaginationUnit[] = [];
-
-  while (remaining.length) {
-    const next = remaining[0];
-    const candidate = [...taken, next];
-    if (measure(serializeUnits(candidate)) <= capacityPx + FIT_EPSILON_PX) {
-      taken.push(remaining.shift()!);
-      continue;
-    }
-
-    // Prefer a semantic page break before the block. Only a block that cannot
-    // fit on an otherwise empty page is split internally.
-    if (taken.length) break;
-
-    if (next.kind === "block" && next.splittable) {
-      const split = splitBlockToFit(next, capacityPx, measure);
-      if (split) {
-        taken.push(split.prefix);
-        remaining[0] = split.suffix;
-        break;
-      }
-    }
-    return { taken, remaining, issue: issueForUnit(next) };
-  }
-
-  return { taken, remaining, issue: null };
-}
-
-function measuredImagePlacements(
-  root: HTMLElement,
-  images: LetterFlowImage[],
-  firstFlowCapacity: number,
-  continuationFlowCapacity: number,
-): { placements: ImagePlacement[]; issue: LetterPaginationIssue | null } {
-  if (!images.length) return { placements: [], issue: null };
-  const host = probe(root, "image-source");
-  const body = host?.querySelector<HTMLElement>("[data-letter-pdf-richtext='body']");
-  if (!host || !body) {
-    return {
-      placements: [],
-      issue: { code: "measurement-failed", message: "Bilder konnten nicht für den Seitenumbruch vermessen werden." },
-    };
-  }
-
-  const bodyTop = body.getBoundingClientRect().top;
-  const nodes = new Map<string, HTMLElement>();
-  for (const node of host.querySelectorAll<HTMLElement>("[data-letter-flow-image]")) {
-    const id = node.dataset.letterFlowImage;
-    if (id) nodes.set(id, node);
-  }
-
-  const placements: ImagePlacement[] = [];
-  for (const image of images) {
-    const node = nodes.get(image.id);
-    if (!node) continue;
-    const rect = node.getBoundingClientRect();
-    const style = window.getComputedStyle(node);
-    const costPx = rect.height + numericCss(style.marginTop) + numericCss(style.marginBottom);
-    if (costPx > continuationFlowCapacity + FIT_EPSILON_PX) {
-      return {
-        placements: [],
-        issue: {
-          code: "image-too-tall",
-          blockType: "Bild",
-          message:
-            "Ein eingebettetes Bild ist höher als der nutzbare Seitenbereich. Verkleinere das Bild; es wird nicht abgeschnitten.",
-        },
-      };
-    }
-
-    const topFromBody = Math.max(0, rect.top - bodyTop);
-    const pageIndex = topFromBody + rect.height <= firstFlowCapacity + FIT_EPSILON_PX ? 0 : 1;
-    placements.push({
-      image: pageIndex === 0 ? image : { ...image, topMm: 0 },
-      pageIndex,
-      costPx,
-    });
-  }
-  return { placements, issue: null };
-}
-
-function imagesForPage(placements: ImagePlacement[], pageIndex: number): LetterFlowImage[] {
-  return placements.filter((placement) => placement.pageIndex === pageIndex).map(({ image }) => image);
-}
-
-function imageCostForPage(placements: ImagePlacement[], pageIndex: number): number {
-  return placements
-    .filter((placement) => placement.pageIndex === pageIndex)
-    .reduce((sum, placement) => sum + placement.costPx, 0);
-}
-
-/**
- * Convert measured semantic body blocks into physical A4 page fragments.
- * Capacity is taken from live LetterCanvas probes; no character/word/page-size
- * constants decide where a break occurs.
- */
-export function paginateMeasuredLetter(
-  measurementRoot: HTMLElement,
-  images: LetterFlowImage[] = [],
-): LetterPaginationResult {
-  const firstFlow = bodyCapacityPx(measurementRoot, "first-flow", false);
-  const firstFinal = bodyCapacityPx(measurementRoot, "first-final", true);
-  const continuationFlow = bodyCapacityPx(measurementRoot, "continuation-flow", false);
-  const continuationFinal = bodyCapacityPx(measurementRoot, "continuation-final", true);
-  const sourceBody = probe(measurementRoot, "source")?.querySelector<HTMLElement>(
-    "[data-letter-pdf-richtext='body']",
+  const contentWidthMm = geometry.content.width;
+  const sourcePalette = cvPalette(design.colors);
+  const palette =
+    design.template === "brief"
+      ? { ink: "#111111", muted: "#4b5563", accent: "#111111", paper: "#ffffff" }
+      : design.colors.sheet
+        ? sourcePalette
+        : {
+            ink: "#111111",
+            muted: "#4b5563",
+            accent: sourcePalette.accent,
+            paper: "#ffffff",
+          };
+  const fontFamily =
+    design.template === "brief"
+      ? FONT_STACKS[design.font]
+      : effectiveDossierFont(design.template, design.fontOverride);
+  const senderAlign = design.senderAlign ?? "left";
+  const recipientAlign = design.recipientAlign ?? "left";
+  const dateAlign = design.dateAlign ?? "left";
+  const senderIntegrated = geometry.effectiveHeaderMode === "contact";
+  const warmCompactHeader = isWarmFirstPageCompactHeader(
+    design.template,
+    geometry.effectiveHeaderMode,
+    geometry.pageIndex,
   );
+  const warmPrimary =
+    design.colors.primary ??
+    design.colors.accent ??
+    design.colors.secondary ??
+    sourcePalette.accent;
+  const warmHeaderInk = onColorRoles(
+    warmPrimary,
+    design.colors.secondary ?? design.colors.accent ?? sourcePalette.accent,
+  ).ink;
+  const senderOffsetY = chrome.headerContentOffsetYMm ?? 0;
+  const recipientOffsetY = chrome.letterRecipientOffsetYMm ?? 0;
+  const senderTransform = senderOffsetY === 0 ? undefined : `translateY(${senderOffsetY}mm)`;
+  const recipientTransform =
+    recipientOffsetY === 0 ? undefined : `translateY(${recipientOffsetY}mm)`;
+  const recipientTopMargin = senderIntegrated
+    ? "mt-[1mm]"
+    : warmCompactHeader
+      ? "mt-0"
+      : "mt-[6mm]";
+  const beilagen = visibleLetterAttachments(data);
+  const showBeilagen = data.showBeilagen !== false && beilagen.length > 0;
+  const showBeilagenInBody = showBeilagen && geometry.requestedFooterMode !== "attachments";
+  const placeholder =
+    "Hier entsteht dein persönliches Motivationsschreiben. Erkläre, weshalb du dich für diesen Beruf und diesen Lehrbetrieb interessierst und was du mitbringst.";
+  const bodyHtml = data.richTextHtml?.trim()
+    ? letterRichHtml(data.richTextHtml, data.text)
+    : data.text
+      ? plainTextToRichHtml(data.text)
+      : exportMode
+        ? ""
+        : plainTextToRichHtml(placeholder);
+  const textLayerRef = useRef<HTMLDivElement>(null);
 
-  if (
-    firstFlow === null ||
-    firstFinal === null ||
-    continuationFlow === null ||
-    continuationFinal === null ||
-    !sourceBody
-  ) {
-    return {
-      pages: [],
-      issue: {
-        code: "measurement-failed",
-        message: "Der Seitenumbruch konnte nicht zuverlässig vermessen werden. Bitte lade die Ansicht neu.",
-      },
+  useEffect(() => {
+    if (!onOverflowChange) return;
+    const textLayer = textLayerRef.current;
+    if (!textLayer) return;
+
+    const measure = () => onOverflowChange(textLayer.scrollHeight > textLayer.clientHeight + 1);
+    const frame = requestAnimationFrame(() => requestAnimationFrame(measure));
+    const observer = new ResizeObserver(measure);
+    observer.observe(textLayer);
+    void document.fonts?.ready.then(measure);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
     };
-  }
+  }, [bodyHtml, data, effectiveDesign, onOverflowChange]);
 
-  const measurer = createHeightMeasurer(sourceBody);
-  try {
-    const units = measuredUnits(sourceBody);
-    const imageResult = measuredImagePlacements(
-      measurementRoot,
-      images,
-      firstFlow,
-      continuationFlow,
-    );
-    if (imageResult.issue) return { pages: [], issue: imageResult.issue };
-    const placements = imageResult.placements;
-
-    const capacity = (pageIndex: number, finalPage: boolean) => {
-      const base =
-        pageIndex === 0
-          ? finalPage
-            ? firstFinal
-            : firstFlow
-          : finalPage
-            ? continuationFinal
-            : continuationFlow;
-      return Math.max(0, base - imageCostForPage(placements, pageIndex));
-    };
-    const fits = (candidate: PaginationUnit[], pageIndex: number, finalPage: boolean) =>
-      measurer.measure(serializeUnits(candidate)) <=
-      capacity(pageIndex, finalPage) + FIT_EPSILON_PX;
-
-    // Preserve the exact legacy one-page contract whenever body + final tail
-    // fit on page 1 and no image had to move to a continuation page.
-    if (!placements.some((placement) => placement.pageIndex > 0) && fits(units, 0, true)) {
-      return {
-        pages: [
-          {
-            pageIndex: 0,
-            finalPage: true,
-            bodyHtml: serializeUnits(units) || EMPTY_BODY_HTML,
-            images: imagesForPage(placements, 0),
-          },
-        ],
-        issue: null,
-      };
-    }
-
-    const pages: LetterPageFragment[] = [];
-    let remaining = [...units];
-    let pageIndex = 0;
-
-    while (pageIndex < 100) {
-      if (fits(remaining, pageIndex, true)) {
-        pages.push({
-          pageIndex,
-          finalPage: true,
-          bodyHtml: serializeUnits(remaining) || EMPTY_BODY_HTML,
-          images: imagesForPage(placements, pageIndex),
-        });
-        return { pages, issue: null };
+  return (
+    <article
+      data-letter-page
+      data-letter-template={design.template}
+      data-letter-header-mode={geometry.effectiveHeaderMode}
+      data-letter-requested-header-mode={geometry.requestedHeaderMode}
+      data-letter-footer-mode={geometry.effectiveFooterMode}
+      data-letter-requested-footer-mode={geometry.requestedFooterMode}
+      data-letter-layout-archetype={geometry.archetype}
+      data-letter-page-index={geometry.pageIndex}
+      data-letter-final-page={geometry.finalPage ? "true" : "false"}
+      data-letter-font={design.fontOverride ?? design.font}
+      data-letter-font-source={
+        design.template === "brief" ? "standalone" : design.fontOverride ? "override" : "dossier"
       }
+      className="relative h-[1123px] w-[794px] overflow-hidden bg-white shadow-xl"
+      style={{ color: palette.ink, fontFamily, backgroundColor: palette.paper }}
+      aria-label={ariaLabel}
+    >
+      <LetterSheetBackground
+        template={design.template}
+        colors={design.colors}
+        pageIndex={geometry.pageIndex}
+        headerMode={geometry.effectiveHeaderMode}
+      />
 
-      const page = takePage(remaining, capacity(pageIndex, false), measurer.measure);
-      if (page.issue) return { pages: [], issue: page.issue };
-      if (!page.taken.length) {
-        return {
-          pages: [],
-          issue: {
-            code: "measurement-failed",
-            message: "Für diese Seite steht kein sicher nutzbarer Textbereich zur Verfügung.",
-          },
-        };
-      }
-
-      let taken = page.taken;
-      let nextRemaining = page.remaining;
-
-      // If non-final geometry swallowed the whole body only because it did not
-      // reserve closing/signature space, keep at least the last semantic block
-      // for the next page where possible. This avoids a gratuitous closing-only
-      // page while still preferring block boundaries over paragraph splitting.
-      if (!nextRemaining.length && taken.length > 1) {
-        const last = taken[taken.length - 1];
-        taken = taken.slice(0, -1);
-        nextRemaining = [last];
-      } else if (!nextRemaining.length && taken.length === 1 && taken[0].kind === "block") {
-        const split = splitBlockToFit(taken[0], capacity(pageIndex, false), measurer.measure);
-        if (
-          split &&
-          measurer.measure(serializeUnits([split.suffix])) <=
-            capacity(pageIndex + 1, true) + FIT_EPSILON_PX
-        ) {
-          taken = [split.prefix];
-          nextRemaining = [split.suffix];
+      <DossierHeaderFooterChrome
+        scope="letter"
+        template={design.template}
+        colors={design.colors}
+        contact={
+          chromeContact ?? {
+            name: data.absenderName,
+            address: data.absenderAdresse,
+            place: data.absenderPlzOrt,
+            phone: data.absenderTelefon,
+            email: data.absenderEmail,
+          }
         }
-      }
+        pageIndex={geometry.pageIndex}
+        options={chrome}
+        footerHeightMm={geometry.footer.height}
+        footerLabel="Beilagen"
+        footerDetails={geometry.footer.showAttachments ? beilagen : []}
+      />
 
-      pages.push({
-        pageIndex,
-        finalPage: false,
-        bodyHtml: serializeUnits(taken) || EMPTY_BODY_HTML,
-        images: imagesForPage(placements, pageIndex),
-      });
-      remaining = nextRemaining;
-      pageIndex += 1;
-    }
+      {warmCompactHeader ? (
+        <div
+          data-letter-warm-sender
+          data-letter-section="sender"
+          className="absolute z-[4] flex items-center text-[9.3pt] leading-[1.42]"
+          style={{
+            left: `${geometry.content.left}mm`,
+            top: 0,
+            width: "82mm",
+            height: `${WARM_FIRST_PAGE_HEADER_HEIGHT_MM}mm`,
+            boxSizing: "border-box",
+            color: warmHeaderInk,
+            textAlign: senderAlign,
+            transform: senderTransform,
+          }}
+        >
+          <div data-letter-pdf-text="sender" className="w-full min-w-0">
+            {data.absenderName?.trim() ? (
+              <div className="mb-[1mm] text-[11pt] font-semibold leading-[1.25]">
+                {data.absenderName}
+              </div>
+            ) : null}
+            <Lines
+              values={[
+                data.absenderAdresse,
+                data.absenderPlzOrt,
+                data.absenderTelefon,
+                data.absenderEmail,
+              ]}
+              align={senderAlign}
+            />
+          </div>
+        </div>
+      ) : null}
 
-    return {
-      pages: [],
-      issue: {
-        code: "measurement-failed",
-        message: "Der Brief würde unerwartet viele Seiten erzeugen. Prüfe den eingefügten Inhalt.",
-      },
-    };
-  } finally {
-    measurer.dispose();
-  }
+      <div
+        ref={textLayerRef}
+        data-letter-text-layer
+        data-letter-content-box={`${geometry.content.left},${geometry.content.top},${geometry.content.right},${geometry.content.bottom}`}
+        className="absolute flex flex-col"
+        style={{
+          left: `${geometry.content.left}mm`,
+          right: `${geometry.content.right}mm`,
+          top: `${geometry.content.top}mm`,
+          bottom: `${geometry.content.bottom}mm`,
+          fontSize: "10.5pt",
+          lineHeight: 1.48,
+        }}
+      >
+        {!senderIntegrated && !warmCompactHeader ? (
+          <>
+            <div
+              data-letter-section="sender"
+              className="text-[9.5pt] leading-[1.45]"
+              style={{ textAlign: senderAlign, transform: senderTransform }}
+            >
+              <div data-letter-pdf-text="sender">
+                <Lines
+                  values={[
+                    data.absenderName,
+                    data.absenderAdresse,
+                    data.absenderPlzOrt,
+                    data.absenderTelefon,
+                    data.absenderEmail,
+                  ]}
+                  align={senderAlign}
+                />
+              </div>
+            </div>
+            {design.ruleAfterSender ? <Separator color={palette.accent} marker="sender" /> : null}
+          </>
+        ) : null}
+
+        <div
+          data-letter-section="recipient"
+          className={`${recipientTopMargin} min-h-[24mm] text-[10pt] leading-[1.45]`}
+          style={{ textAlign: recipientAlign, transform: recipientTransform }}
+        >
+          <div data-letter-pdf-text="recipient">
+            <Lines
+              values={[
+                data.empfaengerFirma,
+                data.empfaengerName,
+                data.empfaengerAdresse,
+                data.empfaengerPlzOrt,
+              ]}
+              align={recipientAlign}
+            />
+          </div>
+        </div>
+
+        {design.ruleAfterRecipient ? <Separator color={palette.accent} marker="recipient" /> : null}
+
+        <div
+          data-letter-section="date"
+          data-letter-pdf-text="date"
+          className="mt-[4mm] text-[9.5pt] leading-[1.45]"
+          style={{ color: palette.muted, textAlign: dateAlign }}
+        >
+          <Lines
+            values={[
+              data.ort && data.datum ? `${data.ort}, ${data.datum}` : data.ort || data.datum,
+            ]}
+            align={dateAlign}
+          />
+        </div>
+
+        <div className="mt-[7mm]">
+          <div data-letter-pdf-text="subject" className="text-[12pt] font-semibold leading-tight">
+            {data.betreff || (exportMode ? "" : "Bewerbung um eine Lehrstelle als …")}
+          </div>
+          {design.ruleAfterSubject ? (
+            <Separator color={palette.accent} marker="subject" />
+          ) : (
+            <div className="h-[8mm]" aria-hidden="true" />
+          )}
+
+          <div data-letter-flow-zone>
+            <p data-letter-pdf-text="salutation" className="mb-[5mm]">
+              {data.anrede || (exportMode ? "" : "Guten Tag")}
+            </p>
+
+            <LetterFlowImages
+              images={data.images ?? []}
+              contentWidthMm={contentWidthMm}
+              exportMode={exportMode}
+              onChange={onImageChange}
+              onRemove={onImageRemove}
+            />
+
+            <div
+              data-letter-pdf-richtext="body"
+              className="text-[10.5pt] leading-[1.55] [&_div]:min-h-[1.55em] [&_p]:min-h-[1.55em] [&_hr]:my-[5mm] [&_hr]:border-0 [&_hr]:border-t [&_hr]:border-current [&_hr]:opacity-50"
+              dangerouslySetInnerHTML={{ __html: bodyHtml }}
+            />
+
+            <div className="mt-[9mm]">
+              <div data-letter-pdf-text="closing">
+                {data.gruss || (exportMode ? "" : "Freundliche Grüsse")}
+              </div>
+              <div data-letter-pdf-text="signature" className="mt-[9mm] font-medium">
+                {data.unterschrift || data.absenderName}
+              </div>
+            </div>
+
+            {showBeilagenInBody ? (
+              <div className="mt-[9mm] text-[10pt] leading-[1.45]">
+                <div data-letter-pdf-text="attachments-heading" className="font-semibold">
+                  Beilagen
+                </div>
+                <div data-letter-pdf-text="attachments-body" className="mt-[1.5mm]">
+                  <Lines values={beilagen} />
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
 }
