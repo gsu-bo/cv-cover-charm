@@ -45,7 +45,9 @@ import {
   defaultLetterColors,
   emptyLetterDesign,
   letterAttachmentValues,
+  letterFontSelection,
   normalizeLetterDesign,
+  withLetterFontSelection,
   type LetterData,
   type LetterDesign,
   type LetterFlowImage,
@@ -1045,12 +1047,21 @@ function Anschreiben() {
               <label className="block text-xs font-medium">
                 Schriftart
                 <select
-                  value={design.font}
-                  onChange={(event) =>
-                    setDesign((current) => ({ ...current, font: event.target.value as FontKey }))
-                  }
+                  value={letterFontSelection(design)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setDesign((current) =>
+                      withLetterFontSelection(
+                        current,
+                        value === "template" ? "template" : (value as FontKey),
+                      ),
+                    );
+                  }}
                   className={inputClass}
                 >
+                  {design.template !== "brief" ? (
+                    <option value="template">Passend zur Vorlage</option>
+                  ) : null}
                   {Object.entries(FONT_LABELS).map(([key, label]) => (
                     <option key={key} value={key}>
                       {label}

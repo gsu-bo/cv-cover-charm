@@ -11,6 +11,7 @@ import type {
 
 export type LetterAlignment = "left" | "right";
 export type LetterTemplateId = TemplateId;
+export type LetterFontSelection = FontKey | "template";
 export type LetterBodyColumns = 1 | 2 | 3;
 export type LetterHeaderMode = "compact" | "contact" | "none";
 export type LetterFooterMode = "compact" | "attachments" | "none";
@@ -105,6 +106,22 @@ export type SavedLetter = {
 export { LETTER_STORAGE_KEY };
 
 export const DEFAULT_LETTER_BEILAGEN = ["Lebenslauf", "Zeugnis"] as const;
+
+/**
+ * Brief keeps its historic standalone font control. Designed templates inherit
+ * their dossier family until the user explicitly chooses an override.
+ */
+export function letterFontSelection(design: LetterDesign): LetterFontSelection {
+  return design.template === "brief" ? design.font : (design.fontOverride ?? "template");
+}
+
+export function withLetterFontSelection(
+  design: LetterDesign,
+  selection: LetterFontSelection,
+): LetterDesign {
+  if (selection === "template") return { ...design, fontOverride: null };
+  return { ...design, font: selection, fontOverride: selection };
+}
 
 /** Fehlendes Feld migrieren, ein bewusst leeres Feld aber respektieren. */
 export function letterAttachmentValues(data: Pick<LetterData, "beilagen">): string[] {
