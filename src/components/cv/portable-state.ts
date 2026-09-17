@@ -1,8 +1,11 @@
 import {
+  CV_INFO_POSITION_STORAGE_KEY,
   normalizeCvSectionGapMm,
+  setCvInfoPosition,
   setCvLayout,
   setCvLayoutMirror,
   setCvSectionGapMm,
+  type CvInfoPosition,
   type CvLayoutId,
 } from "./layout";
 import { setCvPlacement } from "./placement";
@@ -31,6 +34,7 @@ import {
 
 const LAYOUT_KEY = "lebenslauf:layout:v1";
 const MIRROR_KEY = "lebenslauf:layout-mirror:v1";
+const INFO_POSITION_KEY = CV_INFO_POSITION_STORAGE_KEY;
 const SECTION_GAP_KEY = "lebenslauf:section-gap:v1";
 const PLACEMENT_KEY = "lebenslauf:placement:v1";
 const PHOTO_KEY = "lebenslauf:photo:v2";
@@ -39,6 +43,7 @@ const PHOTO_PLACEMENT_KEY = "lebenslauf:photo-place:v1";
 const PORTABLE_CV_STORAGE_KEYS = [
   LAYOUT_KEY,
   MIRROR_KEY,
+  INFO_POSITION_KEY,
   SECTION_GAP_KEY,
   PLACEMENT_KEY,
   PHOTO_KEY,
@@ -54,6 +59,7 @@ const PORTABLE_CV_STORAGE_KEYS = [
 export type PortableCvState = {
   layout?: CvLayoutId;
   mirrored?: boolean;
+  infoPosition?: CvInfoPosition;
   sectionGapMm?: number;
   placements?: Partial<CvPlacements>;
   photoStyle?: Partial<DossierPhotoStyle>;
@@ -87,6 +93,9 @@ export function readPortableCvState(): PortableCvState | undefined {
 
     const layout = validLayout(storage.getItem(LAYOUT_KEY));
     const mirroredRaw = storage.getItem(MIRROR_KEY);
+    const infoPositionRaw = storage.getItem(INFO_POSITION_KEY);
+    const infoPosition =
+      infoPositionRaw === "standard" || infoPositionRaw === "mirrored" ? infoPositionRaw : undefined;
     const sectionGapRaw = storage.getItem(SECTION_GAP_KEY);
     const placementsRaw = storage.getItem(PLACEMENT_KEY);
     const photoRaw = storage.getItem(PHOTO_KEY);
@@ -132,6 +141,7 @@ export function readPortableCvState(): PortableCvState | undefined {
     return {
       ...(layout ? { layout } : {}),
       ...(mirroredRaw !== null ? { mirrored: mirroredRaw === "true" } : {}),
+      ...(infoPosition ? { infoPosition } : {}),
       ...(sectionGapMm !== null ? { sectionGapMm } : {}),
       ...(placements ? { placements } : {}),
       ...(photoStyle ? { photoStyle } : {}),
@@ -164,6 +174,10 @@ export function applyPortableCvState(state?: PortableCvState | null) {
 
   if (state.layout) setCvLayout(state.layout);
   if (typeof state.mirrored === "boolean") setCvLayoutMirror(state.mirrored);
+  // New explicit state always wins over the legacy mirror fallback.
+  if (state.infoPosition === "standard" || state.infoPosition === "mirrored") {
+    setCvInfoPosition(state.infoPosition);
+  }
   if (typeof state.sectionGapMm === "number") setCvSectionGapMm(state.sectionGapMm);
 
   if (state.placements && typeof state.placements === "object") {

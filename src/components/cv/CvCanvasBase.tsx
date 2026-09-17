@@ -11,8 +11,10 @@ import {
   type CustomField,
 } from "@/components/cover/types";
 import {
+  getCvInfoPosition,
   getCvLayout,
   getCvLayoutChoice,
+  getCvLayoutMirror,
   subscribeCvLayout,
   subscribeCvLayoutChoice,
   type CvLayoutId,
@@ -40,6 +42,7 @@ import {
   DEFAULT_CV_PHOTO_PLACEMENT,
   getCvPhotoPlacement,
   normalizeCvPhotoPlacement,
+  resolveCvPhotoPosition,
   setCvPhotoPlacement,
   subscribeCvPhotoPlacement,
 } from "./photo-place";
@@ -193,6 +196,11 @@ export function CvCanvas({
     getCvLayoutChoice,
     () => "classic",
   );
+const infoPosition = useSyncExternalStore(
+  subscribeCvLayout,
+  getCvInfoPosition,
+  () => "standard" as const,
+);
   const placements = useSyncExternalStore(
     subscribeCvPlacements,
     getCvPlacements,
@@ -331,13 +339,30 @@ export function CvCanvas({
     p.nationalitaet && `Nationalität ${p.nationalitaet}`,
   ].filter(Boolean) as string[];
   const nameSize = smartNameSize(name, layout) * TYPE_BASE * titleScale;
+  const photoPosition = resolveCvPhotoPosition(place, {
+    template: design.template,
+    layout,
+    legacyMirrored: getCvLayoutMirror(),
+  });
+  const infoMirrored = infoPosition === "mirrored";
+  const sidebarPhysicalSide = infoMirrored ? "right" : "left";
 
   /**
-   * Sitzt das Foto frei auf dem Blatt, gehört es nicht mehr in den Kopf oder in
-   * die Seitenspalte – sonst stünde es zweimal da.
+   * Es gibt genau ein logisches Foto. Links/Rechts verwenden einen automatischen
+   * Slot, frei verwendet ausschliesslich den vorhandenen freien Renderer.
    */
-  const autoPhoto = !!p.foto && place.mode === "auto";
-  const freePhotoOn = !!p.foto && place.mode === "frei";
+  const autoPhoto = !!p.foto && photoPosition !== "free";
+  const freePhotoOn = !!p.foto && photoPosition === "free";
+  const automaticPhotoInSidebar =
+    autoPhoto &&
+    layout === "modern" &&
+    !personLayoutCustomized &&
+    photoPosition === sidebarPhysicalSide;
+  const automaticPhotoInMain =
+    autoPhoto &&
+    layout === "modern" &&
+    !personLayoutCustomized &&
+    photoPosition !== sidebarPhysicalSide;
   /*
    * Der Rahmen selbst steht in `layout-options.css`: Stärke und Farbe kommen
    * dort als CSS-Variablen an und tragen `!important`. Ein Inline-Ring hier
@@ -822,7 +847,13 @@ export function CvCanvas({
       node: (
         <div
           data-cv-header
-          style={{ display: "flex", gap: "7mm", alignItems: "flex-start", marginBottom: "3.2mm" }}
+          style={{
+            display: "flex",
+            flexDirection: photoPosition === "right" ? "row-reverse" : "row",
+            gap: "7mm",
+            alignItems: "flex-start",
+            marginBottom: "3.2mm",
+          }}
         >
           {autoPhoto && (
             <div
@@ -882,16 +913,19 @@ export function CvCanvas({
             )}
             {angaben.length > 0 && (
               <div
-                data-cv-muted
-                style={{
-                  marginTop: "1.35mm",
-                  fontSize: pt(9.2),
-                  color: pal.muted,
-                  lineHeight: 1.35,
-                }}
-              >
-                {angaben.join(" · ")}
-              </div>
+          data-cv-muted
+          data-cv-personal-info
+          style={{
+            marginTop: "1.35mm",
+            fontSize: pt(9.2),
+            color: pal.muted,
+            lineHeight: 1.35,
+            textAlign: infoMirrored ? "right" : "left",
+          }}
+        >
+          {angaben.join(" · ")}
+        </div>
+
             )}
           </div>
         </div>
@@ -988,7 +1022,7 @@ export function CvCanvas({
           data-cv-header
           style={{
             display: "flex",
-            flexDirection: design.template === "brief" ? "row-reverse" : undefined,
+            flexDirection: photoPosition === "right" ? "row-reverse" : "row",
             gap: "7mm",
             alignItems: "flex-start",
             marginBottom: "3.2mm",
@@ -1059,16 +1093,19 @@ export function CvCanvas({
             )}
             {angaben.length > 0 && (
               <div
-                data-cv-muted
-                style={{
-                  marginTop: "1.35mm",
-                  fontSize: pt(9.2),
-                  color: pal.muted,
-                  lineHeight: 1.35,
-                }}
-              >
-                {angaben.join(" · ")}
-              </div>
+          data-cv-muted
+          data-cv-personal-info
+          style={{
+            marginTop: "1.35mm",
+            fontSize: pt(9.2),
+            color: pal.muted,
+            lineHeight: 1.35,
+            textAlign: infoMirrored ? "right" : "left",
+          }}
+        >
+          {angaben.join(" · ")}
+        </div>
+
             )}
           </div>
         </div>
@@ -1084,49 +1121,81 @@ export function CvCanvas({
     const modernHeader: Row = {
       id: "kopf-modern",
       node: (
-        <div data-cv-header style={{ marginBottom: "4.8mm" }}>
-          {docTitle(pal.muted)}
-          <div
-            data-cv-name
-            style={{
-              fontSize: `${nameSize}pt`,
-              fontWeight: 760,
-              color: pal.ink,
-              lineHeight: 1,
-              letterSpacing: "-0.025em",
-              overflowWrap: "anywhere",
-            }}
-          >
-            {name || "Dein Name"}
-          </div>
-          {p.untertitel && (
-            <div
-              data-cv-subtitle
-              style={{
-                marginTop: "1.4mm",
-                fontSize: ptHead(11.5),
-                fontWeight: 600,
-                color: pal.accent,
-                lineHeight: 1.25,
-              }}
-            >
-              {p.untertitel}
+        <div
+          data-cv-header
+          style={{
+            marginBottom: "4.8mm",
+            display: automaticPhotoInMain ? "flex" : undefined,
+            flexDirection:
+              automaticPhotoInMain && photoPosition === "left" ? "row-reverse" : "row",
+            gap: automaticPhotoInMain ? "7mm" : undefined,
+            alignItems: automaticPhotoInMain ? "flex-start" : undefined,
+          }}
+        >
+          {!nameInBand && (
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {docTitle(pal.muted)}
+              <div
+                data-cv-name
+                style={{
+                  fontSize: `${nameSize}pt`,
+                  fontWeight: 760,
+                  color: pal.ink,
+                  lineHeight: 1,
+                  letterSpacing: "-0.025em",
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {name || "Dein Name"}
+              </div>
+              {p.untertitel && (
+                <div
+                  data-cv-subtitle
+                  style={{
+                    marginTop: "1.4mm",
+                    fontSize: ptHead(11.5),
+                    fontWeight: 600,
+                    color: pal.accent,
+                    lineHeight: 1.25,
+                  }}
+                >
+                  {p.untertitel}
+                </div>
+              )}
+              <div
+                data-cv-accent="header"
+                style={{
+                  width: "24mm",
+                  height: "0.85mm",
+                  marginTop: "3.2mm",
+                  borderRadius: "999px",
+                  background: pal.accent,
+                }}
+              />
             </div>
           )}
-          <div
-            data-cv-accent="header"
-            style={{
-              width: "24mm",
-              height: "0.85mm",
-              marginTop: "3.2mm",
-              borderRadius: "999px",
-              background: pal.accent,
-            }}
-          />
+          {automaticPhotoInMain && (
+            <div
+              data-cv-photo
+              data-cv-photo-auto-main
+              style={{
+                position: "relative",
+                width: `${PHOTO_MAIN_MM}mm`,
+                height: `${PHOTO_MAIN_MM * dossierPhotoRatio(photoStyle.shape)}mm`,
+                flexShrink: 0,
+                overflow: "hidden",
+                borderRadius: dossierPhotoRadius(photoStyle.shape),
+                marginLeft: nameInBand && photoPosition === "right" ? "auto" : undefined,
+                marginRight: nameInBand && photoPosition === "left" ? "auto" : undefined,
+              }}
+            >
+              <img src={p.foto ?? undefined} alt="" style={dossierPhotoCropStyle(photoStyle)} />
+            </div>
+          )}
         </div>
       ),
     };
-    if (!nameInBand) rows.push(modernHeader);
+    if (!nameInBand || automaticPhotoInMain) rows.push(modernHeader);
 
     if (placements.kontakt === "main") rows.push(...contactMainRows());
 
@@ -1193,7 +1262,7 @@ export function CvCanvas({
     })
     .join("|");
   const chromeShape = `${chromeOptions.headerMode}|${chromeOptions.footerMode}|${chromeOptions.headerShowName ? 1 : 0}|${chromeOptions.headerShowAddress ? 1 : 0}|${chromeOptions.headerShowPhone ? 1 : 0}|${chromeOptions.headerShowEmail ? 1 : 0}`;
-  const shape = `${chromeShape}|photo:${place.mode}|${layoutChoice}|${layout}|${frame.id}|${design.font ?? "template"}|${placementShape}|${sectionLayoutShape}|${rows
+  const shape = `${chromeShape}|photo:${photoPosition}|info:${infoPosition}|${layoutChoice}|${layout}|${frame.id}|${design.font ?? "template"}|${placementShape}|${sectionLayoutShape}|${rows
     .map((row) => `${row.id}:${row.minPage ?? "auto"}`)
     .join("|")}`;
 
@@ -1608,7 +1677,7 @@ export function CvCanvas({
         ["--cv-user-section-margin-bottom" as string]:
           sectionTitleMarginBottomPx === null ? undefined : `${sectionTitleMarginBottomPx}px`,
         marginTop:
-          first && !autoPhoto
+          first && !automaticPhotoInSidebar
             ? "0.8mm"
             : sidePlan.veryCompact
               ? "3.2mm"
@@ -2061,7 +2130,7 @@ export function CvCanvas({
         onKeyDown={exportMode ? undefined : nudgePhoto}
         style={{
           position: "absolute",
-          left: `${photoBox.xMm}mm`,
+          left: `${infoMirrored && layout === "modern" ? SHEET_W_MM - photoBox.xMm - photoBox.widthMm : photoBox.xMm}mm`,
           top: `${photoBox.yMm}mm`,
           width: `${photoBox.widthMm}mm`,
           height: `${heightMm}mm`,
@@ -2287,7 +2356,7 @@ export function CvCanvas({
       hasStrengths ||
       hasHobbies ||
       hasReferences;
-    const sidebarPhoto = pageIndex === 0 && autoPhoto && !personLayoutCustomized;
+    const sidebarPhoto = pageIndex === 0 && automaticPhotoInSidebar;
     return (
       <div
         data-cv-sidebar
@@ -2716,6 +2785,8 @@ export function CvCanvas({
       data-cv-template={design.template}
       data-cv-layout={layout}
       data-cv-archetype={frame.id}
+      data-cv-photo-position={photoPosition}
+      data-cv-info-position={infoPosition}
       data-cv-band-head={frame.headFirstMm > 0 ? "true" : "false"}
       data-export-mode={exportMode ? "true" : "false"}
       style={{

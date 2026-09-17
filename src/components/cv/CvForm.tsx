@@ -13,9 +13,13 @@ import {
   CV_SECTION_GAP_CUSTOM_DEFAULT_MM,
   CV_SECTION_GAP_MAX_MM,
   CV_SECTION_GAP_MIN_MM,
+  getCvInfoPosition,
   getCvLayout,
+  getCvLayoutMirror,
   getCvSectionGapMm,
+  setCvInfoPosition,
   setCvSectionGapMm,
+  subscribeCvInfoPosition,
   subscribeCvLayout,
   subscribeCvSectionGap,
 } from "./layout";
@@ -27,7 +31,9 @@ import {
   DEFAULT_CV_PHOTO_PLACEMENT,
   getCvPhotoPlacement,
   resetCvPhotoPlacement,
+  resolveCvPhotoPosition,
   setCvPhotoPlacement,
+  setCvPhotoPosition,
   subscribeCvPhotoPlacement,
 } from "./photo-place";
 import {
@@ -300,29 +306,63 @@ function CvPhotoPlaceControls({ borderWidth }: { borderWidth: number }) {
     getCvPhotoPlacement,
     () => DEFAULT_CV_PHOTO_PLACEMENT,
   );
-  const free = place.mode === "frei";
+  const layout = useSyncExternalStore<"classic" | "modern">(subscribeCvLayout, getCvLayout, () => "classic");
+  const infoPosition = useSyncExternalStore(
+    subscribeCvInfoPosition,
+    getCvInfoPosition,
+    () => "standard",
+  );
+  const template =
+    typeof document === "undefined" ? "brief" : document.documentElement.dataset.dossierTemplate;
+  const photoPosition = resolveCvPhotoPosition(place, {
+    template,
+    layout,
+    legacyMirrored: getCvLayoutMirror(),
+  });
+  const free = photoPosition === "free";
 
   return (
     <div className="mt-3 flex flex-col gap-2 border-t pt-3">
       <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        Positionierung
+        Foto-Position
       </span>
-      <div className="flex gap-1">
+      <div className="flex gap-1" role="group" aria-label="Foto-Position">
+        {([
+          ["left", "Links"],
+          ["right", "Rechts"],
+          ["free", "Frei positionierbar"],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={photoPosition === value ? placeBtnOn : placeBtn}
+            aria-pressed={photoPosition === value}
+            onClick={() => setCvPhotoPosition(value)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <span className="mt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        Angaben &amp; Datumsseite
+      </span>
+      <div className="flex gap-1" role="group" aria-label="Angaben und Datumsseite">
         <button
           type="button"
-          className={free ? placeBtn : placeBtnOn}
-          aria-pressed={!free}
-          onClick={() => setCvPhotoPlacement({ mode: "auto" })}
+          className={infoPosition === "standard" ? placeBtnOn : placeBtn}
+          aria-pressed={infoPosition === "standard"}
+          onClick={() => setCvInfoPosition("standard")}
         >
-          Automatisch
+          Standard
         </button>
         <button
           type="button"
-          className={free ? placeBtnOn : placeBtn}
-          aria-pressed={free}
-          onClick={() => setCvPhotoPlacement({ mode: "frei" })}
+          className={infoPosition === "mirrored" ? placeBtnOn : placeBtn}
+          aria-pressed={infoPosition === "mirrored"}
+          onClick={() => setCvInfoPosition("mirrored")}
         >
-          Frei platzieren
+          Spiegelverkehrt
         </button>
       </div>
 
@@ -354,11 +394,7 @@ function CvPhotoPlaceControls({ borderWidth }: { borderWidth: number }) {
             Platz zurücksetzen
           </button>
         </>
-      ) : (
-        <p className="text-[11px] leading-snug text-muted-foreground">
-          Das Foto sitzt im Kopf bzw. in der Seitenspalte – je nach Aufbau.
-        </p>
-      )}
+      ) : null}
 
       {borderWidth > 0 && (
         <label className="flex items-center gap-2">

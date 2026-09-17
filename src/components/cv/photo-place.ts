@@ -9,9 +9,10 @@
 const STORAGE_KEY = "lebenslauf:photo-place:v1";
 const EVENT = "lebenslauf-photo-place-change";
 
+export type CvPhotoPosition = "left" | "right" | "free";
 export type CvPhotoPlacement = {
-  /** "auto": im Kopf bzw. in der Seitenspalte. "frei": an fester Stelle. */
-  mode: "auto" | "frei";
+  /** `auto` ist nur noch Legacy-Fallback. Neue Auswahl speichert left/right/frei. */
+  mode: "auto" | "left" | "right" | "frei";
   /** Abstand von der linken oberen Blattecke in mm (nur bei "frei"). */
   xMm: number;
   yMm: number;
@@ -27,6 +28,12 @@ export type CvPhotoPlacement = {
   frameColor: string | null;
 };
 
+export type CvPhotoPositionContext = {
+  template?: string | null;
+  layout: "classic" | "modern";
+  legacyMirrored: boolean;
+};
+
 /** A4 in mm – die Grenzen, innerhalb derer das Foto liegen darf. */
 const SHEET_W = 210;
 const SHEET_H = 297;
@@ -34,6 +41,7 @@ export const CV_PHOTO_MIN_MM = 15;
 export const CV_PHOTO_MAX_MM = 90;
 
 export const DEFAULT_CV_PHOTO_PLACEMENT: CvPhotoPlacement = {
+  // Template-aware default/legacy sentinel. UI never exposes "auto".
   mode: "auto",
   xMm: 150,
   yMm: 20,
@@ -62,14 +70,40 @@ export function normalizeCvPhotoPlacement(
     CV_PHOTO_MIN_MM,
     CV_PHOTO_MAX_MM,
   );
+  const mode =
+    value?.mode === "left" ||
+    value?.mode === "right" ||
+    value?.mode === "frei" ||
+    value?.mode === "auto"
+      ? value.mode
+      : DEFAULT_CV_PHOTO_PLACEMENT.mode;
   return {
-    mode: value?.mode === "frei" ? "frei" : "auto",
+    mode,
     // Das Foto darf nicht komplett aus dem Blatt wandern; ein Rest bleibt sichtbar.
     xMm: clamp(numberOr(value?.xMm, DEFAULT_CV_PHOTO_PLACEMENT.xMm), 0, SHEET_W - CV_PHOTO_MIN_MM),
     yMm: clamp(numberOr(value?.yMm, DEFAULT_CV_PHOTO_PLACEMENT.yMm), 0, SHEET_H - CV_PHOTO_MIN_MM),
     widthMm,
     frameColor: colorOrNull(value?.frameColor),
   };
+}
+
+/**
+ * Resolves the one physical photo side. `auto` exists only to reproduce old
+ * dossiers: Standard/Brief historically defaulted right, other classic
+ * templates left; the legacy mirror boolean flipped that side. Sidebar put
+ * the photo in the sidebar, which the legacy mirror moved as a whole.
+ */
+export function resolveCvPhotoPosition(
+  place: Pick<CvPhotoPlacement, "mode">,
+  { template, layout, legacyMirrored }: CvPhotoPositionContext,
+): CvPhotoPosition {
+  if (place.mode === "left") return "left";
+  if (place.mode === "right") return "right";
+  if (place.mode === "frei") return "free";
+
+  if (layout === "modern") return legacyMirrored ? "right" : "left";
+  const normal: Exclude<CvPhotoPosition, "free"> = template === "brief" ? "right" : "left";
+  return legacyMirrored ? (normal === "left" ? "right" : "left") : normal;
 }
 
 /**
@@ -114,6 +148,10 @@ export function setCvPhotoPlacement(patch: Partial<CvPhotoPlacement>) {
   }
   apply(next);
   window.dispatchEvent(new CustomEvent<CvPhotoPlacement>(EVENT, { detail: next }));
+}
+
+export function setCvPhotoPosition(position: CvPhotoPosition) {
+  setCvPhotoPlacement({ mode: position === "free" ? "frei" : position });
 }
 
 export function resetCvPhotoPlacement() {

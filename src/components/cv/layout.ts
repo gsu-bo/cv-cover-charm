@@ -2,6 +2,7 @@ import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentati
 
 export type CvLayoutId = "classic" | "modern" | "minimal" | "timeline" | "executive" | "editorial";
 export type CvRenderLayoutId = "classic" | "modern";
+export type CvInfoPosition = "standard" | "mirrored";
 
 /**
  * Internal IDs intentionally stay unchanged for localStorage/backwards compatibility.
@@ -41,6 +42,7 @@ export const CV_LAYOUTS: Array<{
 
 const STORAGE_KEY = "lebenslauf:layout:v1";
 const MIRROR_STORAGE_KEY = "lebenslauf:layout-mirror:v1";
+export const CV_INFO_POSITION_STORAGE_KEY = "lebenslauf:info-position:v1";
 const SECTION_GAP_STORAGE_KEY = "lebenslauf:section-gap:v1";
 export const CV_LAYOUT_EVENT = "lebenslauf-layout-change";
 const DEFAULT_LAYOUT: CvLayoutId = CANONICAL_DOSSIER_PRESENTATION.cv.layout;
@@ -106,6 +108,27 @@ function readMirror(): boolean {
   }
 }
 
+function readInfoPosition(): CvInfoPosition | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = window.localStorage.getItem(CV_INFO_POSITION_STORAGE_KEY);
+    return value === "standard" || value === "mirrored" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function resolveCvInfoPosition(
+  explicit: CvInfoPosition | null | undefined,
+  legacyMirrored: boolean,
+): CvInfoPosition {
+  return explicit === "standard" || explicit === "mirrored"
+    ? explicit
+    : legacyMirrored
+      ? "mirrored"
+      : "standard";
+}
+
 export function normalizeCvSectionGapMm(value: unknown): number | null {
   if (value === null || value === undefined || value === "") return null;
   const numeric = typeof value === "number" ? value : Number(value);
@@ -144,7 +167,9 @@ function applyVariant(choice: CvLayoutId) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   root.dataset.cvVariant = canonical(choice);
-  root.dataset.cvMirrored = readMirror() ? "true" : "false";
+  const infoPosition = resolveCvInfoPosition(readInfoPosition(), readMirror());
+  root.dataset.cvInfoPosition = infoPosition;
+  root.dataset.cvMirrored = infoPosition === "mirrored" ? "true" : "false";
 
   const sectionGap = readSectionGap();
   if (sectionGap === null) {
@@ -170,9 +195,14 @@ export function getCvLayout(): CvRenderLayoutId {
   return rendererFor(choice);
 }
 
-/** Zweispalten-Aufbauten starten immer normal: Sidebar links, Main rechts. */
+/** Legacy mirror value. New UI/state must use `getCvInfoPosition`. */
 export function getCvLayoutMirror(): boolean {
   return readMirror();
+}
+
+/** Explicit information/date-side choice, with legacy mirror as fallback. */
+export function getCvInfoPosition(): CvInfoPosition {
+  return resolveCvInfoPosition(readInfoPosition(), readMirror());
 }
 
 /** `null` lässt die Abstände der gewählten Vorlage unverändert. */
@@ -204,6 +234,17 @@ export function setCvLayoutMirror(mirrored: boolean) {
   window.dispatchEvent(new CustomEvent(CV_LAYOUT_EVENT));
 }
 
+export function setCvInfoPosition(position: CvInfoPosition) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CV_INFO_POSITION_STORAGE_KEY, position);
+  } catch {
+    // Die laufende Seite reagiert trotzdem über das Event.
+  }
+  applyVariant(readChoice());
+  window.dispatchEvent(new CustomEvent(CV_LAYOUT_EVENT));
+}
+
 export function setCvSectionGapMm(value: number | null) {
   if (typeof window === "undefined") return;
   try {
@@ -228,6 +269,7 @@ export function subscribeCvLayout(onChange: () => void) {
     if (
       event.key === STORAGE_KEY ||
       event.key === MIRROR_STORAGE_KEY ||
+      event.key === CV_INFO_POSITION_STORAGE_KEY ||
       event.key === SECTION_GAP_STORAGE_KEY
     ) {
       applyVariant(readChoice());
@@ -244,5 +286,7 @@ export function subscribeCvLayout(onChange: () => void) {
 
 /** Gleicher Event-Stream, aber mit dem rohen Aufbauwert als Snapshot. */
 export const subscribeCvLayoutChoice = subscribeCvLayout;
+/** Angaben-/Datumsseite teilt denselben Event-Stream wie der Aufbau. */
+export const subscribeCvInfoPosition = subscribeCvLayout;
 /** Globaler Rubrik-Abstand teilt denselben Event-Stream wie die übrigen Aufbauoptionen. */
 export const subscribeCvSectionGap = subscribeCvLayout;

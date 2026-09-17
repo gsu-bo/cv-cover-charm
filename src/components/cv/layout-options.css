@@ -114,11 +114,7 @@ html[data-cv-photo-shape="circle"]
 /* Spiegelverkehrt – alle Aufbauten                                           */
 /* -------------------------------------------------------------------------- */
 
-/* Standard-Familie: Foto sowie Datums-/Sprachspalten tauschen die Seite. */
-html[data-cv-mirrored="true"] [data-cv-layout="classic"] [data-cv-page="0"] [data-cv-header] {
-  flex-direction: row-reverse !important;
-}
-
+/* Datums-/Sprachspalten spiegeln; die Foto-Seite ist davon unabhängig. */
 html[data-cv-mirrored="true"]
   [data-cv-layout="classic"]
   [data-cv-page]
@@ -268,12 +264,4 @@ html[data-cv-mirrored="true"][data-cv-variant="editorial"]
   [data-cv-free-section] {
     outline: none !important;
   }
-}
-
-/* Package 1: Brief/Standard defaults to photo right; mirrored still flips that default. */
-html[data-cv-mirrored="true"]
-  [data-dossier-document="cv"][data-cv-template="brief"][data-cv-layout="classic"]
-  [data-cv-page="0"]
-  [data-cv-header] {
-  flex-direction: row !important;
 }
