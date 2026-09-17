@@ -1,5 +1,6 @@
 name: CV Package 1.5 apply v2
 
+# One-shot apply/verification workflow for the focused Package 1.5 source patch.
 on:
   push:
     branches:
