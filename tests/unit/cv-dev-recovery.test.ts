@@ -14,10 +14,12 @@ const canvas = readFileSync("src/components/cv/CvCanvasBase.tsx", "utf8");
 const route = readFileSync("src/routes/lebenslauf.tsx", "utf8");
 const userTypographyCss = readFileSync("src/components/cv/user-typography.css", "utf8");
 
-test("CV defaults and legacy section rules resolve to full width", () => {
-  expect(CV_TYPE_DEFAULTS.headingRule).toBe("full");
+test("CV template state stays neutral while missing and legacy section rules render full width", () => {
+  expect(CV_TYPE_DEFAULTS.headingRule).toBeUndefined();
+  expect(cvDesignWithFullSectionRules({} as never).headingRule).toBe("full");
   expect(cvDesignWithFullSectionRules({ headingRule: "short" } as never).headingRule).toBe("full");
   expect(cvDesignWithFullSectionRules({ headingRule: "none" } as never).headingRule).toBe("none");
+  expect(route).toContain("headingRule: CV_TYPE_DEFAULTS.headingRule");
   expect(route).not.toContain('["short", "Kurz"]');
   expect(route).toContain('["full", "Ganze Breite"]');
   expect(route).toContain('["none", "Keine"]');
