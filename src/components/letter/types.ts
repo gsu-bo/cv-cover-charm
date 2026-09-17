@@ -16,11 +16,13 @@ export type LetterBodyColumns = 1 | 2 | 3;
 export type LetterHeaderMode = "compact" | "contact" | "none";
 export type LetterFooterMode = "compact" | "attachments" | "none";
 
-/** Frei platzierbares Foto/Bild im Anschreiben. Der Textumbruch ist immer rechteckig (Word: Quadrat). */
+/** Frei platzierbares Bild im Anschreiben mit proportionaler Skalierung und automatischem Textfluss. */
 export type LetterFlowImage = {
   id: string;
   src: string;
   side: "left" | "right";
+  /** Horizontale Position im Brieftext-Bereich in mm. Fehlt bei älteren Entwürfen. */
+  xMm?: number;
   /** Vertikaler Versatz ab Beginn des Brieftext-Bereichs in mm. */
   topMm: number;
   widthMm: number;
