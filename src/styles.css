@@ -253,21 +253,25 @@ html[data-dossier-template="modern"] [data-dossier-document="cover"] [data-block
 [data-letter-rich-editor] > [data-columns="2"] {
   column-count: 2;
   column-gap: 1.25rem;
+  column-rule: none;
 }
 
 [data-letter-rich-editor] > [data-columns="3"] {
   column-count: 3;
   column-gap: 1.25rem;
+  column-rule: none;
 }
 
 [data-letter-pdf-richtext] > [data-columns="2"] {
   column-count: 2;
   column-gap: 6mm;
+  column-rule: none;
 }
 
 [data-letter-pdf-richtext] > [data-columns="3"] {
   column-count: 3;
   column-gap: 6mm;
+  column-rule: none;
 }
 
 [data-letter-rich-editor] > [data-list],

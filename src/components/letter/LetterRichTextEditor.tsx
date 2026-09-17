@@ -99,6 +99,11 @@ function columnsForBlock(block: HTMLElement | null): LetterBodyColumns {
   return 1;
 }
 
+function applyColumns(block: HTMLElement, columns: LetterBodyColumns) {
+  if (columns === 1) delete block.dataset.columns;
+  else block.dataset.columns = String(columns);
+}
+
 function alignmentForBlock(block: HTMLElement | null): LetterTextAlign {
   return letterTextAlign(block?.dataset.align);
 }
@@ -285,13 +290,19 @@ export function LetterRichTextEditor({
 
   const setColumns = (columns: LetterBodyColumns) => {
     const editor = editorRef.current;
-    const range = restoreRange();
-    if (!editor || !range) return;
-    const blocks = ensureSelectedBlocks(editor, range);
-    for (const block of blocks) {
-      if (columns === 1) delete block.dataset.columns;
-      else block.dataset.columns = String(columns);
+    if (!editor) return;
+
+    if (!savedRangeRef.current) {
+      for (const block of editableBlocks(editor)) applyColumns(block, columns);
+      emit();
+      setToolbar((current) => ({ ...current, columns }));
+      return;
     }
+
+    const range = restoreRange();
+    if (!range) return;
+    const blocks = ensureSelectedBlocks(editor, range);
+    for (const block of blocks) applyColumns(block, columns);
     emit();
     setToolbar((current) => ({ ...current, columns }));
   };
@@ -407,19 +418,24 @@ export function LetterRichTextEditor({
         />
 
         <span aria-hidden="true" className="mx-0.5 h-7 w-px self-center bg-border" />
-        {([1, 2, 3] as const).map((count) => (
-          <button
-            key={count}
-            type="button"
-            className={`${toolClass} min-w-8 ${toolbar.columns === count ? activeToolClass : ""}`}
-            aria-label={`${count} ${count === 1 ? "Spalte" : "Spalten"}`}
-            aria-pressed={toolbar.columns === count}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => setColumns(count)}
+        <label className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground">
+          <span>Spalten</span>
+          <select
+            aria-label="Anzahl Textspalten"
+            value={toolbar.columns ?? ""}
+            className="h-6 min-w-20 cursor-pointer bg-transparent text-xs outline-none"
+            onChange={(event) => setColumns(Number(event.target.value) as LetterBodyColumns)}
           >
-            {count}
-          </button>
-        ))}
+            {toolbar.columns === null ? (
+              <option value="" disabled>
+                Gemischt
+              </option>
+            ) : null}
+            <option value="1">1 Spalte</option>
+            <option value="2">2 Spalten</option>
+            <option value="3">3 Spalten</option>
+          </select>
+        </label>
 
         <div className="relative">
           <button
