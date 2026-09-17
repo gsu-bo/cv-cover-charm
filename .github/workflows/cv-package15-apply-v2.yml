@@ -45,6 +45,10 @@ jobs:
               "  const layoutChoice = useSyncExternalStore<CvLayoutId>(\n  subscribeCvLayoutChoice,\n  getCvLayoutChoice,\n  () => \"classic\",\n);",
               "  const layoutChoice = useSyncExternalStore<CvLayoutId>(\n    subscribeCvLayoutChoice,\n    getCvLayoutChoice,\n    () => \"classic\",\n  );",
           )
+          patch = patch.replace(
+              'const layout = useSyncExternalStore(subscribeCvLayout, getCvLayout, () => "classic");',
+              'const layout = useSyncExternalStore<"classic" | "modern">(subscribeCvLayout, getCvLayout, () => "classic");',
+          )
 
           old_helper = (
               "def replace(path: str, old: str, new: str):\n"
