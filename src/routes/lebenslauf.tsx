@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { EditorMenuLabel } from "@/components/dossier/EditorMenuLabel";
 import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";
+import { DossierHyphenationControl } from "@/components/dossier/DossierHyphenationControl";
 import { Section } from "@/components/cover/Section";
 import { TemplatePicker } from "@/components/cover/TemplatePicker";
 import { ColorChooser } from "@/components/cover/ColorChooser";
@@ -2020,6 +2021,8 @@ function Lebenslauf() {
                 hint={`${Math.round((design.bodyScale ?? CV_TYPE_DEFAULTS.bodyScale) * 100)} %`}
               >
                 <div className="flex flex-col gap-3">
+                  <DossierHyphenationControl />
+
                   <label className="flex flex-col gap-1 text-xs">
                     <span className="text-muted-foreground">Schriftart gesamtes Dossier</span>
                     <select

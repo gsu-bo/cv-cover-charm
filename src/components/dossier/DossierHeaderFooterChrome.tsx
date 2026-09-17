@@ -2,6 +2,7 @@ import { Mail, Smartphone } from "lucide-react";
 import { FONT_STACKS } from "@/components/cover/types";
 import { cvPalette, onColorRoles } from "@/components/cv/palette";
 import {
+  effectiveDossierHeaderModeForOptions,
   hasReducedContinuationHeader,
   dossierFooterVisualHeightMmForOptions,
   dossierHeaderVisualHeightMmForOptions,
@@ -148,16 +149,21 @@ export function DossierHeaderFooterChrome({
   footerRight?: string;
 }) {
   const resolvedContact = contact;
-  // Contact-mode template gradients must render identically in motivation
-  // letter and CV. Compact snapshots stay untouched here: their document-level
-  // resolver (not this generic shared renderer) owns special treatments such as
-  // Modern's mirrored dark/pink pair, so explicit chrome snapshots remain authoritative.
+  const headerMode = effectiveDossierHeaderModeForOptions(options, pageIndex);
+  const differentFirstPage = options.headerDifferentFirstPage !== false;
+  // Keep document-level template styling stable for the footer, while allowing
+  // an explicitly selected continuation contact header to receive the same
+  // template-derived contact treatment as a first-page contact header.
   const visualOptions =
     options.headerMode === "contact"
       ? resolveTemplateChromeOptions(template, colors, options)
       : options;
-  const headerMode = options.headerMode;
-  const differentFirstPage = options.headerDifferentFirstPage !== false;
+  const headerVisualOptions =
+    headerMode === options.headerMode
+      ? visualOptions
+      : headerMode === "contact"
+        ? resolveTemplateChromeOptions(template, colors, { ...options, headerMode })
+        : visualOptions;
   const continuationContact = hasReducedContinuationHeader(options, pageIndex);
   const sourcePalette = cvPalette(colors);
   const primary =
@@ -166,21 +172,21 @@ export function DossierHeaderFooterChrome({
       : (colors.primary ?? colors.accent ?? colors.secondary ?? sourcePalette.accent);
   const secondary =
     template === "brief" ? "#4b5563" : (colors.accent ?? colors.secondary ?? sourcePalette.accent);
-  const headerBackground = visualOptions.headerBackgroundColor ?? primary;
+  const headerBackground = headerVisualOptions.headerBackgroundColor ?? primary;
   const footerBackground = visualOptions.footerBackgroundColor ?? secondary;
   const headerRoles = onColorRoles(
     headerBackground,
-    visualOptions.headerGradientColor ?? secondary,
+    headerVisualOptions.headerGradientColor ?? secondary,
   );
   const footerRoles = onColorRoles(footerBackground, visualOptions.footerGradientColor ?? primary);
-  const headerSurface = surfaceBackground(headerBackground, visualOptions.headerGradientColor);
+  const headerSurface = surfaceBackground(headerBackground, headerVisualOptions.headerGradientColor);
   const footerSurface = surfaceBackground(footerBackground, visualOptions.footerGradientColor);
   const borderColor =
     visualOptions.borderColor ??
     automaticBorderColor({
       colors,
       headerBackground,
-      headerGradient: visualOptions.headerGradientColor,
+      headerGradient: headerVisualOptions.headerGradientColor,
       footerBackground,
       footerGradient: visualOptions.footerGradientColor,
       palette: sourcePalette,
@@ -242,7 +248,13 @@ export function DossierHeaderFooterChrome({
   return (
     <div
       data-dossier-chrome={scope}
-      data-dossier-header-mode={headerMode}
+      data-dossier-header-mode={options.headerMode}
+      data-dossier-effective-header-mode={headerMode}
+      data-dossier-continuation-mode={
+        pageIndex > 0 && differentFirstPage
+          ? (options.headerContinuationMode ?? "legacy")
+          : undefined
+      }
       data-dossier-first-page-different={differentFirstPage ? "true" : "false"}
       data-dossier-footer-mode={options.footerMode}
       data-dossier-header-text-layout={options.headerTextLayout}
@@ -253,7 +265,7 @@ export function DossierHeaderFooterChrome({
       data-dossier-border-width-mm={visualOptions.borderWidthMm}
       data-dossier-chrome-font={visualOptions.textFont ?? "template"}
       data-letter-chrome={letter ? "" : undefined}
-      data-letter-header-mode={letter ? headerMode : undefined}
+      data-letter-header-mode={letter ? options.headerMode : undefined}
       className="pointer-events-none absolute inset-0 z-[3] overflow-hidden"
       style={{ fontFamily: textFontFamily }}
     >

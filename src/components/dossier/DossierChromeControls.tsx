@@ -1,6 +1,5 @@
 import { useSyncExternalStore } from "react";
 import { FONT_LABELS, type FontKey } from "@/components/cover/types";
-import { DossierHyphenationControl } from "@/components/dossier/DossierHyphenationControl";
 import {
   DEFAULT_DOSSIER_CHROME_STATE,
   getDossierChromeState,
@@ -80,47 +79,65 @@ function BackgroundControl({
   onColor: (value: string | null) => void;
   onGradientColor: (value: string | null) => void;
 }) {
-  const gradient = gradientColor !== null;
+  const custom = color !== null || gradientColor !== null;
+  const gradient = custom && gradientColor !== null;
   return (
     <div className="grid gap-2 rounded-md border bg-muted/20 p-2.5">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-auto text-xs text-muted-foreground">{label}</span>
-        <input
-          type="color"
-          value={color ?? fallback}
-          onChange={(event) => onColor(event.target.value)}
-          className="h-7 w-10 cursor-pointer rounded border border-input bg-background"
-          aria-label={`${label} erste Farbe`}
-        />
-        {color ? (
-          <button type="button" className={smallButtonClass} onClick={() => onColor(null)}>
-            Wie Vorlage
-          </button>
-        ) : (
-          <span className="text-[11px] text-muted-foreground">Vorlage</span>
-        )}
-      </div>
-
-      <label className="flex items-center gap-2 text-xs">
-        <input
-          type="checkbox"
-          checked={gradient}
-          onChange={(event) => onGradientColor(event.target.checked ? "#ffffff" : null)}
-        />
-        Hintergrundverlauf mit zweiter Farbe
+      <label className="block text-xs font-medium">
+        {label}
+        <select
+          data-dossier-background-mode-control
+          value={custom ? "custom" : "template"}
+          onChange={(event) => {
+            if (event.target.value === "template") {
+              onColor(null);
+              onGradientColor(null);
+            } else {
+              onColor(color ?? fallback);
+            }
+          }}
+          className={selectClass}
+        >
+          <option value="template">Wie Vorlage</option>
+          <option value="custom">Eigene Farbe</option>
+        </select>
       </label>
 
-      {gradient ? (
-        <div className="flex items-center justify-between gap-2 pl-5">
-          <span className="text-[11px] text-muted-foreground">Zweite Farbe</span>
-          <input
-            type="color"
-            value={gradientColor ?? "#ffffff"}
-            onChange={(event) => onGradientColor(event.target.value)}
-            className="h-7 w-10 cursor-pointer rounded border border-input bg-background"
-            aria-label={`${label} zweite Verlaufsfarbe`}
-          />
-        </div>
+      {custom ? (
+        <>
+          <div className="flex flex-wrap items-center gap-2 pl-1">
+            <span className="mr-auto text-xs text-muted-foreground">Erste Farbe</span>
+            <input
+              type="color"
+              value={color ?? fallback}
+              onChange={(event) => onColor(event.target.value)}
+              className="h-7 w-10 cursor-pointer rounded border border-input bg-background"
+              aria-label={`${label} erste Farbe`}
+            />
+          </div>
+
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={gradient}
+              onChange={(event) => onGradientColor(event.target.checked ? "#ffffff" : null)}
+            />
+            Verlauf mit zweiter Farbe
+          </label>
+
+          {gradient ? (
+            <div className="flex items-center justify-between gap-2 pl-5">
+              <span className="text-[11px] text-muted-foreground">Zweite Farbe</span>
+              <input
+                type="color"
+                value={gradientColor ?? "#ffffff"}
+                onChange={(event) => onGradientColor(event.target.value)}
+                className="h-7 w-10 cursor-pointer rounded border border-input bg-background"
+                aria-label={`${label} zweite Verlaufsfarbe`}
+              />
+            </div>
+          ) : null}
+        </>
       ) : null}
     </div>
   );
@@ -163,6 +180,11 @@ export function DossierChromeControls({
         : "contact-stacked"
       : options.headerMode;
   const headerInlineSeparator = options.headerInlineSeparator ?? "icons";
+  const continuationHeaderControlValue = options.headerContinuationMode ?? "legacy";
+  const contactHeaderVisible =
+    options.headerMode === "contact" ||
+    (options.headerDifferentFirstPage !== false && options.headerContinuationMode === "contact");
+  const hasChromeSurface = options.headerMode !== "none" || options.footerMode !== "none";
 
   // The shared model calls the rich footer "details". The letter UI historically
   // exposed the same behavior as "attachments"; keeping that form value avoids
@@ -194,127 +216,7 @@ export function DossierChromeControls({
       data-dossier-chrome-controls={scope}
       className="rounded-lg border bg-background p-3 shadow-sm"
     >
-      <div className="flex items-start gap-2">
-        <input
-          id={`dossier-chrome-sync-${scope}`}
-          data-dossier-chrome-sync
-          type="checkbox"
-          className="mt-0.5"
-          checked={state.sync}
-          onChange={(event) => {
-            const sync = event.target.checked;
-            const nextOptions = sync ? state[scope] : state.shared;
-            setDossierChromeSync(scope, sync);
-            onOptionsChange?.(nextOptions);
-          }}
-        />
-        <label htmlFor={`dossier-chrome-sync-${scope}`} className="min-w-0 text-xs">
-          <span className="block font-semibold">Header &amp; Footer synchron halten</span>
-          <span className="mt-0.5 block leading-relaxed text-muted-foreground">
-            {state.sync
-              ? `Änderungen gelten gleichzeitig für ${thisDocument} und ${other}.`
-              : `Nur ${thisDocument} wird geändert.`}
-          </span>
-        </label>
-      </div>
-
       <div className="mt-3 grid gap-3 border-t pt-3">
-        <DossierHyphenationControl />
-
-        <label className="block text-xs font-medium">
-          Schrift in Header &amp; Footer
-          <select
-            data-dossier-chrome-font-control
-            value={options.textFont ?? "template"}
-            onChange={(event) =>
-              patchOptions({
-                textFont:
-                  event.target.value === "template" ? null : (event.target.value as FontKey),
-              })
-            }
-            className={selectClass}
-          >
-            <option value="template">Wie Vorlage</option>
-            {(Object.entries(FONT_LABELS) as Array<[FontKey, string]>).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div
-          data-dossier-border-controls
-          className="grid gap-2 rounded-md border bg-muted/20 p-2.5"
-        >
-          <label className="flex items-center gap-2 text-xs font-medium">
-            <input
-              data-dossier-border-enabled-control
-              type="checkbox"
-              checked={options.borderEnabled}
-              onChange={(event) => patchOptions({ borderEnabled: event.target.checked })}
-            />
-            Rahmen aktiv
-          </label>
-          <span className="text-[11px] leading-relaxed text-muted-foreground">
-            Eine gemeinsame Linie für beide: Header unten, Footer oben. Farbe und Dicke sind
-            identisch.
-          </span>
-
-          {options.borderEnabled ? (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="mr-auto text-xs text-muted-foreground">Rahmenfarbe</span>
-                <input
-                  data-dossier-border-color-control
-                  type="color"
-                  value={options.borderColor ?? "#64748b"}
-                  onChange={(event) => patchOptions({ borderColor: event.target.value })}
-                  className="h-7 w-10 cursor-pointer rounded border border-input bg-background"
-                  aria-label="Rahmenfarbe"
-                />
-                {options.borderColor ? (
-                  <button
-                    type="button"
-                    className={smallButtonClass}
-                    onClick={() => patchOptions({ borderColor: null })}
-                  >
-                    Automatisch passend
-                  </button>
-                ) : (
-                  <span className="text-[11px] text-muted-foreground">Automatisch passend</span>
-                )}
-              </div>
-
-              <label className="grid gap-1 text-xs">
-                <span className="flex items-center justify-between gap-2 text-muted-foreground">
-                  <span>Rahmendicke</span>
-                  <span>{options.borderWidthMm.toFixed(1)} mm</span>
-                </span>
-                <input
-                  data-dossier-border-width-control
-                  type="range"
-                  min={0.2}
-                  max={3}
-                  step={0.1}
-                  value={options.borderWidthMm}
-                  onChange={(event) => patchOptions({ borderWidthMm: Number(event.target.value) })}
-                  className="w-full accent-primary"
-                />
-                {options.borderWidthMm !== 0.6 ? (
-                  <button
-                    type="button"
-                    className={`${smallButtonClass} justify-self-start`}
-                    onClick={() => patchOptions({ borderWidthMm: 0.6 })}
-                  >
-                    Standarddicke
-                  </button>
-                ) : null}
-              </label>
-            </>
-          ) : null}
-        </div>
-
         <div className="grid gap-2 rounded-md border p-2.5">
           <label className="block text-xs font-medium">
             Header
@@ -355,6 +257,57 @@ export function DossierChromeControls({
             Telefon und E-Mail direkt in den farbigen Header. Bei der waagrechten Variante kannst du
             die Trennung unten auswählen.
           </span>
+
+          {options.headerMode !== "none" ? (
+            <div
+              data-dossier-continuation-settings
+              className="grid gap-2 rounded-md border bg-muted/20 p-2.5"
+            >
+              <label className="flex items-center gap-2 text-xs font-medium">
+                <input
+                  data-dossier-header-different-first-page-control
+                  type="checkbox"
+                  checked={options.headerDifferentFirstPage !== false}
+                  onChange={(event) =>
+                    patchOptions({ headerDifferentFirstPage: event.target.checked })
+                  }
+                />
+                Erste Seite anders
+              </label>
+
+              {options.headerDifferentFirstPage !== false ? (
+                <label className="block text-xs font-medium">
+                  Header ab Seite 2
+                  <select
+                    data-dossier-continuation-header-mode-control
+                    value={continuationHeaderControlValue}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      patchOptions({
+                        headerContinuationMode:
+                          value === "legacy" ? undefined : (value as DossierHeaderMode),
+                      });
+                    }}
+                    className={selectClass}
+                  >
+                    <option value="legacy">Automatisch wie bisher</option>
+                    <option value="compact">Header kompakt</option>
+                    <option value="contact">Kontaktdaten</option>
+                    <option value="none">Kein Header</option>
+                  </select>
+                  <span className="mt-1 block text-[11px] font-normal leading-relaxed text-muted-foreground">
+                    Alte Dossiers bleiben bei „Automatisch wie bisher“ unverändert. Eine bewusste
+                    Auswahl gilt nur für Seite 2 und folgende.
+                  </span>
+                </label>
+              ) : (
+                <span className="text-[11px] leading-relaxed text-muted-foreground">
+                  Derselbe Header wird auf allen Seiten verwendet. Die gespeicherte Folgeseitenwahl
+                  bleibt erhalten.
+                </span>
+              )}
+            </div>
+          ) : null}
 
           {scope === "letter" || options.headerMode === "contact" ? (
             <VerticalOffsetControl
@@ -437,7 +390,7 @@ export function DossierChromeControls({
                 ) : null}
               </label>
 
-              {options.headerMode === "contact" ? (
+              {contactHeaderVisible ? (
                 <>
                   <div
                     data-dossier-header-fields
@@ -455,23 +408,6 @@ export function DossierChromeControls({
                     ))}
                   </div>
 
-                  <label className="grid gap-1 rounded-md border bg-muted/20 p-2.5 text-xs">
-                    <span className="flex items-center gap-2 font-medium">
-                      <input
-                        data-dossier-header-different-first-page-control
-                        type="checkbox"
-                        checked={options.headerDifferentFirstPage !== false}
-                        onChange={(event) =>
-                          patchOptions({ headerDifferentFirstPage: event.target.checked })
-                        }
-                      />
-                      Erste Seite anders
-                    </span>
-                    <span className="pl-6 text-[11px] font-normal leading-relaxed text-muted-foreground">
-                      Auf Folgeseiten wird ein kompakter Header verwendet (Vorname Nachname · E-Mail ·
-                      Tel.).
-                    </span>
-                  </label>
 
                   {options.headerTextLayout === "inline" ? (
                     <label className="block text-xs font-medium">
@@ -610,6 +546,136 @@ export function DossierChromeControls({
             </>
           ) : null}
         </div>
+
+        {hasChromeSurface ? (
+          <>
+      <div className="flex items-start gap-2">
+        <input
+          id={`dossier-chrome-sync-${scope}`}
+          data-dossier-chrome-sync
+          type="checkbox"
+          className="mt-0.5"
+          checked={state.sync}
+          onChange={(event) => {
+            const sync = event.target.checked;
+            const nextOptions = sync ? state[scope] : state.shared;
+            setDossierChromeSync(scope, sync);
+            onOptionsChange?.(nextOptions);
+          }}
+        />
+        <label htmlFor={`dossier-chrome-sync-${scope}`} className="min-w-0 text-xs">
+          <span className="block font-semibold">Header &amp; Footer synchron halten</span>
+          <span className="mt-0.5 block leading-relaxed text-muted-foreground">
+            {state.sync
+              ? `Änderungen gelten gleichzeitig für ${thisDocument} und ${other}.`
+              : `Nur ${thisDocument} wird geändert.`}
+          </span>
+        </label>
+      </div>
+
+        <label className="block text-xs font-medium">
+          Schrift in Header &amp; Footer
+          <select
+            data-dossier-chrome-font-control
+            value={options.textFont ?? "template"}
+            onChange={(event) =>
+              patchOptions({
+                textFont:
+                  event.target.value === "template" ? null : (event.target.value as FontKey),
+              })
+            }
+            className={selectClass}
+          >
+            <option value="template">Wie Vorlage</option>
+            {(Object.entries(FONT_LABELS) as Array<[FontKey, string]>).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div
+          data-dossier-border-controls
+          className="grid gap-2 rounded-md border bg-muted/20 p-2.5"
+        >
+          <label className="flex items-center gap-2 text-xs font-medium">
+            <input
+              data-dossier-border-enabled-control
+              type="checkbox"
+              checked={options.borderEnabled}
+              onChange={(event) => patchOptions({ borderEnabled: event.target.checked })}
+            />
+            Rahmen aktiv
+          </label>
+          <span className="text-[11px] leading-relaxed text-muted-foreground">
+            Eine gemeinsame Linie für beide: Header unten, Footer oben. Farbe und Dicke sind
+            identisch.
+          </span>
+
+          {options.borderEnabled ? (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="mr-auto text-xs text-muted-foreground">Rahmenfarbe</span>
+                <input
+                  data-dossier-border-color-control
+                  type="color"
+                  value={options.borderColor ?? "#64748b"}
+                  onChange={(event) => patchOptions({ borderColor: event.target.value })}
+                  className="h-7 w-10 cursor-pointer rounded border border-input bg-background"
+                  aria-label="Rahmenfarbe"
+                />
+                {options.borderColor ? (
+                  <button
+                    type="button"
+                    className={smallButtonClass}
+                    onClick={() => patchOptions({ borderColor: null })}
+                  >
+                    Automatisch passend
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-muted-foreground">Automatisch passend</span>
+                )}
+              </div>
+
+              <label className="grid gap-1 text-xs">
+                <span className="flex items-center justify-between gap-2 text-muted-foreground">
+                  <span>Rahmendicke</span>
+                  <span>{options.borderWidthMm.toFixed(1)} mm</span>
+                </span>
+                <input
+                  data-dossier-border-width-control
+                  type="range"
+                  min={0.2}
+                  max={3}
+                  step={0.1}
+                  value={options.borderWidthMm}
+                  onChange={(event) => patchOptions({ borderWidthMm: Number(event.target.value) })}
+                  className="w-full accent-primary"
+                />
+                {options.borderWidthMm !== 0.6 ? (
+                  <button
+                    type="button"
+                    className={`${smallButtonClass} justify-self-start`}
+                    onClick={() => patchOptions({ borderWidthMm: 0.6 })}
+                  >
+                    Standarddicke
+                  </button>
+                ) : null}
+              </label>
+            </>
+          ) : null}
+        </div>
+          </>
+        ) : (
+          <p
+            data-dossier-chrome-empty-note
+            className="rounded-md border border-dashed p-2.5 text-[11px] leading-relaxed text-muted-foreground"
+          >
+            Header und Footer sind deaktiviert. Zusätzliche Schrift- und Rahmenoptionen werden erst
+            eingeblendet, sobald eine Fläche aktiv ist.
+          </p>
+        )}
       </div>
     </section>
   );

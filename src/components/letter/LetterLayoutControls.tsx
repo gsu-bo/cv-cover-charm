@@ -1,4 +1,5 @@
 import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";
+import { DossierHyphenationControl } from "@/components/dossier/DossierHyphenationControl";
 import { DossierPageMarginsControl } from "@/components/dossier/DossierPageMarginsControl";
 import {
   letterPageGeometry,
@@ -176,6 +177,8 @@ export function LetterLayoutControls({
           Trennlinie nach Titel / Betreff
         </label>
       </div>
+
+      <DossierHyphenationControl />
 
       <DossierPageMarginsControl
         scope="letter"

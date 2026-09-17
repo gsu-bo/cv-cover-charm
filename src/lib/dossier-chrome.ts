@@ -16,6 +16,8 @@ export type DossierChromeOptions = {
   headerShowEmail: boolean;
   /** Word-like first-page behavior for templates that explicitly use shared chrome. */
   headerDifferentFirstPage?: boolean;
+  /** Explicit page-2+ header. Missing means the exact legacy continuation behavior. */
+  headerContinuationMode?: DossierHeaderMode;
   headerHeightMm: number | null;
   /** Additional whitespace between the shared header zone and document content. */
   headerGapMm?: number;
@@ -112,6 +114,8 @@ let cached: DossierChromeState | null = null;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === "object" && !Array.isArray(value);
+const hasOwn = (value: Record<string, unknown>, key: string) =>
+  Object.prototype.hasOwnProperty.call(value, key);
 
 function normalizedMm(value: unknown, min: number, max: number): number | null {
   if (value === null || value === undefined || value === "") return null;
@@ -174,6 +178,13 @@ function normalizeOptions(
       typeof value.headerDifferentFirstPage === "boolean"
         ? value.headerDifferentFirstPage
         : (fallback.headerDifferentFirstPage ?? true),
+    headerContinuationMode: hasOwn(value, "headerContinuationMode")
+      ? value.headerContinuationMode === "compact" ||
+        value.headerContinuationMode === "contact" ||
+        value.headerContinuationMode === "none"
+        ? value.headerContinuationMode
+        : undefined
+      : fallback.headerContinuationMode,
     headerHeightMm: normalizedMm(value.headerHeightMm, 1, 40),
     headerGapMm: normalizedMm(value.headerGapMm, 0, 40) ?? fallback.headerGapMm ?? 12,
     headerContentOffsetYMm: normalizedOffsetMm(
@@ -239,6 +250,7 @@ function optionsFromSavedLetter(storage: Storage): DossierChromeOptions | null {
       headerShowPhone: design.headerShowPhone,
       headerShowEmail: design.headerShowEmail,
       headerDifferentFirstPage: design.headerDifferentFirstPage,
+      headerContinuationMode: design.headerContinuationMode,
       headerHeightMm: design.headerHeightMm,
       headerGapMm: design.headerGapMm,
       headerTextLayout: design.headerTextLayout,
@@ -390,6 +402,7 @@ function mirrorLegacyLetterDesign(next: DossierChromeState) {
       design.headerShowPhone === options.headerShowPhone &&
       design.headerShowEmail === options.headerShowEmail &&
       design.headerDifferentFirstPage === (options.headerDifferentFirstPage ?? true) &&
+      design.headerContinuationMode === options.headerContinuationMode &&
       design.headerHeightMm === options.headerHeightMm &&
       design.headerGapMm === (options.headerGapMm ?? 12) &&
       design.headerTextLayout === options.headerTextLayout &&
@@ -417,6 +430,7 @@ function mirrorLegacyLetterDesign(next: DossierChromeState) {
         headerShowPhone: options.headerShowPhone,
         headerShowEmail: options.headerShowEmail,
         headerDifferentFirstPage: options.headerDifferentFirstPage ?? true,
+        headerContinuationMode: options.headerContinuationMode,
         headerHeightMm: options.headerHeightMm,
         headerGapMm: options.headerGapMm ?? 12,
         headerTextLayout: options.headerTextLayout,
@@ -574,20 +588,38 @@ export function applyPortableDossierChromeState(
   store(normalizeDossierChromeState(value));
 }
 
-/** Contact remains contact on continuation pages; only its visual treatment reduces. */
+/**
+ * Resolve the semantic header for one page. An explicit continuation choice
+ * wins on page 2+, while old projects that do not contain the new field keep
+ * the historical reduced-contact continuation exactly as before.
+ */
 export function effectiveDossierHeaderModeForOptions(
   options: DossierChromeOptions,
-  _pageIndex = 0,
+  pageIndex = 0,
 ): DossierHeaderMode {
+  if (
+    pageIndex > 0 &&
+    options.headerDifferentFirstPage !== false &&
+    options.headerContinuationMode !== undefined
+  ) {
+    return options.headerContinuationMode;
+  }
   return options.headerMode;
 }
 
 export function hasReducedContinuationHeader(
-  options: { headerMode?: string; headerDifferentFirstPage?: boolean },
+  options: {
+    headerMode?: string;
+    headerDifferentFirstPage?: boolean;
+    headerContinuationMode?: string;
+  },
   pageIndex: number,
 ): boolean {
   return (
-    pageIndex > 0 && options.headerDifferentFirstPage !== false && options.headerMode === "contact"
+    pageIndex > 0 &&
+    options.headerDifferentFirstPage !== false &&
+    options.headerContinuationMode === undefined &&
+    options.headerMode === "contact"
   );
 }
 
@@ -595,14 +627,14 @@ export function dossierHeaderVisualHeightMmForOptions(
   options: DossierChromeOptions,
   pageIndex = 0,
 ): number {
-  if (options.headerMode === "none") return 0;
+  const mode = effectiveDossierHeaderModeForOptions(options, pageIndex);
+  if (mode === "none") return 0;
 
   const custom = options.headerHeightMm;
   if (hasReducedContinuationHeader(options, pageIndex)) {
     return custom === null ? 8 : Math.min(18, Math.max(5, custom));
   }
 
-  const mode = effectiveDossierHeaderModeForOptions(options, pageIndex);
   if (mode === "contact") return custom === null ? 22 : Math.min(40, Math.max(10, custom));
   if (mode === "compact") return custom === null ? 3 : Math.min(18, Math.max(1, custom));
   return 0;
@@ -618,8 +650,7 @@ export function dossierHeaderContentTopMmForOptions(
   const height = dossierHeaderVisualHeightMmForOptions(options, pageIndex);
   const gap = Math.min(40, Math.max(0, options.headerGapMm ?? 12));
   if (pageIndex > 0 && options.headerDifferentFirstPage !== false) {
-    const base =
-      options.headerMode === "contact" ? Math.max(18, height + 10) : Math.max(18, height + 15);
+    const base = mode === "contact" ? Math.max(18, height + 10) : Math.max(18, height + 15);
     return base + gap;
   }
   const base = mode === "contact" ? Math.max(18, height + 9) : Math.max(18, height + 18);

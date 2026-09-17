@@ -1,7 +1,9 @@
 import type { DossierChromeContact, DossierChromeOptions } from "@/lib/dossier-chrome";
 import {
+  dossierHeaderContentTopMmForOptions,
   dossierHeaderVisualHeightMmForOptions,
   dossierFooterVisualHeightMmForOptions,
+  effectiveDossierHeaderModeForOptions,
   hasReducedContinuationHeader,
 } from "@/lib/dossier-chrome";
 import type { DossierDocxDocuments } from "@/lib/dossier-docx-template-types";
@@ -33,13 +35,45 @@ function part(kind: "header" | "footer", body: string) {
   const tag = kind === "header" ? "hdr" : "ftr";
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:${tag} xmlns:w="${W}" xmlns:r="${R}" xmlns:v="urn:schemas-microsoft-com:vml">${body || "<w:p/>"}</w:${tag}>`;
 }
+type HeaderContactRow = {
+  key: "name" | "address" | "place" | "phone" | "email";
+  value: string;
+};
+
+export function dossierDocxInlineHeaderText(
+  rows: HeaderContactRow[],
+  separator: DossierChromeOptions["headerInlineSeparator"] = "icons",
+) {
+  return rows
+    .map((row, index) => {
+      if (separator === "icons" && row.key === "phone") {
+        return `${index ? "  " : ""}☎ ${row.value}`;
+      }
+      if (separator === "icons" && row.key === "email") {
+        return `${index ? "  " : ""}✉ ${row.value}`;
+      }
+      if (index === 0) return row.value;
+      const joiner =
+        separator === "slash"
+          ? " / "
+          : separator === "pipe"
+            ? " | "
+            : separator === "space"
+              ? "     "
+              : " · ";
+      return `${joiner}${row.value}`;
+    })
+    .join("");
+}
+
 function header(
   options: DossierChromeOptions,
   contact: DossierChromeContact,
   colors: Record<string, string>,
   page: number,
 ) {
-  if (options.headerMode === "none") return part("header", "");
+  const mode = effectiveDossierHeaderModeForOptions(options, page);
+  if (mode === "none") return part("header", "");
   const background = color(
     options.headerBackgroundColor ?? colors.primary ?? colors.accent,
     "111111",
@@ -50,17 +84,44 @@ function header(
     0,
     dossierHeaderVisualHeightMmForOptions(options, page),
   );
-  if (options.headerMode === "contact") {
+  if (mode === "contact") {
     const reduced = hasReducedContinuationHeader(options, page);
-    const lines = [
-      options.headerShowName && contact.name,
-      !reduced && options.headerShowAddress && contact.address,
-      !reduced && options.headerShowAddress && contact.place,
-      options.headerShowPhone && contact.phone,
-      options.headerShowEmail && contact.email,
-    ].filter((value): value is string => !!value);
+    const rows = (
+      reduced
+        ? [
+            options.headerShowName && contact.name
+              ? { key: "name", value: contact.name }
+              : null,
+            options.headerShowEmail && contact.email
+              ? { key: "email", value: contact.email }
+              : null,
+            options.headerShowPhone && contact.phone
+              ? { key: "phone", value: contact.phone }
+              : null,
+          ]
+        : [
+            options.headerShowName && contact.name
+              ? { key: "name", value: contact.name }
+              : null,
+            options.headerShowAddress && contact.address
+              ? { key: "address", value: contact.address }
+              : null,
+            options.headerShowAddress && contact.place
+              ? { key: "place", value: contact.place }
+              : null,
+            options.headerShowPhone && contact.phone
+              ? { key: "phone", value: contact.phone }
+              : null,
+            options.headerShowEmail && contact.email
+              ? { key: "email", value: contact.email }
+              : null,
+          ]
+    ).filter((row): row is HeaderContactRow => row !== null);
     const inline = reduced || options.headerTextLayout === "inline";
-    body += (inline ? [lines.join(" · ")] : lines)
+    const lines = inline
+      ? [dossierDocxInlineHeaderText(rows, options.headerInlineSeparator)]
+      : rows.map((row) => row.value);
+    body += lines
       .map((line) =>
         paragraph(
           line,
@@ -72,6 +133,7 @@ function header(
   }
   return part("header", body);
 }
+
 function footer(options: DossierChromeOptions, colors: Record<string, string>, text: string) {
   if (options.footerMode === "none") return part("footer", "");
   const background = color(
@@ -295,9 +357,17 @@ export async function applyDossierChromeToDocx(
           content.slice(0, sectionParagraph) + finalFooter + content.slice(sectionParagraph);
       }
     }
-    if (options.headerMode === "contact") {
+    const firstHeaderMode = effectiveDossierHeaderModeForOptions(options, 0);
+    const continuationHeaderMode = effectiveDossierHeaderModeForOptions(options, 1);
+    if (firstHeaderMode === "contact" || continuationHeaderMode === "contact") {
+      // Word page margins are section-wide. Reserve enough top space for the
+      // larger of page 1 and the continuation pages so an explicit full
+      // contact header on page 2 can never overlap editable document content.
       const minTop = twips(
-        dossierHeaderVisualHeightMmForOptions(options, 0) + 9 + (options.headerGapMm ?? 12),
+        Math.max(
+          dossierHeaderContentTopMmForOptions(options, 0),
+          dossierHeaderContentTopMmForOptions(options, 1),
+        ),
       );
       properties = properties.replace(
         /w:top="(\d+)"/,
