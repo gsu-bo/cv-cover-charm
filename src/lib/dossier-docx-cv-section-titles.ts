@@ -24,6 +24,16 @@ function wordColor(value: string | undefined) {
   return /^[0-9a-f]{6}$/i.test(normalized) ? normalized.toUpperCase() : null;
 }
 
+function sectionRuleColor(design: CvDesign) {
+  return (
+    wordColor(design.sectionTitleColor) ??
+    wordColor(design.colors.accent) ??
+    wordColor(design.colors.primary) ??
+    wordColor(design.colors.secondary) ??
+    "000000"
+  );
+}
+
 function hasExplicitSectionTitleOverride(design: CvDesign) {
   return (
     (typeof design.sectionTitleFontSizePx === "number" && Number.isFinite(design.sectionTitleFontSizePx)) ||
@@ -33,7 +43,8 @@ function hasExplicitSectionTitleOverride(design: CvDesign) {
     design.sectionTitleUnderline !== undefined ||
     (typeof design.sectionTitleMarginBottomPx === "number" &&
       Number.isFinite(design.sectionTitleMarginBottomPx)) ||
-    design.headingRule === "none"
+    design.headingRule === "none" ||
+    design.headingRule === "full"
   );
 }
 
@@ -68,6 +79,15 @@ function ensureRunProperties(run: string, mutate: (properties: string) => string
     return run.replace(match[0], `<w:rPr>${next}</w:rPr>`);
   }
   return run.replace(/<w:r(\s[^>]*)?>/, (open) => `${open}<w:rPr>${mutate("")}</w:rPr>`);
+}
+
+function ensureParagraphProperties(paragraph: string, mutate: (properties: string) => string) {
+  const match = paragraph.match(/<w:pPr>([\s\S]*?)<\/w:pPr>/);
+  if (match) {
+    const next = mutate(match[1]);
+    return paragraph.replace(match[0], `<w:pPr>${next}</w:pPr>`);
+  }
+  return paragraph.replace(/<w:p(\s[^>]*)?>/, (open) => `${open}<w:pPr>${mutate("")}</w:pPr>`);
 }
 
 function replaceOrAppendTag(properties: string, pattern: RegExp, tag: string) {
@@ -129,18 +149,44 @@ function patchParagraphSpacing(paragraph: string, px: number) {
       : spacing[0].replace("/>", ` w:after="${after}"/>`);
     return paragraph.replace(spacing[0], next);
   }
-  return paragraph.replace(/<w:pPr>/, `<w:pPr><w:spacing w:after="${after}"/>`);
+  return ensureParagraphProperties(
+    paragraph,
+    (properties) => `<w:spacing w:after="${after}"/>${properties}`,
+  );
+}
+
+function recolorBottomBorders(source: string, color: string) {
+  return source.replace(/<w:bottom\b[^>]*\/>/g, (tag) =>
+    /\bw:color="[^"]*"/.test(tag)
+      ? tag.replace(/\bw:color="[^"]*"/, `w:color="${color}"`)
+      : tag.replace("/>", ` w:color="${color}"/>`),
+  );
+}
+
+function ensureParagraphBottomBorder(paragraph: string, color: string) {
+  if (/<w:bottom\b[^>]*\/>/.test(paragraph)) return recolorBottomBorders(paragraph, color);
+  return ensureParagraphProperties(paragraph, (properties) => {
+    const bottom = `<w:bottom w:val="single" w:sz="8" w:space="1" w:color="${color}"/>`;
+    const border = properties.match(/<w:pBdr>([\s\S]*?)<\/w:pBdr>/);
+    if (border) {
+      return properties.replace(border[0], `<w:pBdr>${border[1]}${bottom}</w:pBdr>`);
+    }
+    return `${properties}<w:pBdr>${bottom}</w:pBdr>`;
+  });
 }
 
 function patchParagraphBorder(paragraph: string, design: CvDesign) {
-  let next = paragraph;
   if (design.headingRule === "none") {
-    next = next.replace(/<w:pBdr>[\s\S]*?<\/w:pBdr>/g, "");
+    return paragraph.replace(/<w:pBdr>[\s\S]*?<\/w:pBdr>/g, "");
   }
+
+  let next = paragraph;
+  if (design.headingRule === "full") {
+    next = ensureParagraphBottomBorder(next, sectionRuleColor(design));
+  }
+
   const color = wordColor(design.sectionTitleColor);
-  if (color && design.headingRule !== "none") {
-    next = next.replace(/(<w:bottom\b[^>]*\bw:color=")[^"]+("[^>]*\/>)/g, `$1${color}$2`);
-  }
+  if (color) next = recolorBottomBorders(next, color);
   return next;
 }
 
@@ -155,25 +201,41 @@ function patchHeadingParagraph(paragraph: string, design: CvDesign) {
   return patchParagraphBorder(next, design);
 }
 
-function patchHeadingTable(table: string, design: CvDesign) {
-  let next = table;
-  if (
-    typeof design.sectionTitleMarginBottomPx === "number" &&
-    Number.isFinite(design.sectionTitleMarginBottomPx)
-  ) {
-    const margin = design.sectionTitleMarginBottomPx;
-    next = next.replace(/<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g, (paragraph) =>
-      patchParagraphSpacing(paragraph, margin),
-    );
-  }
+function patchHeadingTable(table: string, design: CvDesign, headings: Set<string>) {
+  let next = table.replace(/<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g, (paragraph) => {
+    let patched = paragraph;
+    if (headings.has(paragraphTextXml(paragraph))) {
+      patched = patched.replace(/<w:r(?:\s[^>]*)?>[\s\S]*?<\/w:r>/g, (run) => patchRun(run, design));
+    }
+    if (
+      typeof design.sectionTitleMarginBottomPx === "number" &&
+      Number.isFinite(design.sectionTitleMarginBottomPx)
+    ) {
+      patched = patchParagraphSpacing(patched, design.sectionTitleMarginBottomPx);
+    }
+    return patched;
+  });
+
   if (design.headingRule === "none") {
-    next = next.replace(/<w:pBdr>[\s\S]*?<\/w:pBdr>/g, "");
+    return next.replace(/<w:pBdr>[\s\S]*?<\/w:pBdr>/g, "");
   }
+
+  if (design.headingRule === "full" && !/<w:bottom\b[^>]*\/>/.test(next)) {
+    let added = false;
+    next = next.replace(/<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g, (paragraph) => {
+      if (added || paragraphTextXml(paragraph).trim()) return paragraph;
+      added = true;
+      return ensureParagraphBottomBorder(paragraph, sectionRuleColor(design));
+    });
+    if (!added) {
+      next = next.replace(/<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/, (paragraph) =>
+        ensureParagraphBottomBorder(paragraph, sectionRuleColor(design)),
+      );
+    }
+  }
+
   const color = wordColor(design.sectionTitleColor);
-  if (color && design.headingRule !== "none") {
-    next = next.replace(/(<w:bottom\b[^>]*\bw:color=")[^"]+("[^>]*\/>)/g, `$1${color}$2`);
-  }
-  return next;
+  return color ? recolorBottomBorders(next, color) : next;
 }
 
 function cvDocumentStart(source: string) {
@@ -204,18 +266,26 @@ export function applyCvSectionTitleStyleToDocumentXml(
   const start = cvDocumentStart(source);
   const prefix = source.slice(0, start);
   let body = source.slice(start);
+  const patchedTables: string[] = [];
 
   body = body.replace(/<w:tbl>[\s\S]*?<\/w:tbl>/g, (table) => {
     const containsHeading = Array.from(
       table.matchAll(/<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g),
       (match) => paragraphTextXml(match[0]),
     ).some((text) => headings.has(text));
-    return containsHeading ? patchHeadingTable(table, cv.design) : table;
+    if (!containsHeading) return table;
+    const index = patchedTables.push(patchHeadingTable(table, cv.design, headings)) - 1;
+    return `__CV_SECTION_TITLE_TABLE_${index}__`;
   });
 
   body = body.replace(/<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g, (paragraph) =>
     headings.has(paragraphTextXml(paragraph)) ? patchHeadingParagraph(paragraph, cv.design) : paragraph,
   );
+
+  body = body.replace(/__CV_SECTION_TITLE_TABLE_(\d+)__/g, (_token, rawIndex) => {
+    const index = Number(rawIndex);
+    return patchedTables[index] ?? "";
+  });
 
   return prefix + body;
 }
