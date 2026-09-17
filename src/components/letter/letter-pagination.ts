@@ -86,14 +86,14 @@ function bodyCapacityPx(root: HTMLElement, name: string, finalPage: boolean): nu
 }
 
 function tableRows(table: HTMLTableElement, tableKey: string): TableRowUnit[] {
-  return Array.from(table.querySelectorAll<HTMLTableRowElement>(":scope > tbody > tr, :scope > tr")).map(
-    (row) => ({
-      kind: "table-row",
-      tableKey,
-      rowHtml: row.outerHTML,
-      label: "Tabellenzeile",
-    }),
-  );
+  return Array.from(
+    table.querySelectorAll<HTMLTableRowElement>(":scope > tbody > tr, :scope > tr"),
+  ).map((row) => ({
+    kind: "table-row",
+    tableKey,
+    rowHtml: row.outerHTML,
+    label: "Tabellenzeile",
+  }));
 }
 
 function measuredUnits(sourceBody: HTMLElement): PaginationUnit[] {
@@ -340,7 +340,10 @@ function measuredImagePlacements(
   if (!host || !body) {
     return {
       placements: [],
-      issue: { code: "measurement-failed", message: "Bilder konnten nicht für den Seitenumbruch vermessen werden." },
+      issue: {
+        code: "measurement-failed",
+        message: "Bilder konnten nicht für den Seitenumbruch vermessen werden.",
+      },
     };
   }
 
@@ -382,7 +385,9 @@ function measuredImagePlacements(
 }
 
 function imagesForPage(placements: ImagePlacement[], pageIndex: number): LetterFlowImage[] {
-  return placements.filter((placement) => placement.pageIndex === pageIndex).map(({ image }) => image);
+  return placements
+    .filter((placement) => placement.pageIndex === pageIndex)
+    .map(({ image }) => image);
 }
 
 function imageCostForPage(placements: ImagePlacement[], pageIndex: number): number {
@@ -419,7 +424,8 @@ export function paginateMeasuredLetter(
       pages: [],
       issue: {
         code: "measurement-failed",
-        message: "Der Seitenumbruch konnte nicht zuverlässig vermessen werden. Bitte lade die Ansicht neu.",
+        message:
+          "Der Seitenumbruch konnte nicht zuverlässig vermessen werden. Bitte lade die Ansicht neu.",
       },
     };
   }

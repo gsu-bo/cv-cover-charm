@@ -83,8 +83,7 @@ describe("letter preflight", () => {
         selector === "[data-letter-text-layer]" ? textLayer : null,
     } as unknown as HTMLElement;
     const letterRoot = {
-      querySelector: (selector: string) =>
-        selector === "[data-letter-page]" ? letterPage : null,
+      querySelector: (selector: string) => (selector === "[data-letter-page]" ? letterPage : null),
     } as unknown as HTMLElement;
     const combinedRoot = {
       querySelector: (selector: string) => {
@@ -93,19 +92,21 @@ describe("letter preflight", () => {
         return null;
       },
       querySelectorAll: (selector: string) =>
-        selector === "[data-cv-page]" ? ([{} as HTMLElement] as unknown as NodeListOf<HTMLElement>) : [],
+        selector === "[data-cv-page]"
+          ? ([{} as HTMLElement] as unknown as NodeListOf<HTMLElement>)
+          : [],
     } as unknown as HTMLElement;
 
     try {
       await expect(
         downloadLetterPdf(letterPage, "blocked.pdf", { title: "Test", author: "Test" }),
-      ).rejects.toThrow("Motivationsschreiben passt nicht auf eine Seite");
+      ).rejects.toThrow("Motivationsschreiben Seite 1 enthält Inhalt");
       await expect(
         downloadCombinedDossierPdf(combinedRoot, "blocked-dossier.pdf", {
           title: "Test",
           author: "Test",
         }),
-      ).rejects.toThrow("Motivationsschreiben passt nicht auf eine Seite");
+      ).rejects.toThrow("Motivationsschreiben Seite 1 enthält Inhalt");
     } finally {
       if (documentDescriptor) Object.defineProperty(globalThis, "document", documentDescriptor);
       else Reflect.deleteProperty(globalThis, "document");

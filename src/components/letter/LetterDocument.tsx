@@ -269,10 +269,7 @@ export function LetterDocument({
       data-letter-pagination-error={pagination.issue?.code}
       data-letter-pagination-error-message={pagination.issue?.message}
     >
-      <div
-        data-letter-document-pages
-        className={scaledPreview ? "grid w-full gap-6" : undefined}
-      >
+      <div data-letter-document-pages className={scaledPreview ? "grid w-full gap-6" : undefined}>
         {renderedPages.map((fragment) => {
           const page = (
             <LetterPageShell

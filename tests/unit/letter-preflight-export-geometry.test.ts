@@ -56,7 +56,7 @@ test("M8 PDF export rejects clipped attachment chrome before rasterization", asy
   try {
     await expect(
       downloadLetterPdf(page, "blocked-footer.pdf", { title: "Test", author: "Test" }),
-    ).rejects.toThrow("Motivationsschreiben passt nicht auf eine Seite");
+    ).rejects.toThrow("Motivationsschreiben Seite 1 enthält Inhalt");
   } finally {
     if (documentDescriptor) Object.defineProperty(globalThis, "document", documentDescriptor);
     else Reflect.deleteProperty(globalThis, "document");

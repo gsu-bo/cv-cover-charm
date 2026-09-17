@@ -22,9 +22,7 @@
 }
 
 /* Closing, signature and body-owned attachments exist on the final page only. */
-[data-letter-nonfinal-page]
-  [data-letter-flow-zone]
-  > div:has(> [data-letter-pdf-text="closing"]),
+[data-letter-nonfinal-page] [data-letter-flow-zone] > div:has(> [data-letter-pdf-text="closing"]),
 [data-letter-nonfinal-page]
   [data-letter-flow-zone]
   > div:has([data-letter-pdf-text="attachments-heading"]) {

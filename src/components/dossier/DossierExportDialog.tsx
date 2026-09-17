@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { CvLayoutWarning } from "@/components/cv/CvCanvas";
-import { letterReadiness, letterTextLayerOverflows } from "@/components/letter/preflight";
+import { letterPageOverflows, letterReadiness } from "@/components/letter/preflight";
 import {
   coverPdfDocumentFromSaved,
   coverPdfHasContent,
@@ -87,6 +87,7 @@ export function DossierExportDialog({
   const downloadRef = useRef<HTMLButtonElement>(null);
   const [format, setFormat] = useState<DossierExportFormat>("pdf");
   const [letterOverflow, setLetterOverflow] = useState<boolean | null>(null);
+  const [letterPaginationError, setLetterPaginationError] = useState<string | null>(null);
   const formatSelectionEnabled =
     jsonAvailable !== undefined || pdfAvailable !== undefined || docxAvailable !== undefined;
   const canDownloadPdf = pdfAvailable ?? true;
@@ -135,26 +136,36 @@ export function DossierExportDialog({
   useEffect(() => {
     if (!open || !canDownloadPdf) {
       setLetterOverflow(null);
+      setLetterPaginationError(null);
       return;
     }
     let resizeObserver: ResizeObserver | null = null;
     let innerFrame = 0;
     const measure = () => {
-      const layer = document.querySelector<HTMLElement>(
-        "[data-dossier-document='letter'] [data-letter-text-layer]",
+      const documentRoot = document.querySelector<HTMLElement>(
+        "[data-dossier-document='letter'] [data-letter-document-root]",
       );
-      if (!layer) {
+      if (!documentRoot || documentRoot.dataset.letterPaginationReady !== "true") {
+        setLetterOverflow(null);
+        setLetterPaginationError(null);
+        return;
+      }
+
+      const paginationError = documentRoot.dataset.letterPaginationErrorMessage?.trim() || null;
+      const pages = Array.from(documentRoot.querySelectorAll<HTMLElement>("[data-letter-page]"));
+      setLetterPaginationError(paginationError);
+      if (!pages.length) {
         setLetterOverflow(null);
         return;
       }
-      setLetterOverflow(letterTextLayerOverflows(layer));
-      if (!resizeObserver) {
-        resizeObserver = new ResizeObserver(measure);
-        resizeObserver.observe(layer);
-      }
+      setLetterOverflow(!!paginationError || pages.some(letterPageOverflows));
+
+      if (!resizeObserver) resizeObserver = new ResizeObserver(measure);
+      resizeObserver.disconnect();
+      for (const page of pages) resizeObserver.observe(page);
     };
     const mutationObserver = new MutationObserver(measure);
-    mutationObserver.observe(document.body, { childList: true, subtree: true });
+    mutationObserver.observe(document.body, { childList: true, subtree: true, attributes: true });
     const outerFrame = requestAnimationFrame(() => {
       innerFrame = requestAnimationFrame(measure);
     });
@@ -201,7 +212,9 @@ export function DossierExportDialog({
     : !letterState.readyToSend
       ? missingFieldsCompact
       : letterOverflow === true
-        ? "Brief ist zu lang"
+        ? letterPaginationError
+          ? "Briefinhalt prüfen"
+          : "Briefseite prüfen"
         : layoutPending
           ? "Layout wird geprüft…"
           : "Bereit";
@@ -359,10 +372,10 @@ export function DossierExportDialog({
               {pdfOverflowIssue ? (
                 <li data-dossier-letter-overflow>
                   <span className="font-medium text-foreground">
-                    Motivationsschreiben ist zu lang.
+                    Motivationsschreiben kann nicht sicher exportiert werden.
                   </span>{" "}
-                  Der Brief passt nicht auf eine A4-Seite; ein abgeschnittenes Dossier-PDF wird
-                  nicht erstellt.
+                  {letterPaginationError ??
+                    "Mindestens eine erzeugte Briefseite läuft über den nutzbaren Seitenbereich."}
                 </li>
               ) : null}
               {docxDesignIssue ? (

@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ColorChooser } from "@/components/cover/ColorChooser";
-import { ScaledPreview } from "@/components/cover/ScaledPreview";
 import { Section } from "@/components/cover/Section";
 import { ThemeToggle } from "@/components/cover/ThemeToggle";
 import { FileDown, History, RotateCcw, Sparkles } from "lucide-react";
@@ -19,7 +18,7 @@ import { FONT_LABELS, TEMPLATES, type FontKey } from "@/components/cover/types";
 import { DEFAULTS } from "@/default-config";
 import { ResizableEditorPanel } from "@/components/dossier/ResizableEditorPanel";
 import { SaveStatus, type SaveState } from "@/components/dossier/SaveStatus";
-import { LetterCanvas } from "@/components/letter/LetterCanvas";
+import { LetterDocument, type LetterPaginationState } from "@/components/letter/LetterDocument";
 import { LetterLayoutControls } from "@/components/letter/LetterLayoutControls";
 import { LetterRichTextEditor } from "@/components/letter/LetterRichTextEditor";
 import { LetterTemplatePicker } from "@/components/letter/LetterTemplatePicker";
@@ -138,7 +137,11 @@ function Anschreiben() {
   const [confirmDemo, setConfirmDemo] = useState(false);
   const [confirmWipe, setConfirmWipe] = useState(false);
   const [history, setHistory] = useState<Snapshot[]>([]);
-  const [letterOverflow, setLetterOverflow] = useState(false);
+  const [letterPagination, setLetterPagination] = useState<LetterPaginationState>({
+    ready: false,
+    pageCount: 1,
+    issue: null,
+  });
   const [pdfDownloading, setPdfDownloading] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [source, setSource] = useState<LetterDossierSource | null>(null);
@@ -387,19 +390,25 @@ function Anschreiben() {
   };
 
   const downloadMotivationLetter = async () => {
-    if (pdfDownloading || letterOverflow || !letterHasStarted(data)) return;
+    if (
+      pdfDownloading ||
+      !letterPagination.ready ||
+      letterPagination.issue ||
+      !letterHasStarted(data)
+    )
+      return;
     setPdfError(null);
     setPdfDownloading(true);
     try {
-      const page = document.querySelector<HTMLElement>(
-        "[data-letter-standalone-export] [data-letter-page]",
+      const root = document.querySelector<HTMLElement>(
+        "[data-letter-standalone-export] [data-letter-document-root]",
       );
-      if (!page) throw new Error("Exportansicht ist noch nicht bereit");
+      if (!root) throw new Error("Exportansicht ist noch nicht bereit");
       const namePart = data.absenderName
         .trim()
         .replace(/\s+/g, "-")
         .replace(/[^A-Za-z0-9ÄÖÜäöüß_-]/g, "");
-      await downloadLetterPdf(page, `Motivationsschreiben-${namePart || "Bewerbung"}.pdf`, {
+      await downloadLetterPdf(root, `Motivationsschreiben-${namePart || "Bewerbung"}.pdf`, {
         title: data.betreff || "Motivationsschreiben",
         author: data.absenderName.trim(),
         subject: "Motivationsschreiben",
@@ -584,7 +593,9 @@ function Anschreiben() {
                   setMenuOpen(false);
                   void downloadMotivationLetter();
                 }}
-                disabled={letterOverflow || !letterHasStarted(data)}
+                disabled={
+                  !letterPagination.ready || !!letterPagination.issue || !letterHasStarted(data)
+                }
                 className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
               >
                 <EditorMenuLabel icon={FileDown}>Nur Motivationsschreiben als PDF</EditorMenuLabel>
@@ -696,13 +707,14 @@ function Anschreiben() {
               Lebenslauf, damit längerer Text gut lesbar bleibt.
             </div>
 
-            {letterOverflow ? (
+            {letterPagination.issue ? (
               <div
                 role="alert"
+                data-letter-pagination-issue={letterPagination.issue.code}
                 className="rounded-lg border border-amber-300/80 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
               >
-                <div className="font-semibold">Zu viel Text für eine Seite</div>
-                <div>Dein Motivationsschreiben passt nicht auf eine Seite. Kürze den Text.</div>
+                <div className="font-semibold">Inhalt kann nicht sicher umbrochen werden</div>
+                <div>{letterPagination.issue.message}</div>
               </div>
             ) : null}
 
@@ -1057,17 +1069,16 @@ function Anschreiben() {
 
         <main className="min-w-0 flex-1 overflow-auto bg-muted/40 p-3 sm:p-6">
           <div className="mx-auto w-full max-w-[980px] py-2 sm:py-4">
-            <ScaledPreview max={1}>
-              <LetterCanvas
-                data={data}
-                design={design}
-                chromeOptions={chromeOptions}
-                chromeContact={chromeContact}
-                onOverflowChange={setLetterOverflow}
-                onImageChange={patchLetterImage}
-                onImageRemove={removeLetterImage}
-              />
-            </ScaledPreview>
+            <LetterDocument
+              data={data}
+              design={design}
+              chromeOptions={chromeOptions}
+              chromeContact={chromeContact}
+              onPaginationChange={setLetterPagination}
+              onImageChange={patchLetterImage}
+              onImageRemove={removeLetterImage}
+              scaledPreview
+            />
           </div>
         </main>
 
@@ -1076,7 +1087,7 @@ function Anschreiben() {
           className="pointer-events-none fixed left-[-10000px] top-0"
           aria-hidden="true"
         >
-          <LetterCanvas
+          <LetterDocument
             data={data}
             design={design}
             chromeOptions={chromeOptions}

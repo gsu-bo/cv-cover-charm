@@ -164,7 +164,7 @@ async function openReview(page: Page) {
 test.describe("M1 dossier sending truth", () => {
   test.setTimeout(240_000);
 
-  test("missing fields, overflow and fitting content share one safe dossier preflight", async ({
+  test("missing fields, multi-page and fitting content share one safe dossier preflight", async ({
     page,
   }) => {
     await seedDossier(page, letterPayload(LONG_FITTING_BODY, { betreff: "" }));
@@ -194,11 +194,24 @@ test.describe("M1 dossier sending truth", () => {
     await page.waitForLoadState("networkidle");
 
     dialog = await openReview(page);
-    const overflow = dialog.locator("[data-dossier-letter-overflow]");
-    await expect(overflow).toContainText("Motivationsschreiben ist zu lang", { timeout: 15_000 });
-    await expect(overflow).toContainText("abgeschnittenes Dossier-PDF wird nicht erstellt");
+    let documentRoot = page.locator("[data-dossier-document='letter'] [data-letter-document-root]");
+    await expect(documentRoot).toHaveAttribute("data-letter-pagination-ready", "true", {
+      timeout: 20_000,
+    });
+    await expect
+      .poll(() => documentRoot.locator("[data-letter-page]").count(), { timeout: 20_000 })
+      .toBeGreaterThan(1);
+    await expect(dialog.locator("[data-dossier-letter-overflow]")).toHaveCount(0);
     downloadButton = dialog.getByRole("button", { name: "PDF herunterladen", exact: true });
-    await expect(downloadButton).toBeDisabled();
+    await expect(downloadButton).toBeEnabled({ timeout: 20_000 });
+
+    const [multiDownload] = await Promise.all([
+      page.waitForEvent("download", { timeout: 90_000 }),
+      downloadButton.click(),
+    ]);
+    const multiPath = await multiDownload.path();
+    expect(multiPath).not.toBeNull();
+    expect((await stat(multiPath ?? "")).size).toBeGreaterThan(10_000);
     await dialog.getByRole("button", { name: "Zurück zum Bearbeiten" }).click();
 
     await page.evaluate(
@@ -214,13 +227,23 @@ test.describe("M1 dossier sending truth", () => {
     await page.waitForLoadState("networkidle");
 
     dialog = await openReview(page);
+    documentRoot = page.locator("[data-dossier-document='letter'] [data-letter-document-root]");
+    await expect(documentRoot).toHaveAttribute("data-letter-pagination-ready", "true", {
+      timeout: 20_000,
+    });
+    await expect
+      .poll(() => documentRoot.locator("[data-letter-page]").count(), { timeout: 20_000 })
+      .toBe(1);
     await expect(dialog.locator("[data-dossier-letter-overflow]")).toHaveCount(0);
     downloadButton = dialog.getByRole("button", { name: "PDF herunterladen", exact: true });
-    await expect(downloadButton).toBeEnabled({ timeout: 15_000 });
+    await expect(downloadButton).toBeEnabled({ timeout: 20_000 });
 
-    const [download] = await Promise.all([page.waitForEvent("download"), downloadButton.click()]);
-    const path = await download.path();
-    expect(path).not.toBeNull();
-    expect((await stat(path ?? "")).size).toBeGreaterThan(10_000);
+    const [download] = await Promise.all([
+      page.waitForEvent("download", { timeout: 90_000 }),
+      downloadButton.click(),
+    ]);
+    const pathValue = await download.path();
+    expect(pathValue).not.toBeNull();
+    expect((await stat(pathValue ?? "")).size).toBeGreaterThan(10_000);
   });
 });
