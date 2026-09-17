@@ -1,12 +1,10 @@
 name: CV Package 1.5 apply v2
 
-# One-shot apply/verification workflow for the focused Package 1.5 source patch.
 on:
   push:
-    branches:
-      - dev
+    branches: [dev]
     paths:
-      - .github/workflows/cv-package15-apply-v2.yml
+      - ".github/workflows/cv-package15-apply-v2.yml"
 
 permissions:
   contents: write
@@ -26,7 +24,7 @@ jobs:
       - name: Extract and apply prepared Package 1.5 patch
         shell: bash
         run: |
-          python - <<'PY'
+          python <<'PY'
           import subprocess
           from pathlib import Path
 
@@ -44,35 +42,37 @@ jobs:
           patch = "\n".join(lines) + "\n"
 
           patch = patch.replace(
-              '''  const layoutChoice = useSyncExternalStore<CvLayoutId>(\n  subscribeCvLayoutChoice,\n  getCvLayoutChoice,\n  () => "classic",\n);''',
-              '''  const layoutChoice = useSyncExternalStore<CvLayoutId>(\n    subscribeCvLayoutChoice,\n    getCvLayoutChoice,\n    () => "classic",\n  );''',
+              "  const layoutChoice = useSyncExternalStore<CvLayoutId>(\n  subscribeCvLayoutChoice,\n  getCvLayoutChoice,\n  () => \"classic\",\n);",
+              "  const layoutChoice = useSyncExternalStore<CvLayoutId>(\n    subscribeCvLayoutChoice,\n    getCvLayoutChoice,\n    () => \"classic\",\n  );",
           )
 
-          old_helper = '''def replace(path: str, old: str, new: str):
-    p = Path(path)
-    text = p.read_text()
-    if old not in text:
-        raise SystemExit(f"expected snippet missing in {path}: {old[:100]!r}")
-    p.write_text(text.replace(old, new, 1))
-'''
-          new_helper = '''def replace(path: str, old: str, new: str):
-    import re
-    p = Path(path)
-    text = p.read_text()
-    if old in text:
-        p.write_text(text.replace(old, new, 1))
-        return
-    lines = old.splitlines()
-    parts = []
-    for line in lines:
-        stripped = line.strip()
-        parts.append(r"[ \\t]*" + (re.escape(stripped) if stripped else "") + r"[ \\t]*")
-    pattern = r"\\n".join(parts)
-    match = re.search(pattern, text)
-    if not match:
-        raise SystemExit(f"expected snippet missing in {path}: {old[:100]!r}")
-    p.write_text(text[:match.start()] + new + text[match.end():])
-'''
+          old_helper = (
+              "def replace(path: str, old: str, new: str):\n"
+              "    p = Path(path)\n"
+              "    text = p.read_text()\n"
+              "    if old not in text:\n"
+              "        raise SystemExit(f\"expected snippet missing in {path}: {old[:100]!r}\")\n"
+              "    p.write_text(text.replace(old, new, 1))\n"
+          )
+          new_helper = (
+              "def replace(path: str, old: str, new: str):\n"
+              "    import re\n"
+              "    p = Path(path)\n"
+              "    text = p.read_text()\n"
+              "    if old in text:\n"
+              "        p.write_text(text.replace(old, new, 1))\n"
+              "        return\n"
+              "    lines = old.splitlines()\n"
+              "    parts = []\n"
+              "    for line in lines:\n"
+              "        stripped = line.strip()\n"
+              "        parts.append(r'[ \\t]*' + (re.escape(stripped) if stripped else '') + r'[ \\t]*')\n"
+              "    pattern = r'\\n'.join(parts)\n"
+              "    match = re.search(pattern, text)\n"
+              "    if not match:\n"
+              "        raise SystemExit(f\"expected snippet missing in {path}: {old[:100]!r}\")\n"
+              "    p.write_text(text[:match.start()] + new + text[match.end():])\n"
+          )
           if old_helper not in patch:
               raise SystemExit("prepared patch helper not found")
           patch = patch.replace(old_helper, new_helper, 1)
