@@ -159,7 +159,8 @@ export function LetterCanvas({
   const palette = resolveLetterPalette(design);
   const paperColor = resolveLetterPaperColor(design);
   const paperColorOverride = normalizeLetterPaperColor(design.paperColor);
-  const resolvedFont = design.template === "brief" ? design.font : (design.fontOverride ?? design.font);
+  const resolvedFont =
+    design.template === "brief" ? design.font : (design.fontOverride ?? design.font);
   const fontFamily =
     design.template === "brief"
       ? FONT_STACKS[design.font]
