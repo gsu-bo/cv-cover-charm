@@ -43,7 +43,11 @@ describe("CV custom section presets", () => {
       title: "Familie",
       preset: "familie",
     });
-    expect(migrated.sectionOrder).toContain("custom:familie");
+    expect(migrated.sectionOrder?.slice(0, 3)).toEqual(["person", "custom:familie", "schule"]);
+  });
+
+  test("uses family as the second default rubric", () => {
+    expect(DEMO_CV.sectionOrder?.slice(0, 3)).toEqual(["person", "custom:familie", "schule"]);
   });
 
   test("uses the requested family example in the demo CV", () => {
