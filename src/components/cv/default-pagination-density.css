@@ -18,14 +18,14 @@
 [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page])
   [data-cv-section]:not([data-cv-user-section-margin="true"]) {
-  margin-top: 1.4mm !important;
-  margin-bottom: 0.6mm !important;
+  margin-top: 1.2mm !important;
+  margin-bottom: 0.5mm !important;
 }
 
 [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page])
   [data-cv-entry] {
-  margin-bottom: 0.8mm !important;
+  margin-bottom: 0.6mm !important;
 }
 
 /*
@@ -35,14 +35,14 @@
 [data-cv-layout="modern"]
   :is([data-cv-page], [data-cv-measure-page])
   [data-cv-section]:not([data-cv-user-section-margin="true"]) {
-  margin-top: 1.6mm !important;
-  margin-bottom: 0.7mm !important;
+  margin-top: 1.4mm !important;
+  margin-bottom: 0.6mm !important;
 }
 
 [data-cv-layout="modern"]
   :is([data-cv-page], [data-cv-measure-page])
   [data-cv-entry] {
-  margin-bottom: 1mm !important;
+  margin-bottom: 0.8mm !important;
 }
 
 /*
@@ -73,7 +73,7 @@ html[data-cv-variant="editorial"]
 [data-cv-layout="modern"]
   :is([data-cv-page], [data-cv-measure-page])
   [data-cv-body] {
-  line-height: 1.24 !important;
+  line-height: 1.23 !important;
 }
 
 [data-cv-layout="classic"]
@@ -82,7 +82,7 @@ html[data-cv-variant="editorial"]
 [data-cv-layout="modern"]
   :is([data-cv-page], [data-cv-measure-page])
   [data-cv-muted] {
-  line-height: 1.2 !important;
+  line-height: 1.19 !important;
 }
 
 [data-cv-layout="classic"]
@@ -91,5 +91,5 @@ html[data-cv-variant="editorial"]
 [data-cv-layout="modern"]
   :is([data-cv-page], [data-cv-measure-page])
   [data-cv-entry-title] {
-  line-height: 1.14 !important;
+  line-height: 1.13 !important;
 }
