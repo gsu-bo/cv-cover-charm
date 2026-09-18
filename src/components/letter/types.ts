@@ -63,6 +63,8 @@ export type LetterData = {
 export type LetterDesign = {
   template: LetterTemplateId;
   colors: Record<string, string>;
+  /** Eigene Papierfarbe nur für das Anschreiben; unabhängig von der Vorlage. */
+  paperColor?: string | null;
   /** Standalone-Briefschrift bzw. Kompatibilitätswert für ältere Saves. */
   font: FontKey;
   /**
@@ -251,6 +253,7 @@ export function emptyLetterDesign(): LetterDesign {
   return {
     template,
     colors: defaultLetterColors(template),
+    paperColor: null,
     font: "freundlich",
     fontOverride: null,
     senderAlign: "left",
@@ -327,6 +330,7 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
   return {
     template,
     colors,
+    paperColor: normalizedColor(incoming.paperColor),
     font,
     fontOverride,
     senderAlign: incoming.senderAlign === "right" ? "right" : "left",

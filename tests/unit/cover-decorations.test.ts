@@ -147,6 +147,8 @@ describe("cover decoration single source", () => {
     expect(sheetBackground).toContain("bandMm: 36");
     expect(sheetBackground).toContain("footMm: 16");
     expect(sheetBackground).toContain('template === "edel"');
-    expect(sheetBackground).toContain('style={{ inset: "19mm", backgroundColor: palette.paper }}');
+    expect(sheetBackground).toContain(
+      'style={{ inset: "19mm", backgroundColor: paperColor ?? palette.paper }}',
+    );
   });
 });

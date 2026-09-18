@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { FONT_STACKS } from "@/components/cover/types";
-import { cvPalette, onColorRoles } from "@/components/cv/palette";
+import { onColorRoles } from "@/components/cv/palette";
 import { DossierHeaderFooterChrome } from "@/components/dossier/DossierHeaderFooterChrome";
 import type { DossierChromeContact, DossierChromeOptions } from "@/lib/dossier-chrome";
 import { effectiveDossierFont } from "@/lib/dossier-theme";
@@ -21,6 +21,11 @@ import {
 import { letterRichHtml, plainTextToRichHtml } from "./rich-text";
 import { LetterFlowImages } from "./LetterFlowImages";
 import { LetterSheetBackground } from "./LetterSheetBackground";
+import {
+  normalizeLetterPaperColor,
+  resolveLetterPalette,
+  resolveLetterPaperColor,
+} from "./letter-paper";
 import {
   isWarmFirstPageCompactHeader,
   WARM_FIRST_PAGE_HEADER_HEIGHT_MM,
@@ -151,18 +156,9 @@ export function LetterCanvas({
     headerGapMm: chrome.headerGapMm ?? 12,
   });
   const contentWidthMm = geometry.content.width;
-  const sourcePalette = cvPalette(design.colors);
-  const palette =
-    design.template === "brief"
-      ? { ink: "#111111", muted: "#4b5563", accent: "#111111", paper: "#ffffff" }
-      : design.colors.sheet
-        ? sourcePalette
-        : {
-            ink: "#111111",
-            muted: "#4b5563",
-            accent: sourcePalette.accent,
-            paper: "#ffffff",
-          };
+  const palette = resolveLetterPalette(design);
+  const paperColor = resolveLetterPaperColor(design);
+  const paperColorOverride = normalizeLetterPaperColor(design.paperColor);
   const fontFamily =
     design.template === "brief"
       ? FONT_STACKS[design.font]
@@ -177,13 +173,10 @@ export function LetterCanvas({
     geometry.pageIndex,
   );
   const warmPrimary =
-    design.colors.primary ??
-    design.colors.accent ??
-    design.colors.secondary ??
-    sourcePalette.accent;
+    design.colors.primary ?? design.colors.accent ?? design.colors.secondary ?? palette.accent;
   const warmHeaderInk = onColorRoles(
     warmPrimary,
-    design.colors.secondary ?? design.colors.accent ?? sourcePalette.accent,
+    design.colors.secondary ?? design.colors.accent ?? palette.accent,
   ).ink;
   const senderOffsetY = chrome.headerContentOffsetYMm ?? 0;
   const recipientOffsetY = chrome.letterRecipientOffsetYMm ?? 0;
@@ -243,11 +236,12 @@ export function LetterCanvas({
       data-letter-page-index={geometry.pageIndex}
       data-letter-final-page={geometry.finalPage ? "true" : "false"}
       data-letter-font={design.fontOverride ?? design.font}
+      data-letter-paper-color={paperColor}
       data-letter-font-source={
         design.template === "brief" ? "standalone" : design.fontOverride ? "override" : "dossier"
       }
       className="relative h-[1123px] w-[794px] overflow-hidden bg-white shadow-xl"
-      style={{ color: palette.ink, fontFamily, backgroundColor: palette.paper }}
+      style={{ color: palette.ink, fontFamily, backgroundColor: paperColor }}
       aria-label={ariaLabel}
     >
       <LetterSheetBackground
@@ -255,6 +249,7 @@ export function LetterCanvas({
         colors={design.colors}
         pageIndex={geometry.pageIndex}
         headerMode={geometry.effectiveHeaderMode}
+        paperColor={paperColorOverride}
       />
 
       <DossierHeaderFooterChrome

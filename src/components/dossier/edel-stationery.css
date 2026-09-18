@@ -8,7 +8,7 @@
  * coherent light design rather than a framed poster.
  */
 [data-dossier-sheet-background="edel"] {
-  background-color: #fffdfa !important;
+  background-color: var(--letter-paper-color, #fffdfa) !important;
 }
 
 /* The legacy Edel background created a white card inset by 19 mm inside the
@@ -16,7 +16,7 @@
  */
 [data-dossier-sheet-background="edel"] > div:first-child {
   inset: 0 !important;
-  background-color: #fffdfa !important;
+  background-color: var(--letter-paper-color, #fffdfa) !important;
 }
 
 /* Keep the double gold hairline as the family signature, but move it close to
