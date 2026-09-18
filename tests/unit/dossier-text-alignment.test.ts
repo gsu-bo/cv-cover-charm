@@ -6,6 +6,7 @@ import {
   normalizeTextAlignment,
   TEXT_ALIGNMENTS,
 } from "@/lib/text-alignment";
+import { compatibleLetterTextAlign } from "@/components/letter/rich-text";
 
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 
@@ -60,6 +61,16 @@ describe("shared dossier text alignment", () => {
     expect(letterRichText).toContain("export type LetterTextAlign = BodyTextAlignment");
     expect(cvAlignment).toContain("BodyTextAlignment");
     expect(cvAlignment).not.toContain("normalizeTextAlignment");
+  });
+
+  test("multi-column letter blocks never combine with justification", () => {
+    expect(compatibleLetterTextAlign("justify", 1)).toBe("justify");
+    expect(compatibleLetterTextAlign("justify", 2)).toBe("left");
+    expect(compatibleLetterTextAlign("justify", "3")).toBe("left");
+    expect(compatibleLetterTextAlign("left", 2)).toBe("left");
+    expect(letterEditor).toContain('if (align === "justify") delete block.dataset.columns');
+    expect(letterEditor).toContain('block.dataset.align = "left"');
+    expect(letterCss).toContain('[data-columns="2"], [data-columns="3"]');
   });
 
   test("CV alignment lives in the typography form and reaches preview/PDF body roles", () => {

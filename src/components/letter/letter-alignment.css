@@ -19,3 +19,13 @@
 [data-letter-pdf-richtext] > :is(div, p)[data-align="justify"] {
   text-align: justify;
 }
+
+/*
+ * Defensive rendering for legacy/project HTML that still combines columns
+ * with justification. Column fragments are not paragraph endings in Chromium,
+ * so justification otherwise produces extreme gaps at every fragment edge.
+ */
+[data-letter-rich-editor] > :is(div, p):is([data-columns="2"], [data-columns="3"]),
+[data-letter-pdf-richtext] > :is(div, p):is([data-columns="2"], [data-columns="3"]) {
+  text-align: left;
+}
