@@ -1,10 +1,9 @@
 import type { LetterFlowImage } from "./types";
 import {
-  LETTER_IMAGE_MAX_TOP_MM,
-  LETTER_IMAGE_MAX_WIDTH_MM,
-  LETTER_IMAGE_MIN_WIDTH_MM,
-  clampLetterImageValue,
+  letterImageFreePositionPatch,
+  letterImageMmPerPx,
   letterImagePlacementPatch,
+  letterImageResizePatch,
   normalizeLetterImageGeometry,
   type LetterImagePlacement,
 } from "./letter-image-geometry";
@@ -25,9 +24,9 @@ const PLACEMENT_LABEL: Record<LetterImagePlacement, string> = {
 
 /**
  * Left/right use a real CSS float so text deliberately wraps around the image.
- * Once an image gets an explicit x-coordinate it is truly free: x/y are then
- * measured from the letter content box and PDF renders exactly that geometry.
- * The same normalized geometry is reused by the DOCX postprocessor.
+ * Free x/y coordinates are measured from the same letter content box used by
+ * the page geometry. PDF rasterizes this browser geometry and the DOCX pass
+ * consumes the same normalized millimetre values.
  */
 export function LetterFlowImages({
   images,
@@ -52,11 +51,9 @@ export function LetterFlowImages({
     event.stopPropagation();
 
     const rect = zone.getBoundingClientRect();
-    if (!rect.width) return;
-    const mmPerPx = contentWidthMm / rect.width;
+    const mmPerPx = letterImageMmPerPx(contentWidthMm, rect.width);
+    if (!mmPerPx) return;
     const imageRect = event.currentTarget.getBoundingClientRect();
-    const geometry = normalizeLetterImageGeometry(image, contentWidthMm);
-    const maxX = Math.max(0, contentWidthMm - geometry.widthMm);
     const grabOffsetX = event.clientX - imageRect.left;
     const grabOffsetY = event.clientY - imageRect.top;
     const pointerId = event.pointerId;
@@ -64,22 +61,15 @@ export function LetterFlowImages({
     target.setPointerCapture(pointerId);
 
     const move = (moveEvent: PointerEvent) => {
-      const nextX = clampLetterImageValue(
-        (moveEvent.clientX - rect.left - grabOffsetX) * mmPerPx,
-        0,
-        maxX,
+      onChange(
+        image.id,
+        letterImageFreePositionPatch(
+          image,
+          (moveEvent.clientX - rect.left - grabOffsetX) * mmPerPx,
+          (moveEvent.clientY - rect.top - grabOffsetY) * mmPerPx,
+          contentWidthMm,
+        ),
       );
-      const nextTop = clampLetterImageValue(
-        (moveEvent.clientY - rect.top - grabOffsetY) * mmPerPx,
-        0,
-        LETTER_IMAGE_MAX_TOP_MM,
-      );
-      const side = nextX + geometry.widthMm / 2 < contentWidthMm / 2 ? "left" : "right";
-      onChange(image.id, {
-        xMm: Math.round(nextX * 10) / 10,
-        topMm: Math.round(nextTop * 10) / 10,
-        side,
-      });
     };
 
     const up = () => {
@@ -103,38 +93,18 @@ export function LetterFlowImages({
       event.stopPropagation();
 
       const rect = zone.getBoundingClientRect();
-      if (!rect.width) return;
-      const mmPerPx = contentWidthMm / rect.width;
+      const mmPerPx = letterImageMmPerPx(contentWidthMm, rect.width);
+      if (!mmPerPx) return;
       const startX = event.clientX;
-      const geometry = normalizeLetterImageGeometry(image, contentWidthMm);
       const pointerId = event.pointerId;
       const target = event.currentTarget;
       target.setPointerCapture(pointerId);
 
       const move = (moveEvent: PointerEvent) => {
-        const rawDelta = (moveEvent.clientX - startX) * mmPerPx;
-        if (geometry.placement === "free") {
-          const available = contentWidthMm - geometry.xMm;
-          const widthMm = clampLetterImageValue(
-            geometry.widthMm + rawDelta,
-            LETTER_IMAGE_MIN_WIDTH_MM,
-            Math.min(LETTER_IMAGE_MAX_WIDTH_MM, available),
-          );
-          onChange(image.id, { widthMm: Math.round(widthMm * 10) / 10 });
-          return;
-        }
-
-        const direction = geometry.placement === "right" ? -1 : 1;
-        const delta = rawDelta * direction;
-        const fixedEdge = geometry.xMm + geometry.widthMm;
-        const available =
-          geometry.placement === "right" ? fixedEdge : contentWidthMm - geometry.xMm;
-        const widthMm = clampLetterImageValue(
-          geometry.widthMm + delta,
-          LETTER_IMAGE_MIN_WIDTH_MM,
-          Math.min(LETTER_IMAGE_MAX_WIDTH_MM, available),
+        onChange(
+          image.id,
+          letterImageResizePatch(image, (moveEvent.clientX - startX) * mmPerPx, contentWidthMm),
         );
-        onChange(image.id, { widthMm: Math.round(widthMm * 10) / 10 });
       };
 
       const up = () => {
