@@ -52,6 +52,7 @@ import {
 } from "@/components/cv/CvForm";
 import {
   CV_SECTION_LABELS,
+  CV_CUSTOM_SECTION_PRESETS,
   CV_DOC_TITLE_DEFAULTS,
   CV_DOC_TITLE_FONT_SIZE_MAX,
   CV_DOC_TITLE_FONT_SIZE_MIN,
@@ -66,15 +67,16 @@ import {
   DEFAULT_CV_TITLE,
   DEMO_CV,
   customSectionKey,
+  customSectionFromPreset,
   cvSectionLayout,
   cvSectionOrder,
-  emptyEntry,
   emptyCv,
+  ensureFixedFamilySection,
   entryFilled,
   isCustomSectionKey,
-  newId,
   normalizeCvSectionLayout,
   type CvData,
+  type CvCustomSectionPresetKey,
   type CvDesign,
   type CvLayoutSectionKey,
   type CvPerson,
@@ -333,7 +335,14 @@ function Lebenslauf() {
 
   /** Einen gespeicherten oder importierten Lebenslauf übernehmen. */
   const applySaved = useCallback((p: Partial<Saved>) => {
-    if (p.data) setData({ ...emptyCv, ...p.data, person: { ...emptyCv.person, ...p.data.person } });
+    if (p.data)
+      setData(
+        ensureFixedFamilySection({
+          ...emptyCv,
+          ...p.data,
+          person: { ...emptyCv.person, ...p.data.person },
+        }),
+      );
     if (p.design) setDesign((d) => migratedDesign(d, p.design!, p.version));
     if (Array.isArray(p.elements)) setElements(p.elements);
     if (p.elementStyles) setElementStyles(p.elementStyles);
@@ -1011,23 +1020,20 @@ function Lebenslauf() {
     setDraggedSection(null);
   };
 
-  const addCustomSection = () => {
-    const id = newId("rubrik");
-    const key = customSectionKey(id);
+  const addCustomSection = (preset: CvCustomSectionPresetKey = "eigene-rubrik") => {
+    const section = customSectionFromPreset(preset);
+    const key = customSectionKey(section.id);
     setData((current) => ({
       ...current,
-      customSections: [
-        ...(current.customSections ?? []),
-        { id, title: "Eigene Rubrik", entries: [emptyEntry()] },
-      ],
+      customSections: [...(current.customSections ?? []), section],
       sectionOrder: [...cvSectionOrder(current), key],
       sectionLayouts: {
         ...current.sectionLayouts,
         [key]: normalizeCvSectionLayout({ page: 1 }),
       },
     }));
-    setOpen((current) => ({ ...current, [`custom:${id}`]: true }));
-    setStatus({ kind: "ok", text: "Eigene Rubrik hinzugefügt" });
+    setOpen((current) => ({ ...current, [key]: true }));
+    setStatus({ kind: "ok", text: `Rubrik „${section.title}“ hinzugefügt` });
   };
 
   const patchCustomSection = (
@@ -1043,6 +1049,7 @@ function Lebenslauf() {
 
   const removeCustomSection = (id: string) => {
     const section = data.customSections?.find((candidate) => candidate.id === id);
+    if (section?.preset === "familie") return;
     if (!section || !window.confirm(`Rubrik „${section.title || "Eigene Rubrik"}“ löschen?`))
       return;
     keepSnapshot("Vor dem Löschen einer Rubrik", true);
@@ -1795,15 +1802,17 @@ function Lebenslauf() {
                   onToggle={() => toggle(key)}
                   hint={`${section.entries.length}`}
                   action={
-                    <button
-                      type="button"
-                      onClick={() => removeCustomSection(section.id)}
-                      className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                      aria-label={`${section.title || "Eigene Rubrik"} löschen`}
-                      title="Rubrik löschen"
-                    >
-                      Löschen
-                    </button>
+                    section.preset === "familie" ? undefined : (
+                      <button
+                        type="button"
+                        onClick={() => removeCustomSection(section.id)}
+                        className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        aria-label={`${section.title || "Eigene Rubrik"} löschen`}
+                        title="Rubrik löschen"
+                      >
+                        Löschen
+                      </button>
+                    )
                   }
                 >
                   <div className="mb-2 flex flex-col gap-2 border-b pb-2">
@@ -1824,11 +1833,36 @@ function Lebenslauf() {
                       onLayout={(patch) => setSectionLayout(key, patch)}
                     />
                   </div>
+                  {section.preset === "familie" ? (
+                    <p className="mb-2 rounded-md bg-muted/40 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
+                      Optionaler Bereich. Sinnvolle Aufteilung: „Eltern“ mit Namen und Berufen sowie
+                      „Geschwister“ mit Jahrgang und Tätigkeit. Die Angaben erscheinen erst im CV,
+                      wenn du sie einträgst.
+                    </p>
+                  ) : section.preset === "digitale-kenntnisse" ? (
+                    <p className="mb-2 rounded-md bg-muted/40 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
+                      Programme und Technologien mit Niveau oder konkreter Anwendung angeben, z. B.
+                      „Excel – Grundkenntnisse, einfache Formeln“. Allgemeine PC-Nutzung musst du
+                      nicht aufführen.
+                    </p>
+                  ) : null}
                   <FormCvEntries
                     entries={section.entries}
                     onChange={(entries) => patchCustomSection(section.id, { entries })}
-                    titelLabel="Titel"
-                    ortLabel="Ort / Organisation"
+                    titelLabel={
+                      section.preset === "familie"
+                        ? "Bezug"
+                        : section.preset === "digitale-kenntnisse"
+                          ? "Programm / Technologie"
+                          : "Titel"
+                    }
+                    ortLabel={
+                      section.preset === "familie"
+                        ? "Name / Beruf"
+                        : section.preset === "digitale-kenntnisse"
+                          ? "Niveau / Anwendung"
+                          : "Ort / Organisation"
+                    }
                     placement={null}
                   />
                 </Section>
@@ -1933,13 +1967,25 @@ function Lebenslauf() {
                     </div>
                   );
                 })}
-                <button
-                  type="button"
-                  onClick={addCustomSection}
-                  className="rounded-md border border-input bg-background px-3 py-2 text-xs font-medium hover:bg-accent"
+                <select
+                  defaultValue=""
+                  onChange={(event) => {
+                    const preset = event.target.value as CvCustomSectionPresetKey;
+                    if (preset) addCustomSection(preset);
+                    event.target.value = "";
+                  }}
+                  className="rounded-md border border-input bg-background px-3 py-2 text-xs font-medium hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
+                  aria-label="Rubrik hinzufügen"
                 >
-                  + Eigene Rubrik
-                </button>
+                  <option value="" disabled>
+                    + Rubrik hinzufügen …
+                  </option>
+                  {CV_CUSTOM_SECTION_PRESETS.map((preset) => (
+                    <option key={preset.key} value={preset.key}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </Section>
 

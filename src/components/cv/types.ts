@@ -50,12 +50,7 @@ export type CvPerson = {
 
 /** Welche Abschnitte gibt es und wie heissen sie in der Vorgabe? */
 export type CvSectionKey =
-  | "schule"
-  | "erfahrung"
-  | "sprachen"
-  | "hobbys"
-  | "staerken"
-  | "referenzen";
+  "schule" | "erfahrung" | "sprachen" | "hobbys" | "staerken" | "referenzen";
 
 export const CV_SECTION_LABELS: Record<CvSectionKey, string> = {
   schule: "Schulbildung",
@@ -81,7 +76,19 @@ export type CvCustomSection = {
   id: string;
   title: string;
   entries: CvEntry[];
+  /** Optionales Schnellwahl-Preset; Titel und Inhalte bleiben danach frei editierbar. */
+  preset?: CvCustomSectionPresetKey;
 };
+
+export type CvCustomSectionPresetKey = "familie" | "digitale-kenntnisse" | "eigene-rubrik";
+
+export const CV_CUSTOM_SECTION_PRESETS: ReadonlyArray<{
+  key: CvCustomSectionPresetKey;
+  label: string;
+}> = [
+  { key: "digitale-kenntnisse", label: "Digitale Kenntnisse" },
+  { key: "eigene-rubrik", label: "Eigene Rubrik" },
+];
 
 export type CvCustomSectionKey = `custom:${string}`;
 
@@ -386,6 +393,46 @@ export const emptyPerson: CvPerson = {
 /** Vorgabe für den Dokumenttitel. */
 export const DEFAULT_CV_TITLE = "Lebenslauf";
 
+export const FIXED_FAMILY_SECTION_ID = "familie";
+
+/** Familie ist im Editor fest vorhanden, bleibt im Dokument aber unsichtbar, solange sie leer ist. */
+export const fixedFamilySection = (): CvCustomSection => ({
+  id: FIXED_FAMILY_SECTION_ID,
+  title: "Familie",
+  preset: "familie",
+  entries: [
+    {
+      id: "familie-eintrag",
+      zeit: "",
+      titel: "",
+      ort: "",
+      beschreibung: "",
+    },
+  ],
+});
+
+/** Ergänzt ältere gespeicherte CVs um den neuen festen Familienbereich. */
+export function ensureFixedFamilySection(data: CvData): CvData {
+  const sections = data.customSections ?? [];
+  const key = customSectionKey(FIXED_FAMILY_SECTION_ID);
+  const existing = sections.find((section) => section.id === FIXED_FAMILY_SECTION_ID);
+  if (existing) {
+    if (existing.preset === "familie") return data;
+    return {
+      ...data,
+      customSections: sections.map((section) =>
+        section.id === FIXED_FAMILY_SECTION_ID ? { ...section, preset: "familie" } : section,
+      ),
+      sectionOrder: cvSectionOrder(data),
+    };
+  }
+  return {
+    ...data,
+    customSections: [...sections, fixedFamilySection()],
+    sectionOrder: [...cvSectionOrder(data), key],
+  };
+}
+
 export const emptyCv: CvData = {
   person: { ...emptyPerson },
   titel: DEFAULT_CV_TITLE,
@@ -395,8 +442,8 @@ export const emptyCv: CvData = {
   hobbys: [],
   staerken: [],
   referenzen: [],
-  customSections: [],
-  sectionOrder: [...CV_LAYOUT_SECTION_ORDER],
+  customSections: [fixedFamilySection()],
+  sectionOrder: [...CV_LAYOUT_SECTION_ORDER, customSectionKey(FIXED_FAMILY_SECTION_ID)],
   labels: {},
   hidden: {},
   sectionLayouts: {},
@@ -416,6 +463,17 @@ export const emptyEntry = (): CvEntry => ({
   ort: "",
   beschreibung: "",
 });
+
+/** Erstellt eine optionale Rubrik ohne erfundene Angaben im Lebenslauf. */
+export function customSectionFromPreset(preset: CvCustomSectionPresetKey): CvCustomSection {
+  const title =
+    preset === "familie"
+      ? "Familie"
+      : preset === "digitale-kenntnisse"
+        ? "Digitale Kenntnisse"
+        : "Eigene Rubrik";
+  return { id: newId("rubrik"), title, entries: [emptyEntry()], preset };
+}
 
 export const emptySprache = (): CvSprache => ({ id: newId("s"), name: "", niveau: "" });
 
@@ -495,8 +553,30 @@ export const DEMO_CV: CvData = {
       zusatz: "",
     },
   ],
-  customSections: [],
-  sectionOrder: [...CV_LAYOUT_SECTION_ORDER],
+  customSections: [
+    {
+      id: FIXED_FAMILY_SECTION_ID,
+      title: "Familie",
+      preset: "familie",
+      entries: [
+        {
+          id: "demo-familie-eltern",
+          zeit: "",
+          titel: "Eltern",
+          ort: "Monika Müller, Detailhandelsfachfrau · Peter Müller, Maurer",
+          beschreibung: "",
+        },
+        {
+          id: "demo-familie-geschwister",
+          zeit: "",
+          titel: "Geschwister",
+          ort: "Aline (Jg. 2004), Medizinische Praxisassistentin · Jaro (Jg. 2015), Schüler",
+          beschreibung: "",
+        },
+      ],
+    },
+  ],
+  sectionOrder: [...CV_LAYOUT_SECTION_ORDER, customSectionKey(FIXED_FAMILY_SECTION_ID)],
   labels: {},
   hidden: {},
   sectionLayouts: {},
