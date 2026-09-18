@@ -147,7 +147,10 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
           </span>
           <button
             type="button"
-            onClick={onReset}
+            onClick={() => {
+              onReset();
+              for (const [key, value] of Object.entries(semanticOverrides)) onChange(key, value);
+            }}
             className="text-xs text-muted-foreground underline hover:text-foreground"
           >
             Zurücksetzen
