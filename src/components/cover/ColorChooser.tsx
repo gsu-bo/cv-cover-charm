@@ -29,6 +29,7 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
   const [showCoverDocumentColors, setShowCoverDocumentColors] = useState(false);
   const documentColorsRef = useRef<Record<string, string>>({});
   const documentColorsInitializedRef = useRef(false);
+  const previousSlotsRef = useRef(slots);
 
   // ColorChooser is shared by title page, CV and motivation letter. Route-aware
   // semantic controls keep the generic template palette compact while exposing
@@ -51,17 +52,29 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
 
   /**
    * Semantic document colors belong to the document, not to a template palette.
-   * The historical storage shape still keeps colors per template, so remember
-   * the active document overrides while this editor is mounted and copy them to
-   * every newly selected template. This also clears stale per-template values
-   * after the user chooses "Automatisch".
+   * The historical storage shape still keeps colors per template. Keep the
+   * explicit document choices in this mounted editor and copy them into a newly
+   * selected template. Normal color edits (including CV controls outside this
+   * component) update the remembered document choice instead of being reverted.
    */
   useEffect(() => {
-    if (!activeDocumentColorKeys.length) return;
+    if (!activeDocumentColorKeys.length) {
+      previousSlotsRef.current = slots;
+      return;
+    }
 
     if (!documentColorsInitializedRef.current) {
       documentColorsRef.current = documentColorOverrides(colors, activeDocumentColorKeys);
       documentColorsInitializedRef.current = true;
+      previousSlotsRef.current = slots;
+      return;
+    }
+
+    const templateChanged = previousSlotsRef.current !== slots;
+    previousSlotsRef.current = slots;
+
+    if (!templateChanged) {
+      documentColorsRef.current = documentColorOverrides(colors, activeDocumentColorKeys);
       return;
     }
 
@@ -69,7 +82,7 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
       const expected = documentColorsRef.current[key] ?? "";
       if ((colors[key] ?? "") !== expected) onChange(key, expected);
     }
-  }, [activeDocumentColorKeys, colors, onChange]);
+  }, [activeDocumentColorKeys, colors, onChange, slots]);
 
   const setDocumentColor = (key: string, value: string) => {
     const normalized = value.trim();
