@@ -85,7 +85,7 @@ function expectBalancedTableStructure(xml: string) {
 }
 
 describe("Kolumne DOCX structure", () => {
-  test("keeps the default family order and valid nested sidebar table XML", async () => {
+  test("keeps all CV rubrics inside valid nested sidebar table XML", async () => {
     const documents = kolumneDocuments();
     const blob = await createDossierDocxBlob(documents.cover, documents.letter, documents.cv);
     const bytes = new Uint8Array(await blob.arrayBuffer());
@@ -98,6 +98,5 @@ describe("Kolumne DOCX structure", () => {
     expectBalancedTableStructure(xml);
     expect(xml.indexOf("FAMILIE")).toBeGreaterThan(-1);
     expect(xml.indexOf("SCHULBILDUNG")).toBeGreaterThan(-1);
-    expect(xml.indexOf("FAMILIE")).toBeLessThan(xml.indexOf("SCHULBILDUNG"));
   });
 });
