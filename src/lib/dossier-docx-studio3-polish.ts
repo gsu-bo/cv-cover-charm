@@ -20,6 +20,15 @@ function wordColor(value: string | undefined, fallback: string) {
   return /^[0-9a-f]{6}$/i.test(normalized) ? normalized.toUpperCase() : fallback;
 }
 
+function xmlText(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 function vmlStyle(x: number, y: number, width: number, height: number, z = -251658240) {
   return `position:absolute;margin-left:${x}mm;margin-top:${y}mm;width:${width}mm;height:${height}mm;z-index:${z};mso-position-horizontal-relative:page;mso-position-vertical-relative:page;mso-wrap-distance-left:0;mso-wrap-distance-right:0;mso-wrap-distance-top:0;mso-wrap-distance-bottom:0`;
 }
@@ -38,7 +47,7 @@ function replaceDrawing(source: string, id: string, replacement: string) {
 }
 
 function replaceParagraphAfter(source: string, text: string, afterMm: number) {
-  const textIndex = source.indexOf(`>${text}</w:t>`);
+  const textIndex = source.indexOf(`>${xmlText(text)}</w:t>`);
   if (textIndex < 0) return source;
   const paragraphStart = source.lastIndexOf("<w:p>", textIndex);
   const paragraphEnd = source.indexOf("</w:p>", textIndex);
@@ -47,6 +56,20 @@ function replaceParagraphAfter(source: string, text: string, afterMm: number) {
   const next = paragraph.replace(
     /(<w:spacing\b[^>]*\bw:after=")\d+("[^>]*\/>)/,
     `$1${twips(afterMm)}$2`,
+  );
+  return source.slice(0, paragraphStart) + next + source.slice(paragraphEnd + 6);
+}
+
+function replaceParagraphBefore(source: string, text: string, beforeMm: number) {
+  const textIndex = source.indexOf(`>${xmlText(text)}</w:t>`);
+  if (textIndex < 0) return source;
+  const paragraphStart = source.lastIndexOf("<w:p>", textIndex);
+  const paragraphEnd = source.indexOf("</w:p>", textIndex);
+  if (paragraphStart < 0 || paragraphEnd < 0) return source;
+  const paragraph = source.slice(paragraphStart, paragraphEnd + 6);
+  const next = paragraph.replace(
+    /(<w:spacing\b[^>]*\bw:before=")\d+("[^>]*\/>)/,
+    `$1${twips(beforeMm)}$2`,
   );
   return source.slice(0, paragraphStart) + next + source.slice(paragraphEnd + 6);
 }
@@ -110,6 +133,23 @@ function polishDocumentXml(
   if (cover.data.lehrbeginn?.trim()) {
     xml = replaceSpacerAfter(xml, "Lehrbeginn ·", 48, 63);
   }
+
+  // The native Studio-3 transform already places contact, title and personal
+  // data inside the 58 mm CV masthead. Its historical 7 mm + 12 mm paragraph
+  // offsets plus a 29 mm spacer reserve about 48 mm again on top of that band.
+  // LibreOffice then pushes the final strength/reference block onto a fourth
+  // dossier page. Keep the same editable masthead content, but let it flow
+  // compactly inside the band and retain a 20 mm hand-off to the first section.
+  const cvTitle = (cv.data.titel || "Lebenslauf").toUpperCase();
+  const cvPersonal = [
+    cv.data.person.geburtsdatum ? `Geburtsdatum ${cv.data.person.geburtsdatum}` : "",
+    cv.data.person.nationalitaet ? `Nationalität ${cv.data.person.nationalitaet}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  xml = replaceParagraphBefore(xml, cvTitle, 0);
+  if (cvPersonal) xml = replaceParagraphBefore(xml, cvPersonal, 0);
+  xml = replaceSpacerAfter(xml, 'id="studio3-cv-primary"', 29, 20);
 
   return xml;
 }
