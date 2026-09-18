@@ -1,8 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ColorSlot } from "./types";
 import { isActive, palettesFor } from "./palettes";
 import { cvPalette } from "@/components/cv/palette";
 import { DocumentTextColorControl } from "@/components/dossier/DocumentTextColorControl";
+import {
+  COVER_DOCUMENT_COLOR_KEYS,
+  CV_DOCUMENT_COLOR_KEYS,
+  documentColorOverrides,
+} from "@/lib/dossier-document-colors";
 
 type Props = {
   slots: ColorSlot[];
@@ -22,6 +27,8 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
   const cvText = useMemo(() => cvPalette(colors), [colors]);
   const [showCvText, setShowCvText] = useState(false);
   const [showCoverDocumentColors, setShowCoverDocumentColors] = useState(false);
+  const documentColorsRef = useRef<Record<string, string>>({});
+  const documentColorsInitializedRef = useRef(false);
 
   // ColorChooser is shared by title page, CV and motivation letter. Route-aware
   // semantic controls keep the generic template palette compact while exposing
@@ -31,6 +38,45 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
     setShowCvText(path.startsWith("/lebenslauf"));
     setShowCoverDocumentColors(path.startsWith("/titelblatt"));
   }, []);
+
+  const activeDocumentColorKeys = useMemo<readonly string[]>(
+    () =>
+      showCoverDocumentColors
+        ? COVER_DOCUMENT_COLOR_KEYS
+        : showCvText
+          ? CV_DOCUMENT_COLOR_KEYS
+          : [],
+    [showCoverDocumentColors, showCvText],
+  );
+
+  /**
+   * Semantic document colors belong to the document, not to a template palette.
+   * The historical storage shape still keeps colors per template, so remember
+   * the active document overrides while this editor is mounted and copy them to
+   * every newly selected template. This also clears stale per-template values
+   * after the user chooses "Automatisch".
+   */
+  useEffect(() => {
+    if (!activeDocumentColorKeys.length) return;
+
+    if (!documentColorsInitializedRef.current) {
+      documentColorsRef.current = documentColorOverrides(colors, activeDocumentColorKeys);
+      documentColorsInitializedRef.current = true;
+      return;
+    }
+
+    for (const key of activeDocumentColorKeys) {
+      const expected = documentColorsRef.current[key] ?? "";
+      if ((colors[key] ?? "") !== expected) onChange(key, expected);
+    }
+  }, [activeDocumentColorKeys, colors, onChange]);
+
+  const setDocumentColor = (key: string, value: string) => {
+    const normalized = value.trim();
+    if (normalized) documentColorsRef.current[key] = normalized;
+    else delete documentColorsRef.current[key];
+    onChange(key, value);
+  };
 
   const cvSlots = [
     { key: "cvMuted", label: "Sekundärtext", value: colors.cvMuted || cvText.muted },
@@ -65,7 +111,7 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
                   type="color"
                   aria-label="Seitenhintergrund des Titelblatts"
                   value={coverPaper}
-                  onChange={(event) => onChange("coverPaper", event.target.value)}
+                  onChange={(event) => setDocumentColor("coverPaper", event.target.value)}
                   className="h-8 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
                 />
                 <span>Seitenhintergrund</span>
@@ -73,7 +119,7 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
               <button
                 type="button"
                 disabled={!colors.coverPaper}
-                onClick={() => onChange("coverPaper", "")}
+                onClick={() => setDocumentColor("coverPaper", "")}
                 className="text-xs text-muted-foreground underline hover:text-foreground disabled:cursor-default disabled:no-underline disabled:opacity-45"
               >
                 Automatisch
@@ -90,8 +136,8 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
             customValue={colors.coverInk}
             paperColor={coverPaper}
             description="Gilt bei jeder Vorlage für die Standardtexte des Titelblatts. Formen, Akzente und bewusst einzeln gefärbte eigene Elemente bleiben unabhängig."
-            onChange={(value) => onChange("coverInk", value)}
-            onAuto={() => onChange("coverInk", "")}
+            onChange={(value) => setDocumentColor("coverInk", value)}
+            onAuto={() => setDocumentColor("coverInk", "")}
           />
         </div>
       ) : null}
@@ -149,7 +195,9 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
             type="button"
             onClick={() => {
               onReset();
-              for (const [key, value] of Object.entries(semanticOverrides)) onChange(key, value);
+              for (const [key, value] of Object.entries(semanticOverrides)) {
+                setDocumentColor(key, value);
+              }
             }}
             className="text-xs text-muted-foreground underline hover:text-foreground"
           >
@@ -183,8 +231,8 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
             <button
               type="button"
               onClick={() => {
-                onChange("cvMuted", "");
-                onChange("cvHeading", "");
+                setDocumentColor("cvMuted", "");
+                setDocumentColor("cvHeading", "");
               }}
               className="text-xs text-muted-foreground underline hover:text-foreground"
             >
@@ -200,7 +248,7 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
                 <input
                   type="color"
                   value={slot.value}
-                  onChange={(e) => onChange(slot.key, e.target.value)}
+                  onChange={(e) => setDocumentColor(slot.key, e.target.value)}
                   className="h-8 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
                 />
                 <span className="truncate text-xs">{slot.label}</span>
