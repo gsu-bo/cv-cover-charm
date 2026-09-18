@@ -220,9 +220,7 @@ function cvHasContent(d: CvData): boolean {
     d.hobbys?.length ||
     d.staerken?.length ||
     d.referenzen?.length ||
-    d.customSections?.some(
-      (section) => section.title.trim() || section.entries.some((entry) => entryFilled(entry)),
-    )
+    d.customSections?.some((section) => section.entries.some((entry) => entryFilled(entry)))
   );
 }
 
