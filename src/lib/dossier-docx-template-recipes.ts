@@ -52,7 +52,12 @@ function neonSurfaceShape(shape: DossierDocxRecipeShape): DossierDocxRecipeShape
   // they sit over Neon's dark full-page VML background. A plain VML rect keeps
   // the same white content surface, remains editable in Word, and renders
   // consistently across Word/LibreOffice without changing the web/PDF design.
-  return { ...shape, kind: "rect" };
+  // It must also sit one VML layer above the page background; otherwise
+  // LibreOffice may paint the dark background over the white card and leave the
+  // deliberately dark light-surface text unreadable.
+  return { ...shape, kind: "rect", zIndex: -251658239 } as DossierDocxRecipeShape & {
+    zIndex: number;
+  };
 }
 
 function withLibreOfficeCardPaginationHeadroom(page: DossierDocxTemplateRecipe["cv"]) {
