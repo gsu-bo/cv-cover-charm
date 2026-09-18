@@ -843,7 +843,7 @@ test.describe("M5.8 dossier regression", () => {
     );
     await page.getByRole("button", { name: "Brief", exact: true }).click();
     await expect(preview).toHaveAttribute("data-letter-template", "brief");
-    await expect(page.getByRole("button", { name: "Farben", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Farben", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Editorial", exact: true }).click();
     await expect(preview).toHaveAttribute("data-letter-template", "klassisch");
     await expect(page.getByRole("button", { name: "Farben", exact: true })).toBeVisible();
