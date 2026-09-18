@@ -393,7 +393,10 @@ export function LetterRichTextEditor({
   return (
     <div className="grid gap-1.5">
       <span className="text-xs font-medium text-foreground">Brieftext</span>
-      <div className="relative flex flex-wrap gap-1.5 rounded-t-md border border-b-0 bg-muted/30 p-2">
+      <div
+        data-letter-rich-toolbar
+        className="relative flex flex-wrap gap-1.5 rounded-t-md border border-b-0 bg-muted/30 p-2"
+      >
         <button
           type="button"
           className={toolClass}
@@ -442,25 +445,28 @@ export function LetterRichTextEditor({
           alignments={BODY_TEXT_ALIGNMENTS}
         />
 
-        <span aria-hidden="true" className="mx-0.5 h-7 w-px self-center bg-border" />
-        <label className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground">
-          <span>Spalten</span>
-          <select
-            aria-label="Anzahl Textspalten"
-            value={toolbar.columns ?? ""}
-            className="h-6 min-w-20 cursor-pointer bg-transparent text-xs outline-none"
-            onChange={(event) => setColumns(Number(event.target.value) as LetterBodyColumns)}
-          >
-            {toolbar.columns === null ? (
-              <option value="" disabled>
-                Gemischt
-              </option>
-            ) : null}
-            <option value="1">1 Spalte</option>
-            <option value="2">2 Spalten</option>
-            <option value="3">3 Spalten</option>
-          </select>
-        </label>
+        <span aria-hidden="true" className="h-0 basis-full" />
+        <fieldset
+          data-letter-column-control
+          className="m-0 flex min-w-0 items-center gap-1 rounded-md border border-input bg-background px-1.5 pb-1 pt-0.5"
+        >
+          <legend className="px-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Spalten
+          </legend>
+          {([1, 2, 3] as const).map((count) => (
+            <button
+              key={count}
+              type="button"
+              className={`${toolClass} min-w-8 px-2 py-1 ${toolbar.columns === count ? activeToolClass : ""}`}
+              aria-label={`${count} ${count === 1 ? "Spalte" : "Spalten"}`}
+              aria-pressed={toolbar.columns === count}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => setColumns(count)}
+            >
+              {count}
+            </button>
+          ))}
+        </fieldset>
 
         <div className="relative">
           <button

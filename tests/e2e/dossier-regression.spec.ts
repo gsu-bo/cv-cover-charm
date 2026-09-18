@@ -881,9 +881,20 @@ test.describe("M5.8 dossier regression", () => {
     await page.getByRole("button", { name: "Bullet", exact: true }).click();
 
     await selectBlock(1);
-    const columnsSelect = page.getByRole("combobox", { name: "Anzahl Textspalten" });
-    await columnsSelect.selectOption("2");
-    await expect(columnsSelect).toHaveValue("2");
+    const toolbar = page.locator("[data-letter-rich-toolbar]");
+    const columnsControl = toolbar.getByRole("group", { name: "Spalten" });
+    const oneColumnButton = columnsControl.getByRole("button", { name: "1 Spalte" });
+    const twoColumnButton = columnsControl.getByRole("button", { name: "2 Spalten" });
+    await expect(columnsControl).toBeVisible();
+    const toolbarTop = await toolbar
+      .getByRole("button", { name: "Formatierung entfernen" })
+      .evaluate((button) => button.getBoundingClientRect().top);
+    const columnsTop = await columnsControl.evaluate(
+      (control) => control.getBoundingClientRect().top,
+    );
+    expect(columnsTop).toBeGreaterThan(toolbarTop + 1);
+    await twoColumnButton.click();
+    await expect(twoColumnButton).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("button", { name: "Linksbündig" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -894,12 +905,12 @@ test.describe("M5.8 dossier regression", () => {
     await expect(body.locator(":scope > div").nth(1)).toHaveCSS("column-rule-style", "none");
 
     await page.getByRole("button", { name: "Blocksatz" }).click();
-    await expect(columnsSelect).toHaveValue("1");
+    await expect(oneColumnButton).toHaveAttribute("aria-pressed", "true");
     await expect(body.locator(":scope > div").nth(1)).not.toHaveAttribute("data-columns", /.+/);
     await expect(body.locator(":scope > div").nth(1)).toHaveCSS("text-align", "justify");
 
-    await columnsSelect.selectOption("2");
-    await expect(columnsSelect).toHaveValue("2");
+    await twoColumnButton.click();
+    await expect(twoColumnButton).toHaveAttribute("aria-pressed", "true");
     await expect(body.locator(":scope > div").nth(1)).toHaveAttribute("data-align", "left");
 
     await page.getByRole("button", { name: "Tabelle" }).click();
