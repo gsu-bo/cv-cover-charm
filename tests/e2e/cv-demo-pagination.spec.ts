@@ -27,8 +27,13 @@ test.describe("M9 demo CV pagination", () => {
     const firstPageText = (await pages.first().innerText()).replace(/\s+/g, " ").trim();
     const familyIndex = firstPageText.indexOf("Familie");
     const schoolIndex = firstPageText.indexOf("Schulbildung");
-    expect(familyIndex, "family must render on page 1 directly after the personal block").toBeGreaterThanOrEqual(0);
-    expect(schoolIndex, "education must render after the family block").toBeGreaterThan(familyIndex);
+    expect(
+      familyIndex,
+      "family must render on page 1 directly after the personal block",
+    ).toBeGreaterThanOrEqual(0);
+    expect(schoolIndex, "education must render after the family block").toBeGreaterThan(
+      familyIndex,
+    );
 
     // Styling panels also contain reset buttons called "Vorlage". Section.tsx already exposes
     // a stable semantic toggle marker, so target that contract and ignore the adjacent hint text.
@@ -88,10 +93,15 @@ test.describe("M9 demo CV pagination", () => {
       expect(templateId, `${name}: selected template must reach the rendered CV`).toBeTruthy();
       exercisedTemplateIds.add(templateId!);
 
-      const renderedFirstPageText = (await pages.first().innerText()).replace(/\s+/g, " ").trim();
+      const renderedFirstPageText = (await pages.first().innerText())
+        .replace(/\s+/g, " ")
+        .trim();
       const renderedFamilyIndex = renderedFirstPageText.indexOf("Familie");
       const renderedSchoolIndex = renderedFirstPageText.indexOf("Schulbildung");
-      expect(renderedFamilyIndex, `${templateId}: family must stay on page 1`).toBeGreaterThanOrEqual(0);
+      expect(
+        renderedFamilyIndex,
+        `${templateId}: family must stay on page 1`,
+      ).toBeGreaterThanOrEqual(0);
       expect(
         renderedSchoolIndex,
         `${templateId}: education must stay after the family block`,
