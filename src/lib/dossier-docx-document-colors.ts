@@ -31,7 +31,11 @@ function visibleText(xml: string) {
 }
 
 function textTargets(values: Array<string | null | undefined>) {
-  return [...new Set(values.map((value) => normalizedText(value ?? "")).filter((value) => value.length >= 3))];
+  return [
+    ...new Set(
+      values.map((value) => normalizedText(value ?? "")).filter((value) => value.length >= 3),
+    ),
+  ];
 }
 
 function ensureRunColor(run: string, color: string) {
@@ -46,7 +50,11 @@ function ensureRunColor(run: string, color: string) {
   return run.replace(/<w:r(\s[^>]*)?>/, (open) => `${open}<w:rPr>${colorTag}</w:rPr>`);
 }
 
-function patchRunsByText(source: string, values: Array<string | null | undefined>, color: string | null) {
+function patchRunsByText(
+  source: string,
+  values: Array<string | null | undefined>,
+  color: string | null,
+) {
   if (!color) return source;
   const targets = textTargets(values);
   if (!targets.length) return source;
@@ -69,7 +77,9 @@ function bodyStart(source: string) {
 }
 
 function enclosingParagraph(source: string, index: number) {
-  const start = source.lastIndexOf("<w:p", index);
+  const before = source.slice(0, index);
+  const paragraphStarts = [...before.matchAll(/<w:p(?:\s[^>]*)?>/g)];
+  const start = paragraphStarts.at(-1)?.index ?? -1;
   const endTag = source.indexOf("</w:p>", index);
   if (start < 0 || endTag < 0) return null;
   return { start, end: endTag + "</w:p>".length };
@@ -229,7 +239,8 @@ function patchAtBounds(
   let next = source;
   for (const index of [2, 1, 0] as const) {
     const range = bounds[index];
-    next = next.slice(0, range.start) + mutate(next.slice(range.start, range.end), index) + next.slice(range.end);
+    next =
+      next.slice(0, range.start) + mutate(next.slice(range.start, range.end), index) + next.slice(range.end);
   }
   return next;
 }
@@ -292,10 +303,7 @@ export function applyDossierDocumentColorsToDocumentXml(
   });
 
   if ((coverPaper || letterPaper || cvPaper) && !/\bxmlns:v=/.test(next)) {
-    next = next.replace(
-      /<w:document\b/,
-      '<w:document xmlns:v="urn:schemas-microsoft-com:vml"',
-    );
+    next = next.replace(/<w:document\b/, '<w:document xmlns:v="urn:schemas-microsoft-com:vml"');
   }
   return next;
 }
