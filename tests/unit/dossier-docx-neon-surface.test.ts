@@ -16,4 +16,18 @@ describe("Neon DOCX content surfaces", () => {
       expect(shape("citrus", page, `citrus-${page}-card`)?.kind).toBe("roundrect");
     }
   });
+
+  test("keeps enough Neon CV card reserve while allowing LibreOffice pagination headroom", () => {
+    const recipe = dossierDocxTemplateRecipe("neon");
+    const neonCard = shape("neon", "cv", "neon-cv-card");
+    const bottomMarginMm = recipe?.cv.margins?.bottom;
+
+    expect(bottomMarginMm).toBe(25.5);
+    expect(neonCard).toBeDefined();
+    if (!neonCard || bottomMarginMm === undefined) return;
+
+    const cardBottomMm = neonCard.y + neonCard.h;
+    const contentBottomMm = 297 - bottomMarginMm;
+    expect(cardBottomMm - contentBottomMm).toBeGreaterThanOrEqual(13);
+  });
 });

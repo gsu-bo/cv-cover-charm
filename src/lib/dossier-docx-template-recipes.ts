@@ -65,6 +65,10 @@ function normalizeLegacyWordRecipe(recipe: DossierDocxTemplateRecipe) {
     },
     cv: {
       ...recipe.cv,
+      // Neon's white card ends at 285 mm. Keep 13.5 mm of visible inner-card
+      // reserve while giving Word/LibreOffice 0.5 mm pagination headroom so a
+      // final reference line is not rounded onto a spurious extra CV page.
+      margins: recipe.cv.margins ? { ...recipe.cv.margins, bottom: 25.5 } : recipe.cv.margins,
       shapes: recipe.cv.shapes.map(neonSurfaceShape),
     },
   } satisfies DossierDocxTemplateRecipe;
