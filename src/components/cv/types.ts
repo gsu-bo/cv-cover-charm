@@ -439,11 +439,13 @@ export function ensureFixedFamilySection(data: CvData): CvData {
   const existing = sections.find((section) => section.id === FIXED_FAMILY_SECTION_ID);
 
   if (existing) {
-    const normalizedSections =
+    const normalizedSections: CvCustomSection[] =
       existing.preset === "familie"
         ? sections
         : sections.map((section) =>
-            section.id === FIXED_FAMILY_SECTION_ID ? { ...section, preset: "familie" } : section,
+            section.id === FIXED_FAMILY_SECTION_ID
+              ? { ...section, preset: "familie" as const }
+              : section,
           );
     const nextOrder = usesLegacyDefaultOrder ? defaultCvSectionOrder(customKeys) : cvSectionOrder(data);
     if (normalizedSections === sections && sameSectionOrder(nextOrder, currentSavedOrder)) return data;
