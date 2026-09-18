@@ -26,7 +26,7 @@ const PLACEMENT_LABEL: Record<LetterImagePlacement, string> = {
 /**
  * Left/right use a real CSS float so text deliberately wraps around the image.
  * Once an image gets an explicit x-coordinate it is truly free: x/y are then
- * measured from the letter body zone and PDF renders exactly that geometry.
+ * measured from the letter content box and PDF renders exactly that geometry.
  * The same normalized geometry is reused by the DOCX postprocessor.
  */
 export function LetterFlowImages({
@@ -46,7 +46,7 @@ export function LetterFlowImages({
 
   const startMove = (image: LetterFlowImage) => (event: React.PointerEvent<HTMLDivElement>) => {
     if (exportMode || !onChange || event.button !== 0) return;
-    const zone = event.currentTarget.closest<HTMLElement>("[data-letter-body-zone]");
+    const zone = event.currentTarget.closest<HTMLElement>("[data-letter-text-layer]");
     if (!zone) return;
     event.preventDefault();
     event.stopPropagation();
@@ -97,7 +97,7 @@ export function LetterFlowImages({
   const startResize =
     (image: LetterFlowImage) => (event: React.PointerEvent<HTMLButtonElement>) => {
       if (exportMode || !onChange || event.button !== 0) return;
-      const zone = event.currentTarget.closest<HTMLElement>("[data-letter-body-zone]");
+      const zone = event.currentTarget.closest<HTMLElement>("[data-letter-text-layer]");
       if (!zone) return;
       event.preventDefault();
       event.stopPropagation();
