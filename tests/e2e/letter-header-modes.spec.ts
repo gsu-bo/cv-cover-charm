@@ -106,7 +106,9 @@ test.describe("M1/M2 compact letter header", () => {
 
     await expect(select).toHaveValue("compact");
     await expect(preview).toHaveAttribute("data-letter-header-mode", "compact");
-    await expect(preview).toHaveCSS("background-color", "rgb(255, 255, 255)");
+    await expect(preview).toHaveAttribute("data-letter-paper-color", "#fafafa");
+    await expect(exportPage).toHaveAttribute("data-letter-paper-color", "#fafafa");
+    await expect(preview).toHaveCSS("background-color", "rgb(250, 250, 250)");
     await expect(preview.locator('[data-letter-section="sender"]')).toHaveCount(1);
     expect(
       await preview.locator("[data-letter-text-layer]").evaluate((node) => node.style.top),
