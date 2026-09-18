@@ -159,6 +159,7 @@ export function LetterCanvas({
   const palette = resolveLetterPalette(design);
   const paperColor = resolveLetterPaperColor(design);
   const paperColorOverride = normalizeLetterPaperColor(design.paperColor);
+  const resolvedFont = design.template === "brief" ? design.font : (design.fontOverride ?? design.font);
   const fontFamily =
     design.template === "brief"
       ? FONT_STACKS[design.font]
@@ -235,7 +236,7 @@ export function LetterCanvas({
       data-letter-layout-archetype={geometry.archetype}
       data-letter-page-index={geometry.pageIndex}
       data-letter-final-page={geometry.finalPage ? "true" : "false"}
-      data-letter-font={design.fontOverride ?? design.font}
+      data-letter-font={resolvedFont}
       data-letter-paper-color={paperColor}
       data-letter-text-color={palette.ink}
       data-letter-font-source={
