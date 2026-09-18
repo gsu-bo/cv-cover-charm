@@ -5,7 +5,7 @@ const BASE_URL = "http://127.0.0.1:4173";
 test.describe("M9 demo CV pagination", () => {
   test.setTimeout(6 * 60_000);
 
-  test("every selectable template keeps the family-second demo CV within two unclipped pages", async ({
+  test("every selectable template keeps the family-second demo CV on one unclipped page", async ({
     page,
   }) => {
     await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
@@ -141,21 +141,16 @@ test.describe("M9 demo CV pagination", () => {
           geometry.rightGap,
           `${templateId}: section rule must reach the right edge of its heading row; ${JSON.stringify(geometry)}`,
         ).toBeLessThanOrEqual(2);
-        expect(
-          geometry.width,
-          `${templateId}: section rule must have visible width`,
-        ).toBeGreaterThan(4);
+        expect(geometry.width, `${templateId}: section rule must have visible width`).toBeGreaterThan(4);
       }
 
-      // Family now belongs near the top, so later established sections may continue on page 2.
-      // Keep the quality gate on completeness, compactness and clipping instead of page-1 identity.
       await expect(cv).toContainText("Familie");
       await expect(cv).toContainText("Referenzen");
       await expect(cv).toContainText("Herr Thomas Weber");
 
       const pageCount = await pages.count();
-      if (pageCount > 2) {
-        unexpectedSpillages.push(`${templateId}:${pageCount}:more-than-two-pages`);
+      if (pageCount !== 1) {
+        unexpectedSpillages.push(`${templateId}:${pageCount}:expected-one-page`);
         continue;
       }
 
@@ -168,7 +163,7 @@ test.describe("M9 demo CV pagination", () => {
       for (const clipped of clippedPages) {
         expect(
           clipped.scrollHeight,
-          `${templateId}: compact pagination must not trade page flow for clipped content`,
+          `${templateId}: one-page density must not trade pagination for clipped content`,
         ).toBeLessThanOrEqual(clipped.clientHeight + 3);
       }
     }
@@ -179,7 +174,7 @@ test.describe("M9 demo CV pagination", () => {
     ).toBe(39);
     expect(
       unexpectedSpillages,
-      `family-second demo must stay within two pages; spillages=${unexpectedSpillages.join(" | ")}`,
+      `family-second demo must stay on one page; spillages=${unexpectedSpillages.join(" | ")}`,
     ).toEqual([]);
   });
 });
