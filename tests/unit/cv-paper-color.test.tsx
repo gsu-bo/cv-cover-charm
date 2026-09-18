@@ -56,6 +56,19 @@ describe("template-independent CV paper color", () => {
     expect(readable(palette.ink, palette.paper, 7)).toBe(true);
   });
 
+  test("lets a custom CV text color override the automatic body color", () => {
+    const design = designFor("brief", "#fff4cc");
+    design.colors = { ...design.colors, cvInk: "#5b214e" };
+    const palette = resolveCvPalette(design);
+    const markup = renderToStaticMarkup(
+      createElement(CvCanvas, { data: DEMO_CV, design, elements: [] }),
+    );
+
+    expect(palette.ink).toBe("#5b214e");
+    expect(markup).toContain('data-cv-text-color="#5b214e"');
+    expect(markup).toContain("color:#5b214e");
+  });
+
   test("old and malformed saves safely fall back to the template paper", () => {
     const legacy = designFor("freundlich", null);
     expect(resolveCvPaperColor(legacy)).toBe("#fff9ef");

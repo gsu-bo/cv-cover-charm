@@ -28,7 +28,6 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
   }, []);
 
   const cvSlots = [
-    { key: "cvInk", label: "Haupttext", value: colors.cvInk || cvText.ink },
     { key: "cvMuted", label: "Sekundärtext", value: colors.cvMuted || cvText.muted },
     { key: "cvHeading", label: "Überschriften", value: colors.cvHeading || cvText.accent },
   ] as const;
@@ -114,12 +113,11 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
         <div className="flex flex-col gap-2 border-t pt-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              CV-Textfarben
+              Weitere CV-Textfarben
             </span>
             <button
               type="button"
               onClick={() => {
-                onChange("cvInk", "");
                 onChange("cvMuted", "");
                 onChange("cvHeading", "");
               }}

@@ -237,6 +237,7 @@ export function LetterCanvas({
       data-letter-final-page={geometry.finalPage ? "true" : "false"}
       data-letter-font={design.fontOverride ?? design.font}
       data-letter-paper-color={paperColor}
+      data-letter-text-color={palette.ink}
       data-letter-font-source={
         design.template === "brief" ? "standalone" : design.fontOverride ? "override" : "dossier"
       }

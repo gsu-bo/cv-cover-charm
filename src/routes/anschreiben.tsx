@@ -23,7 +23,11 @@ import { LetterDocument, type LetterPaginationState } from "@/components/letter/
 import { LetterLayoutControls } from "@/components/letter/LetterLayoutControls";
 import { LetterRichTextEditor } from "@/components/letter/LetterRichTextEditor";
 import { LetterTemplatePicker } from "@/components/letter/LetterTemplatePicker";
-import { resolveLetterPaperColor } from "@/components/letter/letter-paper";
+import {
+  resolveLetterPalette,
+  resolveLetterPaperColor,
+} from "@/components/letter/letter-paper";
+import { DocumentTextColorControl } from "@/components/dossier/DocumentTextColorControl";
 import { downloadLetterPdf } from "@/lib/dossier-pdf";
 import { readPhoto } from "@/lib/image";
 import { readDossierContact } from "@/lib/dossier-contact";
@@ -1108,10 +1112,22 @@ function Anschreiben() {
                     </button>
                   </div>
                   <span className="text-[11px] leading-snug text-muted-foreground">
-                    Gilt bei jeder Vorlage für das Papier des Anschreibens. Die Textfarbe passt sich
-                    automatisch an.
+                    Gilt bei jeder Vorlage für das Papier des Anschreibens. Ohne eigene Textfarbe
+                    passt sich die Schrift automatisch an.
                   </span>
                 </div>
+
+                <DocumentTextColorControl
+                  ariaLabel="Textfarbe des Anschreibens"
+                  value={resolveLetterPalette(design).ink}
+                  customValue={design.textColor}
+                  paperColor={resolveLetterPaperColor(design)}
+                  description="Gilt für den normalen Text im Anschreiben. Datum und Gestaltungselemente behalten ihre eigene Farbe."
+                  onChange={(textColor) =>
+                    setDesign((current) => ({ ...current, textColor }))
+                  }
+                  onAuto={() => setDesign((current) => ({ ...current, textColor: null }))}
+                />
 
                 {design.template !== "brief" && template ? (
                   <div className="border-t pt-4">

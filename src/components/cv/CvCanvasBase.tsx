@@ -180,10 +180,7 @@ export function CvCanvas({
   drawing = false,
   onDrawn,
 }: Props) {
-  const pal = useMemo(
-    () => resolveCvPalette(design),
-    [design.colors, design.paperColor],
-  );
+  const pal = resolveCvPalette(design);
   const paperColorOverride = normalizeCvPaperColor(design.paperColor);
   // Die Bauform der Vorlage entscheidet über Flächen und Textbereich. Sie ist
   // der eigentliche Träger der Verwandtschaft zum Titelblatt.
@@ -2861,6 +2858,7 @@ export function CvCanvas({
             key={i}
             data-cv-page={i}
             data-cv-paper-color={pal.paper}
+            data-cv-text-color={pal.ink}
             className="relative overflow-hidden shadow-2xl"
             style={{ width: `${PAGE.WIDTH}px`, height: `${PAGE.HEIGHT}px`, background: pal.paper }}
           >

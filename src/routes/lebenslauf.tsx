@@ -125,7 +125,12 @@ import { readPhoto } from "@/lib/image";
 import { useForeignWrite, usePageVisible } from "@/lib/autosave";
 import { applyDossierTheme } from "@/lib/dossier-theme";
 import { setCvPhotoStyle } from "@/components/cv/photo";
-import { normalizeCvPaperColor, resolveCvPaperColor } from "@/components/cv/cv-paper";
+import {
+  normalizeCvPaperColor,
+  resolveCvPalette,
+  resolveCvPaperColor,
+} from "@/components/cv/cv-paper";
+import { DocumentTextColorControl } from "@/components/dossier/DocumentTextColorControl";
 import { SIDEBAR_PCT_MAX, SIDEBAR_PCT_MIN } from "@/components/cv/archetype";
 import {
   DEFAULT_DOSSIER_CHROME_STATE,
@@ -2031,10 +2036,30 @@ function Lebenslauf() {
                       </button>
                     </div>
                     <span className="text-[11px] leading-snug text-muted-foreground">
-                      Gilt bei jeder Vorlage für das Papier des Lebenslaufs. Die Textfarbe passt
-                      sich automatisch an.
+                      Gilt bei jeder Vorlage für das Papier des Lebenslaufs. Ohne eigene Textfarbe
+                      passt sich die Schrift automatisch an.
                     </span>
                   </div>
+
+                  <DocumentTextColorControl
+                    ariaLabel="Textfarbe des Lebenslaufs"
+                    value={resolveCvPalette(design).ink}
+                    customValue={design.colors.cvInk}
+                    paperColor={resolveCvPaperColor(design)}
+                    description="Gilt für den normalen CV-Text. Sekundärtext und Rubriktitel können darunter separat angepasst werden."
+                    onChange={(cvInk) =>
+                      setDesign((current) => ({
+                        ...current,
+                        colors: { ...current.colors, cvInk },
+                      }))
+                    }
+                    onAuto={() =>
+                      setDesign((current) => ({
+                        ...current,
+                        colors: { ...current.colors, cvInk: "" },
+                      }))
+                    }
+                  />
 
                   <div className="border-t pt-4">
                     <ColorChooser

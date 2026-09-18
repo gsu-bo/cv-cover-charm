@@ -49,6 +49,20 @@ describe("template-independent motivation-letter paper color", () => {
     expect(readable(palette.ink, palette.paper, 7)).toBe(true);
   });
 
+  test("lets a custom text color override the automatic body color", () => {
+    const design = {
+      ...emptyLetterDesign(),
+      paperColor: "#fff4cc",
+      textColor: "#5b214e",
+    };
+    const palette = resolveLetterPalette(design);
+    const markup = renderToStaticMarkup(createElement(LetterCanvas, { data: DEMO_LETTER, design }));
+
+    expect(palette.ink).toBe("#5b214e");
+    expect(markup).toContain('data-letter-text-color="#5b214e"');
+    expect(markup).toContain("color:#5b214e");
+  });
+
   test("old saves keep their template paper until the user chooses an override", () => {
     const legacy = normalizeLetterDesign({
       template: "freundlich",
@@ -57,6 +71,7 @@ describe("template-independent motivation-letter paper color", () => {
     });
 
     expect(legacy.paperColor).toBeNull();
+    expect(legacy.textColor).toBeNull();
     expect(resolveLetterPaperColor(legacy)).toBe("#fff9ef");
   });
 });

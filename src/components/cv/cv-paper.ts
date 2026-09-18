@@ -21,10 +21,5 @@ export function resolveCvPalette(design: CvDesign): CvPalette {
   const override = normalizeCvPaperColor(design.paperColor);
   if (!override) return cvPalette(design.colors);
 
-  const automaticColors = Object.fromEntries(
-    Object.entries(design.colors).filter(
-      ([key]) => key !== "cvInk" && key !== "cvMuted" && key !== "cvHeading",
-    ),
-  );
-  return cvPalette({ ...automaticColors, sheet: override });
+  return cvPalette({ ...design.colors, sheet: override });
 }

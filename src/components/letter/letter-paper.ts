@@ -9,6 +9,10 @@ export function normalizeLetterPaperColor(value: unknown): string | null {
     : null;
 }
 
+export function normalizeLetterTextColor(value: unknown): string | null {
+  return normalizeLetterPaperColor(value);
+}
+
 /** Tatsächlich sichtbare Papierfarbe des Anschreibens. */
 export function resolveLetterPaperColor(design: LetterDesign): string {
   const override = normalizeLetterPaperColor(design.paperColor);
@@ -23,29 +27,35 @@ export function resolveLetterPaperColor(design: LetterDesign): string {
  */
 export function resolveLetterPalette(design: LetterDesign): CvPalette {
   const override = normalizeLetterPaperColor(design.paperColor);
+  const textOverride = normalizeLetterTextColor(design.textColor);
+  let palette: CvPalette;
   if (override) {
     const letterColors = Object.fromEntries(
       Object.entries(design.colors).filter(
         ([key]) => key !== "cvInk" && key !== "cvMuted" && key !== "cvHeading",
       ),
     );
-    return cvPalette({ ...letterColors, sheet: override });
+    palette = cvPalette({ ...letterColors, sheet: override });
+  } else {
+    const source = cvPalette(design.colors);
+    if (design.template === "brief") {
+      palette = {
+        ink: "#111111",
+        muted: "#4b5563",
+        accent: "#111111",
+        paper: DEFAULT_LETTER_PAPER_COLOR,
+      };
+    } else if (design.colors.sheet) {
+      palette = source;
+    } else {
+      palette = {
+        ink: "#111111",
+        muted: "#4b5563",
+        accent: source.accent,
+        paper: DEFAULT_LETTER_PAPER_COLOR,
+      };
+    }
   }
 
-  const source = cvPalette(design.colors);
-  if (design.template === "brief") {
-    return {
-      ink: "#111111",
-      muted: "#4b5563",
-      accent: "#111111",
-      paper: DEFAULT_LETTER_PAPER_COLOR,
-    };
-  }
-  if (design.colors.sheet) return source;
-  return {
-    ink: "#111111",
-    muted: "#4b5563",
-    accent: source.accent,
-    paper: DEFAULT_LETTER_PAPER_COLOR,
-  };
+  return textOverride ? { ...palette, ink: textOverride } : palette;
 }
