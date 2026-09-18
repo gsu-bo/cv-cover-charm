@@ -38,13 +38,13 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
   ] as const;
 
   const semanticOverrides = useMemo(() => {
-    const keys = ["coverInk", "cvInk", "cvMuted", "cvHeading"] as const;
+    const keys = ["coverPaper", "coverInk", "cvInk", "cvMuted", "cvHeading"] as const;
     return Object.fromEntries(
       keys.filter((key) => colors[key]).map((key) => [key, colors[key]]),
     ) as Record<string, string>;
   }, [colors]);
 
-  const coverPaper = colors.bg || "#ffffff";
+  const coverPaper = colors.coverPaper || colors.bg || "#ffffff";
   const coverText = colors.coverInk || colors.ink || colors.primary || colors.accent || "#111111";
 
   return (
@@ -59,16 +59,26 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
             data-cover-paper-color-control
             className="grid gap-2 rounded-md border border-input p-3"
           >
-            <label className="flex min-w-0 items-center gap-2 text-xs font-medium">
-              <input
-                type="color"
-                aria-label="Seitenhintergrund des Titelblatts"
-                value={coverPaper}
-                onChange={(event) => onChange("bg", event.target.value)}
-                className="h-8 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
-              />
-              <span>Seitenhintergrund</span>
-            </label>
+            <div className="flex items-center justify-between gap-3">
+              <label className="flex min-w-0 items-center gap-2 text-xs font-medium">
+                <input
+                  type="color"
+                  aria-label="Seitenhintergrund des Titelblatts"
+                  value={coverPaper}
+                  onChange={(event) => onChange("coverPaper", event.target.value)}
+                  className="h-8 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
+                />
+                <span>Seitenhintergrund</span>
+              </label>
+              <button
+                type="button"
+                disabled={!colors.coverPaper}
+                onClick={() => onChange("coverPaper", "")}
+                className="text-xs text-muted-foreground underline hover:text-foreground disabled:cursor-default disabled:no-underline disabled:opacity-45"
+              >
+                Automatisch
+              </button>
+            </div>
             <span className="text-[11px] leading-snug text-muted-foreground">
               Gilt bei jeder Vorlage für den Hintergrund des Titelblatts.
             </span>
