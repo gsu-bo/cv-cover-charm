@@ -275,7 +275,13 @@ export function LetterDocument({
     };
   }, [bodyHtml, chromeContact, chromeOptions, data, design, fallback, flowImages, freeImages]);
 
-  const renderedPages = pagination.ready && !pagination.issue ? pages : fallback;
+  // Keep the last valid page set mounted while a new measurement is running.
+  // Replacing a two-page preview with the one-page fallback on every keystroke
+  // shrinks the scroll container, clamps its scroll position and makes page 2
+  // visibly jump. `pages` already starts with the fallback and is replaced by
+  // the fallback on an actual pagination error, so readiness alone must not
+  // decide which page set is rendered.
+  const renderedPages = pagination.issue ? fallback : pages;
 
   return (
     <div
