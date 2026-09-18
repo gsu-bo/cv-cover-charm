@@ -787,6 +787,39 @@ test.describe("M5.8 dossier regression", () => {
     );
     await expect.poll(() => pages.count(), { timeout: 20_000 }).toBeGreaterThan(1);
     await expect(page.getByRole("alert")).toHaveCount(0);
+    await page.getByRole("button", { name: /Beilagen/ }).click();
+    const firstAttachment = page.getByLabel("Beilage 1", { exact: true });
+    await expect(firstAttachment).toBeVisible();
+
+    await root.evaluate((element) => {
+      const countPages = () =>
+        element.querySelectorAll("[data-letter-document-pages] [data-letter-page]").length;
+      element.dataset.minimumPreviewPageCount = String(countPages());
+      const observer = new MutationObserver(() => {
+        const minimum = Number(element.dataset.minimumPreviewPageCount ?? countPages());
+        element.dataset.minimumPreviewPageCount = String(Math.min(minimum, countPages()));
+      });
+      observer.observe(element, { childList: true, subtree: true });
+      (
+        element as HTMLElement & { __previewStabilityObserver?: MutationObserver }
+      ).__previewStabilityObserver = observer;
+    });
+
+    await firstAttachment.press("End");
+    await firstAttachment.type(" Zusatz");
+    await expect(root).toHaveAttribute("data-letter-pagination-ready", "true", {
+      timeout: 20_000,
+    });
+    await expect(root).toHaveAttribute("data-minimum-preview-page-count", /^[2-9]\d*$/);
+
+    await root.evaluate((element) => {
+      const stableElement = element as HTMLElement & {
+        __previewStabilityObserver?: MutationObserver;
+      };
+      stableElement.__previewStabilityObserver?.disconnect();
+      delete stableElement.__previewStabilityObserver;
+    });
+
     const downloadToggle = page.getByRole("button", { name: "Download", exact: true });
     await downloadToggle.click();
     await expect(
