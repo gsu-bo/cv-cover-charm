@@ -146,6 +146,7 @@ export function withLetterFontSelection(
   selection: LetterFontSelection,
 ): LetterDesign {
   if (selection === "template") return { ...design, fontOverride: null };
+  if (design.template === "brief") return { ...design, font: selection, fontOverride: null };
   return { ...design, font: selection, fontOverride: selection };
 }
 
@@ -307,7 +308,9 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
       ? (incoming.font as FontKey)
       : fallback.font;
   const fontOverride =
-    typeof incoming.fontOverride === "string" && incoming.fontOverride in FONT_LABELS
+    template !== "brief" &&
+    typeof incoming.fontOverride === "string" &&
+    incoming.fontOverride in FONT_LABELS
       ? (incoming.fontOverride as FontKey)
       : null;
   const chromeTextFont =

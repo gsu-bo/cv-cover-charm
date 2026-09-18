@@ -5,6 +5,7 @@ import { getCvPlacements } from "@/components/cv/placement";
 import { applyDossierDocxSidebar } from "@/lib/dossier-docx-layout";
 import { resolveDossierChromeSnapshot } from "@/lib/dossier-resolved-chrome";
 import { applyDossierChromeToDocx } from "@/lib/dossier-docx-chrome";
+import { applyCvSectionOrderToDocx } from "@/lib/dossier-docx-cv-section-order";
 import { applyCvSectionTitleStyleToDocx } from "@/lib/dossier-docx-cv-section-titles";
 import type {
   CoverPdfDocument,
@@ -229,7 +230,8 @@ export async function createDossierDocxBlob(
     cvLayout: layout,
   });
   const chromed = await applyDossierChromeToDocx(margined, { cover, letter, cv }, resolved);
-  return applyCvSectionTitleStyleToDocx(chromed, bodyCv);
+  const ordered = await applyCvSectionOrderToDocx(chromed, bodyCv);
+  return applyCvSectionTitleStyleToDocx(ordered, bodyCv);
 }
 
 export async function downloadDossierDocx(
