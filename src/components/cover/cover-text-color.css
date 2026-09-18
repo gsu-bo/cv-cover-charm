@@ -1,0 +1,18 @@
+/*
+ * Explicit title-page text colour is a document-level user choice.
+ * Template blocks still keep their own palette while no override is set.
+ * When the override is active it wins for all standard dossier text roles,
+ * including segmented template copy whose spans historically carried colours.
+ */
+[data-dossier-document="cover"][data-cover-text-override="true"]
+  [data-dossier-role]
+  > div {
+  color: var(--cover-text-override) !important;
+}
+
+[data-dossier-document="cover"][data-cover-text-override="true"]
+  [data-dossier-role]
+  > div
+  span {
+  color: inherit !important;
+}
