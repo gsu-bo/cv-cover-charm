@@ -208,7 +208,7 @@ export const CoverCanvas = forwardRef<HTMLDivElement, Props>(function CoverCanva
     liveFont && liveFont !== dossierDefaultFontKey(template) ? liveFont : null;
   const resolvedOverride = fontOverride === undefined ? inferredOverride : fontOverride;
   const dossierFont = effectiveDossierFont(template, resolvedOverride);
-  const paper = colors.bg ?? "#ffffff";
+  const paper = colors.coverPaper || colors.bg || "#ffffff";
   const primary = colors.primary ?? colors.accent ?? colors.ink ?? paper;
   const secondary = colors.secondary ?? colors.accent ?? primary;
   const accent = colors.accent ?? secondary;
