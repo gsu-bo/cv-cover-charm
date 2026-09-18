@@ -5,7 +5,7 @@ const BASE_URL = "http://127.0.0.1:4173";
 test.describe("M9 demo CV pagination", () => {
   test.setTimeout(6 * 60_000);
 
-  test("every selectable template keeps the normal demo CV compact; only family may continue on page 2", async ({
+  test("every selectable template keeps the family-second demo CV within two unclipped pages", async ({
     page,
   }) => {
     await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
@@ -20,7 +20,15 @@ test.describe("M9 demo CV pagination", () => {
 
     const cv = page.locator("main [data-dossier-document='cv']");
     const pages = cv.locator("[data-cv-page]");
-    await expect(pages.first()).toContainText("Herr Thomas Weber");
+    await expect(cv).toContainText("Herr Thomas Weber");
+
+    // Familie is now the canonical second block: personal data first, then family,
+    // then the established CV sections such as education.
+    const firstPageText = (await pages.first().innerText()).replace(/\s+/g, " ").trim();
+    const familyIndex = firstPageText.indexOf("Familie");
+    const schoolIndex = firstPageText.indexOf("Schulbildung");
+    expect(familyIndex, "family must render on page 1 directly after the personal block").toBeGreaterThanOrEqual(0);
+    expect(schoolIndex, "education must render after the family block").toBeGreaterThan(familyIndex);
 
     // Styling panels also contain reset buttons called "Vorlage". Section.tsx already exposes
     // a stable semantic toggle marker, so target that contract and ignore the adjacent hint text.
@@ -79,6 +87,15 @@ test.describe("M9 demo CV pagination", () => {
       const templateId = await cv.getAttribute("data-cv-template");
       expect(templateId, `${name}: selected template must reach the rendered CV`).toBeTruthy();
       exercisedTemplateIds.add(templateId!);
+
+      const renderedFirstPageText = (await pages.first().innerText()).replace(/\s+/g, " ").trim();
+      const renderedFamilyIndex = renderedFirstPageText.indexOf("Familie");
+      const renderedSchoolIndex = renderedFirstPageText.indexOf("Schulbildung");
+      expect(renderedFamilyIndex, `${templateId}: family must stay on page 1`).toBeGreaterThanOrEqual(0);
+      expect(
+        renderedSchoolIndex,
+        `${templateId}: education must stay after the family block`,
+      ).toBeGreaterThan(renderedFamilyIndex);
 
       // Some intentionally quiet templates suppress section rules entirely. When a template does
       // render them, they must still consume the remaining heading-row width cleanly; absence is
@@ -147,24 +164,18 @@ test.describe("M9 demo CV pagination", () => {
         ).toBeGreaterThan(4);
       }
 
-      // The fixed family block intentionally extends the demo data. All established CV content
-      // must still fit on page 1; a second page is acceptable only when it contains family data.
-      await expect(pages.first()).toContainText("Referenzen");
-      await expect(pages.first()).toContainText("Herr Thomas Weber");
+      // With family deliberately moved near the top, later established sections may naturally
+      // continue on page 2. The quality contract is therefore completeness + max two pages + no
+      // clipping, not that references must remain on page 1.
+      await expect(cv).toContainText("Referenzen");
+      await expect(cv).toContainText("Herr Thomas Weber");
+      await expect(cv).toContainText("Monika Müller");
+      await expect(cv).toContainText("Jaro");
 
       const pageCount = await pages.count();
       if (pageCount > 2) {
         unexpectedSpillages.push(`${templateId}:${pageCount}:more-than-two-pages`);
         continue;
-      }
-      if (pageCount === 2) {
-        const continuation = (await pages.nth(1).innerText()).replace(/\s+/g, " ").trim();
-        const familyOnly = /Monika Müller|Peter Müller|Aline|Jaro/.test(continuation);
-        const establishedContentSpilled = /Referenzen|Herr Thomas Weber/.test(continuation);
-        if (!familyOnly || establishedContentSpilled) {
-          unexpectedSpillages.push(`${templateId}:${pageCount}:${continuation.slice(0, 180)}`);
-          continue;
-        }
       }
 
       const clippedPages = await pages.locator("[data-cv-main]").evaluateAll((nodes) =>
@@ -187,7 +198,7 @@ test.describe("M9 demo CV pagination", () => {
     ).toBe(39);
     expect(
       unexpectedSpillages,
-      `only the new family block may continue on page 2; spillages=${unexpectedSpillages.join(" | ")}`,
+      `family-second demo must stay within two unclipped pages; spillages=${unexpectedSpillages.join(" | ")}`,
     ).toEqual([]);
   });
 });
