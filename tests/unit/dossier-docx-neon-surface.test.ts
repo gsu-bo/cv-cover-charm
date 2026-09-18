@@ -6,11 +6,14 @@ function shape(template: "neon" | "verlauf" | "citrus", page: "letter" | "cv", i
 }
 
 describe("legacy DOCX light-card surfaces", () => {
-  test("uses LibreOffice-safe Neon rectangles without flattening the other rounded-card recipes", () => {
+  test("uses LibreOffice-safe Neon rectangles above the dark page background", () => {
     for (const page of ["letter", "cv"] as const) {
       const neonCard = shape("neon", page, `neon-${page}-card`);
+      const neonBackground = shape("neon", page, `neon-${page}-bg`);
       expect(neonCard?.kind).toBe("rect");
       expect((neonCard as { fillHex?: string } | undefined)?.fillHex).toBe("#ffffff");
+      expect((neonCard as { zIndex?: number } | undefined)?.zIndex).toBe(-251658239);
+      expect((neonBackground as { zIndex?: number } | undefined)?.zIndex).toBeUndefined();
 
       expect(shape("verlauf", page, `verlauf-${page}-card`)?.kind).toBe("roundrect");
       expect(shape("citrus", page, `citrus-${page}-card`)?.kind).toBe("roundrect");
