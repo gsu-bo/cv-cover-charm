@@ -141,9 +141,7 @@ export function cvPdfHasContent(data: CvData): boolean {
         value?.trim(),
       ),
     ) ||
-    data.customSections?.some(
-      (section) => section.title.trim() || section.entries.some(entryFilled),
-    )
+    data.customSections?.some((section) => section.entries.some(entryFilled))
   );
 }
 
