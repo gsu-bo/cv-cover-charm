@@ -154,6 +154,7 @@ export function LetterFlowImages({
       {valid.map((image) => {
         const geometry = normalizeLetterImageGeometry(image, contentWidthMm);
         const free = geometry.placement === "free";
+        const flowSide = geometry.placement === "left" ? "left" : "right";
 
         return (
           <div
@@ -186,12 +187,12 @@ export function LetterFlowImages({
                     zIndex: 6,
                   }
                 : {
-                    float: geometry.placement,
+                    float: flowSide,
                     width: `${geometry.widthMm}mm`,
                     marginTop: `${geometry.topMm}mm`,
                     marginBottom: `${geometry.gapMm}mm`,
-                    marginLeft: geometry.placement === "right" ? `${geometry.gapMm}mm` : 0,
-                    marginRight: geometry.placement === "left" ? `${geometry.gapMm}mm` : 0,
+                    marginLeft: flowSide === "right" ? `${geometry.gapMm}mm` : 0,
+                    marginRight: flowSide === "left" ? `${geometry.gapMm}mm` : 0,
                     shapeOutside: "margin-box",
                     zIndex: 3,
                   }
