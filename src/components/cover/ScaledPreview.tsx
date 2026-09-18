@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { PAGE } from "@/default-config";
 
 /** Muss mit dem Blatt und dem Export übereinstimmen – siehe PAGE. */
@@ -30,7 +30,7 @@ export function ScaledPreview({
   const boxRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const el = boxRef.current;
     if (!el) return;
     const update = () => setWidth(el.clientWidth);

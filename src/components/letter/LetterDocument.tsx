@@ -281,7 +281,21 @@ export function LetterDocument({
   // visibly jump. `pages` already starts with the fallback and is replaced by
   // the fallback on an actual pagination error, so readiness alone must not
   // decide which page set is rendered.
-  const renderedPages = pagination.issue ? fallback : pages;
+  const renderedPages = useMemo(() => {
+    if (pagination.issue) return fallback;
+
+    // Pagination owns the page assignment, while interactive image geometry
+    // must follow pointer updates immediately. Keep each image on its last
+    // valid page during measurement, but render its newest saved geometry.
+    const latestImages = new Map(allImages.map((image) => [image.id, image]));
+    return pages.map((fragment) => ({
+      ...fragment,
+      images: fragment.images.flatMap((image) => {
+        const latest = latestImages.get(image.id);
+        return latest ? [latest] : [];
+      }),
+    }));
+  }, [allImages, fallback, pages, pagination.issue]);
 
   return (
     <div
