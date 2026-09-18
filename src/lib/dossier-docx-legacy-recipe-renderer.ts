@@ -16,7 +16,7 @@ const MM_TO_TWIPS = 1440 / 25.4;
 const twips = (mm: number) => Math.round(mm * MM_TO_TWIPS);
 const CONTACT_ONLY_COVER_TEMPLATES = new Set(["forestFlow", "studio2", "warm4", "gallery"]);
 
-type RuntimeShape = DossierDocxRecipeShape & { fillHex?: string };
+type RuntimeShape = DossierDocxRecipeShape & { fillHex?: string; zIndex?: number };
 type RuntimePage = DossierDocxTemplateRecipe["letter"] & { contentSurface?: "light" };
 type RuntimeRecipe = DossierDocxTemplateRecipe & {
   cover: DossierDocxTemplateRecipe["cover"] & { contentSurface?: "light" };
@@ -121,13 +121,13 @@ function shapeRun(shape: RuntimeShape, colors: Palette, templateId: string) {
         : roleColor(colors, shape.color));
   const opacity = sonneCvAccent ? 0.26 : (shape.opacity ?? 1);
   if (shape.kind === "line") {
-    return `<w:r><w:pict><v:rect id="${shape.id}" style="${vmlStyle(shape.x, shape.y, shape.w, shape.strokeMm ?? 0.4)}" fillcolor="${color}" stroked="f">${fillOpacity(opacity)}</v:rect></w:pict></w:r>`;
+    return `<w:r><w:pict><v:rect id="${shape.id}" style="${vmlStyle(shape.x, shape.y, shape.w, shape.strokeMm ?? 0.4, shape.zIndex)}" fillcolor="${color}" stroked="f">${fillOpacity(opacity)}</v:rect></w:pict></w:r>`;
   }
   if (shape.kind === "frame") {
-    return `<w:r><w:pict><v:rect id="${shape.id}" style="${vmlStyle(shape.x, shape.y, shape.w, shape.h)}" filled="f" strokecolor="${color}" strokeweight="${shape.strokeMm ?? 0.4}mm" opacity="${opacity}"/></w:pict></w:r>`;
+    return `<w:r><w:pict><v:rect id="${shape.id}" style="${vmlStyle(shape.x, shape.y, shape.w, shape.h, shape.zIndex)}" filled="f" strokecolor="${color}" strokeweight="${shape.strokeMm ?? 0.4}mm" opacity="${opacity}"/></w:pict></w:r>`;
   }
   const tag = shape.kind === "oval" ? "oval" : shape.kind === "roundrect" ? "roundrect" : "rect";
-  return `<w:r><w:pict><v:${tag} id="${shape.id}" style="${vmlStyle(shape.x, shape.y, shape.w, shape.h)}" fillcolor="${color}" stroked="f">${fillOpacity(opacity)}</v:${tag}></w:pict></w:r>`;
+  return `<w:r><w:pict><v:${tag} id="${shape.id}" style="${vmlStyle(shape.x, shape.y, shape.w, shape.h, shape.zIndex)}" fillcolor="${color}" stroked="f">${fillOpacity(opacity)}</v:${tag}></w:pict></w:r>`;
 }
 
 function recipeShapes(shapes: readonly DossierDocxRecipeShape[], colors: Palette, templateId: string) {
