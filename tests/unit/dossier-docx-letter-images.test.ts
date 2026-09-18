@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { EMPTY_LETTER, emptyLetterDesign } from "../../src/components/letter/types";
+import {
+  EMPTY_LETTER,
+  emptyLetterDesign,
+  type LetterFlowImage,
+} from "../../src/components/letter/types";
 import { applyLetterImagesToDocx } from "../../src/lib/dossier-docx-letter-images";
 import {
   readStoredDocxEntries,
@@ -15,6 +19,10 @@ const sectionBreak =
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+
+type LetterFlowImageWithPlacement = LetterFlowImage & {
+  placement?: "left" | "right" | "free";
+};
 
 function textEntry(name: string, content: string): StoredDocxEntry {
   return { name, bytes: encoder.encode(content) };
@@ -47,6 +55,16 @@ function baseBlob() {
 }
 
 function letter(): LetterPdfDocument {
+  const freeImage: LetterFlowImageWithPlacement = {
+    id: "free-middle",
+    src: PNG_1X1,
+    side: "right",
+    placement: "free",
+    xMm: 54,
+    topMm: 32,
+    widthMm: 36,
+    gapMm: 4,
+  };
   return {
     data: {
       ...EMPTY_LETTER,
@@ -60,15 +78,7 @@ function letter(): LetterPdfDocument {
           widthMm: 28,
           gapMm: 4,
         },
-        {
-          id: "free-middle",
-          src: PNG_1X1,
-          side: "right",
-          xMm: 54,
-          topMm: 32,
-          widthMm: 36,
-          gapMm: 4,
-        },
+        freeImage,
       ],
     },
     design: emptyLetterDesign(),
@@ -76,7 +86,7 @@ function letter(): LetterPdfDocument {
 }
 
 describe("DOCX letter image parity", () => {
-  test("replaces legacy fixed images with wrapping and true free anchors", async () => {
+  test("keeps legacy flow images wrapping and maps explicit free placement to page anchors", async () => {
     const result = await applyLetterImagesToDocx(baseBlob(), letter());
     const entries = readStoredDocxEntries(new Uint8Array(await result.arrayBuffer()));
     const document = decoder.decode(
@@ -105,5 +115,28 @@ describe("DOCX letter image parity", () => {
     expect(types).toContain('Extension="png" ContentType="image/png"');
     expect(entries.some((entry) => entry.name === "word/media/letter-flow-image-1.png")).toBe(true);
     expect(entries.some((entry) => entry.name === "word/media/letter-flow-image-2.png")).toBe(true);
+  });
+
+  test("legacy side plus xMm remains a text-flow anchor instead of becoming free", async () => {
+    const legacy = letter();
+    legacy.data.images = [
+      {
+        id: "legacy-right",
+        src: PNG_1X1,
+        side: "right",
+        xMm: 42,
+        topMm: 5,
+        widthMm: 30,
+        gapMm: 3,
+      },
+    ];
+    const result = await applyLetterImagesToDocx(baseBlob(), legacy);
+    const entries = readStoredDocxEntries(new Uint8Array(await result.arrayBuffer()));
+    const document = decoder.decode(
+      entries.find((entry) => entry.name === "word/document.xml")?.bytes ?? new Uint8Array(),
+    );
+    expect(document).toContain('<wp:positionH relativeFrom="column">');
+    expect(document).toContain('<wp:wrapSquare wrapText="left"/>');
+    expect(document).not.toContain('<wp:wrapNone/>');
   });
 });

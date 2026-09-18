@@ -29,6 +29,41 @@ function blockText(block: string) {
   );
 }
 
+type XmlBlock = {
+  start: number;
+  end: number;
+  xml: string;
+};
+
+/**
+ * Read complete top-level WordprocessingML paragraphs/tables without cutting
+ * nested tables at the first inner closing tag.
+ */
+function topLevelBlocks(xml: string): XmlBlock[] {
+  const result: XmlBlock[] = [];
+  let depth = 0;
+  let start = -1;
+
+  for (const match of xml.matchAll(/<\/?w:(?:p|tbl)(?:\s[^>]*|)>/g)) {
+    const closing = match[0].startsWith("</");
+    if (!closing) {
+      if (depth === 0) start = match.index!;
+      depth += 1;
+      continue;
+    }
+
+    if (depth === 0) continue;
+    depth -= 1;
+    if (depth === 0 && start >= 0) {
+      const end = match.index! + match[0].length;
+      result.push({ start, end, xml: xml.slice(start, end) });
+      start = -1;
+    }
+  }
+
+  return result;
+}
+
 function cvDocumentStart(source: string): number | null {
   let cursor = 0;
   for (let section = 0; section < 2; section += 1) {
@@ -101,11 +136,10 @@ export function applyCvSectionOrderToDocumentXml(
   if (!queues.size) return source;
 
   const matches: HeadingMatch[] = [];
-  const blockPattern = /<w:tbl>[\s\S]*?<\/w:tbl>|<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g;
-  for (const match of content.matchAll(blockPattern)) {
-    const queue = queues.get(blockText(match[0]));
-    if (!queue?.length || match.index === undefined) continue;
-    matches.push({ key: queue.shift()!, start: match.index });
+  for (const block of topLevelBlocks(content)) {
+    const queue = queues.get(blockText(block.xml));
+    if (!queue?.length) continue;
+    matches.push({ key: queue.shift()!, start: block.start });
   }
   if (matches.length < 2) return source;
 

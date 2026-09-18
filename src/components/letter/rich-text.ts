@@ -10,6 +10,21 @@ export function letterTextAlign(value: string | undefined): LetterTextAlign {
   return isBodyTextAlignment(value) ? value : "justify";
 }
 
+/**
+ * Chromium stretches justified text aggressively at CSS column fragment
+ * boundaries. Keep multi-column letter blocks readable by normalizing that
+ * unsupported combination to left alignment everywhere it is rendered or
+ * exported.
+ */
+export function compatibleLetterTextAlign(
+  value: string | undefined,
+  columns: string | number | undefined,
+): LetterTextAlign {
+  return columns === "2" || columns === "3" || columns === 2 || columns === 3
+    ? "left"
+    : letterTextAlign(value);
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -29,9 +44,15 @@ export function plainTextToRichHtml(text: string): string {
 }
 
 function blockAttributes(element: HTMLElement): string {
-  const attributes: string[] = [`data-align="${letterTextAlign(element.dataset.align)}"`];
-  if (element.dataset.columns === "2" || element.dataset.columns === "3") {
-    attributes.push(`data-columns="${element.dataset.columns}"`);
+  const columns =
+    element.dataset.columns === "2" || element.dataset.columns === "3"
+      ? element.dataset.columns
+      : undefined;
+  const attributes: string[] = [
+    `data-align="${compatibleLetterTextAlign(element.dataset.align, columns)}"`,
+  ];
+  if (columns) {
+    attributes.push(`data-columns="${columns}"`);
   }
   if (element.dataset.list && ALLOWED_LISTS.has(element.dataset.list)) {
     attributes.push(`data-list="${element.dataset.list}"`);

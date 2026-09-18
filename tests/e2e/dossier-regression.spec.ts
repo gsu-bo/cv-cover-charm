@@ -884,8 +884,23 @@ test.describe("M5.8 dossier regression", () => {
     const columnsSelect = page.getByRole("combobox", { name: "Anzahl Textspalten" });
     await columnsSelect.selectOption("2");
     await expect(columnsSelect).toHaveValue("2");
+    await expect(page.getByRole("button", { name: "Linksbündig" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(body.locator(":scope > div").nth(1)).toHaveAttribute("data-align", "left");
+    await expect(body.locator(":scope > div").nth(1)).toHaveCSS("text-align", "left");
     await expect(body.locator(":scope > div").nth(1)).toHaveCSS("column-count", "2");
     await expect(body.locator(":scope > div").nth(1)).toHaveCSS("column-rule-style", "none");
+
+    await page.getByRole("button", { name: "Blocksatz" }).click();
+    await expect(columnsSelect).toHaveValue("1");
+    await expect(body.locator(":scope > div").nth(1)).not.toHaveAttribute("data-columns", /.+/);
+    await expect(body.locator(":scope > div").nth(1)).toHaveCSS("text-align", "justify");
+
+    await columnsSelect.selectOption("2");
+    await expect(columnsSelect).toHaveValue("2");
+    await expect(body.locator(":scope > div").nth(1)).toHaveAttribute("data-align", "left");
 
     await page.getByRole("button", { name: "Tabelle" }).click();
     await expect(page.getByRole("grid", { name: "Tabellengrösse auswählen" })).toBeVisible();
@@ -899,6 +914,8 @@ test.describe("M5.8 dossier regression", () => {
     await expect(previewBlocks.nth(0)).not.toHaveAttribute("data-columns", /.+/);
     await expect(previewBlocks.nth(0)).toHaveAttribute("data-list", "bullet");
     await expect(previewBlocks.nth(1)).toHaveAttribute("data-columns", "2");
+    await expect(previewBlocks.nth(1)).toHaveAttribute("data-align", "left");
+    await expect(previewBlocks.nth(1)).toHaveCSS("text-align", "left");
     await expect(previewBlocks.nth(1)).toHaveCSS("column-count", "2");
     await expect(previewBlocks.nth(0).locator("strong")).toContainText("Absatz eins formatiert");
     await expect(previewBlocks.nth(0).locator("em")).toContainText("Absatz eins formatiert");
