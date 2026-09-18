@@ -594,18 +594,12 @@ export const DEMO_CV: CvData = {
       preset: "familie",
       entries: [
         {
-          id: "demo-familie-eltern",
+          id: "demo-familie",
           zeit: "",
-          titel: "Eltern",
-          ort: "Monika Müller, Detailhandelsfachfrau · Peter Müller, Maurer",
-          beschreibung: "",
-        },
-        {
-          id: "demo-familie-geschwister",
-          zeit: "",
-          titel: "Geschwister",
-          ort: "Aline (Jg. 2004), Medizinische Praxisassistentin · Jaro (Jg. 2015), Schüler",
-          beschreibung: "",
+          titel: "",
+          ort: "Sohn von Monika Müller, Detailhandelsfachfrau und Peter Müller, Maurer",
+          beschreibung:
+            "Bruder von Aline, 2004, Medizinische Praxisassistentin und Jaro, 2015, Schüler",
         },
       ],
     },
