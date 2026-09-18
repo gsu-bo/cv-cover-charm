@@ -10,6 +10,7 @@ import type {
 
 const sectionBreak =
   '<w:p><w:pPr><w:sectPr><w:pgSz w:w="1" w:h="1"/></w:sectPr></w:pPr></w:p>';
+const demoSchoolTime = DEMO_CV.schule[0]?.zeit ?? "";
 
 function paragraph(text: string, color = "111111") {
   return `<w:p><w:r><w:rPr><w:color w:val="${color}"/></w:rPr><w:t>${text}</w:t></w:r></w:p>`;
@@ -25,7 +26,7 @@ function baseXml() {
     sectionBreak,
     paragraph("Lea Müller"),
     paragraph("Schulbildung", "556677"),
-    paragraph("2022 – 2026", "667788"),
+    paragraph(demoSchoolTime, "667788"),
     '<w:sectPr><w:pgSz w:w="1" w:h="1"/></w:sectPr>',
     "</w:body></w:document>",
   ].join("");
@@ -112,12 +113,14 @@ describe("DOCX document color parity", () => {
     const letterEnd = patched.indexOf(sectionBreak, letterStart);
     const letterXml = patched.slice(letterStart, letterEnd);
     expect(letterXml).toContain('<w:color w:val="182230"/>');
-    expect(letterXml).toContain('<w:color w:val="777777"/><\/w:rPr><w:t>Hubersdorf, 15.11.2026'.replace("<\\/w:rPr>", "</w:rPr>"));
+    expect(letterXml).toContain(
+      '<w:color w:val="777777"/></w:rPr><w:t>Hubersdorf, 15.11.2026',
+    );
 
     const cvXml = patched.slice(letterEnd + sectionBreak.length);
-    expect(cvXml).toContain('<w:color w:val="172033"/><\/w:rPr><w:t>Lea Müller'.replace("<\\/w:rPr>", "</w:rPr>"));
-    expect(cvXml).toContain('<w:color w:val="1D4ED8"/><\/w:rPr><w:t>Schulbildung'.replace("<\\/w:rPr>", "</w:rPr>"));
-    expect(cvXml).toContain('<w:color w:val="52606D"/><\/w:rPr><w:t>2022 – 2026'.replace("<\\/w:rPr>", "</w:rPr>"));
+    expect(cvXml).toContain('<w:color w:val="172033"/></w:rPr><w:t>Lea Müller');
+    expect(cvXml).toContain('<w:color w:val="1D4ED8"/></w:rPr><w:t>Schulbildung');
+    expect(cvXml).toContain(`<w:color w:val="52606D"/></w:rPr><w:t>${demoSchoolTime}`);
   });
 
   test("is a no-op when no explicit document colors exist", () => {
