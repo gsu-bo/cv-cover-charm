@@ -55,23 +55,39 @@ function neonSurfaceShape(shape: DossierDocxRecipeShape): DossierDocxRecipeShape
   return { ...shape, kind: "rect" };
 }
 
-function normalizeLegacyWordRecipe(recipe: DossierDocxTemplateRecipe) {
-  if (recipe.templateId !== "neon") return recipe;
+function withLibreOfficeCardPaginationHeadroom(page: DossierDocxTemplateRecipe["cv"]) {
   return {
-    ...recipe,
-    letter: {
-      ...recipe.letter,
-      shapes: recipe.letter.shapes.map(neonSurfaceShape),
-    },
-    cv: {
-      ...recipe.cv,
-      // Neon's white card ends at 285 mm. Keep 13.5 mm of visible inner-card
-      // reserve while giving Word/LibreOffice 0.5 mm pagination headroom so a
-      // final reference line is not rounded onto a spurious extra CV page.
-      margins: recipe.cv.margins ? { ...recipe.cv.margins, bottom: 25.5 } : recipe.cv.margins,
-      shapes: recipe.cv.shapes.map(neonSurfaceShape),
-    },
-  } satisfies DossierDocxTemplateRecipe;
+    ...page,
+    // The legacy light cards end at 285 mm. Keep 13.5 mm of visible inner-card
+    // reserve while giving Word/LibreOffice 0.5 mm pagination headroom so the
+    // final reference line is not rounded onto a spurious extra CV page.
+    margins: page.margins ? { ...page.margins, bottom: 25.5 } : page.margins,
+  } satisfies DossierDocxTemplateRecipe["cv"];
+}
+
+function normalizeLegacyWordRecipe(recipe: DossierDocxTemplateRecipe) {
+  if (recipe.templateId === "neon") {
+    return {
+      ...recipe,
+      letter: {
+        ...recipe.letter,
+        shapes: recipe.letter.shapes.map(neonSurfaceShape),
+      },
+      cv: {
+        ...withLibreOfficeCardPaginationHeadroom(recipe.cv),
+        shapes: recipe.cv.shapes.map(neonSurfaceShape),
+      },
+    } satisfies DossierDocxTemplateRecipe;
+  }
+
+  if (recipe.templateId === "citrus") {
+    return {
+      ...recipe,
+      cv: withLibreOfficeCardPaginationHeadroom(recipe.cv),
+    } satisfies DossierDocxTemplateRecipe;
+  }
+
+  return recipe;
 }
 
 const NORMALIZED_FRESH_DOSSIER_DOCX_RECIPES = Object.fromEntries(
