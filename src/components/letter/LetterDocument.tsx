@@ -192,7 +192,7 @@ export function LetterDocument({
   ariaLabel = "Vorschau Motivationsschreiben",
 }: Props) {
   const bodyHtml = useMemo(() => resolvedBodyHtml(data, exportMode), [data, exportMode]);
-  const allImages = data.images ?? [];
+  const allImages = useMemo(() => data.images ?? [], [data.images]);
   const freeImages = useMemo(
     () => allImages.filter((image) => typeof image.xMm === "number" && Number.isFinite(image.xMm)),
     [allImages],
