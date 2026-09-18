@@ -18,16 +18,18 @@ describe("templateFIX visual cleanup", () => {
     expect(end).toBeGreaterThan(start);
 
     const colorful = decorations.slice(start, end);
-    expect(colorful).toContain('decor-top-band');
-    expect(colorful).toContain('decor-left-field');
-    expect(colorful).toContain('decor-middle-field');
-    expect(colorful).toContain('decor-bottom-band');
-    expect(colorful).not.toContain('decor-accent-bar');
+    expect(colorful).toContain("decor-top-band");
+    expect(colorful).toContain("decor-left-field");
+    expect(colorful).toContain("decor-middle-field");
+    expect(colorful).toContain("decor-bottom-band");
+    expect(colorful).not.toContain("decor-accent-bar");
   });
 
   test("Horizont motivation letter leaves footer ownership to shared chrome", () => {
     expect(letterBackground).toContain('data-letter-background-variant="quiet-horizon"');
     expect(letterBackground).toContain('if (template === "welle")');
-    expect(letterBackground).toContain('return <QuietHorizonLetterBackground colors={colors} />;');
+    expect(letterBackground).toContain(
+      "return <QuietHorizonLetterBackground colors={colors} paperColor={paperColor} />;",
+    );
   });
 });

@@ -127,18 +127,31 @@ export function writeStoredDocxEntries(entries: StoredDocxEntry[]) {
   return concat([...localParts, directory, end]);
 }
 
+export async function transformStoredDocxEntries(
+  blob: Blob,
+  transform: (entries: StoredDocxEntry[]) => void | StoredDocxEntry[],
+  context = "DOCX",
+) {
+  const entries = readStoredDocxEntries(new Uint8Array(await blob.arrayBuffer()), context);
+  const transformed = transform(entries) ?? entries;
+  return new Blob([writeStoredDocxEntries(transformed)], { type: DOCX_MIME_TYPE });
+}
+
 export async function transformStoredDocxDocumentXml(
   blob: Blob,
   transform: (documentXml: string) => string,
   context = "DOCX",
 ) {
-  const entries = readStoredDocxEntries(new Uint8Array(await blob.arrayBuffer()), context);
-  const document = entries.find((entry) => entry.name === "word/document.xml");
-  if (!document) throw new Error(`${context} document.xml fehlt.`);
+  return transformStoredDocxEntries(
+    blob,
+    (entries) => {
+      const document = entries.find((entry) => entry.name === "word/document.xml");
+      if (!document) throw new Error(`${context} document.xml fehlt.`);
 
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-  document.bytes = encoder.encode(transform(decoder.decode(document.bytes)));
-
-  return new Blob([writeStoredDocxEntries(entries)], { type: DOCX_MIME_TYPE });
+      const decoder = new TextDecoder();
+      const encoder = new TextEncoder();
+      document.bytes = encoder.encode(transform(decoder.decode(document.bytes)));
+    },
+    context,
+  );
 }

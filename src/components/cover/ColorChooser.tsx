@@ -1,7 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ColorSlot } from "./types";
 import { isActive, palettesFor } from "./palettes";
 import { cvPalette } from "@/components/cv/palette";
+import { DocumentTextColorControl } from "@/components/dossier/DocumentTextColorControl";
+import {
+  COVER_DOCUMENT_COLOR_KEYS,
+  CV_DOCUMENT_COLOR_KEYS,
+  documentColorOverrides,
+} from "@/lib/dossier-document-colors";
 
 type Props = {
   slots: ColorSlot[];
@@ -20,21 +26,135 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
   }, [slots]);
   const cvText = useMemo(() => cvPalette(colors), [colors]);
   const [showCvText, setShowCvText] = useState(false);
+  const [showCoverDocumentColors, setShowCoverDocumentColors] = useState(false);
+  const documentColorsRef = useRef<Record<string, string>>({});
+  const documentColorsInitializedRef = useRef(false);
+  const previousSlotsRef = useRef(slots);
 
-  // ColorChooser is shared by title page and CV. Only the CV needs its own
-  // semantic text overrides; using an effect keeps SSR/client markup identical.
+  // ColorChooser is shared by title page, CV and motivation letter. Route-aware
+  // semantic controls keep the generic template palette compact while exposing
+  // document-level overrides where they belong.
   useEffect(() => {
-    setShowCvText(window.location.pathname.startsWith("/lebenslauf"));
+    const path = window.location.pathname;
+    setShowCvText(path.startsWith("/lebenslauf"));
+    setShowCoverDocumentColors(path.startsWith("/titelblatt"));
   }, []);
 
+  const activeDocumentColorKeys = useMemo<readonly string[]>(
+    () =>
+      showCoverDocumentColors
+        ? COVER_DOCUMENT_COLOR_KEYS
+        : showCvText
+          ? CV_DOCUMENT_COLOR_KEYS
+          : [],
+    [showCoverDocumentColors, showCvText],
+  );
+
+  /**
+   * Semantic document colors belong to the document, not to a template palette.
+   * The historical storage shape still keeps colors per template. Keep the
+   * explicit document choices in this mounted editor and copy them into a newly
+   * selected template. Normal color edits (including CV controls outside this
+   * component) update the remembered document choice instead of being reverted.
+   */
+  useEffect(() => {
+    if (!activeDocumentColorKeys.length) {
+      previousSlotsRef.current = slots;
+      return;
+    }
+
+    if (!documentColorsInitializedRef.current) {
+      documentColorsRef.current = documentColorOverrides(colors, activeDocumentColorKeys);
+      documentColorsInitializedRef.current = true;
+      previousSlotsRef.current = slots;
+      return;
+    }
+
+    const templateChanged = previousSlotsRef.current !== slots;
+    previousSlotsRef.current = slots;
+
+    if (!templateChanged) {
+      documentColorsRef.current = documentColorOverrides(colors, activeDocumentColorKeys);
+      return;
+    }
+
+    for (const key of activeDocumentColorKeys) {
+      const expected = documentColorsRef.current[key] ?? "";
+      if ((colors[key] ?? "") !== expected) onChange(key, expected);
+    }
+  }, [activeDocumentColorKeys, colors, onChange, slots]);
+
+  const setDocumentColor = (key: string, value: string) => {
+    const normalized = value.trim();
+    if (normalized) documentColorsRef.current[key] = normalized;
+    else delete documentColorsRef.current[key];
+    onChange(key, value);
+  };
+
   const cvSlots = [
-    { key: "cvInk", label: "Haupttext", value: colors.cvInk || cvText.ink },
     { key: "cvMuted", label: "Sekundärtext", value: colors.cvMuted || cvText.muted },
     { key: "cvHeading", label: "Überschriften", value: colors.cvHeading || cvText.accent },
   ] as const;
 
+  const semanticOverrides = useMemo(() => {
+    const keys = ["coverPaper", "coverInk", "cvInk", "cvMuted", "cvHeading"] as const;
+    return Object.fromEntries(
+      keys.filter((key) => colors[key]).map((key) => [key, colors[key]]),
+    ) as Record<string, string>;
+  }, [colors]);
+
+  const coverPaper = colors.coverPaper || colors.bg || "#ffffff";
+  const coverText = colors.coverInk || colors.ink || colors.primary || colors.accent || "#111111";
+
   return (
     <div className="flex flex-col gap-4">
+      {showCoverDocumentColors ? (
+        <div className="grid gap-3">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Dokumentfarben
+          </span>
+
+          <div
+            data-cover-paper-color-control
+            className="grid gap-2 rounded-md border border-input p-3"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <label className="flex min-w-0 items-center gap-2 text-xs font-medium">
+                <input
+                  type="color"
+                  aria-label="Seitenhintergrund des Titelblatts"
+                  value={coverPaper}
+                  onChange={(event) => setDocumentColor("coverPaper", event.target.value)}
+                  className="h-8 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
+                />
+                <span>Seitenhintergrund</span>
+              </label>
+              <button
+                type="button"
+                disabled={!colors.coverPaper}
+                onClick={() => setDocumentColor("coverPaper", "")}
+                className="text-xs text-muted-foreground underline hover:text-foreground disabled:cursor-default disabled:no-underline disabled:opacity-45"
+              >
+                Automatisch
+              </button>
+            </div>
+            <span className="text-[11px] leading-snug text-muted-foreground">
+              Gilt bei jeder Vorlage für den Hintergrund des Titelblatts.
+            </span>
+          </div>
+
+          <DocumentTextColorControl
+            ariaLabel="Textfarbe des Titelblatts"
+            value={coverText}
+            customValue={colors.coverInk}
+            paperColor={coverPaper}
+            description="Gilt bei jeder Vorlage für die Standardtexte des Titelblatts. Formen, Akzente und bewusst einzeln gefärbte eigene Elemente bleiben unabhängig."
+            onChange={(value) => setDocumentColor("coverInk", value)}
+            onAuto={() => setDocumentColor("coverInk", "")}
+          />
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-2">
         <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
           Farbsets
@@ -46,7 +166,7 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
               <button
                 key={p.name}
                 type="button"
-                onClick={() => onApplyPalette(p.colors)}
+                onClick={() => onApplyPalette({ ...p.colors, ...semanticOverrides })}
                 aria-label={`Farbset ${p.name}`}
                 title={p.name}
                 aria-pressed={active}
@@ -86,7 +206,12 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
           </span>
           <button
             type="button"
-            onClick={onReset}
+            onClick={() => {
+              onReset();
+              for (const [key, value] of Object.entries(semanticOverrides)) {
+                setDocumentColor(key, value);
+              }
+            }}
             className="text-xs text-muted-foreground underline hover:text-foreground"
           >
             Zurücksetzen
@@ -114,14 +239,13 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
         <div className="flex flex-col gap-2 border-t pt-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              CV-Textfarben
+              Weitere CV-Textfarben
             </span>
             <button
               type="button"
               onClick={() => {
-                onChange("cvInk", "");
-                onChange("cvMuted", "");
-                onChange("cvHeading", "");
+                setDocumentColor("cvMuted", "");
+                setDocumentColor("cvHeading", "");
               }}
               className="text-xs text-muted-foreground underline hover:text-foreground"
             >
@@ -137,7 +261,7 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
                 <input
                   type="color"
                   value={slot.value}
-                  onChange={(e) => onChange(slot.key, e.target.value)}
+                  onChange={(e) => setDocumentColor(slot.key, e.target.value)}
                   className="h-8 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
                 />
                 <span className="truncate text-xs">{slot.label}</span>

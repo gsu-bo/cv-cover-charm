@@ -23,6 +23,11 @@ import { LetterDocument, type LetterPaginationState } from "@/components/letter/
 import { LetterLayoutControls } from "@/components/letter/LetterLayoutControls";
 import { LetterRichTextEditor } from "@/components/letter/LetterRichTextEditor";
 import { LetterTemplatePicker } from "@/components/letter/LetterTemplatePicker";
+import {
+  resolveLetterPalette,
+  resolveLetterPaperColor,
+} from "@/components/letter/letter-paper";
+import { DocumentTextColorControl } from "@/components/dossier/DocumentTextColorControl";
 import { downloadLetterPdf } from "@/lib/dossier-pdf";
 import { readPhoto } from "@/lib/image";
 import { readDossierContact } from "@/lib/dossier-contact";
@@ -1075,27 +1080,78 @@ function Anschreiben() {
               <LetterTemplatePicker value={design.template} onChange={changeTemplate} />
             </Section>
 
-            {design.template !== "brief" && template ? (
-              <Section title="Farben" open={open.farben} onToggle={() => toggle("farben")}>
-                <ColorChooser
-                  slots={template.slots}
-                  colors={design.colors}
-                  onChange={(key, value) =>
-                    setDesign((current) => ({
-                      ...current,
-                      colors: { ...current.colors, [key]: value },
-                    }))
+            <Section title="Farben" open={open.farben} onToggle={() => toggle("farben")}>
+              <div className="grid gap-4">
+                <div
+                  data-letter-paper-color-control
+                  className="grid gap-2 rounded-md border border-input p-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="flex min-w-0 items-center gap-2 text-xs font-medium">
+                      <input
+                        type="color"
+                        aria-label="Seitenhintergrund des Anschreibens"
+                        value={resolveLetterPaperColor(design)}
+                        onChange={(event) =>
+                          setDesign((current) => ({
+                            ...current,
+                            paperColor: event.target.value,
+                          }))
+                        }
+                        className="h-8 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
+                      />
+                      <span>Seitenhintergrund</span>
+                    </label>
+                    <button
+                      type="button"
+                      disabled={!design.paperColor}
+                      onClick={() => setDesign((current) => ({ ...current, paperColor: null }))}
+                      className="text-xs text-muted-foreground underline hover:text-foreground disabled:cursor-default disabled:no-underline disabled:opacity-45"
+                    >
+                      Automatisch
+                    </button>
+                  </div>
+                  <span className="text-[11px] leading-snug text-muted-foreground">
+                    Gilt bei jeder Vorlage für das Papier des Anschreibens. Ohne eigene Textfarbe
+                    passt sich die Schrift automatisch an.
+                  </span>
+                </div>
+
+                <DocumentTextColorControl
+                  ariaLabel="Textfarbe des Anschreibens"
+                  value={resolveLetterPalette(design).ink}
+                  customValue={design.textColor}
+                  paperColor={resolveLetterPaperColor(design)}
+                  description="Gilt für den normalen Text im Anschreiben. Datum und Gestaltungselemente behalten ihre eigene Farbe."
+                  onChange={(textColor) =>
+                    setDesign((current) => ({ ...current, textColor }))
                   }
-                  onApplyPalette={(colors) => setDesign((current) => ({ ...current, colors }))}
-                  onReset={() =>
-                    setDesign((current) => ({
-                      ...current,
-                      colors: defaultLetterColors(current.template),
-                    }))
-                  }
+                  onAuto={() => setDesign((current) => ({ ...current, textColor: null }))}
                 />
-              </Section>
-            ) : null}
+
+                {design.template !== "brief" && template ? (
+                  <div className="border-t pt-4">
+                    <ColorChooser
+                      slots={template.slots}
+                      colors={design.colors}
+                      onChange={(key, value) =>
+                        setDesign((current) => ({
+                          ...current,
+                          colors: { ...current.colors, [key]: value },
+                        }))
+                      }
+                      onApplyPalette={(colors) => setDesign((current) => ({ ...current, colors }))}
+                      onReset={() =>
+                        setDesign((current) => ({
+                          ...current,
+                          colors: defaultLetterColors(current.template),
+                        }))
+                      }
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </Section>
 
             <Section title="Schrift" open={open.typo} onToggle={() => toggle("typo")}>
               <label className="block text-xs font-medium">

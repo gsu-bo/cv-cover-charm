@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { TEMPLATES, type TemplateId } from "@/components/cover/types";
 import { cvContentBox, cvFrameFor } from "@/components/cv/archetype";
 import { cvPalette, onColorRoles } from "@/components/cv/palette";
@@ -560,17 +561,22 @@ export function DossierSheetBackground({
   template,
   colors,
   pageIndex = 0,
+  paperColor,
 }: {
   template: LetterTemplateId;
   colors: Record<string, string>;
   pageIndex?: number;
+  /** Nur das Anschreiben darf die Schreibfläche unabhängig vom Template überschreiben. */
+  paperColor?: string | null;
 }) {
   if (template === "brief") {
     return (
       <div
         data-letter-background="brief"
         data-dossier-sheet-background="brief"
+        data-letter-paper-override={paperColor ?? undefined}
         className="absolute inset-0 bg-white"
+        style={{ backgroundColor: paperColor ?? "#ffffff" }}
         aria-hidden="true"
       />
     );
@@ -587,11 +593,20 @@ export function DossierSheetBackground({
     return (
       <div
         data-dossier-sheet-background={template}
+        data-letter-paper-override={paperColor ?? undefined}
         className="absolute inset-0 overflow-hidden"
-        style={{ backgroundColor: color(colors, "bg") }}
+        style={
+          {
+            backgroundColor: paperColor ?? color(colors, "bg"),
+            "--letter-paper-color": paperColor ?? undefined,
+          } as CSSProperties
+        }
         aria-hidden="true"
       >
-        <div className="absolute" style={{ inset: "19mm", backgroundColor: palette.paper }} />
+        <div
+          className="absolute"
+          style={{ inset: "19mm", backgroundColor: paperColor ?? palette.paper }}
+        />
         <div
           className="absolute"
           style={{ inset: "12mm", border: `0.55px solid ${accent}`, opacity: 0.5 }}
@@ -606,10 +621,12 @@ export function DossierSheetBackground({
 
   if (layout.kind === "card") {
     const inset = layout.cardInsetMm ?? 12;
-    const cardBackground = template === "citrus" ? color(colors, "bg") : palette.paper;
+    const cardBackground =
+      paperColor ?? (template === "citrus" ? color(colors, "bg") : palette.paper);
     return (
       <div
         data-dossier-sheet-background={template}
+        data-letter-paper-override={paperColor ?? undefined}
         className="absolute inset-0 overflow-hidden"
         aria-hidden="true"
       >
@@ -648,8 +665,9 @@ export function DossierSheetBackground({
   return (
     <div
       data-dossier-sheet-background={template}
+      data-letter-paper-override={paperColor ?? undefined}
       className="absolute inset-0 overflow-hidden"
-      style={{ backgroundColor: palette.paper }}
+      style={{ backgroundColor: paperColor ?? palette.paper }}
       aria-hidden="true"
     >
       <DossierSheetSignature

@@ -97,6 +97,7 @@ jobs:
             files: >-
               tests/e2e/letter-header-modes.spec.ts
               tests/e2e/letter-final-qa.spec.ts
+              tests/e2e/letter-image-placement.spec.ts
           - group: letter-m8-edge
             files: >-
               tests/e2e/letter-adversarial-content.spec.ts
@@ -111,6 +112,7 @@ jobs:
           - group: cv-m9-pagination
             files: >-
               tests/e2e/cv-demo-pagination.spec.ts
+              tests/e2e/cv-long-pagination.spec.ts
           - group: m9-responsive
             files: >-
               tests/e2e/dossier-responsive-product-smoke.spec.ts

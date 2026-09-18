@@ -4,6 +4,7 @@ import { CoverBackground } from "./CoverBackground";
 import { BlockLayer, type Point } from "./BlockLayer";
 import { PAGE } from "@/default-config";
 import { dossierDefaultFontKey, effectiveDossierFont } from "@/lib/dossier-theme";
+import "./cover-text-color.css";
 
 /** Ganzzahlige Blattmasse – siehe PAGE in default-config. */
 const { WIDTH: PAGE_W, HEIGHT: PAGE_H } = PAGE;
@@ -207,17 +208,20 @@ export const CoverCanvas = forwardRef<HTMLDivElement, Props>(function CoverCanva
     liveFont && liveFont !== dossierDefaultFontKey(template) ? liveFont : null;
   const resolvedOverride = fontOverride === undefined ? inferredOverride : fontOverride;
   const dossierFont = effectiveDossierFont(template, resolvedOverride);
-  const paper = colors.bg ?? "#ffffff";
+  const paper = colors.coverPaper || colors.bg || "#ffffff";
+  const renderColors = colors.coverPaper ? { ...colors, bg: paper } : colors;
   const primary = colors.primary ?? colors.accent ?? colors.ink ?? paper;
   const secondary = colors.secondary ?? colors.accent ?? primary;
   const accent = colors.accent ?? secondary;
   const ink = colors.ink ?? "#111111";
+  const coverTextOverride = colors.coverInk || "";
 
   return (
     <div
       ref={setCanvasRef}
       data-dossier-document="cover"
       data-cover-template={template}
+      data-cover-text-override={coverTextOverride ? "true" : undefined}
       data-dossier-font-source={resolvedOverride ? "override" : "family"}
       data-dossier-footer-sync={automaticFooterPair ? "automatic" : "manual"}
       className="relative overflow-hidden shadow-2xl"
@@ -233,6 +237,7 @@ export const CoverCanvas = forwardRef<HTMLDivElement, Props>(function CoverCanva
         ["--cover-secondary" as string]: secondary,
         ["--cover-accent" as string]: accent,
         ["--cover-ink" as string]: ink,
+        ["--cover-text-override" as string]: coverTextOverride || ink,
         // Photo initials are not a semantic text role, but still belong to the
         // dossier type system. Keep one unshadowed token for that renderer edge.
         ["--dossier-resolved-font" as string]: dossierFont,
@@ -244,10 +249,10 @@ export const CoverCanvas = forwardRef<HTMLDivElement, Props>(function CoverCanva
         }
       }}
     >
-      <CoverBackground template={template} colors={colors} />
+      <CoverBackground template={template} colors={renderColors} />
       <BlockLayer
         blocks={renderBlocks}
-        colors={colors}
+        colors={renderColors}
         selected={selected}
         onSelect={onSelect}
         onMove={onMove}

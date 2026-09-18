@@ -63,6 +63,10 @@ export type LetterData = {
 export type LetterDesign = {
   template: LetterTemplateId;
   colors: Record<string, string>;
+  /** Eigene Papierfarbe nur für das Anschreiben; unabhängig von der Vorlage. */
+  paperColor?: string | null;
+  /** Eigene Haupttextfarbe; leer lässt sie automatisch aus der Papierfarbe ableiten. */
+  textColor?: string | null;
   /** Standalone-Briefschrift bzw. Kompatibilitätswert für ältere Saves. */
   font: FontKey;
   /**
@@ -142,6 +146,7 @@ export function withLetterFontSelection(
   selection: LetterFontSelection,
 ): LetterDesign {
   if (selection === "template") return { ...design, fontOverride: null };
+  if (design.template === "brief") return { ...design, font: selection, fontOverride: null };
   return { ...design, font: selection, fontOverride: selection };
 }
 
@@ -251,6 +256,8 @@ export function emptyLetterDesign(): LetterDesign {
   return {
     template,
     colors: defaultLetterColors(template),
+    paperColor: null,
+    textColor: null,
     font: "freundlich",
     fontOverride: null,
     senderAlign: "left",
@@ -301,7 +308,9 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
       ? (incoming.font as FontKey)
       : fallback.font;
   const fontOverride =
-    typeof incoming.fontOverride === "string" && incoming.fontOverride in FONT_LABELS
+    template !== "brief" &&
+    typeof incoming.fontOverride === "string" &&
+    incoming.fontOverride in FONT_LABELS
       ? (incoming.fontOverride as FontKey)
       : null;
   const chromeTextFont =
@@ -327,6 +336,8 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
   return {
     template,
     colors,
+    paperColor: normalizedColor(incoming.paperColor),
+    textColor: normalizedColor(incoming.textColor),
     font,
     fontOverride,
     senderAlign: incoming.senderAlign === "right" ? "right" : "left",

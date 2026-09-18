@@ -21,7 +21,8 @@ import {
 } from "./layout";
 import { getCvPlacements, subscribeCvPlacements } from "./placement";
 import { alphaHex, cvVisualPolicy, sidebarPlan, smartNameSize } from "./intelligence";
-import { cvPalette, onColorRoles, type CvOnColor } from "./palette";
+import { onColorRoles, type CvOnColor } from "./palette";
+import { normalizeCvPaperColor, resolveCvPalette } from "./cv-paper";
 import {
   bandLeftMm,
   cvContentBox,
@@ -179,7 +180,8 @@ export function CvCanvas({
   drawing = false,
   onDrawn,
 }: Props) {
-  const pal = useMemo(() => cvPalette(design.colors), [design.colors]);
+  const pal = resolveCvPalette(design);
+  const paperColorOverride = normalizeCvPaperColor(design.paperColor);
   // Die Bauform der Vorlage entscheidet über Flächen und Textbereich. Sie ist
   // der eigentliche Träger der Verwandtschaft zum Titelblatt.
   const frame = useMemo(() => cvFrameFor(design.template), [design.template]);
@@ -1454,6 +1456,7 @@ export function CvCanvas({
         template={design.template}
         colors={design.colors}
         pageIndex={pageIndex}
+        paperColor={paperColorOverride}
       />
     </div>
   );
@@ -1552,7 +1555,11 @@ export function CvCanvas({
           height: `${PAGE.HEIGHT}px`,
         }}
       >
-        <DossierSheetBackground template={design.template} colors={design.colors} />
+        <DossierSheetBackground
+          template={design.template}
+          colors={design.colors}
+          paperColor={paperColorOverride}
+        />
       </div>
     </div>
   );
@@ -2850,6 +2857,8 @@ export function CvCanvas({
           <div
             key={i}
             data-cv-page={i}
+            data-cv-paper-color={pal.paper}
+            data-cv-text-color={pal.ink}
             className="relative overflow-hidden shadow-2xl"
             style={{ width: `${PAGE.WIDTH}px`, height: `${PAGE.HEIGHT}px`, background: pal.paper }}
           >

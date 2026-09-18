@@ -52,6 +52,7 @@ import {
 } from "@/components/cv/CvForm";
 import {
   CV_SECTION_LABELS,
+  CV_CUSTOM_SECTION_PRESETS,
   CV_DOC_TITLE_DEFAULTS,
   CV_DOC_TITLE_FONT_SIZE_MAX,
   CV_DOC_TITLE_FONT_SIZE_MIN,
@@ -66,15 +67,16 @@ import {
   DEFAULT_CV_TITLE,
   DEMO_CV,
   customSectionKey,
+  customSectionFromPreset,
   cvSectionLayout,
   cvSectionOrder,
-  emptyEntry,
   emptyCv,
+  ensureFixedFamilySection,
   entryFilled,
   isCustomSectionKey,
-  newId,
   normalizeCvSectionLayout,
   type CvData,
+  type CvCustomSectionPresetKey,
   type CvDesign,
   type CvLayoutSectionKey,
   type CvPerson,
@@ -125,6 +127,12 @@ import { readPhoto } from "@/lib/image";
 import { useForeignWrite, usePageVisible } from "@/lib/autosave";
 import { applyDossierTheme } from "@/lib/dossier-theme";
 import { setCvPhotoStyle } from "@/components/cv/photo";
+import {
+  normalizeCvPaperColor,
+  resolveCvPalette,
+  resolveCvPaperColor,
+} from "@/components/cv/cv-paper";
+import { DocumentTextColorControl } from "@/components/dossier/DocumentTextColorControl";
 import { SIDEBAR_PCT_MAX, SIDEBAR_PCT_MIN } from "@/components/cv/archetype";
 import {
   DEFAULT_DOSSIER_CHROME_STATE,
@@ -190,6 +198,7 @@ type Saved = {
  */
 function migratedDesign(current: CvDesign, incoming: CvDesign, version?: number): CvDesign {
   const merged = { ...current, ...incoming };
+  merged.paperColor = normalizeCvPaperColor(incoming.paperColor);
   if (!merged.font || !(merged.font in FONT_LABELS)) delete merged.font;
   const isOldSave = (version ?? 1) < DESIGN_MIGRATION_VERSION;
   const usedOldDefault = LEGACY_DEFAULT_BG_OPACITIES.some(
@@ -211,9 +220,7 @@ function cvHasContent(d: CvData): boolean {
     d.hobbys?.length ||
     d.staerken?.length ||
     d.referenzen?.length ||
-    d.customSections?.some(
-      (section) => section.title.trim() || section.entries.some((entry) => entryFilled(entry)),
-    )
+    d.customSections?.some((section) => section.entries.some((entry) => entryFilled(entry)))
   );
 }
 
@@ -262,6 +269,7 @@ function Lebenslauf() {
     return {
       template: d.template,
       colors: d.colors,
+      paperColor: null,
       font: "freundlich",
       bgOpacity: DEFAULT_BG_OPACITY,
       useElements: false,
@@ -325,7 +333,14 @@ function Lebenslauf() {
 
   /** Einen gespeicherten oder importierten Lebenslauf übernehmen. */
   const applySaved = useCallback((p: Partial<Saved>) => {
-    if (p.data) setData({ ...emptyCv, ...p.data, person: { ...emptyCv.person, ...p.data.person } });
+    if (p.data)
+      setData(
+        ensureFixedFamilySection({
+          ...emptyCv,
+          ...p.data,
+          person: { ...emptyCv.person, ...p.data.person },
+        }),
+      );
     if (p.design) setDesign((d) => migratedDesign(d, p.design!, p.version));
     if (Array.isArray(p.elements)) setElements(p.elements);
     if (p.elementStyles) setElementStyles(p.elementStyles);
@@ -769,6 +784,7 @@ function Lebenslauf() {
     setDesign((d) => ({
       template: draft?.template ?? d.template,
       colors: draft?.colors ?? d.colors,
+      paperColor: null,
       font: draft ? (draft.font ?? undefined) : "freundlich",
       bgOpacity: DEFAULT_BG_OPACITY,
       useElements: false,
@@ -1002,23 +1018,20 @@ function Lebenslauf() {
     setDraggedSection(null);
   };
 
-  const addCustomSection = () => {
-    const id = newId("rubrik");
-    const key = customSectionKey(id);
+  const addCustomSection = (preset: CvCustomSectionPresetKey = "eigene-rubrik") => {
+    const section = customSectionFromPreset(preset);
+    const key = customSectionKey(section.id);
     setData((current) => ({
       ...current,
-      customSections: [
-        ...(current.customSections ?? []),
-        { id, title: "Eigene Rubrik", entries: [emptyEntry()] },
-      ],
+      customSections: [...(current.customSections ?? []), section],
       sectionOrder: [...cvSectionOrder(current), key],
       sectionLayouts: {
         ...current.sectionLayouts,
         [key]: normalizeCvSectionLayout({ page: 1 }),
       },
     }));
-    setOpen((current) => ({ ...current, [`custom:${id}`]: true }));
-    setStatus({ kind: "ok", text: "Eigene Rubrik hinzugefügt" });
+    setOpen((current) => ({ ...current, [key]: true }));
+    setStatus({ kind: "ok", text: `Rubrik „${section.title}“ hinzugefügt` });
   };
 
   const patchCustomSection = (
@@ -1034,6 +1047,7 @@ function Lebenslauf() {
 
   const removeCustomSection = (id: string) => {
     const section = data.customSections?.find((candidate) => candidate.id === id);
+    if (section?.preset === "familie") return;
     if (!section || !window.confirm(`Rubrik „${section.title || "Eigene Rubrik"}“ löschen?`))
       return;
     keepSnapshot("Vor dem Löschen einer Rubrik", true);
@@ -1786,15 +1800,17 @@ function Lebenslauf() {
                   onToggle={() => toggle(key)}
                   hint={`${section.entries.length}`}
                   action={
-                    <button
-                      type="button"
-                      onClick={() => removeCustomSection(section.id)}
-                      className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                      aria-label={`${section.title || "Eigene Rubrik"} löschen`}
-                      title="Rubrik löschen"
-                    >
-                      Löschen
-                    </button>
+                    section.preset === "familie" ? undefined : (
+                      <button
+                        type="button"
+                        onClick={() => removeCustomSection(section.id)}
+                        className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        aria-label={`${section.title || "Eigene Rubrik"} löschen`}
+                        title="Rubrik löschen"
+                      >
+                        Löschen
+                      </button>
+                    )
                   }
                 >
                   <div className="mb-2 flex flex-col gap-2 border-b pb-2">
@@ -1815,11 +1831,36 @@ function Lebenslauf() {
                       onLayout={(patch) => setSectionLayout(key, patch)}
                     />
                   </div>
+                  {section.preset === "familie" ? (
+                    <p className="mb-2 rounded-md bg-muted/40 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
+                      Optionaler Bereich. Sinnvolle Aufteilung: „Eltern“ mit Namen und Berufen sowie
+                      „Geschwister“ mit Jahrgang und Tätigkeit. Die Angaben erscheinen erst im CV,
+                      wenn du sie einträgst.
+                    </p>
+                  ) : section.preset === "digitale-kenntnisse" ? (
+                    <p className="mb-2 rounded-md bg-muted/40 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
+                      Programme und Technologien mit Niveau oder konkreter Anwendung angeben, z. B.
+                      „Excel – Grundkenntnisse, einfache Formeln“. Allgemeine PC-Nutzung musst du
+                      nicht aufführen.
+                    </p>
+                  ) : null}
                   <FormCvEntries
                     entries={section.entries}
                     onChange={(entries) => patchCustomSection(section.id, { entries })}
-                    titelLabel="Titel"
-                    ortLabel="Ort / Organisation"
+                    titelLabel={
+                      section.preset === "familie"
+                        ? "Bezug"
+                        : section.preset === "digitale-kenntnisse"
+                          ? "Programm / Technologie"
+                          : "Titel"
+                    }
+                    ortLabel={
+                      section.preset === "familie"
+                        ? "Name / Beruf"
+                        : section.preset === "digitale-kenntnisse"
+                          ? "Niveau / Anwendung"
+                          : "Ort / Organisation"
+                    }
                     placement={null}
                   />
                 </Section>
@@ -1924,13 +1965,25 @@ function Lebenslauf() {
                     </div>
                   );
                 })}
-                <button
-                  type="button"
-                  onClick={addCustomSection}
-                  className="rounded-md border border-input bg-background px-3 py-2 text-xs font-medium hover:bg-accent"
+                <select
+                  defaultValue=""
+                  onChange={(event) => {
+                    const preset = event.target.value as CvCustomSectionPresetKey;
+                    if (preset) addCustomSection(preset);
+                    event.target.value = "";
+                  }}
+                  className="rounded-md border border-input bg-background px-3 py-2 text-xs font-medium hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
+                  aria-label="Rubrik hinzufügen"
                 >
-                  + Eigene Rubrik
-                </button>
+                  <option value="" disabled>
+                    + Rubrik hinzufügen …
+                  </option>
+                  {CV_CUSTOM_SECTION_PRESETS.map((preset) => (
+                    <option key={preset.key} value={preset.key}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </Section>
 
@@ -1996,15 +2049,76 @@ function Lebenslauf() {
                 onToggle={() => toggle("farben")}
                 hint={`${activeTemplate.slots.length}`}
               >
-                <ColorChooser
-                  slots={activeTemplate.slots}
-                  colors={design.colors}
-                  onChange={(key, value) =>
-                    setDesign((d) => ({ ...d, colors: { ...d.colors, [key]: value } }))
-                  }
-                  onApplyPalette={(next) => setDesign((d) => ({ ...d, colors: next }))}
-                  onReset={() => setDesign((d) => ({ ...d, colors: defaultColors(d.template) }))}
-                />
+                <div className="grid gap-4">
+                  <div
+                    data-cv-paper-color-control
+                    className="grid gap-2 rounded-md border border-input p-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="flex min-w-0 items-center gap-2 text-xs font-medium">
+                        <input
+                          type="color"
+                          aria-label="Seitenhintergrund des Lebenslaufs"
+                          value={resolveCvPaperColor(design)}
+                          onChange={(event) =>
+                            setDesign((current) => ({
+                              ...current,
+                              paperColor: event.target.value,
+                            }))
+                          }
+                          className="h-8 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
+                        />
+                        <span>Seitenhintergrund</span>
+                      </label>
+                      <button
+                        type="button"
+                        disabled={!design.paperColor}
+                        onClick={() => setDesign((current) => ({ ...current, paperColor: null }))}
+                        className="text-xs text-muted-foreground underline hover:text-foreground disabled:cursor-default disabled:no-underline disabled:opacity-45"
+                      >
+                        Automatisch
+                      </button>
+                    </div>
+                    <span className="text-[11px] leading-snug text-muted-foreground">
+                      Gilt bei jeder Vorlage für das Papier des Lebenslaufs. Ohne eigene Textfarbe
+                      passt sich die Schrift automatisch an.
+                    </span>
+                  </div>
+
+                  <DocumentTextColorControl
+                    ariaLabel="Textfarbe des Lebenslaufs"
+                    value={resolveCvPalette(design).ink}
+                    customValue={design.colors.cvInk}
+                    paperColor={resolveCvPaperColor(design)}
+                    description="Gilt für den normalen CV-Text. Sekundärtext und Rubriktitel können darunter separat angepasst werden."
+                    onChange={(cvInk) =>
+                      setDesign((current) => ({
+                        ...current,
+                        colors: { ...current.colors, cvInk },
+                      }))
+                    }
+                    onAuto={() =>
+                      setDesign((current) => ({
+                        ...current,
+                        colors: { ...current.colors, cvInk: "" },
+                      }))
+                    }
+                  />
+
+                  <div className="border-t pt-4">
+                    <ColorChooser
+                      slots={activeTemplate.slots}
+                      colors={design.colors}
+                      onChange={(key, value) =>
+                        setDesign((d) => ({ ...d, colors: { ...d.colors, [key]: value } }))
+                      }
+                      onApplyPalette={(next) => setDesign((d) => ({ ...d, colors: next }))}
+                      onReset={() =>
+                        setDesign((d) => ({ ...d, colors: defaultColors(d.template) }))
+                      }
+                    />
+                  </div>
+                </div>
               </Section>
 
               <Section

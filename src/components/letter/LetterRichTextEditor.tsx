@@ -3,6 +3,7 @@ import { List, Table2 } from "lucide-react";
 import { TextAlignmentControl } from "@/components/dossier/TextAlignmentControl";
 import { BODY_TEXT_ALIGNMENTS } from "@/lib/text-alignment";
 import {
+  compatibleLetterTextAlign,
   letterRichHtml,
   letterTextAlign,
   richHtmlToPlainText,
@@ -101,11 +102,19 @@ function columnsForBlock(block: HTMLElement | null): LetterBodyColumns {
 
 function applyColumns(block: HTMLElement, columns: LetterBodyColumns) {
   if (columns === 1) delete block.dataset.columns;
-  else block.dataset.columns = String(columns);
+  else {
+    block.dataset.columns = String(columns);
+    block.dataset.align = "left";
+  }
+}
+
+function applyAlignment(block: HTMLElement, align: LetterTextAlign) {
+  block.dataset.align = align;
+  if (align === "justify") delete block.dataset.columns;
 }
 
 function alignmentForBlock(block: HTMLElement | null): LetterTextAlign {
-  return letterTextAlign(block?.dataset.align);
+  return compatibleLetterTextAlign(block?.dataset.align, block?.dataset.columns);
 }
 
 function listForBlock(block: HTMLElement | null): LetterListStyle | null {
@@ -274,18 +283,26 @@ export function LetterRichTextEditor({
     // paragraph. In that common case, treat alignment as a whole-letter
     // action instead of silently doing nothing.
     if (!savedRangeRef.current) {
-      for (const block of editableBlocks(editor)) block.dataset.align = align;
+      for (const block of editableBlocks(editor)) applyAlignment(block, align);
       emit();
-      setToolbar((current) => ({ ...current, align }));
+      setToolbar((current) => ({
+        ...current,
+        align,
+        columns: align === "justify" ? 1 : current.columns,
+      }));
       return;
     }
 
     const range = restoreRange();
     if (!range) return;
     const blocks = ensureSelectedBlocks(editor, range);
-    for (const block of blocks) block.dataset.align = align;
+    for (const block of blocks) applyAlignment(block, align);
     emit();
-    setToolbar((current) => ({ ...current, align }));
+    setToolbar((current) => ({
+      ...current,
+      align,
+      columns: align === "justify" ? 1 : current.columns,
+    }));
   };
 
   const setColumns = (columns: LetterBodyColumns) => {
@@ -295,7 +312,11 @@ export function LetterRichTextEditor({
     if (!savedRangeRef.current) {
       for (const block of editableBlocks(editor)) applyColumns(block, columns);
       emit();
-      setToolbar((current) => ({ ...current, columns }));
+      setToolbar((current) => ({
+        ...current,
+        columns,
+        align: columns > 1 ? "left" : current.align,
+      }));
       return;
     }
 
@@ -304,7 +325,11 @@ export function LetterRichTextEditor({
     const blocks = ensureSelectedBlocks(editor, range);
     for (const block of blocks) applyColumns(block, columns);
     emit();
-    setToolbar((current) => ({ ...current, columns }));
+    setToolbar((current) => ({
+      ...current,
+      columns,
+      align: columns > 1 ? "left" : current.align,
+    }));
   };
 
   const setListStyle = (style: LetterListStyle | "none") => {
@@ -368,7 +393,10 @@ export function LetterRichTextEditor({
   return (
     <div className="grid gap-1.5">
       <span className="text-xs font-medium text-foreground">Brieftext</span>
-      <div className="relative flex flex-wrap gap-1.5 rounded-t-md border border-b-0 bg-muted/30 p-2">
+      <div
+        data-letter-rich-toolbar
+        className="relative flex flex-wrap gap-1.5 rounded-t-md border border-b-0 bg-muted/30 p-2"
+      >
         <button
           type="button"
           className={toolClass}
@@ -417,25 +445,28 @@ export function LetterRichTextEditor({
           alignments={BODY_TEXT_ALIGNMENTS}
         />
 
-        <span aria-hidden="true" className="mx-0.5 h-7 w-px self-center bg-border" />
-        <label className="inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground">
-          <span>Spalten</span>
-          <select
-            aria-label="Anzahl Textspalten"
-            value={toolbar.columns ?? ""}
-            className="h-6 min-w-20 cursor-pointer bg-transparent text-xs outline-none"
-            onChange={(event) => setColumns(Number(event.target.value) as LetterBodyColumns)}
-          >
-            {toolbar.columns === null ? (
-              <option value="" disabled>
-                Gemischt
-              </option>
-            ) : null}
-            <option value="1">1 Spalte</option>
-            <option value="2">2 Spalten</option>
-            <option value="3">3 Spalten</option>
-          </select>
-        </label>
+        <span aria-hidden="true" className="h-0 basis-full" />
+        <fieldset
+          data-letter-column-control
+          className="m-0 flex min-w-0 items-center gap-1 rounded-md border border-input bg-background px-1.5 pb-1 pt-0.5"
+        >
+          <legend className="px-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Spalten
+          </legend>
+          {([1, 2, 3] as const).map((count) => (
+            <button
+              key={count}
+              type="button"
+              className={`${toolClass} min-w-8 px-2 py-1 ${toolbar.columns === count ? activeToolClass : ""}`}
+              aria-label={`${count} ${count === 1 ? "Spalte" : "Spalten"}`}
+              aria-pressed={toolbar.columns === count}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => setColumns(count)}
+            >
+              {count}
+            </button>
+          ))}
+        </fieldset>
 
         <div className="relative">
           <button

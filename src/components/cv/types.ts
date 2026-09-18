@@ -50,12 +50,7 @@ export type CvPerson = {
 
 /** Welche Abschnitte gibt es und wie heissen sie in der Vorgabe? */
 export type CvSectionKey =
-  | "schule"
-  | "erfahrung"
-  | "sprachen"
-  | "hobbys"
-  | "staerken"
-  | "referenzen";
+  "schule" | "erfahrung" | "sprachen" | "hobbys" | "staerken" | "referenzen";
 
 export const CV_SECTION_LABELS: Record<CvSectionKey, string> = {
   schule: "Schulbildung",
@@ -81,13 +76,28 @@ export type CvCustomSection = {
   id: string;
   title: string;
   entries: CvEntry[];
+  /** Optionales Schnellwahl-Preset; Titel und Inhalte bleiben danach frei editierbar. */
+  preset?: CvCustomSectionPresetKey;
 };
+
+export type CvCustomSectionPresetKey = "familie" | "digitale-kenntnisse" | "eigene-rubrik";
+
+export const CV_CUSTOM_SECTION_PRESETS: ReadonlyArray<{
+  key: CvCustomSectionPresetKey;
+  label: string;
+}> = [
+  { key: "digitale-kenntnisse", label: "Digitale Kenntnisse" },
+  { key: "eigene-rubrik", label: "Eigene Rubrik" },
+];
 
 export type CvCustomSectionKey = `custom:${string}`;
 
 export const customSectionKey = (id: string): CvCustomSectionKey => `custom:${id}`;
 export const isCustomSectionKey = (key: string): key is CvCustomSectionKey =>
   key.startsWith("custom:");
+
+export const FIXED_FAMILY_SECTION_ID = "familie";
+const FIXED_FAMILY_SECTION_KEY = customSectionKey(FIXED_FAMILY_SECTION_ID);
 
 /**
  * Rubriken, deren komplette Anordnung die Schülerin / der Schüler bestimmen
@@ -96,6 +106,24 @@ export const isCustomSectionKey = (key: string): key is CvCustomSectionKey =>
  */
 export type CvLayoutSectionKey = "person" | CvSectionKey | CvCustomSectionKey;
 export const CV_LAYOUT_SECTION_ORDER: CvLayoutSectionKey[] = ["person", ...CV_SECTION_ORDER];
+
+/**
+ * Default-Reihenfolge mit der festen Familienrubrik direkt nach den persönlichen Angaben.
+ * Weitere eigene Rubriken bleiben anschliessend am Ende in ihrer Erstellungsreihenfolge.
+ */
+function defaultCvSectionOrder(customKeys: CvCustomSectionKey[]): CvLayoutSectionKey[] {
+  const hasFamily = customKeys.includes(FIXED_FAMILY_SECTION_KEY);
+  return [
+    "person",
+    ...(hasFamily ? [FIXED_FAMILY_SECTION_KEY] : []),
+    ...CV_SECTION_ORDER,
+    ...customKeys.filter((key) => key !== FIXED_FAMILY_SECTION_KEY),
+  ];
+}
+
+function sameSectionOrder(a: CvLayoutSectionKey[], b: CvLayoutSectionKey[]): boolean {
+  return a.length === b.length && a.every((key, index) => key === b[index]);
+}
 
 export type CvSectionPage = 1 | 2;
 export type CvSectionWidth = "full" | "half";
@@ -156,13 +184,14 @@ export function cvSectionOrder(
   data: Pick<CvData, "customSections" | "sectionOrder">,
 ): CvLayoutSectionKey[] {
   const customKeys = (data.customSections ?? []).map((section) => customSectionKey(section.id));
-  const available = new Set<CvLayoutSectionKey>([...CV_LAYOUT_SECTION_ORDER, ...customKeys]);
+  const fallbackOrder = defaultCvSectionOrder(customKeys);
+  const available = new Set<CvLayoutSectionKey>(fallbackOrder);
   const result: CvLayoutSectionKey[] = [];
 
   for (const key of data.sectionOrder ?? []) {
     if (available.has(key) && !result.includes(key)) result.push(key);
   }
-  for (const key of [...CV_LAYOUT_SECTION_ORDER, ...customKeys]) {
+  for (const key of fallbackOrder) {
     if (!result.includes(key)) result.push(key);
   }
   return result;
@@ -180,10 +209,8 @@ export function customSectionForKey(
 export function hasCustomizedCvSectionLayout(
   data: Pick<CvData, "customSections" | "sectionOrder" | "sectionLayouts">,
 ): boolean {
-  const canonicalOrder: CvLayoutSectionKey[] = [
-    ...CV_LAYOUT_SECTION_ORDER,
-    ...(data.customSections ?? []).map((section) => customSectionKey(section.id)),
-  ];
+  const customKeys = (data.customSections ?? []).map((section) => customSectionKey(section.id));
+  const canonicalOrder = defaultCvSectionOrder(customKeys);
   const order = cvSectionOrder(data);
   if (order.some((key, index) => key !== canonicalOrder[index])) return true;
   return order.some((key) => {
@@ -249,6 +276,8 @@ export type CvData = {
 export type CvDesign = {
   template: TemplateId;
   colors: Record<string, string>;
+  /** Eigene Papierfarbe nur für den Lebenslauf; unabhängig von der Vorlage. */
+  paperColor?: string | null;
   /** Einheitliche Dossier-Schrift; leer verwendet die passende Vorlagenschrift. */
   font?: FontKey;
   /**
@@ -384,6 +413,60 @@ export const emptyPerson: CvPerson = {
 /** Vorgabe für den Dokumenttitel. */
 export const DEFAULT_CV_TITLE = "Lebenslauf";
 
+/** Familie ist im Editor fest vorhanden, bleibt im Dokument aber unsichtbar, solange sie leer ist. */
+export const fixedFamilySection = (): CvCustomSection => ({
+  id: FIXED_FAMILY_SECTION_ID,
+  title: "Familie",
+  preset: "familie",
+  entries: [
+    {
+      id: "familie-eintrag",
+      zeit: "",
+      titel: "",
+      ort: "",
+      beschreibung: "",
+    },
+  ],
+});
+
+/** Ergänzt ältere gespeicherte CVs um den neuen festen Familienbereich. */
+export function ensureFixedFamilySection(data: CvData): CvData {
+  const sections = data.customSections ?? [];
+  const customKeys = sections.map((section) => customSectionKey(section.id));
+  const legacyCanonicalOrder: CvLayoutSectionKey[] = [...CV_LAYOUT_SECTION_ORDER, ...customKeys];
+  const currentSavedOrder = data.sectionOrder ?? legacyCanonicalOrder;
+  const usesLegacyDefaultOrder = sameSectionOrder(currentSavedOrder, legacyCanonicalOrder);
+  const existing = sections.find((section) => section.id === FIXED_FAMILY_SECTION_ID);
+
+  if (existing) {
+    const normalizedSections: CvCustomSection[] =
+      existing.preset === "familie"
+        ? sections
+        : sections.map((section) =>
+            section.id === FIXED_FAMILY_SECTION_ID
+              ? { ...section, preset: "familie" as const }
+              : section,
+          );
+    const nextOrder = usesLegacyDefaultOrder ? defaultCvSectionOrder(customKeys) : cvSectionOrder(data);
+    if (normalizedSections === sections && sameSectionOrder(nextOrder, currentSavedOrder)) return data;
+    return {
+      ...data,
+      customSections: normalizedSections,
+      sectionOrder: nextOrder,
+    };
+  }
+
+  const nextSections = [...sections, fixedFamilySection()];
+  const nextCustomKeys = [...customKeys, FIXED_FAMILY_SECTION_KEY];
+  return {
+    ...data,
+    customSections: nextSections,
+    sectionOrder: usesLegacyDefaultOrder
+      ? defaultCvSectionOrder(nextCustomKeys)
+      : [...cvSectionOrder(data), FIXED_FAMILY_SECTION_KEY],
+  };
+}
+
 export const emptyCv: CvData = {
   person: { ...emptyPerson },
   titel: DEFAULT_CV_TITLE,
@@ -393,8 +476,8 @@ export const emptyCv: CvData = {
   hobbys: [],
   staerken: [],
   referenzen: [],
-  customSections: [],
-  sectionOrder: [...CV_LAYOUT_SECTION_ORDER],
+  customSections: [fixedFamilySection()],
+  sectionOrder: defaultCvSectionOrder([FIXED_FAMILY_SECTION_KEY]),
   labels: {},
   hidden: {},
   sectionLayouts: {},
@@ -414,6 +497,17 @@ export const emptyEntry = (): CvEntry => ({
   ort: "",
   beschreibung: "",
 });
+
+/** Erstellt eine optionale Rubrik ohne erfundene Angaben im Lebenslauf. */
+export function customSectionFromPreset(preset: CvCustomSectionPresetKey): CvCustomSection {
+  const title =
+    preset === "familie"
+      ? "Familie"
+      : preset === "digitale-kenntnisse"
+        ? "Digitale Kenntnisse"
+        : "Eigene Rubrik";
+  return { id: newId("rubrik"), title, entries: [emptyEntry()], preset };
+}
 
 export const emptySprache = (): CvSprache => ({ id: newId("s"), name: "", niveau: "" });
 
@@ -493,8 +587,24 @@ export const DEMO_CV: CvData = {
       zusatz: "",
     },
   ],
-  customSections: [],
-  sectionOrder: [...CV_LAYOUT_SECTION_ORDER],
+  customSections: [
+    {
+      id: FIXED_FAMILY_SECTION_ID,
+      title: "Familie",
+      preset: "familie",
+      entries: [
+        {
+          id: "demo-familie",
+          zeit: "",
+          titel: "",
+          ort: "Sohn von Monika Müller, Detailhandelsfachfrau und Peter Müller, Maurer",
+          beschreibung:
+            "Bruder von Aline, 2004, Medizinische Praxisassistentin und Jaro, 2015, Schüler",
+        },
+      ],
+    },
+  ],
+  sectionOrder: defaultCvSectionOrder([FIXED_FAMILY_SECTION_KEY]),
   labels: {},
   hidden: {},
   sectionLayouts: {},

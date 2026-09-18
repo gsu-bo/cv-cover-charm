@@ -33,10 +33,12 @@ function WarmLetterBackground({
   colors,
   pageIndex,
   headerMode,
+  paperColor,
 }: {
   colors: Record<string, string>;
   pageIndex: number;
   headerMode: LetterHeaderMode;
+  paperColor?: string | null;
 }) {
   const palette = cvPalette(colors);
   const primary = pick(colors, "primary", "accent", "secondary", "ink");
@@ -47,8 +49,9 @@ function WarmLetterBackground({
     <div
       data-dossier-sheet-background="freundlich"
       data-letter-background-variant="warm"
+      data-letter-paper-override={paperColor ?? undefined}
       className="absolute inset-0 overflow-hidden"
-      style={{ backgroundColor: palette.paper }}
+      style={{ backgroundColor: paperColor ?? palette.paper }}
       aria-hidden="true"
     >
       {headerMode === "compact" ? (
@@ -98,9 +101,11 @@ function WarmLetterBackground({
 function FreshLetterBackground({
   template,
   colors,
+  paperColor,
 }: {
   template: LetterTemplateId;
   colors: Record<string, string>;
+  paperColor?: string | null;
 }) {
   const spec = freshLetterSpec(template);
   if (!spec) return null;
@@ -112,8 +117,9 @@ function FreshLetterBackground({
       data-dossier-sheet-background={template}
       data-letter-background-variant="fresh"
       data-letter-fresh-template={template}
+      data-letter-paper-override={paperColor ?? undefined}
       className="absolute inset-0 overflow-hidden"
-      style={{ backgroundColor: palette.paper }}
+      style={{ backgroundColor: paperColor ?? palette.paper }}
       aria-hidden="true"
     >
       {spec.motifs.map((motif) => {
@@ -153,9 +159,11 @@ function FreshLetterBackground({
 function QuietColumnBackground({
   template,
   colors,
+  paperColor,
 }: {
   template: "blockig" | "terracotta" | "studio";
   colors: Record<string, string>;
+  paperColor?: string | null;
 }) {
   const palette = cvPalette(colors);
   const primary = pick(colors, "primary", "accent", "secondary", "ink");
@@ -166,8 +174,9 @@ function QuietColumnBackground({
     <div
       data-dossier-sheet-background={template}
       data-letter-background-variant="quiet-column"
+      data-letter-paper-override={paperColor ?? undefined}
       className="absolute inset-0 overflow-hidden"
-      style={{ backgroundColor: palette.paper }}
+      style={{ backgroundColor: paperColor ?? palette.paper }}
       aria-hidden="true"
     >
       {template === "blockig" ? (
@@ -227,14 +236,21 @@ function QuietColumnBackground({
  * the CV background would create a second 24 mm band and the old orange wedge.
  * Keep the sheet itself quiet and let the shared footer be the only footer.
  */
-function QuietHorizonLetterBackground({ colors }: { colors: Record<string, string> }) {
+function QuietHorizonLetterBackground({
+  colors,
+  paperColor,
+}: {
+  colors: Record<string, string>;
+  paperColor?: string | null;
+}) {
   const palette = cvPalette(colors);
   return (
     <div
       data-dossier-sheet-background="welle"
       data-letter-background-variant="quiet-horizon"
+      data-letter-paper-override={paperColor ?? undefined}
       className="absolute inset-0 overflow-hidden"
-      style={{ backgroundColor: palette.paper }}
+      style={{ backgroundColor: paperColor ?? palette.paper }}
       aria-hidden="true"
     />
   );
@@ -250,27 +266,43 @@ export function LetterSheetBackground({
   colors,
   pageIndex = 0,
   headerMode = defaultHeaderModeForTemplate(template),
+  paperColor,
 }: {
   template: LetterTemplateId;
   colors: Record<string, string>;
   pageIndex?: number;
   headerMode?: LetterHeaderMode;
+  paperColor?: string | null;
 }) {
   if (freshLetterSpec(template)) {
-    return <FreshLetterBackground template={template} colors={colors} />;
+    return <FreshLetterBackground template={template} colors={colors} paperColor={paperColor} />;
   }
 
   if (template === "freundlich") {
-    return <WarmLetterBackground colors={colors} pageIndex={pageIndex} headerMode={headerMode} />;
+    return (
+      <WarmLetterBackground
+        colors={colors}
+        pageIndex={pageIndex}
+        headerMode={headerMode}
+        paperColor={paperColor}
+      />
+    );
   }
 
   if (template === "welle") {
-    return <QuietHorizonLetterBackground colors={colors} />;
+    return <QuietHorizonLetterBackground colors={colors} paperColor={paperColor} />;
   }
 
   if (template === "blockig" || template === "terracotta" || template === "studio") {
-    return <QuietColumnBackground template={template} colors={colors} />;
+    return <QuietColumnBackground template={template} colors={colors} paperColor={paperColor} />;
   }
 
-  return <DossierSheetBackground template={template} colors={colors} pageIndex={pageIndex} />;
+  return (
+    <DossierSheetBackground
+      template={template}
+      colors={colors}
+      pageIndex={pageIndex}
+      paperColor={paperColor}
+    />
+  );
 }

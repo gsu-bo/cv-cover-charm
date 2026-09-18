@@ -5,7 +5,7 @@ const BASE_URL = "http://127.0.0.1:4173";
 test.describe("M9 demo CV pagination", () => {
   test.setTimeout(6 * 60_000);
 
-  test("every selectable template keeps the normal demo CV compact without an almost-empty continuation", async ({
+  test("every selectable template keeps the family-second demo CV on one unclipped page", async ({
     page,
   }) => {
     await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
@@ -20,8 +20,7 @@ test.describe("M9 demo CV pagination", () => {
 
     const cv = page.locator("main [data-dossier-document='cv']");
     const pages = cv.locator("[data-cv-page]");
-    const measureMain = cv.locator("[data-cv-measure-page] [data-cv-main]");
-    await expect(pages.first()).toContainText("Herr Thomas Weber");
+    await expect(cv).toContainText("Herr Thomas Weber");
 
     // Styling panels also contain reset buttons called "Vorlage". Section.tsx already exposes
     // a stable semantic toggle marker, so target that contract and ignore the adjacent hint text.
@@ -40,7 +39,7 @@ test.describe("M9 demo CV pagination", () => {
     const templateButtons = templatePanel.locator("button[title][aria-pressed]");
     await expect(templateButtons).toHaveCount(39);
     const templateCount = await templateButtons.count();
-    const spillages: string[] = [];
+    const unexpectedSpillages: string[] = [];
     const exercisedTemplateIds = new Set<string>();
 
     for (let index = 0; index < templateCount; index += 1) {
@@ -148,35 +147,28 @@ test.describe("M9 demo CV pagination", () => {
         ).toBeGreaterThan(4);
       }
 
+      await expect(cv).toContainText("Familie");
+      await expect(cv).toContainText("Referenzen");
+      await expect(cv).toContainText("Herr Thomas Weber");
+
       const pageCount = await pages.count();
       if (pageCount !== 1) {
-        const continuation = (await pages.nth(1).innerText())
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 180);
-        const measure = await measureMain.evaluate((node) => ({
-          scrollHeight: node.scrollHeight,
-          clientHeight: node.clientHeight,
-        }));
-        const deficit = Math.max(0, measure.scrollHeight - measure.clientHeight);
-        spillages.push(`${templateId}:${pageCount}:deficit=${deficit}px:${continuation}`);
+        unexpectedSpillages.push(`${templateId}:${pageCount}:expected-one-page`);
         continue;
       }
 
-      await expect(pages.first()).toContainText("Referenzen");
-      await expect(pages.first()).toContainText("Herr Thomas Weber");
-
-      const clipped = await pages
-        .first()
-        .locator("[data-cv-main]")
-        .evaluate((node) => ({
+      const clippedPages = await pages.locator("[data-cv-main]").evaluateAll((nodes) =>
+        nodes.map((node) => ({
           scrollHeight: node.scrollHeight,
           clientHeight: node.clientHeight,
-        }));
-      expect(
-        clipped.scrollHeight,
-        `${templateId}: compacting the CV must not trade the extra page for clipped content`,
-      ).toBeLessThanOrEqual(clipped.clientHeight + 3);
+        })),
+      );
+      for (const clipped of clippedPages) {
+        expect(
+          clipped.scrollHeight,
+          `${templateId}: one-page density must not trade pagination for clipped content`,
+        ).toBeLessThanOrEqual(clipped.clientHeight + 3);
+      }
     }
 
     expect(
@@ -184,8 +176,8 @@ test.describe("M9 demo CV pagination", () => {
       "runtime template picker must exercise 39 unique CV templates",
     ).toBe(39);
     expect(
-      spillages,
-      `normal demo CV should stay on one page for every template; spillages=${spillages.join(" | ")}`,
+      unexpectedSpillages,
+      `family-second demo must stay on one page; spillages=${unexpectedSpillages.join(" | ")}`,
     ).toEqual([]);
   });
 });
