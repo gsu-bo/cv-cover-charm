@@ -7,6 +7,7 @@ import { resolveDossierChromeSnapshot } from "@/lib/dossier-resolved-chrome";
 import { applyDossierChromeToDocx } from "@/lib/dossier-docx-chrome";
 import { applyCvSectionOrderToDocx } from "@/lib/dossier-docx-cv-section-order";
 import { applyCvSectionTitleStyleToDocx } from "@/lib/dossier-docx-cv-section-titles";
+import { applyDossierDocumentColorsToDocx } from "@/lib/dossier-docx-document-colors";
 import type {
   CoverPdfDocument,
   CvPdfDocument,
@@ -231,7 +232,8 @@ export async function createDossierDocxBlob(
   });
   const chromed = await applyDossierChromeToDocx(margined, { cover, letter, cv }, resolved);
   const ordered = await applyCvSectionOrderToDocx(chromed, bodyCv);
-  return applyCvSectionTitleStyleToDocx(ordered, bodyCv);
+  const titled = await applyCvSectionTitleStyleToDocx(ordered, bodyCv);
+  return applyDossierDocumentColorsToDocx(titled, { cover, letter, cv: bodyCv });
 }
 
 export async function downloadDossierDocx(
