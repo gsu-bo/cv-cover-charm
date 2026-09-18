@@ -10,6 +10,7 @@ import {
   type TemplateId,
 } from "@/components/cover/types";
 import { emptyCv, entryFilled, type CvData, type CvDesign } from "@/components/cv/types";
+import { normalizeCvPaperColor } from "@/components/cv/cv-paper";
 import {
   EMPTY_LETTER,
   normalizeLetterDesign,
@@ -215,6 +216,7 @@ export function cvPdfDocumentFromSaved(raw: unknown): CvPdfDocument | null {
     colors: isRecord(incomingDesign.colors)
       ? (incomingDesign.colors as Record<string, string>)
       : defaultColors(template),
+    paperColor: normalizeCvPaperColor(incomingDesign.paperColor),
     bgOpacity: typeof incomingDesign.bgOpacity === "number" ? incomingDesign.bgOpacity : 0.25,
     useElements: incomingDesign.useElements === true,
     ...(incomingDesign.font && incomingDesign.font in FONT_LABELS

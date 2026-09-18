@@ -249,6 +249,8 @@ export type CvData = {
 export type CvDesign = {
   template: TemplateId;
   colors: Record<string, string>;
+  /** Eigene Papierfarbe nur für den Lebenslauf; unabhängig von der Vorlage. */
+  paperColor?: string | null;
   /** Einheitliche Dossier-Schrift; leer verwendet die passende Vorlagenschrift. */
   font?: FontKey;
   /**

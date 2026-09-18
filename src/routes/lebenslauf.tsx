@@ -125,6 +125,7 @@ import { readPhoto } from "@/lib/image";
 import { useForeignWrite, usePageVisible } from "@/lib/autosave";
 import { applyDossierTheme } from "@/lib/dossier-theme";
 import { setCvPhotoStyle } from "@/components/cv/photo";
+import { normalizeCvPaperColor, resolveCvPaperColor } from "@/components/cv/cv-paper";
 import { SIDEBAR_PCT_MAX, SIDEBAR_PCT_MIN } from "@/components/cv/archetype";
 import {
   DEFAULT_DOSSIER_CHROME_STATE,
@@ -190,6 +191,7 @@ type Saved = {
  */
 function migratedDesign(current: CvDesign, incoming: CvDesign, version?: number): CvDesign {
   const merged = { ...current, ...incoming };
+  merged.paperColor = normalizeCvPaperColor(incoming.paperColor);
   if (!merged.font || !(merged.font in FONT_LABELS)) delete merged.font;
   const isOldSave = (version ?? 1) < DESIGN_MIGRATION_VERSION;
   const usedOldDefault = LEGACY_DEFAULT_BG_OPACITIES.some(
@@ -262,6 +264,7 @@ function Lebenslauf() {
     return {
       template: d.template,
       colors: d.colors,
+      paperColor: null,
       font: "freundlich",
       bgOpacity: DEFAULT_BG_OPACITY,
       useElements: false,
@@ -769,6 +772,7 @@ function Lebenslauf() {
     setDesign((d) => ({
       template: draft?.template ?? d.template,
       colors: draft?.colors ?? d.colors,
+      paperColor: null,
       font: draft ? (draft.font ?? undefined) : "freundlich",
       bgOpacity: DEFAULT_BG_OPACITY,
       useElements: false,
@@ -1996,15 +2000,56 @@ function Lebenslauf() {
                 onToggle={() => toggle("farben")}
                 hint={`${activeTemplate.slots.length}`}
               >
-                <ColorChooser
-                  slots={activeTemplate.slots}
-                  colors={design.colors}
-                  onChange={(key, value) =>
-                    setDesign((d) => ({ ...d, colors: { ...d.colors, [key]: value } }))
-                  }
-                  onApplyPalette={(next) => setDesign((d) => ({ ...d, colors: next }))}
-                  onReset={() => setDesign((d) => ({ ...d, colors: defaultColors(d.template) }))}
-                />
+                <div className="grid gap-4">
+                  <div
+                    data-cv-paper-color-control
+                    className="grid gap-2 rounded-md border border-input p-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="flex min-w-0 items-center gap-2 text-xs font-medium">
+                        <input
+                          type="color"
+                          aria-label="Seitenhintergrund des Lebenslaufs"
+                          value={resolveCvPaperColor(design)}
+                          onChange={(event) =>
+                            setDesign((current) => ({
+                              ...current,
+                              paperColor: event.target.value,
+                            }))
+                          }
+                          className="h-8 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
+                        />
+                        <span>Seitenhintergrund</span>
+                      </label>
+                      <button
+                        type="button"
+                        disabled={!design.paperColor}
+                        onClick={() => setDesign((current) => ({ ...current, paperColor: null }))}
+                        className="text-xs text-muted-foreground underline hover:text-foreground disabled:cursor-default disabled:no-underline disabled:opacity-45"
+                      >
+                        Automatisch
+                      </button>
+                    </div>
+                    <span className="text-[11px] leading-snug text-muted-foreground">
+                      Gilt bei jeder Vorlage für das Papier des Lebenslaufs. Die Textfarbe passt
+                      sich automatisch an.
+                    </span>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <ColorChooser
+                      slots={activeTemplate.slots}
+                      colors={design.colors}
+                      onChange={(key, value) =>
+                        setDesign((d) => ({ ...d, colors: { ...d.colors, [key]: value } }))
+                      }
+                      onApplyPalette={(next) => setDesign((d) => ({ ...d, colors: next }))}
+                      onReset={() =>
+                        setDesign((d) => ({ ...d, colors: defaultColors(d.template) }))
+                      }
+                    />
+                  </div>
+                </div>
               </Section>
 
               <Section
