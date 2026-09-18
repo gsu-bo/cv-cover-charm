@@ -1,24 +1,13 @@
 import type { LetterFlowImage } from "./types";
-
-const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
-
-function imageX(image: LetterFlowImage, widthMm: number, contentWidthMm: number) {
-  const maxX = Math.max(0, contentWidthMm - widthMm);
-  const storedX = image.xMm;
-  return clamp(
-    typeof storedX === "number" && Number.isFinite(storedX)
-      ? storedX
-      : image.side === "left"
-        ? 0
-        : maxX,
-    0,
-    maxX,
-  );
-}
-
-function imageSide(xMm: number, widthMm: number, contentWidthMm: number) {
-  return xMm + widthMm / 2 < contentWidthMm / 2 ? ("left" as const) : ("right" as const);
-}
+import {
+  LETTER_IMAGE_MAX_TOP_MM,
+  LETTER_IMAGE_MAX_WIDTH_MM,
+  LETTER_IMAGE_MIN_WIDTH_MM,
+  clampLetterImageValue,
+  letterImagePlacementPatch,
+  normalizeLetterImageGeometry,
+  type LetterImagePlacement,
+} from "./letter-image-geometry";
 
 type Props = {
   images: LetterFlowImage[];
@@ -28,11 +17,17 @@ type Props = {
   onRemove?: (id: string) => void;
 };
 
+const PLACEMENT_LABEL: Record<LetterImagePlacement, string> = {
+  left: "Links mit Textfluss",
+  right: "Rechts mit Textfluss",
+  free: "Frei positionieren",
+};
+
 /**
- * Fotos/Bilder im Anschreiben nutzen bewusst echten CSS-Float statt eine
- * absolute Ebene. Dadurch wird der Platz nicht nur optisch ausgespart: Text,
- * Gruss, Name und Beilagen weichen dem Bild automatisch aus. Die gespeicherte
- * X-Position erweitert ältere Entwürfe, die nur links/rechts kannten.
+ * Left/right use a real CSS float so text deliberately wraps around the image.
+ * Once an image gets an explicit x-coordinate it is truly free: x/y are then
+ * measured from the letter body zone and PDF renders exactly that geometry.
+ * The same normalized geometry is reused by the DOCX postprocessor.
  */
 export function LetterFlowImages({
   images,
@@ -51,28 +46,35 @@ export function LetterFlowImages({
 
   const startMove = (image: LetterFlowImage) => (event: React.PointerEvent<HTMLDivElement>) => {
     if (exportMode || !onChange || event.button !== 0) return;
-    const layer = event.currentTarget.closest<HTMLElement>("[data-letter-text-layer]");
-    if (!layer) return;
+    const zone = event.currentTarget.closest<HTMLElement>("[data-letter-body-zone]");
+    if (!zone) return;
     event.preventDefault();
     event.stopPropagation();
 
-    const rect = layer.getBoundingClientRect();
+    const rect = zone.getBoundingClientRect();
     if (!rect.width) return;
     const mmPerPx = contentWidthMm / rect.width;
     const imageRect = event.currentTarget.getBoundingClientRect();
-    const widthMm = clamp(Number(image.widthMm) || 34, 16, Math.min(78, contentWidthMm - 12));
-    const maxX = Math.max(0, contentWidthMm - widthMm);
+    const geometry = normalizeLetterImageGeometry(image, contentWidthMm);
+    const maxX = Math.max(0, contentWidthMm - geometry.widthMm);
     const grabOffsetX = event.clientX - imageRect.left;
-    const startY = event.clientY;
-    const fromTop = clamp(Number(image.topMm) || 0, 0, 150);
+    const grabOffsetY = event.clientY - imageRect.top;
     const pointerId = event.pointerId;
     const target = event.currentTarget;
     target.setPointerCapture(pointerId);
 
     const move = (moveEvent: PointerEvent) => {
-      const nextX = clamp((moveEvent.clientX - rect.left - grabOffsetX) * mmPerPx, 0, maxX);
-      const nextTop = clamp(fromTop + (moveEvent.clientY - startY) * mmPerPx, 0, 150);
-      const side = imageSide(nextX, widthMm, contentWidthMm);
+      const nextX = clampLetterImageValue(
+        (moveEvent.clientX - rect.left - grabOffsetX) * mmPerPx,
+        0,
+        maxX,
+      );
+      const nextTop = clampLetterImageValue(
+        (moveEvent.clientY - rect.top - grabOffsetY) * mmPerPx,
+        0,
+        LETTER_IMAGE_MAX_TOP_MM,
+      );
+      const side = nextX + geometry.widthMm / 2 < contentWidthMm / 2 ? "left" : "right";
       onChange(image.id, {
         xMm: Math.round(nextX * 10) / 10,
         topMm: Math.round(nextTop * 10) / 10,
@@ -95,33 +97,44 @@ export function LetterFlowImages({
   const startResize =
     (image: LetterFlowImage) => (event: React.PointerEvent<HTMLButtonElement>) => {
       if (exportMode || !onChange || event.button !== 0) return;
-      const layer = event.currentTarget.closest<HTMLElement>("[data-letter-text-layer]");
-      if (!layer) return;
+      const zone = event.currentTarget.closest<HTMLElement>("[data-letter-body-zone]");
+      if (!zone) return;
       event.preventDefault();
       event.stopPropagation();
 
-      const rect = layer.getBoundingClientRect();
+      const rect = zone.getBoundingClientRect();
       if (!rect.width) return;
       const mmPerPx = contentWidthMm / rect.width;
       const startX = event.clientX;
-      const fromWidth = clamp(Number(image.widthMm) || 34, 16, Math.min(78, contentWidthMm - 12));
-      const fromX = imageX(image, fromWidth, contentWidthMm);
-      const fixedEdge = fromX + fromWidth;
-      const side = imageSide(fromX, fromWidth, contentWidthMm);
+      const geometry = normalizeLetterImageGeometry(image, contentWidthMm);
       const pointerId = event.pointerId;
       const target = event.currentTarget;
       target.setPointerCapture(pointerId);
 
       const move = (moveEvent: PointerEvent) => {
-        const direction = side === "right" ? -1 : 1;
-        const delta = (moveEvent.clientX - startX) * mmPerPx * direction;
-        const available = side === "right" ? fixedEdge : contentWidthMm - fromX;
-        const widthMm = clamp(fromWidth + delta, 16, Math.min(78, available));
-        const xMm = side === "right" ? fixedEdge - widthMm : fromX;
-        onChange(image.id, {
-          xMm: Math.round(xMm * 10) / 10,
-          widthMm: Math.round(widthMm * 10) / 10,
-        });
+        const rawDelta = (moveEvent.clientX - startX) * mmPerPx;
+        if (geometry.placement === "free") {
+          const available = contentWidthMm - geometry.xMm;
+          const widthMm = clampLetterImageValue(
+            geometry.widthMm + rawDelta,
+            LETTER_IMAGE_MIN_WIDTH_MM,
+            Math.min(LETTER_IMAGE_MAX_WIDTH_MM, available),
+          );
+          onChange(image.id, { widthMm: Math.round(widthMm * 10) / 10 });
+          return;
+        }
+
+        const direction = geometry.placement === "right" ? -1 : 1;
+        const delta = rawDelta * direction;
+        const fixedEdge = geometry.xMm + geometry.widthMm;
+        const available =
+          geometry.placement === "right" ? fixedEdge : contentWidthMm - geometry.xMm;
+        const widthMm = clampLetterImageValue(
+          geometry.widthMm + delta,
+          LETTER_IMAGE_MIN_WIDTH_MM,
+          Math.min(LETTER_IMAGE_MAX_WIDTH_MM, available),
+        );
+        onChange(image.id, { widthMm: Math.round(widthMm * 10) / 10 });
       };
 
       const up = () => {
@@ -139,35 +152,50 @@ export function LetterFlowImages({
   return (
     <>
       {valid.map((image) => {
-        const widthMm = clamp(Number(image.widthMm) || 34, 16, Math.min(78, contentWidthMm - 12));
-        const topMm = clamp(Number(image.topMm) || 0, 0, 150);
-        const gapMm = clamp(Number(image.gapMm) || 4, 0, 12);
-        const maxX = Math.max(0, contentWidthMm - widthMm);
-        const xMm = imageX(image, widthMm, contentWidthMm);
-        const side = imageSide(xMm, widthMm, contentWidthMm);
-        const outerOffsetMm = side === "left" ? xMm : maxX - xMm;
+        const geometry = normalizeLetterImageGeometry(image, contentWidthMm);
+        const free = geometry.placement === "free";
 
         return (
           <div
             key={image.id}
             data-letter-flow-image={image.id}
-            data-wrap="square"
+            data-letter-image-placement={geometry.placement}
+            data-wrap={free ? "none" : "square"}
             data-aspect="original"
-            data-side={side}
-            data-x-mm={xMm}
+            data-side={geometry.side}
+            data-x-mm={geometry.xMm}
+            data-top-mm={geometry.topMm}
+            data-width-mm={geometry.widthMm}
             onPointerDown={startMove(image)}
-            title={exportMode ? undefined : "Bild frei verschieben"}
-            className={exportMode ? "relative" : "relative cursor-move touch-none"}
-            style={{
-              float: side,
-              width: `${widthMm}mm`,
-              marginTop: `${topMm}mm`,
-              marginBottom: `${gapMm}mm`,
-              marginLeft: side === "right" ? `${gapMm}mm` : `${outerOffsetMm}mm`,
-              marginRight: side === "left" ? `${gapMm}mm` : `${outerOffsetMm}mm`,
-              shapeOutside: "margin-box",
-              zIndex: 3,
-            }}
+            title={exportMode ? undefined : "Bild ziehen = frei positionieren"}
+            className={
+              exportMode
+                ? free
+                  ? "absolute"
+                  : "relative"
+                : free
+                  ? "absolute cursor-move touch-none"
+                  : "relative cursor-move touch-none"
+            }
+            style={
+              free
+                ? {
+                    left: `${geometry.xMm}mm`,
+                    top: `${geometry.topMm}mm`,
+                    width: `${geometry.widthMm}mm`,
+                    zIndex: 6,
+                  }
+                : {
+                    float: geometry.placement,
+                    width: `${geometry.widthMm}mm`,
+                    marginTop: `${geometry.topMm}mm`,
+                    marginBottom: `${geometry.gapMm}mm`,
+                    marginLeft: geometry.placement === "right" ? `${geometry.gapMm}mm` : 0,
+                    marginRight: geometry.placement === "left" ? `${geometry.gapMm}mm` : 0,
+                    shapeOutside: "margin-box",
+                    zIndex: 3,
+                  }
+            }
           >
             <img
               src={image.src}
@@ -178,6 +206,36 @@ export function LetterFlowImages({
 
             {!exportMode && onChange ? (
               <>
+                <div
+                  data-letter-image-placement-controls
+                  className="absolute -top-8 left-0 flex overflow-hidden rounded-md border bg-background shadow"
+                  onPointerDown={(event) => event.stopPropagation()}
+                >
+                  {(["left", "right", "free"] as const).map((placement) => (
+                    <button
+                      key={placement}
+                      type="button"
+                      aria-label={PLACEMENT_LABEL[placement]}
+                      title={PLACEMENT_LABEL[placement]}
+                      aria-pressed={geometry.placement === placement}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onChange(
+                          image.id,
+                          letterImagePlacementPatch(image, placement, contentWidthMm),
+                        );
+                      }}
+                      className={`min-w-7 px-1.5 py-1 text-[10px] font-semibold ${
+                        geometry.placement === placement
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-accent"
+                      }`}
+                    >
+                      {placement === "left" ? "L" : placement === "right" ? "R" : "F"}
+                    </button>
+                  ))}
+                </div>
+
                 {onRemove ? (
                   <button
                     type="button"
@@ -200,7 +258,9 @@ export function LetterFlowImages({
                   title="Bild proportional skalieren"
                   onPointerDown={startResize(image)}
                   className={`absolute -bottom-2 grid h-5 w-5 touch-none place-items-center rounded border bg-background text-[10px] shadow ${
-                    side === "right" ? "-left-2 cursor-nesw-resize" : "-right-2 cursor-nwse-resize"
+                    free || geometry.placement === "left"
+                      ? "-right-2 cursor-nwse-resize"
+                      : "-left-2 cursor-nesw-resize"
                   }`}
                 >
                   ↘
