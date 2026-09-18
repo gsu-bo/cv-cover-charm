@@ -96,6 +96,9 @@ export const customSectionKey = (id: string): CvCustomSectionKey => `custom:${id
 export const isCustomSectionKey = (key: string): key is CvCustomSectionKey =>
   key.startsWith("custom:");
 
+export const FIXED_FAMILY_SECTION_ID = "familie";
+const FIXED_FAMILY_SECTION_KEY = customSectionKey(FIXED_FAMILY_SECTION_ID);
+
 /**
  * Rubriken, deren komplette Anordnung die Schülerin / der Schüler bestimmen
  * kann. Die persönlichen Angaben sind bewusst ein eigener Layout-Block; die
@@ -103,6 +106,24 @@ export const isCustomSectionKey = (key: string): key is CvCustomSectionKey =>
  */
 export type CvLayoutSectionKey = "person" | CvSectionKey | CvCustomSectionKey;
 export const CV_LAYOUT_SECTION_ORDER: CvLayoutSectionKey[] = ["person", ...CV_SECTION_ORDER];
+
+/**
+ * Default-Reihenfolge mit der festen Familienrubrik direkt nach den persönlichen Angaben.
+ * Weitere eigene Rubriken bleiben anschliessend am Ende in ihrer Erstellungsreihenfolge.
+ */
+function defaultCvSectionOrder(customKeys: CvCustomSectionKey[]): CvLayoutSectionKey[] {
+  const hasFamily = customKeys.includes(FIXED_FAMILY_SECTION_KEY);
+  return [
+    "person",
+    ...(hasFamily ? [FIXED_FAMILY_SECTION_KEY] : []),
+    ...CV_SECTION_ORDER,
+    ...customKeys.filter((key) => key !== FIXED_FAMILY_SECTION_KEY),
+  ];
+}
+
+function sameSectionOrder(a: CvLayoutSectionKey[], b: CvLayoutSectionKey[]): boolean {
+  return a.length === b.length && a.every((key, index) => key === b[index]);
+}
 
 export type CvSectionPage = 1 | 2;
 export type CvSectionWidth = "full" | "half";
@@ -163,13 +184,14 @@ export function cvSectionOrder(
   data: Pick<CvData, "customSections" | "sectionOrder">,
 ): CvLayoutSectionKey[] {
   const customKeys = (data.customSections ?? []).map((section) => customSectionKey(section.id));
-  const available = new Set<CvLayoutSectionKey>([...CV_LAYOUT_SECTION_ORDER, ...customKeys]);
+  const fallbackOrder = defaultCvSectionOrder(customKeys);
+  const available = new Set<CvLayoutSectionKey>(fallbackOrder);
   const result: CvLayoutSectionKey[] = [];
 
   for (const key of data.sectionOrder ?? []) {
     if (available.has(key) && !result.includes(key)) result.push(key);
   }
-  for (const key of [...CV_LAYOUT_SECTION_ORDER, ...customKeys]) {
+  for (const key of fallbackOrder) {
     if (!result.includes(key)) result.push(key);
   }
   return result;
@@ -187,10 +209,8 @@ export function customSectionForKey(
 export function hasCustomizedCvSectionLayout(
   data: Pick<CvData, "customSections" | "sectionOrder" | "sectionLayouts">,
 ): boolean {
-  const canonicalOrder: CvLayoutSectionKey[] = [
-    ...CV_LAYOUT_SECTION_ORDER,
-    ...(data.customSections ?? []).map((section) => customSectionKey(section.id)),
-  ];
+  const customKeys = (data.customSections ?? []).map((section) => customSectionKey(section.id));
+  const canonicalOrder = defaultCvSectionOrder(customKeys);
   const order = cvSectionOrder(data);
   if (order.some((key, index) => key !== canonicalOrder[index])) return true;
   return order.some((key) => {
@@ -393,8 +413,6 @@ export const emptyPerson: CvPerson = {
 /** Vorgabe für den Dokumenttitel. */
 export const DEFAULT_CV_TITLE = "Lebenslauf";
 
-export const FIXED_FAMILY_SECTION_ID = "familie";
-
 /** Familie ist im Editor fest vorhanden, bleibt im Dokument aber unsichtbar, solange sie leer ist. */
 export const fixedFamilySection = (): CvCustomSection => ({
   id: FIXED_FAMILY_SECTION_ID,
@@ -414,22 +432,36 @@ export const fixedFamilySection = (): CvCustomSection => ({
 /** Ergänzt ältere gespeicherte CVs um den neuen festen Familienbereich. */
 export function ensureFixedFamilySection(data: CvData): CvData {
   const sections = data.customSections ?? [];
-  const key = customSectionKey(FIXED_FAMILY_SECTION_ID);
+  const customKeys = sections.map((section) => customSectionKey(section.id));
+  const legacyCanonicalOrder: CvLayoutSectionKey[] = [...CV_LAYOUT_SECTION_ORDER, ...customKeys];
+  const currentSavedOrder = data.sectionOrder ?? legacyCanonicalOrder;
+  const usesLegacyDefaultOrder = sameSectionOrder(currentSavedOrder, legacyCanonicalOrder);
   const existing = sections.find((section) => section.id === FIXED_FAMILY_SECTION_ID);
+
   if (existing) {
-    if (existing.preset === "familie") return data;
+    const normalizedSections =
+      existing.preset === "familie"
+        ? sections
+        : sections.map((section) =>
+            section.id === FIXED_FAMILY_SECTION_ID ? { ...section, preset: "familie" } : section,
+          );
+    const nextOrder = usesLegacyDefaultOrder ? defaultCvSectionOrder(customKeys) : cvSectionOrder(data);
+    if (normalizedSections === sections && sameSectionOrder(nextOrder, currentSavedOrder)) return data;
     return {
       ...data,
-      customSections: sections.map((section) =>
-        section.id === FIXED_FAMILY_SECTION_ID ? { ...section, preset: "familie" } : section,
-      ),
-      sectionOrder: cvSectionOrder(data),
+      customSections: normalizedSections,
+      sectionOrder: nextOrder,
     };
   }
+
+  const nextSections = [...sections, fixedFamilySection()];
+  const nextCustomKeys = [...customKeys, FIXED_FAMILY_SECTION_KEY];
   return {
     ...data,
-    customSections: [...sections, fixedFamilySection()],
-    sectionOrder: [...cvSectionOrder(data), key],
+    customSections: nextSections,
+    sectionOrder: usesLegacyDefaultOrder
+      ? defaultCvSectionOrder(nextCustomKeys)
+      : [...cvSectionOrder(data), FIXED_FAMILY_SECTION_KEY],
   };
 }
 
@@ -443,7 +475,7 @@ export const emptyCv: CvData = {
   staerken: [],
   referenzen: [],
   customSections: [fixedFamilySection()],
-  sectionOrder: [...CV_LAYOUT_SECTION_ORDER, customSectionKey(FIXED_FAMILY_SECTION_ID)],
+  sectionOrder: defaultCvSectionOrder([FIXED_FAMILY_SECTION_KEY]),
   labels: {},
   hidden: {},
   sectionLayouts: {},
@@ -576,7 +608,7 @@ export const DEMO_CV: CvData = {
       ],
     },
   ],
-  sectionOrder: [...CV_LAYOUT_SECTION_ORDER, customSectionKey(FIXED_FAMILY_SECTION_ID)],
+  sectionOrder: defaultCvSectionOrder([FIXED_FAMILY_SECTION_KEY]),
   labels: {},
   hidden: {},
   sectionLayouts: {},
