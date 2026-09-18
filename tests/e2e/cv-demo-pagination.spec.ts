@@ -141,7 +141,10 @@ test.describe("M9 demo CV pagination", () => {
           geometry.rightGap,
           `${templateId}: section rule must reach the right edge of its heading row; ${JSON.stringify(geometry)}`,
         ).toBeLessThanOrEqual(2);
-        expect(geometry.width, `${templateId}: section rule must have visible width`).toBeGreaterThan(4);
+        expect(
+          geometry.width,
+          `${templateId}: section rule must have visible width`,
+        ).toBeGreaterThan(4);
       }
 
       await expect(cv).toContainText("Familie");
