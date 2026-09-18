@@ -192,6 +192,15 @@ export function LetterDocument({
   ariaLabel = "Vorschau Motivationsschreiben",
 }: Props) {
   const bodyHtml = useMemo(() => resolvedBodyHtml(data, exportMode), [data, exportMode]);
+  const allImages = data.images ?? [];
+  const freeImages = useMemo(
+    () => allImages.filter((image) => typeof image.xMm === "number" && Number.isFinite(image.xMm)),
+    [allImages],
+  );
+  const flowImages = useMemo(
+    () => allImages.filter((image) => typeof image.xMm !== "number" || !Number.isFinite(image.xMm)),
+    [allImages],
+  );
   const measurementRef = useRef<HTMLDivElement>(null);
   const fallback = useMemo<LetterPageFragment[]>(
     () => [
@@ -199,10 +208,10 @@ export function LetterDocument({
         pageIndex: 0,
         finalPage: true,
         bodyHtml: bodyHtml || EMPTY_BODY_HTML,
-        images: data.images ?? [],
+        images: allImages,
       },
     ],
-    [bodyHtml, data.images],
+    [allImages, bodyHtml],
   );
   const [pages, setPages] = useState<LetterPageFragment[]>(fallback);
   const [pagination, setPagination] = useState<LetterPaginationState>({
@@ -241,7 +250,9 @@ export function LetterDocument({
         page.setAttribute("data-letter-measurement-page", "true");
       }
 
-      const result = paginateMeasuredLetter(root, data.images ?? []);
+      // Free images are page overlays, not flow content. Only left/right images
+      // reduce text capacity; free images stay on the first page at their x/y.
+      const result = paginateMeasuredLetter(root, flowImages);
       if (cancelled) return;
       if (result.issue) {
         setPages(fallback);
@@ -249,15 +260,20 @@ export function LetterDocument({
         return;
       }
 
-      setPages(result.pages);
-      setPagination({ ready: true, pageCount: result.pages.length, issue: null });
+      const resolvedPages = result.pages.map((fragment) =>
+        fragment.pageIndex === 0
+          ? { ...fragment, images: [...fragment.images, ...freeImages] }
+          : fragment,
+      );
+      setPages(resolvedPages);
+      setPagination({ ready: true, pageCount: resolvedPages.length, issue: null });
     };
 
     void measure();
     return () => {
       cancelled = true;
     };
-  }, [bodyHtml, chromeContact, chromeOptions, data, design, fallback]);
+  }, [bodyHtml, chromeContact, chromeOptions, data, design, fallback, flowImages, freeImages]);
 
   const renderedPages = pagination.ready && !pagination.issue ? pages : fallback;
 
@@ -356,7 +372,7 @@ export function LetterDocument({
           pageIndex={1}
           finalPage={false}
           bodyHtml={PROBE_BODY_HTML}
-          images={data.images ?? []}
+          images={flowImages}
           data={data}
           design={design}
           chromeOptions={chromeOptions}
