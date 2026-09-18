@@ -209,6 +209,7 @@ export const CoverCanvas = forwardRef<HTMLDivElement, Props>(function CoverCanva
   const resolvedOverride = fontOverride === undefined ? inferredOverride : fontOverride;
   const dossierFont = effectiveDossierFont(template, resolvedOverride);
   const paper = colors.coverPaper || colors.bg || "#ffffff";
+  const renderColors = colors.coverPaper ? { ...colors, bg: paper } : colors;
   const primary = colors.primary ?? colors.accent ?? colors.ink ?? paper;
   const secondary = colors.secondary ?? colors.accent ?? primary;
   const accent = colors.accent ?? secondary;
@@ -248,10 +249,10 @@ export const CoverCanvas = forwardRef<HTMLDivElement, Props>(function CoverCanva
         }
       }}
     >
-      <CoverBackground template={template} colors={colors} />
+      <CoverBackground template={template} colors={renderColors} />
       <BlockLayer
         blocks={renderBlocks}
-        colors={colors}
+        colors={renderColors}
         selected={selected}
         onSelect={onSelect}
         onMove={onMove}
