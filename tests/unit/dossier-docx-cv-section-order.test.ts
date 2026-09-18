@@ -61,4 +61,24 @@ describe("DOCX CV section order", () => {
       reordered.indexOf("PRAKTIKA & SCHNUPPERTAGE"),
     );
   });
+
+  test("never cuts nested sidebar tables while scanning rubric headings", () => {
+    const nested = [
+      "<w:document><w:body>",
+      sectionBreak,
+      sectionBreak,
+      '<w:tbl><w:tr><w:tc>',
+      block("Stärken", "STRENGTH"),
+      "</w:tc><w:tc>",
+      block("Schulbildung", "SCHOOL"),
+      block("Familie", "FAMILY"),
+      "</w:tc></w:tr></w:tbl>",
+      '<w:sectPr><w:pgSz w:w="1" w:h="1"/></w:sectPr>',
+      "</w:body></w:document>",
+    ].join("");
+
+    const reordered = applyCvSectionOrderToDocumentXml(nested, { data: DEMO_CV });
+
+    expect(reordered).toBe(nested);
+  });
 });

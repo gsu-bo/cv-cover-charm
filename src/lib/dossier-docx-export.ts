@@ -217,8 +217,9 @@ export async function createDossierDocxBlob(
     letter,
     cv: bodyCv,
   });
+  const ordered = await applyCvSectionOrderToDocx(blob, bodyCv);
   const laidOut =
-    layout === "modern" ? await applyDossierDocxSidebar(blob, bodyCv, placements) : blob;
+    layout === "modern" ? await applyDossierDocxSidebar(ordered, bodyCv, placements) : ordered;
   const letterAligned = await applyLetterAlignmentToDocx(laidOut, letter);
   const aligned = await applyCvTextAlignmentToDocx(letterAligned, cv);
   const hyphenated = await applyDossierHyphenationToDocx(
@@ -232,8 +233,7 @@ export async function createDossierDocxBlob(
     cvLayout: layout,
   });
   const chromed = await applyDossierChromeToDocx(margined, { cover, letter, cv }, resolved);
-  const ordered = await applyCvSectionOrderToDocx(chromed, bodyCv);
-  const titled = await applyCvSectionTitleStyleToDocx(ordered, bodyCv);
+  const titled = await applyCvSectionTitleStyleToDocx(chromed, bodyCv);
   const withLetterImages = await applyLetterImagesToDocx(titled, letter);
   return applyDossierDocumentColorsToDocx(withLetterImages, { cover, letter, cv: bodyCv });
 }
