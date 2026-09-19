@@ -14,7 +14,7 @@ describe("template-owned dossier chrome", () => {
     expect(defaultHeaderGapMmForTemplate("brief")).toBe(12);
   });
 
-  test("ordinary templates and Warm default to compact headers", () => {
+  test("ordinary quiet templates default to compact headers", () => {
     for (const template of [
       "klassisch",
       "modern",
@@ -27,7 +27,6 @@ describe("template-owned dossier chrome", () => {
       "welle",
       "edge",
       "ribbon",
-      "freundlich",
     ]) {
       expect(defaultHeaderModeForTemplate(template)).toBe("compact");
       expect(defaultHeaderGapMmForTemplate(template)).toBe(12);
@@ -41,6 +40,7 @@ describe("template-owned dossier chrome", () => {
 
   test("designed masthead families opt into contact headers", () => {
     for (const template of [
+      "freundlich",
       "horizon",
       "violetPulse",
       "studio",
