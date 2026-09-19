@@ -23,7 +23,8 @@ const none: DossierChromeOptions = {
 
 describe("pure dossier chrome geometry", () => {
   test("option helpers need no browser/store state", () => {
-    expect(dossierHeaderContentTopMmForOptions(contact, 0)).toBe(43);
+    expect(dossierHeaderVisualHeightMmForOptions(contact, 0)).toBe(32);
+    expect(dossierHeaderContentTopMmForOptions(contact, 0)).toBe(53);
     expect(dossierHeaderContentTopMmForOptions(none, 0)).toBe(18);
     expect(dossierFooterContentBottomMmForOptions(contact)).toBe(20);
     expect(dossierFooterContentBottomMmForOptions(none)).toBe(10);
@@ -31,10 +32,14 @@ describe("pure dossier chrome geometry", () => {
 
   test("CV geometry follows the explicit chrome snapshot", () => {
     const frame = cvFrameFor("modern");
-    expect(cvContentBox(frame, 0, "classic", 0.3, contact)).toMatchObject({ top: 43, bottom: 20 });
+    expect(cvContentBox(frame, 0, "classic", 0.3, contact)).toMatchObject({ top: 53, bottom: 20 });
     expect(cvContentBox(frame, 0, "classic", 0.3, none)).toMatchObject({ top: 18, bottom: 10 });
-    expect(cvSurface(frame, 0, "classic", 0.3, contact)).toMatchObject({ top: 22, bottom: 10 });
+    expect(cvSurface(frame, 0, "classic", 0.3, contact)).toMatchObject({ top: 32, bottom: 10 });
     expect(cvSurface(frame, 0, "classic", 0.3, none)).toMatchObject({ top: 0, bottom: 0 });
+  });
+
+  test("explicit contact height still overrides the 32 mm default", () => {
+    expect(dossierHeaderVisualHeightMmForOptions({ ...contact, headerHeightMm: 47 })).toBe(47);
   });
 
   test("stacked contact headers use the visible slider range through 80 mm", () => {
