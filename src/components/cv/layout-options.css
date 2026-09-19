@@ -10,15 +10,27 @@
 [data-cv-photo] {
   position: relative !important;
   /*
-   * Rahmenfarbe: ohne eigene Wahl die Schriftfarbe der Umgebung, sonst die im
-   * Lebenslauf gewählte. Die Regel gewinnt gegen Inline-Stile, darum läuft auch
-   * die Farbe über eine Variable statt über den Renderer.
+   * The frame used to be an outer box-shadow. Near the top/right edge of a
+   * clipped header area that made the ring look much thicker on the left and
+   * bottom. Keep the photo geometry unchanged and draw the frame as an overlay
+   * inside the crop instead.
    */
-  box-shadow: 0 0 0 var(--cv-photo-border-width, 0.3mm) var(--cv-photo-border-color, currentColor) !important;
+  box-shadow: none !important;
+}
+
+[data-cv-photo]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 var(--cv-photo-border-width, 0.3mm)
+    var(--cv-photo-border-color, currentColor);
 }
 
 /* Warm: no second ring around a circular portrait. */
-html[data-dossier-template="freundlich"] [data-dossier-document="cv"] [data-cv-photo] {
+html[data-dossier-template="freundlich"] [data-dossier-document="cv"] [data-cv-photo]::after {
   box-shadow: none !important;
 }
 
