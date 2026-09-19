@@ -683,6 +683,7 @@ export function DossierSheetBackground({
           )}
         </MotifLayer>
         <div
+          data-dossier-sheet-card
           className="absolute shadow-sm"
           style={{
             inset: `${inset}mm`,
