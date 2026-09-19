@@ -149,17 +149,17 @@ html
   opacity: clamp(0, calc(var(--dossier-motif-opacity, 1) * 2.4), 0.68);
 }
 
-/* Kolumne owns contact in the sidebar only while that sidebar layout is
- * actually active. When users switch to Kolumne from a classic layout in the
- * same session, the historic Terracotta cleanup must not hide the shared
- * contact header as well, or address/phone/email disappear completely. */
-html[data-dossier-template="terracotta"]:not([data-cv-variant="modern"])
+/* Kolumne owns contact in the sidebar only while the renderer really uses the
+ * modern/sidebar layout. The CV root is the source of truth for that rendered
+ * layout. When Kolumne is selected while Classic remains active, keep the
+ * shared contact header visible so address/phone/email never disappear. */
+[data-dossier-document="cv"][data-cv-template="terracotta"][data-cv-layout="classic"]
   [data-dossier-chrome="cv"]
   [data-dossier-contact-header-background] {
   display: block !important;
 }
 
-html[data-dossier-template="terracotta"]:not([data-cv-variant="modern"])
+[data-dossier-document="cv"][data-cv-template="terracotta"][data-cv-layout="classic"]
   [data-dossier-chrome="cv"]
   :is([data-dossier-integrated-contact], [data-dossier-continuation-contact-header]) {
   display: flex !important;
