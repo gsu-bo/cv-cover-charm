@@ -637,7 +637,7 @@ export function dossierHeaderVisualHeightMmForOptions(
 
   if (mode === "contact") {
     const min = options.headerTextLayout === "stacked" ? 18 : 10;
-    return custom === null ? 22 : Math.min(80, Math.max(min, custom));
+    return custom === null ? 32 : Math.min(80, Math.max(min, custom));
   }
   if (mode === "compact") return custom === null ? 3 : Math.min(80, Math.max(1, custom));
   return 0;
