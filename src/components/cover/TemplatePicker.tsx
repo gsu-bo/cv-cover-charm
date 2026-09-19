@@ -129,12 +129,8 @@ function applyTemplateHeaderDefault(template: TemplateId) {
   const footerMode = defaultFooterModeForTemplate(template);
   const headerGapMm = defaultHeaderGapMmForTemplate(template);
   const cvOnly = window.location.pathname.includes("lebenslauf");
-  const warmStackedContact =
-    template === "freundlich" ? { headerTextLayout: "stacked" as const } : {};
-  patchDossierChrome("cv", { headerMode, footerMode, headerGapMm, ...warmStackedContact });
-  if (!cvOnly) {
-    patchDossierChrome("letter", { headerMode, footerMode, headerGapMm, ...warmStackedContact });
-  }
+  patchDossierChrome("cv", { headerMode, footerMode, headerGapMm });
+  if (!cvOnly) patchDossierChrome("letter", { headerMode, footerMode, headerGapMm });
 }
 
 export function TemplatePicker({ value, onChange }: Props) {

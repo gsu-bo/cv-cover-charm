@@ -179,10 +179,7 @@ export function DossierHeaderFooterChrome({
     headerVisualOptions.headerGradientColor ?? secondary,
   );
   const footerRoles = onColorRoles(footerBackground, visualOptions.footerGradientColor ?? primary);
-  const headerSurface = surfaceBackground(
-    headerBackground,
-    headerVisualOptions.headerGradientColor,
-  );
+  const headerSurface = surfaceBackground(headerBackground, headerVisualOptions.headerGradientColor);
   const footerSurface = surfaceBackground(footerBackground, visualOptions.footerGradientColor);
   const borderColor =
     visualOptions.borderColor ??
@@ -240,14 +237,6 @@ export function DossierHeaderFooterChrome({
     (value): value is string => !!value?.trim(),
   );
   const stackedHeader = options.headerTextLayout === "stacked";
-  /**
-   * IMPORTANT — USER-APPROVED WARM CONTRACT, DO NOT NORMALIZE OR REMOVE:
-   * Warm's first-page contact header owns these gold shapes. They must live in
-   * the shared header layer (not behind it), otherwise generic opaque chrome
-   * hides the decoration again in CV preview and PDF export.
-   */
-  const warmContactDecoration =
-    template === "freundlich" && pageIndex === 0 && headerMode === "contact";
   const inlineSeparator = options.headerInlineSeparator ?? "icons";
   const headerContentOffsetY = options.headerContentOffsetYMm ?? 0;
   const footerContentOffsetY = options.footerContentOffsetYMm ?? 0;
@@ -345,39 +334,9 @@ export function DossierHeaderFooterChrome({
                 boxSizing: "border-box",
                 background: headerSurface,
                 borderBottom: borderStyle,
-                overflow: warmContactDecoration ? "hidden" : undefined,
               }}
               aria-hidden="true"
-            >
-              {warmContactDecoration ? (
-                <>
-                  <div
-                    data-warm-contact-gold-orb
-                    className="absolute rounded-full"
-                    style={{
-                      width: "39mm",
-                      height: "39mm",
-                      right: "-14mm",
-                      top: "-13mm",
-                      backgroundColor: secondary,
-                      opacity: 0.65,
-                    }}
-                  />
-                  <div
-                    data-warm-contact-gold-dot
-                    className="absolute rounded-full"
-                    style={{
-                      width: "8mm",
-                      height: "8mm",
-                      right: "10mm",
-                      top: "8mm",
-                      backgroundColor: secondary,
-                      opacity: 0.75,
-                    }}
-                  />
-                </>
-              ) : null}
-            </div>
+            />
             <div
               data-dossier-integrated-contact
               data-letter-integrated-contact={letter ? "" : undefined}
