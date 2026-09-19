@@ -35,27 +35,22 @@ function replaceFirstAfter(source: string, anchor: string, search: string, repla
 }
 
 function reclaimWarmCvPaginationSlack(source: string) {
-  const anchor = "rIdSemanticcvheaderdefault";
-  const anchorIndex = source.indexOf(anchor);
-  if (anchorIndex < 0) throw new Error("Warm DOCX CV section anchor missing.");
+  const sections = [...source.matchAll(/<w:sectPr\b[\s\S]*?<\/w:sectPr>/g)];
+  const cvSection = sections.at(-1);
+  if (!cvSection || cvSection.index === undefined) return source;
 
-  const sectionStart = source.lastIndexOf("<w:sectPr", anchorIndex);
-  const sectionClose = source.indexOf("</w:sectPr>", anchorIndex);
-  if (sectionStart < 0 || sectionClose < 0)
-    throw new Error("Warm DOCX CV section bounds missing.");
-
-  const sectionEnd = sectionClose + "</w:sectPr>".length;
-  const section = source.slice(sectionStart, sectionEnd);
+  const sectionStart = cvSection.index;
+  const section = cvSection[0];
   const topMargin = section.match(/w:top="(\d+)"/);
-  if (!topMargin) throw new Error("Warm DOCX CV top margin missing.");
+  if (!topMargin) return source;
 
   // The intentional 32 mm contact masthead leaves Warm exactly on a
   // LibreOffice pagination boundary. Keep the masthead unchanged and reclaim
-  // only 0.35 mm of the body safety gap so the final reference phone number
-  // remains on the CV page instead of creating a fourth dossier page.
+  // only 0.35 mm of the body safety gap in the final (CV) section so the last
+  // reference phone number remains on page three.
   const compactTop = Math.max(0, Number(topMargin[1]) - twips(0.35));
   const compactSection = section.replace(topMargin[0], `w:top="${compactTop}"`);
-  return source.slice(0, sectionStart) + compactSection + source.slice(sectionEnd);
+  return source.slice(0, sectionStart) + compactSection + source.slice(sectionStart + section.length);
 }
 
 function polishDocumentXml(source: string, cover: CoverPdfDocument) {
@@ -87,7 +82,7 @@ function polishDocumentXml(source: string, cover: CoverPdfDocument) {
     xml = replaceFirst(xml, oldOpen, newOpen);
 
     const oldClose = `</w:t></w:r></w:p></w:tc></w:tc><w:tc><w:tcPr><w:tcW w:w="${sideWidth}"`;
-    const newClose = `</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="${sideWidth}"`;
+    const newClose = `</w:t></w:r></w:p></w:tc><w:tcPr><w:tcW w:w="${sideWidth}"`;
     xml = replaceFirstAfter(xml, "Lehrbeginn", oldClose, newClose);
 
     const oldBottomSpacer = `<w:spacing w:before="0" w:after="0" w:line="${twips(48)}" w:lineRule="exact"/>`;
