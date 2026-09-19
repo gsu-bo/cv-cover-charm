@@ -617,3 +617,279 @@ html[data-dossier-template="forestFlow"]
   background: var(--cover-secondary) !important;
   opacity: 0.95 !important;
 }
+
+/* -------------------------------------------------------------------------- */
+/* PACKAGE 4 — GLOW / HUMAN / HORIZONT / ORBIT IDENTITY                      */
+/* -------------------------------------------------------------------------- */
+/*
+ * Template-specific top chrome for the four families whose shared mastheads
+ * still read as colour-only bands. The treatment is restricted to default
+ * surfaces, so an explicit user colour remains authoritative. Decorative
+ * layers inherit the shared motif-opacity variable and therefore disappear at
+ * 0% and scale through 25/50/100% without touching header-selection state.
+ *
+ * Prism is intentionally unchanged: its existing navy/royal diagonal masthead
+ * already carries the cover's split-plane language clearly.
+ */
+
+:is(
+    [data-dossier-template-chrome="glow"],
+    [data-dossier-template-chrome="human"],
+    [data-dossier-template-chrome="welle"],
+    [data-dossier-template-chrome="orbit"]
+  )[data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+:is(
+    [data-dossier-template-chrome="glow"],
+    [data-dossier-template-chrome="human"],
+    [data-dossier-template-chrome="welle"],
+    [data-dossier-template-chrome="orbit"]
+  )[data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::before,
+:is(
+    [data-dossier-template-chrome="glow"],
+    [data-dossier-template-chrome="human"],
+    [data-dossier-template-chrome="welle"],
+    [data-dossier-template-chrome="orbit"]
+  )[data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--dossier-motif-opacity, 1);
+}
+
+:is(
+    [data-dossier-template-chrome="glow"],
+    [data-dossier-template-chrome="human"],
+    [data-dossier-template-chrome="welle"],
+    [data-dossier-template-chrome="orbit"]
+  )[data-dossier-header-custom-surface="false"]
+  [data-dossier-continuation-contact-header]
+  > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* GLOW — a warm, diffused field plus one restrained luminous trace echoes the
+ * soft cover capsule without introducing neon colour or reducing contrast. */
+[data-dossier-template-chrome="glow"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  background: linear-gradient(
+    104deg,
+    var(--chrome-primary) 0%,
+    var(--chrome-primary) 64%,
+    color-mix(in srgb, var(--chrome-primary) 72%, var(--chrome-secondary)) 100%
+  ) !important;
+}
+
+[data-dossier-template-chrome="glow"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::before {
+  right: -12mm;
+  top: 50%;
+  width: 58mm;
+  height: 42mm;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--chrome-secondary) 52%, transparent) 0%,
+    color-mix(in srgb, var(--chrome-secondary) 22%, transparent) 48%,
+    transparent 74%
+  );
+  filter: blur(1.2mm);
+  transform: translateY(-50%);
+}
+
+[data-dossier-template-chrome="glow"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::after {
+  right: 15mm;
+  bottom: 2.3mm;
+  width: 34mm;
+  height: 0.7mm;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--chrome-paper) 72%, transparent) 44%,
+    color-mix(in srgb, var(--chrome-secondary) 70%, transparent) 72%,
+    transparent
+  );
+  box-shadow: 0 0 2.6mm color-mix(in srgb, var(--chrome-secondary) 36%, transparent);
+}
+
+/* HUMAN — asymmetric, softly rounded forms turn the dark strip into a calm
+ * organic masthead related to the cover's earthy overlapping shapes. */
+[data-dossier-template-chrome="human"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  background: linear-gradient(
+    108deg,
+    var(--chrome-primary) 0%,
+    var(--chrome-primary) 70%,
+    color-mix(in srgb, var(--chrome-primary) 82%, var(--chrome-secondary)) 100%
+  ) !important;
+}
+
+[data-dossier-template-chrome="human"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::before {
+  right: -8mm;
+  top: -15mm;
+  width: 55mm;
+  height: 39mm;
+  border-radius: 62% 20% 54% 42%;
+  background: color-mix(in srgb, var(--chrome-secondary) 44%, transparent);
+  transform: rotate(-7deg);
+}
+
+[data-dossier-template-chrome="human"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::after {
+  right: 28mm;
+  bottom: -8mm;
+  width: 27mm;
+  height: 16mm;
+  border-radius: 46% 58% 48% 62%;
+  background: color-mix(in srgb, var(--chrome-paper) 18%, transparent);
+  transform: rotate(6deg);
+}
+
+/* HORIZONT (template id: welle) — two quiet horizontal depths create an actual
+ * horizon composition while keeping the masthead open and spacious. */
+[data-dossier-template-chrome="welle"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  background: linear-gradient(
+    90deg,
+    var(--chrome-primary) 0%,
+    color-mix(in srgb, var(--chrome-primary) 88%, var(--chrome-secondary)) 100%
+  ) !important;
+}
+
+[data-dossier-template-chrome="welle"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::before {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3.2mm;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--chrome-secondary) 20%, transparent) 0%,
+    color-mix(in srgb, var(--chrome-secondary) 72%, transparent) 18%,
+    color-mix(in srgb, var(--chrome-secondary) 72%, transparent) 78%,
+    color-mix(in srgb, var(--chrome-secondary) 28%, transparent) 100%
+  );
+}
+
+[data-dossier-template-chrome="welle"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::after {
+  left: 18mm;
+  right: 18mm;
+  bottom: 3.25mm;
+  height: 0.38mm;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--chrome-paper) 64%, transparent) 18%,
+    color-mix(in srgb, var(--chrome-paper) 64%, transparent) 82%,
+    transparent
+  );
+}
+
+/* ORBIT — two cropped rings bring the cover's circular system into the dossier
+ * masthead. Their low-contrast placement at the right keeps contact readable. */
+[data-dossier-template-chrome="orbit"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  background: linear-gradient(
+    102deg,
+    var(--chrome-primary) 0%,
+    var(--chrome-primary) 68%,
+    color-mix(in srgb, var(--chrome-primary) 78%, var(--chrome-secondary)) 100%
+  ) !important;
+}
+
+[data-dossier-template-chrome="orbit"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::before {
+  right: -8mm;
+  top: 50%;
+  width: 42mm;
+  height: 42mm;
+  border: 2.1mm solid color-mix(in srgb, var(--chrome-secondary) 42%, transparent);
+  border-radius: 50%;
+  box-sizing: border-box;
+  transform: translateY(-50%);
+}
+
+[data-dossier-template-chrome="orbit"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::after {
+  right: 25mm;
+  top: 50%;
+  width: 13mm;
+  height: 13mm;
+  border: 0.7mm solid color-mix(in srgb, var(--chrome-accent) 66%, transparent);
+  border-radius: 50%;
+  box-sizing: border-box;
+  transform: translateY(-50%);
+}
