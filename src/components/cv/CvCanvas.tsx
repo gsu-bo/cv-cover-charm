@@ -31,6 +31,7 @@ import "./fresh-modern-sidebar-geometry.css";
 import "./default-pagination-density.css";
 import "./user-typography.css";
 import "./citrus-rubric.css";
+import "./content-geometry-contract.css";
 
 export type { CvLayoutWarning } from "./CvCanvasBase";
 
