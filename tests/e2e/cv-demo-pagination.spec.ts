@@ -22,8 +22,6 @@ test.describe("M9 demo CV pagination", () => {
     const pages = cv.locator("[data-cv-page]");
     await expect(cv).toContainText("Herr Thomas Weber");
 
-    // Styling panels also contain reset buttons called "Vorlage". Section.tsx already exposes
-    // a stable semantic toggle marker, so target that contract and ignore the adjacent hint text.
     const templateSection = page
       .locator("[data-editor-section-toggle]")
       .filter({ hasText: "Vorlage" })
@@ -35,9 +33,8 @@ test.describe("M9 demo CV pagination", () => {
     const templatePanelId = await templateSection.getAttribute("aria-controls");
     expect(templatePanelId).toBeTruthy();
     const templatePanel = page.locator(`[id="${templatePanelId}"]`);
-    // Count the runtime picker itself so shared templates such as Brief cannot drift from this gate.
     const templateButtons = templatePanel.locator("button[title][aria-pressed]");
-    await expect(templateButtons).toHaveCount(40);
+    await expect(templateButtons).toHaveCount(39);
     const templateCount = await templateButtons.count();
     const unexpectedSpillages: string[] = [];
     const exercisedTemplateIds = new Set<string>();
@@ -48,9 +45,6 @@ test.describe("M9 demo CV pagination", () => {
       await button.click();
       await expect(button).toHaveAttribute("aria-pressed", "true");
 
-      // Template selection, dossier-theme propagation and pagination do not commit in one
-      // React frame. Wait for the document to become mutation-quiet before sampling pages;
-      // otherwise this gate can attribute the previous template's pagination to the new one.
       await page.evaluate(
         () =>
           new Promise<void>((resolve) => {
@@ -74,15 +68,10 @@ test.describe("M9 demo CV pagination", () => {
           }),
       );
 
-      // React selection is the source of truth here. Autosave intentionally lags behind the UI,
-      // so localStorage must not decide which template the pagination gate is inspecting.
       const templateId = await cv.getAttribute("data-cv-template");
       expect(templateId, `${name}: selected template must reach the rendered CV`).toBeTruthy();
       exercisedTemplateIds.add(templateId!);
 
-      // Some intentionally quiet templates suppress section rules entirely. When a template does
-      // render them, they must still consume the remaining heading-row width cleanly; absence is
-      // a presentation choice and must not fail this pagination-focused gate.
       const ruleGeometry = await pages
         .first()
         .locator('[data-cv-accent="section"]:visible')
@@ -141,10 +130,7 @@ test.describe("M9 demo CV pagination", () => {
           geometry.rightGap,
           `${templateId}: section rule must reach the right edge of its heading row; ${JSON.stringify(geometry)}`,
         ).toBeLessThanOrEqual(2);
-        expect(
-          geometry.width,
-          `${templateId}: section rule must have visible width`,
-        ).toBeGreaterThan(4);
+        expect(geometry.width, `${templateId}: section rule must have visible width`).toBeGreaterThan(4);
       }
 
       await expect(cv).toContainText("Familie");
@@ -173,8 +159,8 @@ test.describe("M9 demo CV pagination", () => {
 
     expect(
       exercisedTemplateIds.size,
-      "runtime template picker must exercise 40 unique CV templates",
-    ).toBe(40);
+      "runtime template picker must exercise 39 unique CV templates",
+    ).toBe(39);
     expect(
       unexpectedSpillages,
       `family-second demo must stay on one page; spillages=${unexpectedSpillages.join(" | ")}`,

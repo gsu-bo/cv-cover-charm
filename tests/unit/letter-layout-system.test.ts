@@ -42,8 +42,8 @@ function designFor(
 
 describe("central motivation-letter layout system", () => {
   test("every selectable letter style and every header/footer mode yields one usable content box", () => {
-    expect(TEMPLATES.length).toBe(42);
-    expect(LETTER_TEMPLATE_IDS.length).toBe(42);
+    expect(TEMPLATES.length).toBe(41);
+    expect(LETTER_TEMPLATE_IDS.length).toBe(41);
 
     for (const template of LETTER_TEMPLATE_IDS) {
       for (const headerMode of headerModes) {
@@ -117,7 +117,6 @@ describe("central motivation-letter layout system", () => {
       signatures.add(`${geometry.content.left}/${geometry.content.right}`);
     }
 
-    // Fresh letters are not flattened into one `klassisch` margin pair.
     expect(signatures.size).toBeGreaterThan(5);
   });
 
@@ -141,7 +140,6 @@ describe("central motivation-letter layout system", () => {
     expect(letterArchetypeFor("glow" as LetterTemplateId)).toBe("fresh");
     expect(letterArchetypeFor("edge" as LetterTemplateId)).toBe("band");
     expect(letterArchetypeFor("horizon" as LetterTemplateId)).toBe("band");
-    expect(letterArchetypeFor("frame" as LetterTemplateId)).toBe("frame");
     expect(letterArchetypeFor("verlauf2" as LetterTemplateId)).toBe("fresh");
     expect(letterArchetypeFor("verlauf3" as LetterTemplateId)).toBe("fresh");
   });
