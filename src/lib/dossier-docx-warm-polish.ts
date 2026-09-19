@@ -82,7 +82,7 @@ function polishDocumentXml(source: string, cover: CoverPdfDocument) {
     xml = replaceFirst(xml, oldOpen, newOpen);
 
     const oldClose = `</w:t></w:r></w:p></w:tc></w:tc><w:tc><w:tcPr><w:tcW w:w="${sideWidth}"`;
-    const newClose = `</w:t></w:r></w:p></w:tc><w:tcPr><w:tcW w:w="${sideWidth}"`;
+    const newClose = `</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="${sideWidth}"`;
     xml = replaceFirstAfter(xml, "Lehrbeginn", oldClose, newClose);
 
     const oldBottomSpacer = `<w:spacing w:before="0" w:after="0" w:line="${twips(48)}" w:lineRule="exact"/>`;
