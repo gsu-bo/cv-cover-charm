@@ -340,8 +340,12 @@ test.describe("template cleanup", () => {
 
     const colorful = await seedCv(page, "colorful");
     const colorfulHeader = colorful.locator("[data-cv-header]").first();
-    await expect(colorfulHeader).toBeVisible();
+    const colorfulCompact = colorful.locator("[data-dossier-compact-header]").first();
+    await expect(colorfulCompact).toBeVisible();
     expect((await pseudoStyle(colorfulHeader, "::after")).display).toBe("none");
+    const colorfulCompactBox = await colorfulCompact.boundingBox();
+    expect(colorfulCompactBox).not.toBeNull();
+    expect(colorfulCompactBox?.width ?? 0).toBeGreaterThan(100);
 
     const aurora = await seedCv(page, "aurora");
     const auroraCompact = aurora.locator("[data-dossier-compact-header]").first();
@@ -383,11 +387,12 @@ test.describe("template cleanup", () => {
     await expect(compact).toBeVisible();
 
     const geometry = await compact.evaluate((node) => {
-      const header = node.getBoundingClientRect();
+      const page = node.closest<HTMLElement>("[data-cv-page]");
+      const pageWidth = page?.getBoundingClientRect().width ?? 0;
       const topGold = getComputedStyle(node, "::before");
       const diamond = getComputedStyle(node, "::after");
       return {
-        headerWidth: header.width,
+        pageWidth,
         goldWidth: Number.parseFloat(topGold.width) || 0,
         goldHeight: Number.parseFloat(topGold.height) || 0,
         goldContent: topGold.content,
@@ -400,7 +405,8 @@ test.describe("template cleanup", () => {
 
     expect(geometry.goldContent).not.toBe("none");
     expect(geometry.goldHeight).toBeGreaterThan(0);
-    expect(geometry.goldWidth / geometry.headerWidth).toBeCloseTo(1, 2);
+    expect(geometry.pageWidth).toBeGreaterThan(0);
+    expect(geometry.goldWidth / geometry.pageWidth).toBeCloseTo(1, 2);
     expect(geometry.diamondContent).not.toBe("none");
     expect(geometry.diamondWidth).toBeGreaterThan(0);
     expect(geometry.diamondHeight).toBeGreaterThan(0);
