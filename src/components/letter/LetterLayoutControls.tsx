@@ -211,7 +211,7 @@ export function LetterLayoutControls({
         />
 
         <AlignmentRow
-          label="Eigene Anschrift"
+          label="Meine Kontaktdaten"
           value={design.senderAlign ?? "left"}
           onChange={(senderAlign) => onChange({ senderAlign })}
         />
@@ -234,7 +234,7 @@ export function LetterLayoutControls({
               checked={design.ruleAfterSender === true}
               onChange={(event) => onChange({ ruleAfterSender: event.target.checked })}
             />
-            Trennlinie nach eigener Anschrift
+            Trennlinie nach meinen Kontaktdaten
           </label>
           <label className="flex items-center gap-2 text-xs">
             <input
