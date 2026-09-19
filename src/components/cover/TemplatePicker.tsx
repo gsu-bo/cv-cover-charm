@@ -8,6 +8,7 @@ import { DOSSIER_CHROME_STORAGE_KEY, patchDossierChrome } from "@/lib/dossier-ch
 import {
   defaultFooterModeForTemplate,
   defaultHeaderGapMmForTemplate,
+  defaultHeaderHeightMmForTemplate,
   defaultHeaderModeForTemplate,
 } from "@/lib/template-chrome";
 import {
@@ -127,13 +128,26 @@ function mirrorHint(layout: CvLayoutId): string {
 function applyTemplateHeaderDefault(template: TemplateId) {
   const headerMode = defaultHeaderModeForTemplate(template);
   const footerMode = defaultFooterModeForTemplate(template);
+  const headerHeightMm = defaultHeaderHeightMmForTemplate(template);
   const headerGapMm = defaultHeaderGapMmForTemplate(template);
   const cvOnly = window.location.pathname.includes("lebenslauf");
   const warmStackedContact =
     template === "freundlich" ? { headerTextLayout: "stacked" as const } : {};
-  patchDossierChrome("cv", { headerMode, footerMode, headerGapMm, ...warmStackedContact });
+  patchDossierChrome("cv", {
+    headerMode,
+    footerMode,
+    headerHeightMm,
+    headerGapMm,
+    ...warmStackedContact,
+  });
   if (!cvOnly) {
-    patchDossierChrome("letter", { headerMode, footerMode, headerGapMm, ...warmStackedContact });
+    patchDossierChrome("letter", {
+      headerMode,
+      footerMode,
+      headerHeightMm,
+      headerGapMm,
+      ...warmStackedContact,
+    });
   }
 }
 
