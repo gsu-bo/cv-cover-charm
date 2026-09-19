@@ -114,13 +114,19 @@ async function seed(page: Page, template: SeedTemplate) {
 }
 
 async function motifSlider(page: Page) {
-  const colorsSection = page.locator('[data-editor-section-title="Farben"]');
-  const toggle = colorsSection.locator("[data-editor-section-toggle]");
-  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
-  const slider = colorsSection
+  const slider = page
     .locator("label")
     .filter({ hasText: "Hintergrund-Motiv" })
     .locator('input[type="range"]');
+
+  if ((await slider.count()) === 0) {
+    const toggles = page.locator('[data-editor-section-toggle][aria-expanded="false"]');
+    for (let index = 0; index < (await toggles.count()); index += 1) {
+      await toggles.nth(index).click();
+      if ((await slider.count()) > 0) break;
+    }
+  }
+
   await expect(slider).toBeVisible();
   return slider;
 }
@@ -128,7 +134,8 @@ async function motifSlider(page: Page) {
 async function setMotifPercent(slider: Locator, percent: number) {
   await slider.evaluate((node, value) => {
     const input = node as HTMLInputElement;
-    input.value = String(value);
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    setter?.call(input, String(value));
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
   }, percent);
