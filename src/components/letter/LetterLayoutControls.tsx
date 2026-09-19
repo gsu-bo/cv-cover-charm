@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";
 import { DossierHyphenationControl } from "@/components/dossier/DossierHyphenationControl";
 import { DossierPageMarginsControl } from "@/components/dossier/DossierPageMarginsControl";
@@ -6,11 +7,19 @@ import {
   letterSafePageMarginMinimums,
 } from "@/components/letter/layout-system";
 import type { LetterAlignment, LetterData, LetterDesign } from "@/components/letter/types";
-import type { DossierChromeOptions } from "@/lib/dossier-chrome";
+import {
+  DEFAULT_DOSSIER_CHROME_STATE,
+  getDossierChromeState,
+  patchDossierChrome,
+  subscribeDossierChrome,
+  type DossierChromeOptions,
+} from "@/lib/dossier-chrome";
 import type { DossierPageMargins } from "@/lib/dossier-page-margins";
 
 const buttonClass =
   "rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const smallButtonClass =
+  "rounded border border-input bg-background px-2 py-1 text-[11px] font-medium hover:bg-accent";
 
 function legacyChromePatch(patch: Partial<DossierChromeOptions>): Partial<LetterDesign> {
   const next: Partial<LetterDesign> = {};
@@ -109,6 +118,51 @@ function AlignmentRow({
   );
 }
 
+function VerticalOffsetControl({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  const min = -12;
+  const max = 12;
+  return (
+    <label className="grid gap-1 text-xs">
+      <span className="flex items-center justify-between gap-2 text-muted-foreground">
+        <span>{label}</span>
+        <span>
+          {value === 0
+            ? "0 mm · zentriert"
+            : `${value > 0 ? "+" : ""}${value.toFixed(value % 1 ? 1 : 0)} mm`}
+        </span>
+      </span>
+      <input
+        data-letter-recipient-offset-control
+        type="range"
+        min={min}
+        max={max}
+        step={1}
+        value={Math.min(max, Math.max(min, value))}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="w-full accent-primary"
+        aria-label={label}
+      />
+      {value !== 0 ? (
+        <button
+          type="button"
+          className={`${smallButtonClass} justify-self-start`}
+          onClick={() => onChange(0)}
+        >
+          Zentrierte Standardposition
+        </button>
+      ) : null}
+    </label>
+  );
+}
+
 export function LetterLayoutControls({
   data,
   design,
@@ -118,9 +172,16 @@ export function LetterLayoutControls({
   design: LetterDesign;
   onChange: (value: Partial<LetterDesign>) => void;
 }) {
+  const chromeState = useSyncExternalStore(
+    subscribeDossierChrome,
+    getDossierChromeState,
+    () => DEFAULT_DOSSIER_CHROME_STATE,
+  );
+  const chromeOptions = chromeState.sync ? chromeState.shared : chromeState.letter;
   const defaultMargins = currentLetterDefaultMargins(data, design);
   const minimumMargins = letterSafePageMarginMinimums(data, design);
   const accentColor = design.colors.accent ?? design.colors.primary;
+  const recipientOffsetY = chromeOptions.letterRecipientOffsetYMm ?? 0;
 
   return (
     <div className="grid gap-2.5">
@@ -129,53 +190,69 @@ export function LetterLayoutControls({
         onOptionsChange={(patch) => onChange(legacyChromePatch(patch))}
       />
 
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Header und Footer stellst du hier gemeinsam für Lebenslauf und Motivationsschreiben ein.
-        Empfänger, Datum und Trennlinien bleiben briefspezifisch.
-      </p>
+      <div
+        data-letter-specific-layout-controls
+        className="grid gap-2.5 rounded-lg border bg-background p-3 shadow-sm"
+      >
+        <div>
+          <div className="text-xs font-semibold">Briefspezifische Positionen</div>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            Diese Einstellungen gelten nur fürs Motivationsschreiben. Header und Footer darüber sind
+            identisch aufgebaut wie im Lebenslauf.
+          </p>
+        </div>
 
-      <AlignmentRow
-        label="Meine Kontaktdaten"
-        value={design.senderAlign ?? "left"}
-        onChange={(senderAlign) => onChange({ senderAlign })}
-      />
-      <AlignmentRow
-        label="Firma / Lehrbetrieb"
-        value={design.recipientAlign ?? "left"}
-        onChange={(recipientAlign) => onChange({ recipientAlign })}
-      />
-      <AlignmentRow
-        label="Ort & Datum"
-        value={design.dateAlign ?? "left"}
-        onChange={(dateAlign) => onChange({ dateAlign })}
-      />
+        <VerticalOffsetControl
+          label="Firma / Lehrbetrieb – vertikale Position"
+          value={recipientOffsetY}
+          onChange={(letterRecipientOffsetYMm) =>
+            patchDossierChrome("letter", { letterRecipientOffsetYMm })
+          }
+        />
 
-      <div className="grid gap-2 rounded-md border p-2.5">
-        <span className="text-xs font-medium">Trennlinien im Kopf</span>
-        <label className="flex items-center gap-2 text-xs">
-          <input
-            type="checkbox"
-            checked={design.ruleAfterSender === true}
-            onChange={(event) => onChange({ ruleAfterSender: event.target.checked })}
-          />
-          Trennlinie nach meinen Kontaktdaten
-        </label>
-        <label className="flex items-center gap-2 text-xs">
-          <input
-            type="checkbox"
-            checked={design.ruleAfterRecipient === true}
-            onChange={(event) => onChange({ ruleAfterRecipient: event.target.checked })}
-          />
-          Trennlinie nach Firma / Lehrbetrieb
-        </label>
-        <label className="flex items-center gap-2 text-xs">
-          <input
-            type="checkbox"
-            checked={design.ruleAfterSubject === true}
-            onChange={(event) => onChange({ ruleAfterSubject: event.target.checked })}
-          />
-          Trennlinie nach Titel / Betreff
-        </label>
+        <AlignmentRow
+          label="Meine Kontaktdaten"
+          value={design.senderAlign ?? "left"}
+          onChange={(senderAlign) => onChange({ senderAlign })}
+        />
+        <AlignmentRow
+          label="Firma / Lehrbetrieb"
+          value={design.recipientAlign ?? "left"}
+          onChange={(recipientAlign) => onChange({ recipientAlign })}
+        />
+        <AlignmentRow
+          label="Ort & Datum"
+          value={design.dateAlign ?? "left"}
+          onChange={(dateAlign) => onChange({ dateAlign })}
+        />
+
+        <div className="grid gap-2 rounded-md border p-2.5">
+          <span className="text-xs font-medium">Trennlinien im Kopf</span>
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={design.ruleAfterSender === true}
+              onChange={(event) => onChange({ ruleAfterSender: event.target.checked })}
+            />
+            Trennlinie nach meinen Kontaktdaten
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={design.ruleAfterRecipient === true}
+              onChange={(event) => onChange({ ruleAfterRecipient: event.target.checked })}
+            />
+            Trennlinie nach Firma / Lehrbetrieb
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={design.ruleAfterSubject === true}
+              onChange={(event) => onChange({ ruleAfterSubject: event.target.checked })}
+            />
+            Trennlinie nach Titel / Betreff
+          </label>
+        </div>
       </div>
 
       <DossierHyphenationControl />
