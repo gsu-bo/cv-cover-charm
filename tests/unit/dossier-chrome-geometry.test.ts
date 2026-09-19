@@ -4,6 +4,8 @@ import {
   DEFAULT_DOSSIER_CHROME_OPTIONS,
   dossierFooterContentBottomMmForOptions,
   dossierHeaderContentTopMmForOptions,
+  dossierHeaderVisualHeightMmForOptions,
+  normalizeDossierChromeState,
   type DossierChromeOptions,
 } from "../../src/lib/dossier-chrome";
 
@@ -33,5 +35,36 @@ describe("pure dossier chrome geometry", () => {
     expect(cvContentBox(frame, 0, "classic", 0.3, none)).toMatchObject({ top: 18, bottom: 10 });
     expect(cvSurface(frame, 0, "classic", 0.3, contact)).toMatchObject({ top: 22, bottom: 10 });
     expect(cvSurface(frame, 0, "classic", 0.3, none)).toMatchObject({ top: 0, bottom: 0 });
+  });
+
+  test("stacked contact headers use the visible slider range through 80 mm", () => {
+    const warmTall: DossierChromeOptions = {
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      headerMode: "contact",
+      headerTextLayout: "stacked",
+      headerHeightMm: 80,
+      headerGapMm: 4,
+    };
+    const staleTooSmall: DossierChromeOptions = {
+      ...warmTall,
+      headerHeightMm: 10,
+    };
+
+    expect(dossierHeaderVisualHeightMmForOptions(warmTall)).toBe(80);
+    expect(dossierHeaderContentTopMmForOptions(warmTall)).toBe(93);
+    expect(cvSurface(cvFrameFor("freundlich"), 0, "classic", 0.3, warmTall).top).toBe(80);
+    expect(dossierHeaderVisualHeightMmForOptions(staleTooSmall)).toBe(18);
+  });
+
+  test("persisted header heights are normalized to the new 80 mm ceiling", () => {
+    const state = normalizeDossierChromeState({
+      sync: true,
+      shared: {
+        ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+        headerHeightMm: 120,
+      },
+    });
+
+    expect(state.shared.headerHeightMm).toBe(80);
   });
 });

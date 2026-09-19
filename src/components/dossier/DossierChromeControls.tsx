@@ -198,13 +198,19 @@ export function DossierChromeControls({
   };
 
   const headerDefaultHeight = options.headerMode === "contact" ? 22 : 3;
-  const headerHeight = options.headerHeightMm ?? headerDefaultHeight;
+  const headerMin =
+    options.headerMode === "contact" ? (options.headerTextLayout === "stacked" ? 18 : 10) : 1;
+  const headerMax = 80;
+  // Display exactly the geometry the renderer can use. Older saved projects can
+  // contain a 10 mm value from compact mode even after switching to a stacked
+  // contact header; showing that stale raw value made the Warm slider look dead.
+  const headerHeight = Math.min(
+    headerMax,
+    Math.max(headerMin, options.headerHeightMm ?? headerDefaultHeight),
+  );
   const headerGap = options.headerGapMm ?? 12;
   const headerContentOffsetY = options.headerContentOffsetYMm ?? 0;
   const recipientOffsetY = options.letterRecipientOffsetYMm ?? 0;
-  const headerMin =
-    options.headerMode === "contact" ? (options.headerTextLayout === "stacked" ? 18 : 10) : 1;
-  const headerMax = options.headerMode === "contact" ? 40 : 18;
   const footerDefaultHeight = options.footerMode === "details" ? 10 : 2.4;
   const footerHeight = options.footerHeightMm ?? footerDefaultHeight;
   const footerContentOffsetY = options.footerContentOffsetYMm ?? 0;
@@ -371,7 +377,7 @@ export function DossierChromeControls({
                   min={headerMin}
                   max={headerMax}
                   step={1}
-                  value={Math.min(headerMax, Math.max(headerMin, headerHeight))}
+                  value={headerHeight}
                   onChange={(event) => patchOptions({ headerHeightMm: Number(event.target.value) })}
                   className="w-full accent-primary"
                 />
