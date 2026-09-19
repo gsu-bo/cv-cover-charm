@@ -1,0 +1,15 @@
+/*
+ * The generic CV background-motif slider owns the final opacity of decorative
+ * motif wrappers. Older reviewed template CSS uses high-specificity
+ * nth-child(...){ opacity: ... !important } rules on the same wrappers. Keep
+ * those template rules for their baseline styling, but do not let them pin the
+ * user's 0–100% visibility control.
+ *
+ * The repeated attributes are deliberate specificity, not a styling pattern:
+ * they beat those legacy !important selectors without changing template
+ * geometry, content, text or structural surfaces.
+ */
+[data-dossier-sheet-background]
+  > [data-dossier-sheet-motif][data-dossier-sheet-motif][data-dossier-sheet-motif][data-dossier-sheet-motif] {
+  opacity: var(--dossier-motif-opacity, 1) !important;
+}
