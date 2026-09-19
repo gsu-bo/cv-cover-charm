@@ -132,13 +132,15 @@ async function motifSlider(page: Page) {
 }
 
 async function setMotifPercent(slider: Locator, percent: number) {
-  await slider.evaluate((node, value) => {
-    const input = node as HTMLInputElement;
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-    setter?.call(input, String(value));
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  }, percent);
+  await slider.focus();
+  if (percent === 100) {
+    await slider.press("End");
+    return;
+  }
+  await slider.press("Home");
+  for (let value = 0; value < percent; value += 1) {
+    await slider.press("ArrowRight");
+  }
 }
 
 const hash = (buffer: Buffer) => createHash("sha256").update(buffer).digest("hex");
