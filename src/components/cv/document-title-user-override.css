@@ -5,7 +5,18 @@
  * declarations. Once the student explicitly toggles Fett / Kursiv /
  * Unterstrichen, that choice must outrank every template default in preview,
  * measurement and PDF rendering. Untouched titles are not targeted here.
+ *
+ * Vertical document-title spacing is dossier-wide rather than template-owned.
+ * The shared chrome first computes the safe CV content box; this rule then adds
+ * only the user's requested whitespace above the title inside that box.
  */
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-dossier-document="cv"][data-dossier-document="cv"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-doc-title] {
+  margin-top: var(--cv-doc-title-margin-top, 0px) !important;
+}
+
 html[data-dossier-template][data-dossier-template][data-dossier-template]
   [data-dossier-document="cv"][data-dossier-document="cv"]
   :is([data-cv-page], [data-cv-measure-page])
