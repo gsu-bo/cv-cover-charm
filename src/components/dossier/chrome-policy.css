@@ -73,10 +73,6 @@
   margin-top: 11mm !important;
 }
 
-[data-cv-template="citrus"] :is([data-cv-page="0"], [data-cv-measure-page]) [data-cv-header] {
-  margin-top: 12mm !important;
-}
-
 /* Studio 3 has the same stale pre-chrome 12 mm main offset. Keep its title and
  * personal metadata inside the 60 mm teal hero, but begin them below contact. */
 [data-cv-template="studio3"] :is([data-cv-page="0"], [data-cv-measure-page]) [data-cv-header] {
@@ -207,7 +203,7 @@ html[data-dossier-template="ribbon"] [data-dossier-document="cover"] [data-block
   border-radius: 50%;
   box-sizing: border-box;
   transform: translateY(-50%);
-  opacity: 0.8;
+  opacity: calc(var(--dossier-motif-opacity, 1) * 0.8);
 }
 
 [data-dossier-template-chrome="citrus"]
@@ -228,6 +224,7 @@ html[data-dossier-template="ribbon"] [data-dossier-document="cover"] [data-block
     -7mm 0 0 color-mix(in srgb, var(--chrome-paper) 48%, transparent),
     7mm 0 0 color-mix(in srgb, var(--chrome-paper) 48%, transparent);
   transform: translateY(-50%) rotate(24deg);
+  opacity: var(--dossier-motif-opacity, 1);
 }
 
 [data-dossier-template-chrome="citrus"][data-dossier-header-custom-surface="false"]

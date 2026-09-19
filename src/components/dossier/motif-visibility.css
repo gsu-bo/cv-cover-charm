@@ -12,3 +12,45 @@
 [data-dossier-sheet-motif]:not(#dossier-motif-user-opacity-a):not(#dossier-motif-user-opacity-b) {
   opacity: var(--dossier-motif-opacity, 1) !important;
 }
+
+/*
+ * The opacity wrapper was added after many template refinements had already
+ * targeted direct child positions. Those historic selectors can otherwise
+ * resize, move or even hide the wrapper itself instead of a motif primitive.
+ * Keep the wrapper a stable full-sheet layer; template rules remain free to
+ * style the primitives inside it.
+ */
+[data-dossier-document="cv"][data-dossier-document="cv"]
+  [data-cv-background="motif"]
+  > [data-dossier-sheet-background]
+  > [data-dossier-sheet-motif]:not(#dossier-motif-wrapper-a):not(#dossier-motif-wrapper-b) {
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  filter: none !important;
+  transform: none !important;
+  pointer-events: none !important;
+  opacity: var(--dossier-motif-opacity, 1) !important;
+}
+
+/* Quiet/band/column signatures must sit above the opaque reading plane but
+ * below every content layer. Card templates keep their full-page gradients
+ * behind the reading plane and expose them through their dedicated hero area. */
+[data-dossier-document="cv"]
+  [data-cv-background="motif"]
+  > [data-dossier-sheet-background]:not([data-dossier-sheet-background="neon"]):not(
+    [data-dossier-sheet-background="verlauf"]
+  ):not([data-dossier-sheet-background="citrus"])
+  > [data-dossier-sheet-motif] {
+  z-index: 1 !important;
+}
+
+[data-cv-page]
+  > :is([data-cv-main], [data-cv-sidebar], [data-cv-band-header], [data-cv-footer]) {
+  z-index: 2;
+}
