@@ -34,6 +34,30 @@ function replaceFirstAfter(source: string, anchor: string, search: string, repla
   return source.slice(0, index) + replacement + source.slice(index + search.length);
 }
 
+function reclaimWarmCvPaginationSlack(source: string) {
+  const anchor = "rIdSemanticcvheaderdefault";
+  const anchorIndex = source.indexOf(anchor);
+  if (anchorIndex < 0) throw new Error("Warm DOCX CV section anchor missing.");
+
+  const sectionStart = source.lastIndexOf("<w:sectPr", anchorIndex);
+  const sectionClose = source.indexOf("</w:sectPr>", anchorIndex);
+  if (sectionStart < 0 || sectionClose < 0)
+    throw new Error("Warm DOCX CV section bounds missing.");
+
+  const sectionEnd = sectionClose + "</w:sectPr>".length;
+  const section = source.slice(sectionStart, sectionEnd);
+  const topMargin = section.match(/w:top="(\d+)"/);
+  if (!topMargin) throw new Error("Warm DOCX CV top margin missing.");
+
+  // The intentional 32 mm contact masthead leaves Warm exactly on a
+  // LibreOffice pagination boundary. Keep the masthead unchanged and reclaim
+  // only 0.35 mm of the body safety gap so the final reference phone number
+  // remains on the CV page instead of creating a fourth dossier page.
+  const compactTop = Math.max(0, Number(topMargin[1]) - twips(0.35));
+  const compactSection = section.replace(topMargin[0], `w:top="${compactTop}"`);
+  return source.slice(0, sectionStart) + compactSection + source.slice(sectionEnd);
+}
+
 function polishDocumentXml(source: string, cover: CoverPdfDocument) {
   const primary = wordColor(cover.colors.primary, "0F766E");
   const secondary = wordColor(cover.colors.secondary, "F59E0B");
@@ -71,7 +95,7 @@ function polishDocumentXml(source: string, cover: CoverPdfDocument) {
     xml = replaceFirstAfter(xml, "Lehrbeginn", oldBottomSpacer, newBottomSpacer);
   }
 
-  return xml;
+  return reclaimWarmCvPaginationSlack(xml);
 }
 
 export async function createPolishedWarmDossierDocxBlob(
