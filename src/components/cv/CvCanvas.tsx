@@ -103,18 +103,16 @@ export function CvCanvas({
     };
   }, [design.template]);
 
-  const modernBox = cvContentBox(
-    cvFrameFor(design.template),
-    0,
-    "modern",
-    design.sidebarPct,
-    resolvedChromeOptions,
-  );
+  const frame = cvFrameFor(design.template);
+  const classicBox = cvContentBox(frame, 0, "classic", design.sidebarPct, resolvedChromeOptions);
+  const modernBox = cvContentBox(frame, 0, "modern", design.sidebarPct, resolvedChromeOptions);
   const primary = design.colors.primary ?? design.colors.accent ?? design.colors.ink ?? "#111111";
   const secondary = design.colors.secondary ?? design.colors.accent ?? primary;
   const tertiary = design.colors.tertiary ?? design.colors.accent ?? secondary;
   const geometryStyle = {
     display: "contents",
+    "--cv-classic-main-left": `${classicBox.left}mm`,
+    "--cv-classic-main-right": `${classicBox.right}mm`,
     "--cv-modern-main-left": `${modernBox.left}mm`,
     "--cv-modern-main-right": `${modernBox.right}mm`,
     "--cover-primary": primary,

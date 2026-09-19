@@ -15,7 +15,7 @@
 
 html[data-cv-variant="minimal"] [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page]) > [data-cv-accent="page"] {
-  left: 24mm !important;
+  left: var(--cv-classic-main-left) !important;
   right: auto !important;
   width: 22mm !important;
   top: 10mm !important;
@@ -23,10 +23,10 @@ html[data-cv-variant="minimal"] [data-cv-layout="classic"]
 
 html[data-cv-variant="minimal"] [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main] {
-  left: 24mm !important;
-  right: 24mm !important;
-  top: 20mm !important;
-  bottom: 18mm !important;
+  left: var(--cv-classic-main-left) !important;
+  right: var(--cv-classic-main-right) !important;
+  top: var(--cv-main-top) !important;
+  bottom: var(--cv-main-bottom) !important;
 }
 
 html[data-cv-variant="minimal"] [data-cv-layout="classic"]
@@ -79,9 +79,16 @@ html[data-cv-variant="minimal"] [data-cv-layout="classic"]
 
 html[data-cv-variant="timeline"] [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main] {
-  left: 21mm !important;
-  right: 19mm !important;
-  top: 16mm !important;
+  left: max(0mm, calc(var(--cv-classic-main-left) - 11mm)) !important;
+  right: var(--cv-classic-main-right) !important;
+  top: var(--cv-main-top) !important;
+  bottom: var(--cv-main-bottom) !important;
+}
+
+html[data-cv-variant="timeline"] [data-cv-layout="classic"]
+  :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main]
+  > div:has([data-cv-header]) {
+  padding-left: 11mm;
 }
 
 html[data-cv-variant="timeline"] [data-cv-layout="classic"]
@@ -222,7 +229,7 @@ html[data-cv-variant="executive"] [data-cv-layout="modern"] [data-cv-page="0"]
 
 html[data-cv-variant="editorial"] [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page]) > [data-cv-accent="page"] {
-  left: 21mm !important;
+  left: max(0mm, calc(var(--cv-classic-main-left) - 3mm)) !important;
   right: auto !important;
   top: 19mm !important;
   width: var(--dossier-line-thickness) !important;
@@ -231,10 +238,10 @@ html[data-cv-variant="editorial"] [data-cv-layout="classic"]
 
 html[data-cv-variant="editorial"] [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main] {
-  left: 30mm !important;
-  right: 22mm !important;
-  top: 20mm !important;
-  bottom: 18mm !important;
+  left: var(--cv-classic-main-left) !important;
+  right: var(--cv-classic-main-right) !important;
+  top: var(--cv-main-top) !important;
+  bottom: var(--cv-main-bottom) !important;
 }
 
 /*

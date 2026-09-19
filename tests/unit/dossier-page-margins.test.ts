@@ -29,6 +29,8 @@ const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta
 const control = read("src/components/dossier/DossierPageMarginsControl.tsx");
 const cvPortal = read("src/components/cv/CvTextAlignmentPortal.tsx");
 const cvCanvas = read("src/components/cv/CvCanvas.tsx");
+const cvLayoutVariants = read("src/components/cv/layout-variants.css");
+const cvLayoutOptions = read("src/components/cv/layout-options.css");
 const letterCanvas = read("src/components/letter/LetterCanvas.tsx");
 const letterControls = read("src/components/letter/LetterLayoutControls.tsx");
 const letterLayout = read("src/components/letter/layout-system.ts");
@@ -56,6 +58,26 @@ describe("configurable CV and motivation-letter page margins", () => {
     const frame = cvFrameFor("klassisch");
     const expected = cvDefaultContentBox(frame, 0, "classic");
     expect(cvContentBox(frame, 0, "classic")).toEqual(expected);
+  });
+
+  test("all CV layout variants use the resolved page-margin edges", () => {
+    expect(cvCanvas).toContain('"--cv-classic-main-left"');
+    expect(cvCanvas).toContain('"--cv-classic-main-right"');
+    expect(cvLayoutVariants).toContain("left: var(--cv-classic-main-left) !important;");
+    expect(cvLayoutVariants).toContain("right: var(--cv-classic-main-right) !important;");
+    expect(cvLayoutVariants).toContain(
+      "left: max(0mm, calc(var(--cv-classic-main-left) - 11mm)) !important;",
+    );
+    expect(cvLayoutOptions).toContain(
+      "right: max(0mm, calc(var(--cv-classic-main-right) - 11mm)) !important;",
+    );
+    for (const staleRule of [
+      "left: 24mm !important;",
+      "left: 30mm !important;",
+      "right: 22mm !important;",
+    ]) {
+      expect(cvLayoutVariants).not.toContain(staleRule);
+    }
   });
 
   test("CV custom margins respect template and chrome collision minimums", () => {

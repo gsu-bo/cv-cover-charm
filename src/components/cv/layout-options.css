@@ -153,7 +153,7 @@ html[data-cv-mirrored="true"][data-cv-variant="minimal"]
   [data-cv-page]
   > [data-cv-accent="page"] {
   left: auto !important;
-  right: 24mm !important;
+  right: var(--cv-classic-main-right) !important;
 }
 
 html[data-cv-mirrored="true"][data-cv-variant="minimal"]
@@ -178,8 +178,8 @@ html[data-cv-mirrored="true"][data-cv-variant="timeline"]
   [data-cv-layout="classic"]
   [data-cv-page]
   > [data-cv-main] {
-  left: 19mm !important;
-  right: 21mm !important;
+  left: var(--cv-classic-main-left) !important;
+  right: max(0mm, calc(var(--cv-classic-main-right) - 11mm)) !important;
 }
 
 html[data-cv-mirrored="true"][data-cv-variant="timeline"]
@@ -195,6 +195,15 @@ html[data-cv-mirrored="true"][data-cv-variant="timeline"]
   [data-cv-page]
   > [data-cv-main]
   > div:not(:has([data-cv-header])) {
+  padding-left: 0 !important;
+  padding-right: 11mm !important;
+}
+
+html[data-cv-mirrored="true"][data-cv-variant="timeline"]
+  [data-cv-layout="classic"]
+  [data-cv-page]
+  > [data-cv-main]
+  > div:has([data-cv-header]) {
   padding-left: 0 !important;
   padding-right: 11mm !important;
 }
@@ -223,22 +232,22 @@ html[data-cv-mirrored="true"][data-cv-variant="editorial"]
   [data-cv-page]
   > [data-cv-accent="page"] {
   left: auto !important;
-  right: 21mm !important;
+  right: max(0mm, calc(var(--cv-classic-main-right) - 3mm)) !important;
 }
 
 html[data-cv-mirrored="true"][data-cv-variant="editorial"]
   [data-cv-layout="classic"]
   [data-cv-page]
   > [data-cv-main] {
-  left: 22mm !important;
-  right: 30mm !important;
+  left: var(--cv-classic-main-right) !important;
+  right: var(--cv-classic-main-left) !important;
 }
 
 html[data-cv-mirrored="true"][data-cv-variant="editorial"]
   [data-cv-layout="classic"]
   [data-cv-page="0"]::after {
   right: auto !important;
-  left: 22mm !important;
+  left: var(--cv-classic-main-right) !important;
 }
 
 /* Decorative intensity deliberately has no layout-specific rule here. M5.6

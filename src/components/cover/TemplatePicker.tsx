@@ -14,11 +14,11 @@ import {
   recommendsStackedContactHeader,
 } from "@/lib/template-chrome";
 import {
-  CV_LAYOUTS,
+  CV_LAYOUT_PICKER_OPTIONS,
+  getCvInfoPosition,
   getCvLayoutChoice,
-  getCvLayoutMirror,
+  setCvInfoPosition,
   setCvLayout,
-  setCvLayoutMirror,
   subscribeCvLayoutChoice,
   type CvLayoutId,
 } from "@/components/cv/layout";
@@ -39,10 +39,14 @@ type Props = {
   onChange: (id: TemplateId) => void;
 };
 
-function LayoutPreview({ id }: { id: CvLayoutId }) {
+function LayoutPreview({ id, mirrored = false }: { id: CvLayoutId; mirrored?: boolean }) {
   if (id === "modern") {
     return (
-      <span className="flex h-9 w-full overflow-hidden rounded border border-foreground/15 bg-background">
+      <span
+        className={`flex h-9 w-full overflow-hidden rounded border border-foreground/15 bg-background ${
+          mirrored ? "flex-row-reverse" : ""
+        }`}
+      >
         <span className="w-[30%] bg-foreground/10" />
         <span className="flex flex-1 flex-col gap-1 p-1.5">
           <span className="h-1.5 w-2/3 rounded bg-foreground/55" />
@@ -119,12 +123,16 @@ function LayoutPreview({ id }: { id: CvLayoutId }) {
   );
 }
 
-function mirrorHint(layout: CvLayoutId): string {
-  if (layout === "modern" || layout === "executive") return "Sidebar rechts, Main links";
-  if (layout === "timeline") return "Zeitachse und Datumsseite nach rechts";
-  if (layout === "editorial") return "Akzent, Foto und Datumsrand tauschen die Seite";
-  if (layout === "minimal") return "Foto, Signatur und Datumsseite tauschen die Seite";
-  return "Foto und Datumsseite tauschen die Seite";
+function mirrorHint(layout: CvLayoutId, mirrored: boolean): string {
+  if (layout === "modern" || layout === "executive") {
+    return mirrored ? "Sidebar rechts, Hauptspalte links" : "Sidebar links, Hauptspalte rechts";
+  }
+  if (layout === "timeline") return mirrored ? "Zeitachse rechts" : "Zeitachse links";
+  if (layout === "editorial") {
+    return mirrored ? "Akzent und Datumsrand rechts" : "Akzent und Datumsrand links";
+  }
+  if (layout === "minimal") return mirrored ? "Signatur rechts" : "Signatur links";
+  return mirrored ? "Foto und Datumsseite rechts" : "Foto und Datumsseite links";
 }
 
 /** Brand-new dossiers still get a predictable per-template default. */
@@ -173,7 +181,12 @@ export function TemplatePicker({ value, onChange }: Props) {
     getCvLayoutChoice,
     () => "classic",
   );
-  const mirrored = useSyncExternalStore(subscribeCvLayoutChoice, getCvLayoutMirror, () => false);
+  const infoPosition = useSyncExternalStore(
+    subscribeCvLayoutChoice,
+    getCvInfoPosition,
+    () => "standard" as const,
+  );
+  const mirrored = infoPosition === "mirrored";
   const [onCvPage, setOnCvPage] = useState(false);
 
   useEffect(() => {
@@ -234,13 +247,18 @@ export function TemplatePicker({ value, onChange }: Props) {
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            {CV_LAYOUTS.map((layout) => {
-              const active = cvLayout === layout.id;
+            {CV_LAYOUT_PICKER_OPTIONS.map((option) => {
+              const active =
+                cvLayout === option.layout &&
+                (option.infoPosition === undefined || option.infoPosition === infoPosition);
               return (
                 <button
-                  key={layout.id}
+                  key={option.key}
                   type="button"
-                  onClick={() => setCvLayout(layout.id)}
+                  onClick={() => {
+                    setCvLayout(option.layout);
+                    if (option.infoPosition) setCvInfoPosition(option.infoPosition);
+                  }}
                   aria-pressed={active}
                   className={`flex flex-col gap-2 rounded-md border p-2 text-left transition ${
                     active
@@ -248,11 +266,11 @@ export function TemplatePicker({ value, onChange }: Props) {
                       : "border-input hover:border-foreground/40"
                   }`}
                 >
-                  <LayoutPreview id={layout.id} />
+                  <LayoutPreview id={option.layout} mirrored={option.infoPosition === "mirrored"} />
                   <span>
-                    <span className="block text-xs font-semibold">{layout.name}</span>
+                    <span className="block text-xs font-semibold">{option.name}</span>
                     <span className="block text-[11px] leading-tight text-muted-foreground">
-                      {layout.description}
+                      {option.description}
                     </span>
                   </span>
                 </button>
@@ -264,11 +282,11 @@ export function TemplatePicker({ value, onChange }: Props) {
             <input
               type="checkbox"
               checked={mirrored}
-              onChange={(e) => setCvLayoutMirror(e.target.checked)}
+              onChange={(e) => setCvInfoPosition(e.target.checked ? "mirrored" : "standard")}
             />
             <span>
               <span className="font-medium">Spiegelverkehrt</span>
-              <span className="ml-1 text-muted-foreground">{mirrorHint(cvLayout)}</span>
+              <span className="ml-1 text-muted-foreground">{mirrorHint(cvLayout, mirrored)}</span>
             </span>
           </label>
         </div>
