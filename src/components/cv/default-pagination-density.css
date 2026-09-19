@@ -93,3 +93,19 @@ html[data-cv-variant="editorial"]
   [data-cv-entry-title] {
   line-height: 1.13 !important;
 }
+
+/*
+ * Citrus keeps its title block immediately below the adjustable shared header.
+ * --cv-main-top includes the generic 21 mm content-clearance budget for the
+ * normal contact header (9 mm structural clearance + 12 mm global gap). Citrus
+ * owns a compact hero and only needs 2 mm after the header, so recover 19 mm
+ * here instead of hard-coding a header height. The max() keeps header-less or
+ * compact legacy states at a safe historical floor. Measurement and rendered
+ * page use the exact same rule so pagination stays deterministic.
+ */
+html[data-dossier-template="citrus"]
+  [data-dossier-document="cv"][data-cv-template="citrus"][data-cv-layout]
+  :is([data-cv-page="0"], [data-cv-measure-page])
+  [data-cv-main] {
+  top: max(14mm, calc(var(--cv-main-top) - 19mm)) !important;
+}

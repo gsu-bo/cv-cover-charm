@@ -270,6 +270,7 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
         },
       },
       TEMPLATES[0],
+      TEMPLATES[2],
     ];
 
     for (const template of motifTemplates) {
@@ -278,6 +279,7 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
       const motifLayers = sheet.locator("[data-dossier-sheet-motif]");
       expect(await motifLayers.count(), `${template.id} should expose decorative motif layers`).toBeGreaterThan(0);
       const name = sheet.locator("[data-cv-name]").first();
+      let zeroShot: Buffer | null = null;
 
       for (const percent of [0, 25, 50, 100]) {
         await setMotifPercent(slider, percent);
@@ -286,6 +288,15 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
           .toBeCloseTo(percent / 100, 2);
         await expect(slider).toHaveValue(String(percent));
         expect(await name.evaluate((node) => getComputedStyle(node).opacity)).toBe("1");
+        if (percent === 0) zeroShot = await sheet.screenshot({ animations: "disabled" });
+        if (percent === 100) {
+          const fullShot = await sheet.screenshot({ animations: "disabled" });
+          expect(zeroShot, `${template.id} should capture its zero-motif state`).not.toBeNull();
+          expect(
+            hash(fullShot),
+            `${template.id} should change visibly between 0% and 100% motif strength`,
+          ).not.toBe(hash(zeroShot!));
+        }
       }
     }
 
