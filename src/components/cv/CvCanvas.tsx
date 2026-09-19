@@ -111,13 +111,23 @@ export function CvCanvas({
     () => resolveTemplateChromeOptions(design.template, design.colors, chromeOptions),
     [chromeOptions, design.colors, design.template],
   );
+  const canvasChromeOptions = useMemo<DossierChromeOptions>(() => {
+    if (design.template !== "terracotta" || resolvedChromeOptions.headerMode !== "contact") {
+      return resolvedChromeOptions;
+    }
+    // Kolumne intentionally hides the shared contact copy and presents these
+    // fields in its sidebar. Keep the same contact-header geometry, but tell the
+    // body de-duplication path that the hidden chrome does not own these fields.
+    return {
+      ...resolvedChromeOptions,
+      headerShowAddress: false,
+      headerShowPhone: false,
+      headerShowEmail: false,
+    };
+  }, [design.template, resolvedChromeOptions]);
   const data = useMemo(
-    () =>
-      // Kolumne deliberately hides the shared CV contact header and owns the
-      // contact block in its sidebar. Generic contact-mode de-duplication would
-      // otherwise blank address/phone/email before that sidebar can render them.
-      design.template === "terracotta" ? props.data : cvBodyData(props.data, resolvedChromeOptions),
-    [design.template, props.data, resolvedChromeOptions],
+    () => cvBodyData(props.data, canvasChromeOptions),
+    [canvasChromeOptions, props.data],
   );
 
   // Layout defaults are template-aware, but an explicit student choice remains
@@ -138,8 +148,8 @@ export function CvCanvas({
   }, [design.template]);
 
   const frame = cvFrameFor(design.template);
-  const classicBox = cvContentBox(frame, 0, "classic", design.sidebarPct, resolvedChromeOptions);
-  const modernBox = cvContentBox(frame, 0, "modern", design.sidebarPct, resolvedChromeOptions);
+  const classicBox = cvContentBox(frame, 0, "classic", design.sidebarPct, canvasChromeOptions);
+  const modernBox = cvContentBox(frame, 0, "modern", design.sidebarPct, canvasChromeOptions);
   const primary = design.colors.primary ?? design.colors.accent ?? design.colors.ink ?? "#111111";
   const secondary = design.colors.secondary ?? design.colors.accent ?? primary;
   const tertiary = design.colors.tertiary ?? design.colors.accent ?? secondary;
@@ -180,14 +190,14 @@ export function CvCanvas({
         {...props}
         data={data}
         design={design}
-        chromeOptions={resolvedChromeOptions}
+        chromeOptions={canvasChromeOptions}
         chromeContact={resolvedContact}
       />
       {!props.exportMode ? (
         <CvTextAlignmentPortal
           template={design.template}
           sidebarPct={design.sidebarPct}
-          chromeOptions={resolvedChromeOptions}
+          chromeOptions={canvasChromeOptions}
           accentColor={design.colors.accent ?? secondary}
         />
       ) : null}
