@@ -11,6 +11,7 @@ import {
 } from "@/components/cover/CoverForm";
 import { CoverCanvas, type Point } from "@/components/cover/CoverCanvas";
 import { TemplatePicker } from "@/components/cover/TemplatePicker";
+import { useTemplateQaTemplateSwitch } from "@/lib/template-qa-switch";
 import { ColorChooser } from "@/components/cover/ColorChooser";
 import { ScaledPreview } from "@/components/cover/ScaledPreview";
 import { ThemeToggle } from "@/components/cover/ThemeToggle";
@@ -258,6 +259,7 @@ function Titelblatt() {
   );
   const [data, setData] = useState<CoverData>(emptyData);
   const [template, setTemplate] = useState<TemplateId>(DEFAULTS.TEMPLATE);
+  useTemplateQaTemplateSwitch(template, setTemplate, "both");
   const [colorsByTemplate, setColorsByTemplate] =
     useState<Record<TemplateId, Record<string, string>>>(allDefaultColors);
   const [layoutByTemplate, setLayoutByTemplate] =

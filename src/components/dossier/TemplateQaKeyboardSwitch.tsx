@@ -1,7 +1,5 @@
 import { useEffect } from "react";
-import { TEMPLATES } from "@/components/cover/types";
-
-const TEMPLATE_DESCRIPTIONS = new Set(TEMPLATES.map((template) => template.description));
+import { dispatchTemplateQaTemplateStep } from "@/lib/template-qa-switch";
 const SWITCH_ID = "template-qa-keyboard-switch";
 const DEVTOOLS_CODE = "555";
 const OFFSET_STORAGE_KEY = "cv-cover-charm:qa-layout-offsets:v1";
@@ -52,12 +50,6 @@ type OffsetMap = Record<string, Offset>;
 function editableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
   return Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
-}
-
-function templateButtons(): HTMLButtonElement[] {
-  return Array.from(document.querySelectorAll<HTMLButtonElement>("button[aria-pressed][title]")).filter(
-    (button) => TEMPLATE_DESCRIPTIONS.has(button.title),
-  );
 }
 
 function readOffsets(): OffsetMap {
@@ -133,7 +125,17 @@ export function TemplateQaKeyboardSwitch() {
     button.id = SWITCH_ID;
     button.type = "button";
     button.dataset.templateQaSwitch = "true";
-    button.textContent = "Dev Tools";
+    button.innerHTML = `
+      <span data-editor-menu-label class="flex min-w-0 items-center gap-2">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
+          class="h-4 w-4 shrink-0">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94L14.7 6.3z"></path>
+        </svg>
+        <span data-template-qa-label>Dev Tools</span>
+      </span>
+      <span class="text-xs text-muted-foreground">Ctrl + ←/→</span>
+    `;
     button.title = "QA-Tools aktivieren";
     button.className =
       "flex w-full items-center justify-between border-t px-4 py-3 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground";
@@ -188,7 +190,8 @@ export function TemplateQaKeyboardSwitch() {
       active = true;
       document.documentElement.dataset.templateQaActive = "true";
       button.dataset.templateQaActive = "true";
-      button.textContent = "Dev Tools ✓";
+      const label = button.querySelector<HTMLElement>("[data-template-qa-label]");
+      if (label) label.textContent = "Dev Tools ✓";
       button.title = "QA aktiv: Ctrl+←/→ Vorlage · Dokumentblöcke ziehen";
       applyStoredOffsets();
     };
@@ -267,27 +270,27 @@ export function TemplateQaKeyboardSwitch() {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (!active) return;
+
+      // Template stepping is a global QA command. Handle it before the editable
+      // target guard so a focused text field cannot silently disable the tool.
+      if (
+        event.ctrlKey &&
+        !event.altKey &&
+        !event.metaKey &&
+        !event.shiftKey &&
+        (event.key === "ArrowLeft" || event.key === "ArrowRight")
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        dispatchTemplateQaTemplateStep(event.key === "ArrowRight" ? 1 : -1);
+        requestAnimationFrame(applyStoredOffsets);
+        return;
+      }
+
       if (editableTarget(event.target)) return;
 
       if (event.key === "Escape") {
         selectElement(null);
-        return;
-      }
-
-      if (event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey) {
-        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-        const buttons = templateButtons();
-        if (buttons.length < 2) return;
-        const currentIndex = buttons.findIndex(
-          (candidate) => candidate.getAttribute("aria-pressed") === "true",
-        );
-        if (currentIndex < 0) return;
-        const delta = event.key === "ArrowRight" ? 1 : -1;
-        const nextIndex = (currentIndex + delta + buttons.length) % buttons.length;
-        event.preventDefault();
-        event.stopPropagation();
-        buttons[nextIndex]?.click();
-        requestAnimationFrame(applyStoredOffsets);
         return;
       }
 
