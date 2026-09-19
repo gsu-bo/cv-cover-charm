@@ -257,6 +257,7 @@ export async function applyDossierChromeToDocx(
       .replace(/<w:(?:headerReference|footerReference|titlePg)\b[^>]*\/>/g, "");
     const references: string[] = [];
     const warmRecipe = String(document.design.template) === "freundlich";
+    const citrusRecipe = String(document.design.template) === "citrus";
     if (warmRecipe) {
       const surfaces = WARM_RECIPE_SURFACES[scope];
       if (options.footerMode !== "compact") {
@@ -367,11 +368,12 @@ export async function applyDossierChromeToDocx(
         dossierHeaderContentTopMmForOptions(options, 0),
         dossierHeaderContentTopMmForOptions(options, 1),
       );
-      // Warm's reviewed recipe already supplies its own first-page masthead.
-      // With the intentional 32 mm contact header, LibreOffice sits exactly on
-      // a page-break boundary. Reclaim 0.35 mm of body safety gap for the CV
-      // only; the 32 mm visible header itself is unchanged.
-      const minTop = twips(warmRecipe && scope === "cv" ? chromeTopMm - 0.35 : chromeTopMm);
+      // Template-specific DOCX recipes can already provide part of the visual
+      // separation below the 32 mm header. Keep the visible header unchanged
+      // and only reclaim redundant body safety space in the CV section.
+      const cvTopAllowanceMm =
+        scope === "cv" ? (warmRecipe ? 0.35 : citrusRecipe ? 8 : 0) : 0;
+      const minTop = twips(chromeTopMm - cvTopAllowanceMm);
       properties = properties.replace(
         /w:top="(\d+)"/,
         (_m, value) => `w:top="${Math.max(Number(value), minTop)}"`,
