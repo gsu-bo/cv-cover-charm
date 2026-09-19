@@ -19,7 +19,13 @@ export const SAMPLE_LOCATION = "Hubersdorf";
 export const SAMPLE_POSTAL_LOCATION = "4535 Hubersdorf";
 export const SAMPLE_DATE = "15.11.2026";
 
-export const RETIRED_TEMPLATE_IDS = new Set(["edelBlockig", "sonnig", "warm4", "warm5"]);
+export const RETIRED_TEMPLATE_IDS = new Set([
+  "edelBlockig",
+  "sonnig",
+  "warm4",
+  "warm5",
+  "frame",
+]);
 
 export const PRODUCT_TEMPLATES = [
   ...TEMPLATES.filter((template) => !RETIRED_TEMPLATE_IDS.has(template.id as string)).map(
@@ -28,6 +34,10 @@ export const PRODUCT_TEMPLATES = [
   ...FRESH_TEMPLATE_REGISTRY.filter(
     (template) => !RETIRED_TEMPLATE_IDS.has(template.id as string),
   ).map((template) => ({ id: template.id, name: template.name })),
+  // Diagonal deliberately lives outside the historical Fresh registry, but is
+  // an active standalone product template and must remain in all 39-template
+  // release galleries after Frame's complete retirement.
+  { id: "diagonal", name: "Diagonal" },
   { id: "edelDark", name: "Edel Dark" },
 ];
 
@@ -189,7 +199,15 @@ export function assertGalleryCatalog() {
   expect(GALLERY_CASES).toHaveLength(39);
   expect(GALLERY_CASES.at(-1)?.label).toBe("Edel Dark");
   for (const retiredId of RETIRED_TEMPLATE_IDS) expect(galleryIds).not.toContain(retiredId);
-  for (const requiredId of ["edel", "edelDark", "warm2", "warm3", "verlauf2", "verlauf3"]) {
+  for (const requiredId of [
+    "edel",
+    "edelDark",
+    "diagonal",
+    "warm2",
+    "warm3",
+    "verlauf2",
+    "verlauf3",
+  ]) {
     expect(galleryIds).toContain(requiredId);
   }
   expect(new Set(galleryIds).size).toBe(39);
