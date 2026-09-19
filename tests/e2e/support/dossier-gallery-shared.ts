@@ -184,7 +184,7 @@ export function assertCanonicalDossier(stored: CanonicalDossier) {
 
 export function assertGalleryCatalog() {
   const galleryIds = PRODUCT_TEMPLATES.map(({ id }) => id as string);
-  expect(FRESH_TEMPLATE_REGISTRY).toHaveLength(22);
+  expect(FRESH_TEMPLATE_REGISTRY).toHaveLength(21);
   expect(PRODUCT_TEMPLATES).toHaveLength(39);
   expect(GALLERY_CASES).toHaveLength(39);
   expect(GALLERY_CASES.at(-1)?.label).toBe("Edel Dark");
