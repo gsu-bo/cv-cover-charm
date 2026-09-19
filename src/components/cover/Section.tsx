@@ -4,6 +4,8 @@ type Props = {
   title: string;
   open: boolean;
   onToggle: () => void;
+  /** Optional visual order inside an editor group. */
+  order?: number;
   /** Kurzinfo rechts im Kopf, z. B. "5 / 7 ausgefüllt". */
   hint?: string;
   action?: ReactNode;
@@ -12,7 +14,13 @@ type Props = {
 
 type FormGroup = "content" | "design" | "advanced";
 
-const DESIGN_SECTIONS = new Set(["Vorlage", "Farben", "Schrift", "Schrift und Layout", "Header & Footer"]);
+const DESIGN_SECTIONS = new Set([
+  "Vorlage",
+  "Farben",
+  "Schrift",
+  "Schrift und Layout",
+  "Header & Footer",
+]);
 const ADVANCED_SECTIONS = new Set(["Layout", "PDF-Angaben", "Rubriken anordnen"]);
 
 function formGroup(title: string): FormGroup {
@@ -31,7 +39,7 @@ function groupMarker(title: string): string | null {
 }
 
 /** Aufklappbarer Abschnitt für die gemeinsame Dossier-Seitenleiste. */
-export function Section({ title, open, onToggle, hint, action, children }: Props) {
+export function Section({ title, open, onToggle, order, hint, action, children }: Props) {
   const id = useId();
   const group = formGroup(title);
   const marker = groupMarker(title);
@@ -42,6 +50,7 @@ export function Section({ title, open, onToggle, hint, action, children }: Props
       data-editor-section-title={title}
       data-form-group={group}
       className="overflow-hidden rounded-lg border bg-background"
+      style={order === undefined ? undefined : { order }}
     >
       <div className="flex items-center gap-2 pr-2 sm:pr-3">
         <button

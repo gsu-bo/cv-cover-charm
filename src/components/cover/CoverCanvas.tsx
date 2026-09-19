@@ -45,13 +45,13 @@ function sharedDossierBlockFont(blocks: Block[]): FontKey | null {
  *
  * A user-supplied Kontakt label remains authoritative.
  */
-function normalizedFooterBlocks(blocks: Block[], data: CoverData): Block[] {
-  const hasCustomContactLabel = Boolean(data.labelKontakt?.trim());
+function normalizedFooterBlocks(blocks: Block[], contactLabel: string): Block[] {
+  const hasCustomContactLabel = Boolean(contactLabel.trim());
 
   return blocks.map((block) => {
     if (block.kind !== "text") return block;
 
-    if (block.id === "kontaktTitel" && !hasCustomContactLabel) {
+    if (block.id === "kontaktTitel" && !hasCustomContactLabel && block.lines.length > 0) {
       return { ...block, lines: ["Kontakt"] };
     }
 
@@ -117,10 +117,13 @@ export const CoverCanvas = forwardRef<HTMLDivElement, Props>(function CoverCanva
   const { editable = true, drawing = false, fontScale = 1 } = rest;
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const renderBlocks = useMemo(
-    () => normalizedFooterBlocks(blocks, data),
+    () => normalizedFooterBlocks(blocks, data.labelKontakt),
     [blocks, data.labelKontakt],
   );
   const automaticFooterPair = usesAutomaticFooterPair(renderBlocks);
+  const synchronizeFooterPair =
+    automaticFooterPair &&
+    renderBlocks.some((block) => block.id === "kontaktTitel" && block.lines.length > 0);
 
   const setCanvasRef = (node: HTMLDivElement | null) => {
     canvasRef.current = node;
@@ -159,7 +162,7 @@ export const CoverCanvas = forwardRef<HTMLDivElement, Props>(function CoverCanva
    * `usesAutomaticFooterPair` above.
    */
   useLayoutEffect(() => {
-    if (!automaticFooterPair) return;
+    if (!synchronizeFooterPair) return;
     const root = canvasRef.current;
     if (!root) return;
 
@@ -197,7 +200,7 @@ export const CoverCanvas = forwardRef<HTMLDivElement, Props>(function CoverCanva
         attachmentsBody.style.removeProperty("top");
       }
     };
-  }, [automaticFooterPair, fontScale, renderBlocks, template]);
+  }, [fontScale, renderBlocks, synchronizeFooterPair, template]);
 
   // Die Titelblatt-Route trägt eine bewusst gewählte globale Schrift bereits
   // in alle Standardblöcke ein. Ein von der Familienvorgabe abweichender

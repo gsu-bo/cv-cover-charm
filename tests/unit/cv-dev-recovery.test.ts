@@ -23,6 +23,8 @@ test("CV template state stays neutral while missing and legacy section rules ren
   expect(route).not.toContain('["short", "Kurz"]');
   expect(route).toContain('["full", "Ganze Breite"]');
   expect(route).toContain('["none", "Keine"]');
+  expect(canvas).toContain("data-cv-heading-rule={headingRule}");
+  expect(userTypographyCss).toContain('[data-cv-heading-rule="none"]');
 });
 
 test("document title has independent persisted style controls in preview/PDF renderer", () => {
@@ -86,4 +88,13 @@ test("explicit typography controls outrank template defaults without breaking th
 
 test("demo CV no longer adds a redundant subtitle below the candidate name", () => {
   expect(DEMO_CV.person.untertitel).toBe("");
+});
+
+test("optional personal details are separate, left-aligned and not prefilled", () => {
+  expect(DEMO_CV.person.nationalitaet).toBe("");
+  expect(canvas).not.toContain('angaben.join(" · ")');
+  expect(canvas).toContain("{angaben.map((line) => (");
+  expect(canvas).toContain('textAlign: "left"');
+  expect(route).toContain('order={editorSectionOrder("person")}');
+  expect(route).toContain("order={editorSectionOrder(key)}");
 });

@@ -4,6 +4,7 @@ import { FONT_STACKS } from "./types";
 import { resolveColor } from "./layouts";
 import { ShapeElement } from "./ShapeElement";
 import { resolveLayout } from "./resolve";
+import { clampBlockDragPosition } from "./drag-bounds";
 import { FRAME, PAGE } from "@/default-config";
 
 const MM = 96 / 25.4; // px pro mm bei 96dpi
@@ -301,9 +302,16 @@ export function BlockLayer({
         detachBlocksDependingOn(block.id);
         detachedDependents = true;
       }
+      const position = clampBlockDragPosition({
+        id: block.id,
+        x: ox + dx,
+        y: oy + dy,
+        width: block.style.w,
+        height: heightMm,
+      });
       onMove(block.id, {
-        x: Math.round(Math.max(0, Math.min(PAGE_W_MM - block.style.w, ox + dx)) * 10) / 10,
-        y: Math.round(Math.max(0, Math.min(PAGE_H_MM - heightMm, oy + dy)) * 10) / 10,
+        x: Math.round(position.x * 10) / 10,
+        y: Math.round(position.y * 10) / 10,
         ...(block.style.follows ? { follows: null } : {}),
         ...(block.style.above ? { above: null } : {}),
         ...(block.style.anchorBottom ? { anchorBottom: false } : {}),
