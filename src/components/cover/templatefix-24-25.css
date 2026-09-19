@@ -87,11 +87,11 @@ html[data-dossier-template="forestFlow"]
 html[data-dossier-template="forestFlow"]
   [data-dossier-document="cover"]
   [data-fresh-cover-field="secondary"] {
-  left: 52mm !important;
+  left: 52.6mm !important;
   right: 0 !important;
   top: 0 !important;
   bottom: auto !important;
-  width: 158mm !important;
+  width: 157.4mm !important;
   height: 82mm !important;
   border-radius: 0 0 0 38mm !important;
   opacity: 0.3 !important;
@@ -99,14 +99,18 @@ html[data-dossier-template="forestFlow"]
   transform: none !important;
 }
 
+/* Keep the dark rail exactly 52 mm wide at every y-position. The old accent
+ * started at 51 mm and covered the rail for the first 82 mm, making the edge
+ * appear to jump when the accent ended. The seam now lives entirely to the
+ * right of the rail; the canopy starts 0.2 mm behind it to avoid a subpixel gap. */
 html[data-dossier-template="forestFlow"]
   [data-dossier-document="cover"]
   [data-fresh-cover-field="accent"] {
-  left: 51mm !important;
+  left: 52mm !important;
   right: auto !important;
   top: 0 !important;
   bottom: auto !important;
-  width: 1.4mm !important;
+  width: 0.8mm !important;
   height: 82mm !important;
   border-radius: 0 !important;
   opacity: 0.9 !important;
