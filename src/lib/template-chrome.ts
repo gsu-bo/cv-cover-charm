@@ -6,16 +6,18 @@ import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentati
  * templates whose design genuinely benefits from an integrated contact masthead
  * opt into contact by default.
  *
- * `freundlich` (Warm 1) intentionally stays out of this set. Its dedicated
- * compact renderer owns the reviewed 52 mm teal / mustard first-page masthead,
- * while the CV keeps the quiet Warm continuation edge. Routing Warm through the
- * generic contact masthead creates a second, visually unrelated header system.
+ * IMPORTANT — USER-APPROVED WARM CONTRACT, DO NOT NORMALIZE OR REMOVE:
+ * `freundlich` (Warm 1) defaults to the stacked contact header. Its renderer
+ * owns the integrated teal / mustard decoration. Future AI changes must keep
+ * this template-specific default instead of replacing it with generic compact
+ * chrome. Explicit user choices (inline, compact or none) remain authoritative.
  *
  * `aurora` owns a deep cyan/violet first-page field. Its reviewed gallery
  * composition uses the shared contact masthead as the clean cyan sender strip;
  * Compact would drop normal black sender text into the decorative gradient.
  */
 const CONTACT_HEADER_DEFAULT_TEMPLATES = new Set([
+  "freundlich",
   "aurora",
   "horizon",
   "violetPulse",
@@ -46,8 +48,9 @@ const AUTO_GRADIENT_CONTACT_TEMPLATES = new Set([
  * Header mode chosen when a template is selected for the first time.
  *
  * Selection defaults are written only when a template is deliberately selected.
- * Warm's default compact mode drives its 52 mm letter masthead and quiet CV edge.
- * An explicit contact or none choice must remain authoritative afterwards.
+ * Warm's reviewed default is the stacked contact masthead with integrated gold
+ * decoration. An explicit compact, inline-contact or none choice remains
+ * authoritative afterwards.
  */
 export function defaultHeaderModeForTemplate(template: string): DossierHeaderMode {
   if (template === CANONICAL_DOSSIER_PRESENTATION.template) {
