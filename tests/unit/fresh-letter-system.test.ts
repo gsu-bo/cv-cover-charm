@@ -8,9 +8,9 @@ import {
 } from "../../src/components/letter/fresh-letter-system";
 
 describe("Fresh motivation-letter visual system", () => {
-  test("all 22 Fresh templates have one dedicated letter specification", () => {
-    expect(FRESH_TEMPLATE_IDS).toHaveLength(22);
-    expect(Object.keys(FRESH_LETTER_SPECS)).toHaveLength(22);
+  test("all 21 active Fresh templates have one dedicated letter specification", () => {
+    expect(FRESH_TEMPLATE_IDS).toHaveLength(21);
+    expect(Object.keys(FRESH_LETTER_SPECS)).toHaveLength(21);
 
     for (const id of FRESH_TEMPLATE_IDS) {
       const spec = freshLetterSpec(id);
@@ -41,15 +41,13 @@ describe("Fresh motivation-letter visual system", () => {
 
   test("Fresh identity is varied without using cover-sized decoration", () => {
     const archetypes = new Set(FRESH_TEMPLATE_IDS.map((id) => FRESH_LETTER_SPECS[id].archetype));
-    expect(archetypes).toEqual(new Set(["fresh", "sidebar", "band", "frame"]));
+    expect(archetypes).toEqual(new Set(["fresh", "sidebar", "band"]));
 
     for (const id of FRESH_TEMPLATE_IDS) {
       for (const motif of FRESH_LETTER_SPECS[id].motifs) {
         const fullHeightRail = motif.h === LETTER_SHEET_MM.height;
         const restrainedHeaderBand = motif.w >= 180 && motif.h <= 12;
 
-        // Long edge rails and shallow page-width mastheads are deliberate letter
-        // signatures. Other motifs stay compact and can never become cover-scale art.
         if (fullHeightRail || restrainedHeaderBand) continue;
         expect(motif.w * motif.h, `${id}/${motif.id}`).toBeLessThan(1800);
       }
