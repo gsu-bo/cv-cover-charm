@@ -7,7 +7,7 @@ const route = readFileSync(
 );
 
 const resetPositionsOnly = route.match(
-  /const resetPositionsOnly = \(\) => \{([\s\S]*?)\n  \};\n\n  const resetEverything/,
+  /const resetPositionsOnly = \(\) => \{([\s\S]*?)\n {2}\};\n\n {2}const resetEverything/,
 )?.[1];
 
 describe("CV position reset", () => {
