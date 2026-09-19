@@ -120,6 +120,7 @@ jobs:
             files: >-
               tests/e2e/cover-edge-smoke.spec.ts
               tests/e2e/template-cleanup.spec.ts
+              tests/e2e/prism-neon-header-identity.spec.ts
               tests/e2e/gradient-edge-smoke.spec.ts
           - group: fresh-dossier-templates
             files: >-
