@@ -6,7 +6,7 @@ const SWITCH_ID = "template-qa-keyboard-switch";
 const DEVTOOLS_CODE = "555";
 const OFFSET_STORAGE_KEY = "cv-cover-charm:qa-layout-offsets:v1";
 const PAGE_SELECTOR = "[data-letter-page], [data-cv-page]";
-const QA_TARGET_SELECTOR = [
+const QA_TARGETS = [
   "[data-letter-section]",
   "[data-letter-pdf-richtext]",
   "[data-letter-pdf-text]",
@@ -22,7 +22,11 @@ const QA_TARGET_SELECTOR = [
   "[data-dossier-continuation-contact-header]",
   "[data-dossier-compact-header]",
   "[data-dossier-footer]",
-].join(", ");
+] as const;
+const QA_TARGET_SELECTOR = QA_TARGETS.join(", ");
+const QA_ACTIVE_TARGET_SELECTOR = QA_TARGETS.map(
+  (selector) => `html[data-template-qa-active='true'] ${selector}`,
+).join(",\n");
 
 const STABLE_ATTRIBUTES = [
   "data-letter-section",
@@ -133,7 +137,7 @@ export function TemplateQaKeyboardSwitch() {
     const qaStyle = document.createElement("style");
     qaStyle.dataset.templateQaStyle = "true";
     qaStyle.textContent = `
-      html[data-template-qa-active='true'] ${QA_TARGET_SELECTOR} {
+      ${QA_ACTIVE_TARGET_SELECTOR} {
         pointer-events: auto !important;
         cursor: grab !important;
       }
@@ -218,8 +222,14 @@ export function TemplateQaKeyboardSwitch() {
       const move = (moveEvent: PointerEvent) => {
         const rawX = moveEvent.clientX - startX;
         const rawY = moveEvent.clientY - startY;
-        const dx = Math.max(pageRect.left - startRect.left, Math.min(pageRect.right - startRect.right, rawX));
-        const dy = Math.max(pageRect.top - startRect.top, Math.min(pageRect.bottom - startRect.bottom, rawY));
+        const dx = Math.max(
+          pageRect.left - startRect.left,
+          Math.min(pageRect.right - startRect.right, rawX),
+        );
+        const dy = Math.max(
+          pageRect.top - startRect.top,
+          Math.min(pageRect.bottom - startRect.bottom, rawY),
+        );
         finalOffset = { x: startingOffset.x + dx, y: startingOffset.y + dy };
         applyOffset(element, finalOffset);
       };
