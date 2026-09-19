@@ -39,17 +39,16 @@ export function setCvDocumentTitleMarginTopPx(value: number): void {
 
 export function subscribeCvDocumentTitleMarginTop(onChange: () => void): () => void {
   if (typeof window === "undefined") return () => undefined;
-  const refresh = () => {
+  const notify = () => onChange();
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== CV_DOC_TITLE_MARGIN_TOP_STORAGE_KEY) return;
     cached = read();
     onChange();
   };
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === CV_DOC_TITLE_MARGIN_TOP_STORAGE_KEY) refresh();
-  };
-  window.addEventListener(EVENT, refresh);
+  window.addEventListener(EVENT, notify);
   window.addEventListener("storage", onStorage);
   return () => {
-    window.removeEventListener(EVENT, refresh);
+    window.removeEventListener(EVENT, notify);
     window.removeEventListener("storage", onStorage);
   };
 }
