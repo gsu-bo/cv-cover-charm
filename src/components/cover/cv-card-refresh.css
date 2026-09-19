@@ -261,6 +261,17 @@ html[data-dossier-template="verlauf"] [data-dossier-document="cv"] [data-cv-date
 /* -------------------------------------------------------------------------- */
 /* CITRUS — warm open hero + airy body + soft friendly section capsules        */
 /* -------------------------------------------------------------------------- */
+/* The shared card background still contains the title-page's inset paper card.
+ * The refreshed CV already owns one full reading plane below the hero; keeping
+ * both creates the visible sheet-inside-a-sheet seam. Hide only that legacy
+ * card in the CV. Cover and motivation-letter geometry remain unchanged. */
+[data-dossier-document="cv"][data-cv-template="citrus"]
+  [data-cv-background="motif"]
+  [data-dossier-sheet-background="citrus"]
+  > [data-dossier-sheet-card] {
+  display: none !important;
+}
+
 html[data-dossier-template="citrus"] [data-dossier-document="cv"] [data-cv-page="0"] [data-cv-surface] {
   left: 0 !important;
   right: 0 !important;
