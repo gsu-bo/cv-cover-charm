@@ -43,6 +43,28 @@ describe("Warm contact header", () => {
     expect(markup).toContain(contact.email);
   });
 
+  test("uses the requested Warm header height through 80 mm", () => {
+    const markup = renderToStaticMarkup(
+      createElement(DossierHeaderFooterChrome, {
+        scope: "cv",
+        template: "freundlich",
+        colors,
+        contact,
+        options: {
+          ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+          headerMode: "contact",
+          headerTextLayout: "stacked",
+          headerHeightMm: 80,
+          headerGapMm: 4,
+        },
+      }),
+    );
+
+    expect(markup).toContain('data-dossier-header-height-mm="80"');
+    expect(markup).toContain("height:80mm");
+    expect(markup).toContain("data-warm-contact-gold-orb");
+  });
+
   test("does not force Warm decoration into compact, none or continuation headers", () => {
     for (const headerMode of ["compact", "none"] as const) {
       const markup = renderToStaticMarkup(
