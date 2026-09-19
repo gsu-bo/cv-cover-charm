@@ -133,16 +133,6 @@ const COVER: Record<FreshTemplateId, CoverSpec> = {
     heroAlign: "left",
     heroLeftMm: 20,
   },
-  frame: {
-    shapes: [
-      frame("frame-cover-frame", 10, 10, 190, 277, "primary", 0.55),
-      rect("frame-cover-top-mark", 10, 10, 38, 4, "secondary"),
-      rect("frame-cover-bottom-mark", 172, 281, 28, 4, "accent"),
-    ],
-    photoFrame: { kind: "rect", x: 140, y: 50, w: 40, h: 40, stroke: "primary" },
-    heroAlign: "left",
-    heroLeftMm: 20,
-  },
   monoLuxe: {
     shapes: [
       rect("mono-cover-band", 0, 0, 210, 32, "primary"),
