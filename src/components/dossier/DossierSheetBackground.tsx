@@ -279,12 +279,18 @@ function DossierSheetSignature({
     case "edge":
       return (
         <>
-          <div className="absolute inset-y-0 left-0 w-[7mm]" style={{ backgroundColor: primary }} />
           <div
+            data-dossier-signature-part="edge-rail"
+            className="absolute inset-y-0 left-0 w-[7mm]"
+            style={{ backgroundColor: primary }}
+          />
+          <div
+            data-dossier-signature-part="edge-stripe"
             className="absolute inset-y-0 left-[7mm] w-[1.2mm]"
             style={{ backgroundColor: accent, opacity: 0.9 }}
           />
           <div
+            data-dossier-signature-part="edge-rule"
             className="absolute left-[17mm] top-[19mm] h-[1.2mm] w-[18mm]"
             style={{ backgroundColor: secondary }}
           />
@@ -311,10 +317,12 @@ function DossierSheetSignature({
       return (
         <>
           <div
+            data-dossier-signature-part="frame-marker"
             className="absolute left-[9mm] top-[9mm] h-[17mm] w-[2mm]"
             style={{ backgroundColor: accent }}
           />
           <div
+            data-dossier-signature-part="frame-redundant-marker"
             className="absolute bottom-[9mm] right-[9mm] h-[2mm] w-[17mm]"
             style={{ backgroundColor: secondary }}
           />
@@ -367,14 +375,17 @@ function DossierSheetSignature({
       return (
         <>
           <div
+            data-dossier-signature-part="forest-rail"
             className="absolute inset-y-0 left-0 w-[10mm]"
             style={{ backgroundColor: primary }}
           />
           <div
+            data-dossier-signature-part="forest-canopy"
             className="absolute left-[7mm] top-[18mm] h-[30mm] w-[30mm] rounded-full"
             style={{ backgroundColor: secondary, opacity: 0.22 }}
           />
           <div
+            data-dossier-signature-part="forest-flow-line"
             className="absolute left-[18mm] top-[22mm] h-[1.2mm] w-[17mm]"
             style={{ backgroundColor: accent }}
           />

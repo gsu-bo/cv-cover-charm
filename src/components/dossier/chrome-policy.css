@@ -245,7 +245,23 @@ html[data-dossier-template="ribbon"] [data-dossier-document="cover"] [data-block
   box-shadow: inset 0 0.35mm 0 color-mix(in srgb, var(--chrome-paper) 48%, transparent);
 }
 
-/* Cove: one plum masthead with the same coral bay in compact/contact states. */
+/* Cove: the shared header owns the masthead whenever one is enabled. Suppress
+ * the duplicated sheet-top planes in that case, then reuse one coherent coral
+ * bay shape in compact and contact states. With header=none the original Cove
+ * sheet motif remains untouched. */
+:is([data-cv-template="cove"], [data-letter-page][data-letter-template="cove"])
+  :has(
+    [data-dossier-template-chrome="cove"]:is(
+        [data-dossier-effective-header-mode="compact"],
+        [data-dossier-effective-header-mode="contact"]
+      )
+  )
+  [data-dossier-sheet-background="cove"]
+  [data-dossier-sheet-motif]
+  > :is(div:nth-child(1), div:nth-child(2)) {
+  display: none !important;
+}
+
 [data-dossier-template-chrome="cove"][data-dossier-header-custom-surface="false"]
   :is(
     [data-dossier-compact-header],
@@ -253,31 +269,31 @@ html[data-dossier-template="ribbon"] [data-dossier-document="cover"] [data-block
     [data-dossier-continuation-contact-header]
   ) {
   background: var(--chrome-primary) !important;
+  overflow: visible;
 }
 
-[data-dossier-template-chrome="cove"]
-  :is(
-    [data-dossier-compact-header],
-    [data-dossier-contact-header-background],
-    [data-dossier-continuation-contact-header]
-  ) {
-  overflow: hidden;
-}
-
-[data-dossier-template-chrome="cove"]
-  :is(
-    [data-dossier-compact-header],
-    [data-dossier-contact-header-background],
-    [data-dossier-continuation-contact-header]
-  )::after {
+[data-dossier-template-chrome="cove"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header]::after {
   content: "";
   position: absolute;
   right: 0;
   top: 0;
-  width: 52mm;
+  width: 48mm;
+  height: 8mm;
+  border-radius: 0 0 0 8mm;
+  background: var(--chrome-secondary);
+  opacity: 0.94;
+}
+
+[data-dossier-template-chrome="cove"][data-dossier-header-custom-surface="false"]
+  :is([data-dossier-contact-header-background], [data-dossier-continuation-contact-header])::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 54mm;
   height: 100%;
-  min-height: 3mm;
-  border-radius: 0 0 0 13mm;
+  border-radius: 0 0 0 17mm;
   background: var(--chrome-secondary);
   opacity: 0.94;
 }
@@ -375,4 +391,505 @@ html[data-dossier-template="ribbon"] [data-dossier-document="cover"] [data-block
 [data-dossier-template-chrome="edel"] [data-dossier-footer] > * {
   position: relative;
   z-index: 1;
+}
+
+/* -------------------------------------------------------------------------- */
+/* PACKAGE 3 — CONNECTED EDGE / FOREST FLOW / FRAME SIGNATURES                */
+/* -------------------------------------------------------------------------- */
+/*
+ * The motif-opacity wrapper was introduced after several Fresh-template rules
+ * had been written against direct-child nth positions. Those selectors then
+ * resized the wrapper instead of the primitives inside it. Named primitives
+ * keep these three compositions stable and preserve the shared 0–100% motif
+ * control without changing header-selection state.
+ */
+
+/* Restore the full motif canvas after stale direct-child geometry touched it. */
+:is(
+    [data-dossier-sheet-background="edge"],
+    [data-dossier-sheet-background="forestFlow"],
+    [data-dossier-sheet-background="frame"]
+  )
+  > [data-dossier-sheet-motif][data-dossier-sheet-motif] {
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  filter: none !important;
+  transform: none !important;
+  opacity: var(--dossier-motif-opacity, 1) !important;
+}
+
+/* EDGE — dark page rail, short blue spine and signal line meet as one corner. */
+[data-dossier-sheet-background="edge"]
+  [data-dossier-signature-part="edge-rail"] {
+  display: block !important;
+  left: 0 !important;
+  right: auto !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 7mm !important;
+  height: auto !important;
+}
+
+[data-dossier-sheet-background="edge"]
+  [data-dossier-signature-part="edge-stripe"] {
+  display: block !important;
+  left: 7mm !important;
+  right: auto !important;
+  top: 0 !important;
+  bottom: auto !important;
+  width: 1.2mm !important;
+  height: 29mm !important;
+  border-radius: 0 !important;
+}
+
+[data-dossier-sheet-background="edge"]
+  [data-dossier-signature-part="edge-rule"] {
+  display: block !important;
+  left: 7mm !important;
+  right: auto !important;
+  top: 27.8mm !important;
+  bottom: auto !important;
+  width: 36mm !important;
+  height: 1.2mm !important;
+  border-radius: 0 999px 999px 0 !important;
+}
+
+/* The Edge rail no longer occupies the top edge, so contact stays at its
+ * canonical top position instead of retaining the obsolete 9–10 mm offset. */
+[data-letter-page][data-letter-template="edge"]
+  [data-dossier-chrome="letter"]
+  [data-dossier-integrated-contact],
+[data-cv-template="edge"] [data-dossier-integrated-contact] {
+  top: 0 !important;
+}
+
+/* Match the dedicated Fresh letter background to the connected CV signature. */
+[data-letter-fresh-template="edge"][data-letter-fresh-template="edge"]
+  [data-letter-motif="edge-band"] {
+  left: 0 !important;
+  top: 0 !important;
+  width: 7mm !important;
+  height: 297mm !important;
+  border-radius: 0 !important;
+}
+
+[data-letter-fresh-template="edge"][data-letter-fresh-template="edge"]
+  [data-letter-motif="edge-signal"] {
+  left: 7mm !important;
+  top: 0 !important;
+  width: 1.2mm !important;
+  height: 29mm !important;
+  border-radius: 0 !important;
+}
+
+[data-letter-fresh-template="edge"][data-letter-fresh-template="edge"]
+  [data-letter-motif="edge-rule"] {
+  display: block !important;
+  left: 7mm !important;
+  top: 27.8mm !important;
+  width: 36mm !important;
+  height: 1.2mm !important;
+  border-radius: 0 999px 999px 0 !important;
+}
+
+/* FOREST FLOW — the canopy grows out of the rail; its line exits the canopy. */
+[data-dossier-sheet-background="forestFlow"]
+  [data-dossier-signature-part="forest-rail"] {
+  display: block !important;
+  left: 0 !important;
+  right: auto !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 10mm !important;
+  height: auto !important;
+  border-radius: 0 !important;
+}
+
+[data-dossier-sheet-background="forestFlow"]
+  [data-dossier-signature-part="forest-canopy"] {
+  display: block !important;
+  left: 5mm !important;
+  right: auto !important;
+  top: 14mm !important;
+  bottom: auto !important;
+  width: 24mm !important;
+  height: 24mm !important;
+  border-radius: 999px !important;
+  opacity: 0.2 !important;
+}
+
+[data-dossier-sheet-background="forestFlow"]
+  [data-dossier-signature-part="forest-flow-line"] {
+  display: block !important;
+  left: 22mm !important;
+  right: auto !important;
+  top: 32mm !important;
+  bottom: auto !important;
+  width: 25mm !important;
+  height: 1.2mm !important;
+  border-radius: 0 999px 999px 0 !important;
+}
+
+[data-letter-fresh-template="forestFlow"][data-letter-fresh-template="forestFlow"]
+  [data-letter-motif="rail"] {
+  left: 0 !important;
+  top: 0 !important;
+  width: 10mm !important;
+  height: 297mm !important;
+  border-radius: 0 !important;
+}
+
+[data-letter-fresh-template="forestFlow"][data-letter-fresh-template="forestFlow"]
+  [data-letter-motif="soft-orb"] {
+  display: block !important;
+  left: 5mm !important;
+  right: auto !important;
+  top: 14mm !important;
+  width: 24mm !important;
+  height: 24mm !important;
+  border-radius: 999px !important;
+  opacity: 0.2 !important;
+}
+
+[data-letter-fresh-template="forestFlow"][data-letter-fresh-template="forestFlow"]
+  [data-letter-motif="rail-rule"] {
+  display: block !important;
+  left: 22mm !important;
+  top: 32mm !important;
+  width: 25mm !important;
+  height: 1.2mm !important;
+  border-radius: 0 999px 999px 0 !important;
+}
+
+/* Keep contact copy fully on clean paper beside the organic cluster. */
+html[data-dossier-template="forestFlow"]
+  [data-dossier-chrome="cv"]
+  [data-dossier-integrated-contact],
+html[data-dossier-template="forestFlow"]
+  [data-dossier-chrome="cv"]
+  [data-dossier-continuation-contact-header],
+[data-letter-page][data-letter-template="forestFlow"] [data-dossier-integrated-contact],
+[data-letter-page][data-letter-template="forestFlow"] [data-dossier-continuation-contact-header] {
+  left: 34mm !important;
+}
+
+/* FRAME — a hairline page frame plus one marker physically attached to it. */
+[data-dossier-sheet-background="frame"]
+  [data-dossier-signature-part="frame-marker"] {
+  display: block !important;
+  left: 10mm !important;
+  right: auto !important;
+  top: 10mm !important;
+  bottom: auto !important;
+  width: 26mm !important;
+  height: 2mm !important;
+  border-radius: 0 !important;
+  background: var(--cover-secondary) !important;
+  opacity: 0.95 !important;
+}
+
+[data-dossier-sheet-background="frame"]
+  [data-dossier-signature-part="frame-redundant-marker"] {
+  display: none !important;
+}
+
+/* Fresh letters already receive the same structural hairline via ::before.
+ * Keep one attached marker and remove the four-line duplicate construction. */
+[data-letter-fresh-template="frame"][data-letter-fresh-template="frame"]
+  [data-letter-motif] {
+  display: none !important;
+}
+
+[data-letter-fresh-template="frame"][data-letter-fresh-template="frame"]
+  [data-letter-motif="frame-top"] {
+  display: block !important;
+  left: 10mm !important;
+  top: 10mm !important;
+  width: 26mm !important;
+  height: 2mm !important;
+  border-radius: 0 !important;
+  background: var(--cover-secondary) !important;
+  opacity: 0.95 !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* PACKAGE 4 — GLOW / HUMAN / HORIZONT / ORBIT IDENTITY                      */
+/* -------------------------------------------------------------------------- */
+/*
+ * Template-specific top chrome for the four families whose shared mastheads
+ * still read as colour-only bands. The treatment is restricted to default
+ * surfaces, so an explicit user colour remains authoritative. Decorative
+ * layers inherit the shared motif-opacity variable and therefore disappear at
+ * 0% and scale through 25/50/100% without touching header-selection state.
+ *
+ * Prism is intentionally unchanged: its existing navy/royal diagonal masthead
+ * already carries the cover's split-plane language clearly.
+ */
+
+:is(
+    [data-dossier-template-chrome="glow"],
+    [data-dossier-template-chrome="human"],
+    [data-dossier-template-chrome="welle"],
+    [data-dossier-template-chrome="orbit"]
+  )[data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+:is(
+    [data-dossier-template-chrome="glow"],
+    [data-dossier-template-chrome="human"],
+    [data-dossier-template-chrome="welle"],
+    [data-dossier-template-chrome="orbit"]
+  )[data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::before,
+:is(
+    [data-dossier-template-chrome="glow"],
+    [data-dossier-template-chrome="human"],
+    [data-dossier-template-chrome="welle"],
+    [data-dossier-template-chrome="orbit"]
+  )[data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--dossier-motif-opacity, 1);
+}
+
+:is(
+    [data-dossier-template-chrome="glow"],
+    [data-dossier-template-chrome="human"],
+    [data-dossier-template-chrome="welle"],
+    [data-dossier-template-chrome="orbit"]
+  )[data-dossier-header-custom-surface="false"]
+  [data-dossier-continuation-contact-header]
+  > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* GLOW — a warm, diffused field plus one restrained luminous trace echoes the
+ * soft cover capsule without introducing neon colour or reducing contrast. */
+[data-dossier-template-chrome="glow"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  background: linear-gradient(
+    104deg,
+    var(--chrome-primary) 0%,
+    var(--chrome-primary) 64%,
+    color-mix(in srgb, var(--chrome-primary) 72%, var(--chrome-secondary)) 100%
+  ) !important;
+}
+
+[data-dossier-template-chrome="glow"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::before {
+  right: -12mm;
+  top: 50%;
+  width: 58mm;
+  height: 42mm;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--chrome-secondary) 52%, transparent) 0%,
+    color-mix(in srgb, var(--chrome-secondary) 22%, transparent) 48%,
+    transparent 74%
+  );
+  filter: blur(1.2mm);
+  transform: translateY(-50%);
+}
+
+[data-dossier-template-chrome="glow"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::after {
+  right: 15mm;
+  bottom: 2.3mm;
+  width: 34mm;
+  height: 0.7mm;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--chrome-paper) 72%, transparent) 44%,
+    color-mix(in srgb, var(--chrome-secondary) 70%, transparent) 72%,
+    transparent
+  );
+  box-shadow: 0 0 2.6mm color-mix(in srgb, var(--chrome-secondary) 36%, transparent);
+}
+
+/* HUMAN — asymmetric, softly rounded forms turn the dark strip into a calm
+ * organic masthead related to the cover's earthy overlapping shapes. */
+[data-dossier-template-chrome="human"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  background: linear-gradient(
+    108deg,
+    var(--chrome-primary) 0%,
+    var(--chrome-primary) 70%,
+    color-mix(in srgb, var(--chrome-primary) 82%, var(--chrome-secondary)) 100%
+  ) !important;
+}
+
+[data-dossier-template-chrome="human"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::before {
+  right: -8mm;
+  top: -15mm;
+  width: 55mm;
+  height: 39mm;
+  border-radius: 62% 20% 54% 42%;
+  background: color-mix(in srgb, var(--chrome-secondary) 44%, transparent);
+  transform: rotate(-7deg);
+}
+
+[data-dossier-template-chrome="human"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::after {
+  right: 28mm;
+  bottom: -8mm;
+  width: 27mm;
+  height: 16mm;
+  border-radius: 46% 58% 48% 62%;
+  background: color-mix(in srgb, var(--chrome-paper) 18%, transparent);
+  transform: rotate(6deg);
+}
+
+/* HORIZONT (template id: welle) — two quiet horizontal depths create an actual
+ * horizon composition while keeping the masthead open and spacious. */
+[data-dossier-template-chrome="welle"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  background: linear-gradient(
+    90deg,
+    var(--chrome-primary) 0%,
+    color-mix(in srgb, var(--chrome-primary) 88%, var(--chrome-secondary)) 100%
+  ) !important;
+}
+
+[data-dossier-template-chrome="welle"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::before {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3.2mm;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--chrome-secondary) 20%, transparent) 0%,
+    color-mix(in srgb, var(--chrome-secondary) 72%, transparent) 18%,
+    color-mix(in srgb, var(--chrome-secondary) 72%, transparent) 78%,
+    color-mix(in srgb, var(--chrome-secondary) 28%, transparent) 100%
+  );
+}
+
+[data-dossier-template-chrome="welle"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::after {
+  left: 18mm;
+  right: 18mm;
+  bottom: 3.25mm;
+  height: 0.38mm;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--chrome-paper) 64%, transparent) 18%,
+    color-mix(in srgb, var(--chrome-paper) 64%, transparent) 82%,
+    transparent
+  );
+}
+
+/* ORBIT — two cropped rings bring the cover's circular system into the dossier
+ * masthead. Their low-contrast placement at the right keeps contact readable. */
+[data-dossier-template-chrome="orbit"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  background: linear-gradient(
+    102deg,
+    var(--chrome-primary) 0%,
+    var(--chrome-primary) 68%,
+    color-mix(in srgb, var(--chrome-primary) 78%, var(--chrome-secondary)) 100%
+  ) !important;
+}
+
+[data-dossier-template-chrome="orbit"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::before {
+  right: -8mm;
+  top: 50%;
+  width: 42mm;
+  height: 42mm;
+  border: 2.1mm solid color-mix(in srgb, var(--chrome-secondary) 42%, transparent);
+  border-radius: 50%;
+  box-sizing: border-box;
+  transform: translateY(-50%);
+}
+
+[data-dossier-template-chrome="orbit"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::after {
+  right: 25mm;
+  top: 50%;
+  width: 13mm;
+  height: 13mm;
+  border: 0.7mm solid color-mix(in srgb, var(--chrome-accent) 66%, transparent);
+  border-radius: 50%;
+  box-sizing: border-box;
+  transform: translateY(-50%);
 }

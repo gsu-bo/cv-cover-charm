@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { FONT_LABELS, type FontKey } from "@/components/cover/types";
 import {
   DEFAULT_DOSSIER_CHROME_STATE,
@@ -179,7 +179,8 @@ export function DossierChromeControls({
         ? "contact-inline"
         : "contact-stacked"
       : options.headerMode;
-  const headerInlineSeparator = options.headerInlineSeparator ?? "icons";
+  const headerInlineSeparator =
+    options.headerInlineSeparator === "icons" ? "dot" : (options.headerInlineSeparator ?? "dot");
   const continuationHeaderControlValue = options.headerContinuationMode ?? "legacy";
   const contactHeaderVisible =
     options.headerMode === "contact" ||
@@ -196,6 +197,15 @@ export function DossierChromeControls({
     patchDossierChrome(scope, patch);
     onOptionsChange?.(patch);
   };
+
+  // The retired icon separator remains readable in old JSON/localStorage but is
+  // migrated immediately to the supported midpoint variant when the editor opens.
+  useEffect(() => {
+    if (options.headerInlineSeparator !== "icons") return;
+    const patch = { headerInlineSeparator: "dot" as DossierChromeInlineSeparator };
+    patchDossierChrome(scope, patch);
+    onOptionsChange?.(patch);
+  }, [onOptionsChange, options.headerInlineSeparator, scope]);
 
   const headerDefaultHeight = options.headerMode === "contact" ? 22 : 3;
   const headerMin =
@@ -262,8 +272,9 @@ export function DossierChromeControls({
                     headerMode: "contact",
                     headerTextLayout: value === "contact-inline" ? "inline" : "stacked",
                     headerHeightMm: null,
-                    ...(value === "contact-inline" && options.headerInlineSeparator == null
-                      ? { headerInlineSeparator: "icons" as DossierChromeInlineSeparator }
+                    ...(value === "contact-inline" &&
+                    (options.headerInlineSeparator == null || options.headerInlineSeparator === "icons")
+                      ? { headerInlineSeparator: "dot" as DossierChromeInlineSeparator }
                       : {}),
                   });
                   return;
@@ -439,14 +450,12 @@ export function DossierChromeControls({
                         className={selectClass}
                       >
                         <option value="dot">Mittelpunkt ·</option>
-                        <option value="icons">Symbole: Handy + Brief</option>
                         <option value="slash">Schrägstrich /</option>
                         <option value="pipe">Senkrechter Strich |</option>
                         <option value="space">Leerraum (5 Leerzeichen)</option>
                       </select>
                       <span className="mt-1 block text-[11px] font-normal leading-relaxed text-muted-foreground">
-                        Symbole setzt vor Telefon und E-Mail feine einfarbige Icons; die übrigen
-                        Angaben bleiben ruhig mit Mittelpunkt getrennt.
+                        Wähle eine ruhige Trennung für die waagrecht angeordneten Kontaktdaten.
                       </span>
                     </label>
                   ) : null}

@@ -1,11 +1,7 @@
 import "@/components/cover/fresh-templates";
 import { TEMPLATES } from "@/components/cover/types";
 import { patchDossierChrome } from "@/lib/dossier-chrome";
-import {
-  defaultHeaderGapMmForTemplate,
-  defaultHeaderHeightMmForTemplate,
-  defaultHeaderModeForTemplate,
-} from "@/lib/template-chrome";
+import { recommendedHeaderPatchForTemplate } from "@/lib/template-chrome";
 import type { LetterTemplateId } from "./types";
 
 const RETIRED_TEMPLATE_IDS = new Set(["warm4", "warm5"]);
@@ -23,12 +19,8 @@ const baseClass =
 
 export function LetterTemplatePicker({ value, onChange }: Props) {
   const chooseTemplate = (template: LetterTemplateId) => {
-    patchDossierChrome("letter", {
-      headerMode: defaultHeaderModeForTemplate(template),
-      headerHeightMm: defaultHeaderHeightMmForTemplate(template),
-      headerGapMm: defaultHeaderGapMmForTemplate(template),
-      ...(template === "freundlich" ? { headerTextLayout: "stacked" as const } : {}),
-    });
+    const recommendation = recommendedHeaderPatchForTemplate(template);
+    if (recommendation) patchDossierChrome("letter", recommendation);
     onChange(template);
   };
 

@@ -14,6 +14,8 @@ import appCss from "../styles.css?url";
 import editorActionMenuCss from "../components/dossier/editor-action-menu.css?url";
 import humanPolishCss from "../components/dossier/human-polish.css?url";
 import letterAlignmentCss from "../components/letter/letter-alignment.css?url";
+import headerProductionPolishCss from "../components/dossier/header-production-polish.css?url";
+import motifVisibilityCss from "../components/dossier/motif-visibility.css?url";
 import { DossierHyphenationBridge } from "../components/dossier/DossierHyphenationControl";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -131,6 +133,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: letterAlignmentCss,
+      },
+      {
+        rel: "stylesheet",
+        href: headerProductionPolishCss,
+      },
+      {
+        rel: "stylesheet",
+        href: motifVisibilityCss,
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
