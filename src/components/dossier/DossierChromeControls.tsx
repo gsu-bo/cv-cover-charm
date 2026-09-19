@@ -210,7 +210,6 @@ export function DossierChromeControls({
   );
   const headerGap = options.headerGapMm ?? 12;
   const headerContentOffsetY = options.headerContentOffsetYMm ?? 0;
-  const recipientOffsetY = options.letterRecipientOffsetYMm ?? 0;
   const footerDefaultHeight = options.footerMode === "details" ? 10 : 2.4;
   const footerHeight = options.footerHeightMm ?? footerDefaultHeight;
   const footerContentOffsetY = options.footerContentOffsetYMm ?? 0;
@@ -340,27 +339,13 @@ export function DossierChromeControls({
             </div>
           ) : null}
 
-          {scope === "letter" || options.headerMode === "contact" ? (
+          {options.headerMode === "contact" ? (
             <VerticalOffsetControl
-              label={
-                scope === "letter"
-                  ? "Eigene Anschrift – vertikale Position"
-                  : "Header-Inhalt – vertikale Position"
-              }
+              label="Header-Inhalt – vertikale Position"
               value={headerContentOffsetY}
               min={-12}
               max={12}
               onChange={(headerContentOffsetYMm) => patchOptions({ headerContentOffsetYMm })}
-            />
-          ) : null}
-
-          {scope === "letter" ? (
-            <VerticalOffsetControl
-              label="Firma / Lehrbetrieb – vertikale Position"
-              value={recipientOffsetY}
-              min={-12}
-              max={12}
-              onChange={(letterRecipientOffsetYMm) => patchOptions({ letterRecipientOffsetYMm })}
             />
           ) : null}
 
