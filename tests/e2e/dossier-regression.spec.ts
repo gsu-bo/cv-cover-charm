@@ -163,6 +163,10 @@ async function seedCv(page: Page, options: SeedOptions = {}) {
   );
   await page.waitForLoadState("domcontentloaded");
   await previewRoot(page).locator("[data-cv-page]").first().waitFor({ state: "visible" });
+  await previewRoot(page)
+    .locator("[data-cv-main] [data-cv-entry]")
+    .first()
+    .waitFor({ state: "visible" });
   await settlePagination(page);
 }
 
@@ -404,7 +408,7 @@ test.describe("M5.8 dossier regression", () => {
   }) => {
     const metrics = async () =>
       previewRoot(page)
-        .locator('[data-cv-page="0"] > [data-cv-main]')
+        .locator('[data-cv-page="0"] [data-cv-main]')
         .evaluate((main) => {
           const section = main.querySelector<HTMLElement>("[data-cv-section]");
           const entry = main.querySelector<HTMLElement>("[data-cv-entry]:has(> [data-cv-rail])");
@@ -452,8 +456,8 @@ test.describe("M5.8 dossier regression", () => {
     const root = previewRoot(page);
     const geometry = async () =>
       root.locator('[data-cv-page="0"]').evaluate((sheet) => {
-        const sidebar = sheet.querySelector<HTMLElement>(":scope > [data-cv-sidebar]");
-        const main = sheet.querySelector<HTMLElement>(":scope > [data-cv-main]");
+        const sidebar = sheet.querySelector<HTMLElement>("[data-cv-sidebar]");
+        const main = sheet.querySelector<HTMLElement>("[data-cv-main]");
         if (!sidebar || !main) throw new Error("Sidebar geometry missing");
         const sidebarRect = sidebar.getBoundingClientRect();
         const mainRect = main.getBoundingClientRect();
