@@ -352,27 +352,28 @@ export function DossierHeaderFooterChrome({
               {warmContactDecoration ? (
                 <>
                   <div
-                    data-warm-contact-gold-orb
+                    data-warm-contact-gold-ring
                     className="absolute rounded-full"
                     style={{
-                      width: "39mm",
-                      height: "39mm",
-                      right: "-14mm",
-                      top: "-13mm",
-                      backgroundColor: secondary,
-                      opacity: 0.65,
+                      width: "92mm",
+                      height: "92mm",
+                      right: "-24mm",
+                      top: "-41mm",
+                      border: `0.8mm solid ${secondary}`,
+                      boxSizing: "border-box",
+                      opacity: 0.78,
                     }}
                   />
                   <div
-                    data-warm-contact-gold-dot
+                    data-warm-contact-gold-orb
                     className="absolute rounded-full"
                     style={{
-                      width: "8mm",
-                      height: "8mm",
-                      right: "10mm",
-                      top: "8mm",
+                      width: "72mm",
+                      height: "72mm",
+                      right: "-13mm",
+                      top: "-31mm",
                       backgroundColor: secondary,
-                      opacity: 0.75,
+                      opacity: 0.72,
                     }}
                   />
                 </>

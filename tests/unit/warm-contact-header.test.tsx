@@ -19,7 +19,7 @@ const colors = {
 };
 
 describe("Warm contact header", () => {
-  test("keeps stacked contact details and gold decoration together", () => {
+  test("keeps stacked contact details and approved gold ring/orb decoration together", () => {
     const markup = renderToStaticMarkup(
       createElement(DossierHeaderFooterChrome, {
         scope: "cv",
@@ -37,8 +37,15 @@ describe("Warm contact header", () => {
 
     expect(markup).toContain('data-dossier-header-text-layout="stacked"');
     expect(markup).toContain("data-dossier-integrated-contact");
+    expect(markup).toContain("data-warm-contact-gold-ring");
     expect(markup).toContain("data-warm-contact-gold-orb");
-    expect(markup).toContain("data-warm-contact-gold-dot");
+    expect(markup).toContain("width:92mm");
+    expect(markup).toContain("right:-24mm");
+    expect(markup).toContain("top:-41mm");
+    expect(markup).toContain("width:72mm");
+    expect(markup).toContain("right:-13mm");
+    expect(markup).toContain("top:-31mm");
+    expect(markup).not.toContain("data-warm-contact-gold-dot");
     expect(markup).toContain(contact.name);
     expect(markup).toContain(contact.email);
   });
@@ -62,6 +69,7 @@ describe("Warm contact header", () => {
 
     expect(markup).toContain('data-dossier-header-height-mm="80"');
     expect(markup).toContain("height:80mm");
+    expect(markup).toContain("data-warm-contact-gold-ring");
     expect(markup).toContain("data-warm-contact-gold-orb");
   });
 
@@ -76,6 +84,7 @@ describe("Warm contact header", () => {
           options: { ...DEFAULT_DOSSIER_CHROME_OPTIONS, headerMode },
         }),
       );
+      expect(markup).not.toContain("data-warm-contact-gold-ring");
       expect(markup).not.toContain("data-warm-contact-gold-orb");
     }
 
@@ -89,6 +98,7 @@ describe("Warm contact header", () => {
         options: { ...DEFAULT_DOSSIER_CHROME_OPTIONS, headerMode: "contact" },
       }),
     );
+    expect(continuation).not.toContain("data-warm-contact-gold-ring");
     expect(continuation).not.toContain("data-warm-contact-gold-orb");
   });
 });
