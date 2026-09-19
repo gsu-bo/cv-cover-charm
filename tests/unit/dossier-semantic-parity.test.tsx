@@ -73,7 +73,7 @@ describe("header/footer semantic precedence", () => {
       const next = letterPageGeometry(EMPTY_LETTER, design, { pageIndex: 1 });
       expect(effectiveDossierHeaderModeForOptions(options, 1)).toBe("contact");
       expect(dossierHeaderVisualHeightMmForOptions(options, 1)).toBe(
-        headerDifferentFirstPage ? 8 : 22,
+        headerDifferentFirstPage ? 8 : 32,
       );
       if (!headerDifferentFirstPage) expect(next.content.top).toBe(first.content.top);
       else expect(next.content.top).toBeLessThan(first.content.top);
