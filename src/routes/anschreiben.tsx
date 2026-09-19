@@ -23,6 +23,7 @@ import { LetterDocument, type LetterPaginationState } from "@/components/letter/
 import { LetterLayoutControls } from "@/components/letter/LetterLayoutControls";
 import { LetterRichTextEditor } from "@/components/letter/LetterRichTextEditor";
 import { LetterTemplatePicker } from "@/components/letter/LetterTemplatePicker";
+import { useTemplateQaTemplateSwitch } from "@/lib/template-qa-switch";
 import {
   resolveLetterPalette,
   resolveLetterPaperColor,
@@ -439,6 +440,7 @@ function Anschreiben() {
       colors: defaultLetterColors(next),
     }));
   };
+  useTemplateQaTemplateSwitch(design.template, changeTemplate, "letter");
 
   const downloadMotivationLetter = async () => {
     if (

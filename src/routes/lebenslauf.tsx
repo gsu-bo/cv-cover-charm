@@ -16,6 +16,7 @@ import { DossierChromeControls } from "@/components/dossier/DossierChromeControl
 import { DossierHyphenationControl } from "@/components/dossier/DossierHyphenationControl";
 import { Section } from "@/components/cover/Section";
 import { TemplatePicker } from "@/components/cover/TemplatePicker";
+import { useTemplateQaTemplateSwitch } from "@/lib/template-qa-switch";
 import { ColorChooser } from "@/components/cover/ColorChooser";
 import { ScaledPreview } from "@/components/cover/ScaledPreview";
 import { CvCanvas, type CvLayoutWarning } from "@/components/cv/CvCanvas";
@@ -275,6 +276,12 @@ function Lebenslauf() {
       useElements: false,
     };
   });
+  useTemplateQaTemplateSwitch(
+    design.template,
+    (template) =>
+      setDesign((current) => ({ ...current, template, colors: defaultColors(template) })),
+    "cv",
+  );
   const [elements, setElements] = useState<CustomField[]>([]);
   const [elementStyles, setElementStyles] = useState<StyleOverrides>({});
   const [selected, setSelected] = useState<string | null>(null);
