@@ -392,3 +392,228 @@ html[data-dossier-template="ribbon"] [data-dossier-document="cover"] [data-block
   position: relative;
   z-index: 1;
 }
+
+/* -------------------------------------------------------------------------- */
+/* PACKAGE 3 — CONNECTED EDGE / FOREST FLOW / FRAME SIGNATURES                */
+/* -------------------------------------------------------------------------- */
+/*
+ * The motif-opacity wrapper was introduced after several Fresh-template rules
+ * had been written against direct-child nth positions. Those selectors then
+ * resized the wrapper instead of the primitives inside it. Named primitives
+ * keep these three compositions stable and preserve the shared 0–100% motif
+ * control without changing header-selection state.
+ */
+
+/* Restore the full motif canvas after stale direct-child geometry touched it. */
+:is(
+    [data-dossier-sheet-background="edge"],
+    [data-dossier-sheet-background="forestFlow"],
+    [data-dossier-sheet-background="frame"]
+  )
+  > [data-dossier-sheet-motif][data-dossier-sheet-motif] {
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  filter: none !important;
+  transform: none !important;
+  opacity: var(--dossier-motif-opacity, 1) !important;
+}
+
+/* EDGE — dark page rail, short blue spine and signal line meet as one corner. */
+[data-dossier-sheet-background="edge"]
+  [data-dossier-signature-part="edge-rail"] {
+  display: block !important;
+  left: 0 !important;
+  right: auto !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 7mm !important;
+  height: auto !important;
+}
+
+[data-dossier-sheet-background="edge"]
+  [data-dossier-signature-part="edge-stripe"] {
+  display: block !important;
+  left: 7mm !important;
+  right: auto !important;
+  top: 0 !important;
+  bottom: auto !important;
+  width: 1.2mm !important;
+  height: 29mm !important;
+  border-radius: 0 !important;
+}
+
+[data-dossier-sheet-background="edge"]
+  [data-dossier-signature-part="edge-rule"] {
+  display: block !important;
+  left: 7mm !important;
+  right: auto !important;
+  top: 27.8mm !important;
+  bottom: auto !important;
+  width: 36mm !important;
+  height: 1.2mm !important;
+  border-radius: 0 999px 999px 0 !important;
+}
+
+/* The Edge rail no longer occupies the top edge, so contact stays at its
+ * canonical top position instead of retaining the obsolete 9–10 mm offset. */
+[data-letter-page][data-letter-template="edge"]
+  [data-dossier-chrome="letter"]
+  [data-dossier-integrated-contact],
+[data-cv-template="edge"] [data-dossier-integrated-contact] {
+  top: 0 !important;
+}
+
+/* Match the dedicated Fresh letter background to the connected CV signature. */
+[data-letter-fresh-template="edge"][data-letter-fresh-template="edge"]
+  [data-letter-motif="edge-band"] {
+  left: 0 !important;
+  top: 0 !important;
+  width: 7mm !important;
+  height: 297mm !important;
+  border-radius: 0 !important;
+}
+
+[data-letter-fresh-template="edge"][data-letter-fresh-template="edge"]
+  [data-letter-motif="edge-signal"] {
+  left: 7mm !important;
+  top: 0 !important;
+  width: 1.2mm !important;
+  height: 29mm !important;
+  border-radius: 0 !important;
+}
+
+[data-letter-fresh-template="edge"][data-letter-fresh-template="edge"]
+  [data-letter-motif="edge-rule"] {
+  display: block !important;
+  left: 7mm !important;
+  top: 27.8mm !important;
+  width: 36mm !important;
+  height: 1.2mm !important;
+  border-radius: 0 999px 999px 0 !important;
+}
+
+/* FOREST FLOW — the canopy grows out of the rail; its line exits the canopy. */
+[data-dossier-sheet-background="forestFlow"]
+  [data-dossier-signature-part="forest-rail"] {
+  display: block !important;
+  left: 0 !important;
+  right: auto !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 10mm !important;
+  height: auto !important;
+  border-radius: 0 !important;
+}
+
+[data-dossier-sheet-background="forestFlow"]
+  [data-dossier-signature-part="forest-canopy"] {
+  display: block !important;
+  left: 5mm !important;
+  right: auto !important;
+  top: 14mm !important;
+  bottom: auto !important;
+  width: 24mm !important;
+  height: 24mm !important;
+  border-radius: 999px !important;
+  opacity: 0.2 !important;
+}
+
+[data-dossier-sheet-background="forestFlow"]
+  [data-dossier-signature-part="forest-flow-line"] {
+  display: block !important;
+  left: 22mm !important;
+  right: auto !important;
+  top: 32mm !important;
+  bottom: auto !important;
+  width: 25mm !important;
+  height: 1.2mm !important;
+  border-radius: 0 999px 999px 0 !important;
+}
+
+[data-letter-fresh-template="forestFlow"][data-letter-fresh-template="forestFlow"]
+  [data-letter-motif="rail"] {
+  left: 0 !important;
+  top: 0 !important;
+  width: 10mm !important;
+  height: 297mm !important;
+  border-radius: 0 !important;
+}
+
+[data-letter-fresh-template="forestFlow"][data-letter-fresh-template="forestFlow"]
+  [data-letter-motif="soft-orb"] {
+  display: block !important;
+  left: 5mm !important;
+  right: auto !important;
+  top: 14mm !important;
+  width: 24mm !important;
+  height: 24mm !important;
+  border-radius: 999px !important;
+  opacity: 0.2 !important;
+}
+
+[data-letter-fresh-template="forestFlow"][data-letter-fresh-template="forestFlow"]
+  [data-letter-motif="rail-rule"] {
+  display: block !important;
+  left: 22mm !important;
+  top: 32mm !important;
+  width: 25mm !important;
+  height: 1.2mm !important;
+  border-radius: 0 999px 999px 0 !important;
+}
+
+/* Keep contact copy fully on clean paper beside the organic cluster. */
+html[data-dossier-template="forestFlow"]
+  [data-dossier-chrome="cv"]
+  [data-dossier-integrated-contact],
+html[data-dossier-template="forestFlow"]
+  [data-dossier-chrome="cv"]
+  [data-dossier-continuation-contact-header],
+[data-letter-page][data-letter-template="forestFlow"] [data-dossier-integrated-contact],
+[data-letter-page][data-letter-template="forestFlow"] [data-dossier-continuation-contact-header] {
+  left: 34mm !important;
+}
+
+/* FRAME — a hairline page frame plus one marker physically attached to it. */
+[data-dossier-sheet-background="frame"]
+  [data-dossier-signature-part="frame-marker"] {
+  display: block !important;
+  left: 10mm !important;
+  right: auto !important;
+  top: 10mm !important;
+  bottom: auto !important;
+  width: 26mm !important;
+  height: 2mm !important;
+  border-radius: 0 !important;
+  background: var(--cover-secondary) !important;
+  opacity: 0.95 !important;
+}
+
+[data-dossier-sheet-background="frame"]
+  [data-dossier-signature-part="frame-redundant-marker"] {
+  display: none !important;
+}
+
+/* Fresh letters already receive the same structural hairline via ::before.
+ * Keep one attached marker and remove the four-line duplicate construction. */
+[data-letter-fresh-template="frame"][data-letter-fresh-template="frame"]
+  [data-letter-motif] {
+  display: none !important;
+}
+
+[data-letter-fresh-template="frame"][data-letter-fresh-template="frame"]
+  [data-letter-motif="frame-top"] {
+  display: block !important;
+  left: 10mm !important;
+  top: 10mm !important;
+  width: 26mm !important;
+  height: 2mm !important;
+  border-radius: 0 !important;
+  background: var(--cover-secondary) !important;
+  opacity: 0.95 !important;
+}
