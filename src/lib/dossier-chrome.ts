@@ -185,7 +185,7 @@ function normalizeOptions(
         ? value.headerContinuationMode
         : undefined
       : fallback.headerContinuationMode,
-    headerHeightMm: normalizedMm(value.headerHeightMm, 1, 40),
+    headerHeightMm: normalizedMm(value.headerHeightMm, 1, 80),
     headerGapMm: normalizedMm(value.headerGapMm, 0, 40) ?? fallback.headerGapMm ?? 12,
     headerContentOffsetYMm: normalizedOffsetMm(
       value.headerContentOffsetYMm,
@@ -635,8 +635,11 @@ export function dossierHeaderVisualHeightMmForOptions(
     return custom === null ? 8 : Math.min(18, Math.max(5, custom));
   }
 
-  if (mode === "contact") return custom === null ? 22 : Math.min(40, Math.max(10, custom));
-  if (mode === "compact") return custom === null ? 3 : Math.min(18, Math.max(1, custom));
+  if (mode === "contact") {
+    const min = options.headerTextLayout === "stacked" ? 18 : 10;
+    return custom === null ? 22 : Math.min(80, Math.max(min, custom));
+  }
+  if (mode === "compact") return custom === null ? 3 : Math.min(80, Math.max(1, custom));
   return 0;
 }
 
