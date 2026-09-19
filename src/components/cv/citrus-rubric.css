@@ -1,0 +1,20 @@
+html[data-dossier-template="citrus"] [data-cv-citrus-pill] [data-dossier-document="cv"] [data-cv-main] [data-cv-section] > div {
+  transform: translateX(var(--cv-citrus-rubric-x, 0mm));
+}
+
+html[data-dossier-template="citrus"] [data-cv-citrus-pill] [data-dossier-document="cv"] [data-cv-main] [data-cv-entry] {
+  box-sizing: border-box;
+  margin-left: var(--cv-citrus-content-indent, 4mm);
+  width: calc(100% - var(--cv-citrus-content-indent, 4mm));
+}
+
+html[data-dossier-template="citrus"] [data-cv-citrus-pill="false"] [data-dossier-document="cv"] [data-cv-section] > div {
+  gap: 2.2mm !important;
+}
+
+html[data-dossier-template="citrus"] [data-cv-citrus-pill="false"] [data-dossier-document="cv"] [data-cv-section-title] {
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}

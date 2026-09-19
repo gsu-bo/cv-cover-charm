@@ -177,6 +177,38 @@ async function typographySnapshot(root: Locator) {
   });
 }
 
+async function citrusGeometrySnapshot(root: Locator) {
+  return root.evaluate((node) => {
+    const page = node.querySelector<HTMLElement>('[data-cv-page="0"]');
+    const main = page?.querySelector<HTMLElement>("[data-cv-main]");
+    const section = main?.querySelector<HTMLElement>("[data-cv-section]");
+    const row = section?.firstElementChild as HTMLElement | null;
+    const title = row?.querySelector<HTMLElement>("[data-cv-section-title]");
+    const rule = row?.querySelector<HTMLElement>('[data-cv-accent="section"]');
+    const entry = main?.querySelector<HTMLElement>("[data-cv-entry]");
+    if (!page || !main || !row || !title || !rule || !entry) return null;
+
+    const pageRect = page.getBoundingClientRect();
+    const mainRect = main.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    const ruleRect = rule.getBoundingClientRect();
+    const entryRect = entry.getBoundingClientRect();
+    const titleStyle = getComputedStyle(title);
+    const toMm = (pixels: number) => (pixels / pageRect.width) * 210;
+
+    return {
+      headingOffsetMm: toMm(rowRect.left - mainRect.left),
+      contentIndentMm: toMm(entryRect.left - mainRect.left),
+      ruleRightMm: toMm(ruleRect.right - pageRect.left),
+      ruleWidthMm: toMm(ruleRect.width),
+      pillBackground: titleStyle.backgroundColor,
+      pillPaddingLeft: titleStyle.paddingLeft,
+      headingDisplay: titleStyle.display,
+      pageCount: node.querySelectorAll("[data-cv-page]").length,
+    };
+  });
+}
+
 test.describe("Neon / Verlauf / Citrus CV refresh", () => {
   test.setTimeout(120_000);
 
@@ -252,6 +284,108 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
     }
 
     expect(screenshots.size).toBe(TEMPLATES.length);
+  });
+
+  test("Citrus rubric controls keep safe defaults, persist and match export geometry", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1137, height: 913 });
+    await seed(page, TEMPLATES[2]);
+
+    const preview = page.locator('[data-dossier-document="cv"][data-export-mode="false"]').first();
+    const exportRoot = page.locator('[data-dossier-document="cv"][data-export-mode="true"]').first();
+    await expect(preview).toBeVisible();
+
+    const defaultPreview = await citrusGeometrySnapshot(preview);
+    const defaultExport = await citrusGeometrySnapshot(exportRoot);
+    expect(defaultPreview).not.toBeNull();
+    expect(defaultExport).not.toBeNull();
+    if (!defaultPreview || !defaultExport) return;
+
+    await expect(page.locator('[data-cv-citrus-pill="true"]').first()).toHaveAttribute(
+      "data-cv-citrus-content-indent",
+      "4",
+    );
+    expect(defaultPreview.pillBackground).not.toBe("rgba(0, 0, 0, 0)");
+    expect(defaultPreview.headingOffsetMm).toBeCloseTo(0, 1);
+    expect(defaultPreview.contentIndentMm).toBeCloseTo(4, 1);
+    expect(defaultPreview.pageCount).toBe(1);
+    expect(defaultExport.headingOffsetMm).toBeCloseTo(defaultPreview.headingOffsetMm, 1);
+    expect(defaultExport.contentIndentMm).toBeCloseTo(defaultPreview.contentIndentMm, 1);
+    expect(defaultExport.ruleRightMm).toBeCloseTo(defaultPreview.ruleRightMm, 1);
+
+    const typographyToggle = page
+      .locator("[data-editor-section-toggle]")
+      .filter({ hasText: "Schrift und Layout" })
+      .first();
+    await expect(typographyToggle).toBeVisible();
+    await typographyToggle.click();
+
+    const controls = page.locator("[data-citrus-rubric-controls]");
+    await expect(controls).toBeVisible();
+    await expect(controls.getByText("Rubrik als Pille", { exact: true })).toBeVisible();
+    await expect(controls.getByRole("slider", { name: "Rubrik horizontal" })).toHaveValue("0");
+    await expect(controls.getByRole("slider", { name: "Inhaltseinzug unter Rubrik" })).toHaveValue(
+      "4",
+    );
+
+    await controls.getByRole("button", { name: "Nein" }).click();
+    await controls.getByRole("slider", { name: "Rubrik horizontal" }).evaluate((node) => {
+      const input = node as HTMLInputElement;
+      input.value = "5";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await controls.getByRole("slider", { name: "Inhaltseinzug unter Rubrik" }).evaluate((node) => {
+      const input = node as HTMLInputElement;
+      input.value = "10";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    await expect.poll(async () =>
+      page.evaluate(() => {
+        const saved = JSON.parse(localStorage.getItem("lebenslauf:v1") || "{}") as {
+          design?: Record<string, unknown>;
+        };
+        return [
+          saved.design?.citrusRubricPill,
+          saved.design?.citrusRubricOffsetMm,
+          saved.design?.citrusContentIndentMm,
+        ];
+      }),
+    ).toEqual([false, 5, 10]);
+
+    const changedPreview = await citrusGeometrySnapshot(preview);
+    const changedExport = await citrusGeometrySnapshot(exportRoot);
+    expect(changedPreview).not.toBeNull();
+    expect(changedExport).not.toBeNull();
+    if (!changedPreview || !changedExport) return;
+
+    expect(changedPreview.pillBackground).toBe("rgba(0, 0, 0, 0)");
+    expect(changedPreview.pillPaddingLeft).toBe("0px");
+    expect(changedPreview.headingDisplay).not.toBe("none");
+    expect(changedPreview.ruleWidthMm).toBeGreaterThan(5);
+    expect(changedPreview.headingOffsetMm).toBeCloseTo(5, 1);
+    expect(changedPreview.contentIndentMm).toBeCloseTo(10, 1);
+    expect(changedPreview.ruleRightMm - defaultPreview.ruleRightMm).toBeCloseTo(5, 1);
+    expect(changedPreview.ruleRightMm).toBeLessThan(210);
+    expect(changedExport.headingOffsetMm).toBeCloseTo(changedPreview.headingOffsetMm, 1);
+    expect(changedExport.contentIndentMm).toBeCloseTo(changedPreview.contentIndentMm, 1);
+    expect(changedExport.ruleRightMm).toBeCloseTo(changedPreview.ruleRightMm, 1);
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.locator('[data-cv-citrus-pill="false"]').first()).toHaveAttribute(
+      "data-cv-citrus-rubric-x",
+      "5",
+    );
+    const persistedPreview = page
+      .locator('[data-dossier-document="cv"][data-export-mode="false"]')
+      .first();
+    const persisted = await citrusGeometrySnapshot(persistedPreview);
+    expect(persisted).not.toBeNull();
+    expect(persisted?.headingOffsetMm).toBeCloseTo(5, 1);
+    expect(persisted?.contentIndentMm).toBeCloseTo(10, 1);
   });
 
   test("background motif slider updates decorative layers at 0/25/50/100 only", async ({

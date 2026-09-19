@@ -20,6 +20,7 @@ import { useTemplateQaTemplateSwitch } from "@/lib/template-qa-switch";
 import { ColorChooser } from "@/components/cover/ColorChooser";
 import { ScaledPreview } from "@/components/cover/ScaledPreview";
 import { CvCanvas, type CvLayoutWarning } from "@/components/cv/CvCanvas";
+import { CitrusRubricControls } from "@/components/cv/CitrusRubricControls";
 import { ElementBar } from "@/components/cover/ElementBar";
 import { AddElementMenu } from "@/components/cover/AddElementMenu";
 import { DossierExportDialog } from "@/components/dossier/DossierExportDialog";
@@ -2360,6 +2361,11 @@ function Lebenslauf() {
                         ))}
                       </div>
                     </div>
+
+                    <CitrusRubricControls
+                      design={design}
+                      onChange={(patch) => setDesign((current) => ({ ...current, ...patch }))}
+                    />
 
                     <span className="text-[11px] leading-relaxed text-muted-foreground/80">
                       Gilt gemeinsam für Schulbildung, Praktika, Sprachen, Stärken, Hobbys,
