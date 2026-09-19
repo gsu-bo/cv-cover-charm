@@ -43,8 +43,8 @@ function footerHeight(markup: string): number {
 
 describe("compact letter presentation", () => {
   test("letter canvas renders shared dossier paper for every template", () => {
-    expect(TEMPLATES.length).toBe(41);
-    expect(LETTER_TEMPLATE_IDS.length).toBe(41);
+    expect(TEMPLATES.length).toBe(42);
+    expect(LETTER_TEMPLATE_IDS.length).toBe(42);
     for (const template of LETTER_TEMPLATE_IDS) {
       const markup = markupFor(template, "compact");
       expect(markup).toContain('data-letter-header-mode="compact"');

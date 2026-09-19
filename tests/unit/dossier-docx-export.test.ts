@@ -211,8 +211,8 @@ describe("generic DOCX export profiles", () => {
 });
 
 describe("DOCX family fallback coverage", () => {
-  test("classifies all 39 selectable templates with an individual safety valve", () => {
-    expect(Object.keys(DOSSIER_DOCX_TEMPLATE_PLANS)).toHaveLength(39);
+  test("classifies all 40 selectable templates with an individual safety valve", () => {
+    expect(Object.keys(DOSSIER_DOCX_TEMPLATE_PLANS)).toHaveLength(40);
     expect(
       Object.values(DOSSIER_DOCX_TEMPLATE_PLANS).every((plan) => plan.fallback === "individual"),
     ).toBe(true);
@@ -234,7 +234,7 @@ describe("DOCX family fallback coverage", () => {
     }
   });
 
-  test("all 39 template plans resolve and produce structurally valid DOCX packages", async () => {
+  test("all 40 template plans resolve and produce structurally valid DOCX packages", async () => {
     for (const [templateId, plan] of Object.entries(DOSSIER_DOCX_TEMPLATE_PLANS)) {
       const docs = documentsAs(templateId);
       const profile = resolveDossierDocxProfile(docs.cover, docs.letter, docs.cv);
