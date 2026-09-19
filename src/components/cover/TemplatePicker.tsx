@@ -10,6 +10,8 @@ import {
   defaultHeaderGapMmForTemplate,
   defaultHeaderHeightMmForTemplate,
   defaultHeaderModeForTemplate,
+  recommendedHeaderPatchForTemplate,
+  recommendsStackedContactHeader,
 } from "@/lib/template-chrome";
 import {
   CV_LAYOUTS,
@@ -125,20 +127,22 @@ function mirrorHint(layout: CvLayoutId): string {
   return "Foto und Datumsseite tauschen die Seite";
 }
 
-function applyTemplateHeaderDefault(template: TemplateId) {
+/** Brand-new dossiers still get a predictable per-template default. */
+function applyInitialTemplateChromeDefault(template: TemplateId) {
   const headerMode = defaultHeaderModeForTemplate(template);
   const footerMode = defaultFooterModeForTemplate(template);
   const headerHeightMm = defaultHeaderHeightMmForTemplate(template);
   const headerGapMm = defaultHeaderGapMmForTemplate(template);
   const cvOnly = window.location.pathname.includes("lebenslauf");
-  const warmStackedContact =
-    template === "freundlich" ? { headerTextLayout: "stacked" as const } : {};
+  const stackedContact = recommendsStackedContactHeader(template)
+    ? { headerTextLayout: "stacked" as const }
+    : {};
   patchDossierChrome("cv", {
     headerMode,
     footerMode,
     headerHeightMm,
     headerGapMm,
-    ...warmStackedContact,
+    ...stackedContact,
   });
   if (!cvOnly) {
     patchDossierChrome("letter", {
@@ -146,9 +150,21 @@ function applyTemplateHeaderDefault(template: TemplateId) {
       footerMode,
       headerHeightMm,
       headerGapMm,
-      ...warmStackedContact,
+      ...stackedContact,
     });
   }
+}
+
+/**
+ * Normal template switches keep the user's header selection. Only Warm and
+ * Citrus intentionally own a stacked-contact recommendation.
+ */
+function applyTemplateHeaderRecommendation(template: TemplateId) {
+  const patch = recommendedHeaderPatchForTemplate(template);
+  if (!patch) return;
+  const cvOnly = window.location.pathname.includes("lebenslauf");
+  patchDossierChrome("cv", patch);
+  if (!cvOnly) patchDossierChrome("letter", patch);
 }
 
 export function TemplatePicker({ value, onChange }: Props) {
@@ -168,9 +184,9 @@ export function TemplatePicker({ value, onChange }: Props) {
     applyDossierTheme(value, freshFamilyForTemplate(value) ?? familyForTemplate(value));
   }, [value]);
 
-  // Brand-new dossiers start on the canonical Brief fallback. Establish its
-  // neutral chrome before parent autosave effects can create a draft key. Existing canonical chrome
-  // or legacy drafts remain authoritative and are never overwritten here.
+  // Brand-new dossiers start on the canonical fallback, then receive the
+  // selected visual template's default once before autosave creates draft keys.
+  // Existing chrome or drafts remain authoritative and are never overwritten.
   useLayoutEffect(() => {
     try {
       if (window.localStorage.getItem(DOSSIER_CHROME_STORAGE_KEY)) return;
@@ -178,11 +194,11 @@ export function TemplatePicker({ value, onChange }: Props) {
     } catch {
       return;
     }
-    applyTemplateHeaderDefault(value);
+    applyInitialTemplateChromeDefault(value);
   }, [value]);
 
   const chooseTemplate = (template: TemplateId) => {
-    applyTemplateHeaderDefault(template);
+    applyTemplateHeaderRecommendation(template);
     onChange(template);
   };
 
