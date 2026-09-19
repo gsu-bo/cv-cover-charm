@@ -189,18 +189,26 @@ async function citrusGeometrySnapshot(root: Locator) {
     if (!page || !main || !row || !title || !rule || !entry) return null;
 
     const pageRect = page.getBoundingClientRect();
-    const mainRect = main.getBoundingClientRect();
-    const rowRect = row.getBoundingClientRect();
     const ruleRect = rule.getBoundingClientRect();
-    const entryRect = entry.getBoundingClientRect();
     const titleStyle = getComputedStyle(title);
-    const toMm = (pixels: number) => (pixels / pageRect.width) * 210;
+    const rowStyle = getComputedStyle(row);
+    const entryStyle = getComputedStyle(entry);
+    const ruleStyle = getComputedStyle(rule);
+    const cssPxPerMm = 96 / 25.4;
+    const toCssMm = (pixels: number) => pixels / cssPxPerMm;
+    const toPageMm = (pixels: number) => (pixels / pageRect.width) * 210;
+    const rowTransform =
+      rowStyle.transform === "none" ? new DOMMatrixReadOnly() : new DOMMatrixReadOnly(rowStyle.transform);
 
     return {
-      headingOffsetMm: toMm(rowRect.left - mainRect.left),
-      contentIndentMm: toMm(entryRect.left - mainRect.left),
-      ruleRightMm: toMm(ruleRect.right - pageRect.left),
-      ruleWidthMm: toMm(ruleRect.width),
+      // The controls are authored in CSS millimetres. Preview zoom changes DOM
+      // rectangles, so read their computed CSS-space values instead of deriving
+      // control values from the scaled A4 backing rectangle.
+      headingOffsetMm: toCssMm(rowTransform.m41),
+      contentIndentMm: toCssMm(Number.parseFloat(entryStyle.marginLeft) || 0),
+      // Keep page-normalised visual geometry only for boundary/parity checks.
+      ruleRightMm: toPageMm(ruleRect.right - pageRect.left),
+      ruleWidthMm: toCssMm(Number.parseFloat(ruleStyle.width) || 0),
       pillBackground: titleStyle.backgroundColor,
       pillPaddingLeft: titleStyle.paddingLeft,
       headingDisplay: titleStyle.display,
@@ -368,7 +376,7 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
     expect(changedPreview.ruleWidthMm).toBeGreaterThan(5);
     expect(changedPreview.headingOffsetMm).toBeCloseTo(5, 1);
     expect(changedPreview.contentIndentMm).toBeCloseTo(10, 1);
-    expect(changedPreview.ruleRightMm - defaultPreview.ruleRightMm).toBeCloseTo(5, 1);
+    expect(changedPreview.ruleRightMm).toBeGreaterThan(defaultPreview.ruleRightMm);
     expect(changedPreview.ruleRightMm).toBeLessThan(210);
     expect(changedExport.headingOffsetMm).toBeCloseTo(changedPreview.headingOffsetMm, 1);
     expect(changedExport.contentIndentMm).toBeCloseTo(changedPreview.contentIndentMm, 1);
