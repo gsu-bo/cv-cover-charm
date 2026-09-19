@@ -2,38 +2,21 @@ import type { DossierChromeOptions, DossierHeaderMode } from "@/lib/dossier-chro
 import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
 
 /**
- * Most dossier templates read better with the quiet 3 mm signature band. Only
- * templates whose design genuinely benefits from an integrated contact masthead
- * opt into contact by default.
+ * Normal visual templates default to the quiet compact header. Warm and Citrus
+ * are the two reviewed exceptions whose composition depends on a stacked
+ * contact masthead.
  *
  * IMPORTANT — USER-APPROVED WARM CONTRACT, DO NOT NORMALIZE OR REMOVE:
  * `freundlich` (Warm 1) defaults to the stacked contact header. Its renderer
  * owns the integrated teal / mustard decoration. Future AI changes must keep
- * this template-specific default instead of replacing it with generic compact
- * chrome. Explicit user choices (inline, compact or none) remain authoritative.
+ * this template-specific recommendation instead of replacing it with generic
+ * compact chrome.
  *
- * `aurora` owns a deep cyan/violet first-page field. Its reviewed gallery
- * composition uses the shared contact masthead as the clean cyan sender strip;
- * Compact would drop normal black sender text into the decorative gradient.
+ * Citrus intentionally shares that recommendation so the contact block stays
+ * clear of its right-hand citrus slice. Explicit user choices remain
+ * authoritative when switching between all other templates.
  */
-const CONTACT_HEADER_DEFAULT_TEMPLATES = new Set([
-  "freundlich",
-  "aurora",
-  "horizon",
-  "violetPulse",
-  "studio",
-  "studio2",
-  "studio3",
-  "warm2",
-  "warm3",
-  // Retired but still render-compatible; keep family behaviour coherent.
-  "warm4",
-  "warm5",
-  "verlauf",
-  "verlauf2",
-  "verlauf3",
-  "prism",
-]);
+const STACKED_CONTACT_RECOMMENDED_TEMPLATES = new Set(["freundlich", "citrus"]);
 
 const AUTO_GRADIENT_CONTACT_TEMPLATES = new Set([
   "horizon",
@@ -44,22 +27,25 @@ const AUTO_GRADIENT_CONTACT_TEMPLATES = new Set([
   "prism",
 ]);
 
+export function recommendsStackedContactHeader(template: string): boolean {
+  return STACKED_CONTACT_RECOMMENDED_TEMPLATES.has(template);
+}
+
 /**
- * Header mode chosen when a template is selected for the first time.
+ * Header mode used for a brand-new/template-default state.
  *
- * Selection defaults are written only when a template is deliberately selected.
- * Warm's reviewed default is the stacked contact masthead with integrated gold
- * decoration. An explicit compact, inline-contact or none choice remains
- * authoritative afterwards.
+ * `brief` remains the canonical neutral fallback. Every selectable visual
+ * template defaults to compact except Warm and Citrus, which intentionally
+ * recommend the stacked contact masthead.
  */
 export function defaultHeaderModeForTemplate(template: string): DossierHeaderMode {
   if (template === CANONICAL_DOSSIER_PRESENTATION.template) {
     return CANONICAL_DOSSIER_PRESENTATION.letter.headerMode;
   }
-  return CONTACT_HEADER_DEFAULT_TEMPLATES.has(template) ? "contact" : "compact";
+  return recommendsStackedContactHeader(template) ? "contact" : "compact";
 }
 
-/** Footer mode written when a template is deliberately selected. */
+/** Footer mode written for a brand-new template-default state. */
 export function defaultFooterModeForTemplate(template: string): "none" | "compact" {
   return template === CANONICAL_DOSSIER_PRESENTATION.template
     ? CANONICAL_DOSSIER_PRESENTATION.letter.footerMode
@@ -67,27 +53,37 @@ export function defaultFooterModeForTemplate(template: string): "none" | "compac
 }
 
 /**
- * Header height written only when a template is deliberately selected.
- * Warm needs the taller reviewed masthead by default, while every other
- * template falls back to its automatic mode-specific height. The stored value
- * remains ordinary user-editable chrome state afterwards.
+ * Header height used only for a template recommendation/default.
+ * Warm keeps the reviewed 44 mm masthead. Citrus uses the normal automatic
+ * stacked-contact height. Afterwards the value remains ordinary user state.
  */
 export function defaultHeaderHeightMmForTemplate(template: string): number | null {
   return template === "freundlich" ? 44 : null;
 }
 
 /**
- * Default whitespace after the selected template header. Contact mastheads
- * already carry substantial visual height, so they normally need much less
- * additional whitespace than the compact signature band. Aurora is the
- * exception: its reviewed deep first-page field relies on the original 12 mm
- * flow clearance so recipient text starts below the decorative masthead.
- * Values are written only when a template is selected; users remain free to
- * change them afterwards.
+ * Default whitespace after a template-default header. Stacked contact
+ * mastheads need less extra whitespace than compact signature bands.
  */
 export function defaultHeaderGapMmForTemplate(template: string): number {
-  if (template === "aurora") return 12;
   return defaultHeaderModeForTemplate(template) === "contact" ? 4 : 12;
+}
+
+/**
+ * Patch applied only when a deliberate template switch has an explicit visual
+ * recommendation. Returning null for normal templates is intentional: it
+ * preserves the user's current header choice instead of silently resetting it.
+ */
+export function recommendedHeaderPatchForTemplate(
+  template: string,
+): Partial<DossierChromeOptions> | null {
+  if (!recommendsStackedContactHeader(template)) return null;
+  return {
+    headerMode: "contact",
+    headerTextLayout: "stacked",
+    headerHeightMm: defaultHeaderHeightMmForTemplate(template),
+    headerGapMm: defaultHeaderGapMmForTemplate(template),
+  };
 }
 
 /**
