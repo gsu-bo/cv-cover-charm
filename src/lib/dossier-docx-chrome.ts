@@ -363,12 +363,15 @@ export async function applyDossierChromeToDocx(
       // Word page margins are section-wide. Reserve enough top space for the
       // larger of page 1 and the continuation pages so an explicit full
       // contact header on page 2 can never overlap editable document content.
-      const minTop = twips(
-        Math.max(
-          dossierHeaderContentTopMmForOptions(options, 0),
-          dossierHeaderContentTopMmForOptions(options, 1),
-        ),
+      const chromeTopMm = Math.max(
+        dossierHeaderContentTopMmForOptions(options, 0),
+        dossierHeaderContentTopMmForOptions(options, 1),
       );
+      // Warm's reviewed recipe already supplies its own first-page masthead.
+      // With the intentional 32 mm contact header, LibreOffice sits exactly on
+      // a page-break boundary. Reclaim 0.35 mm of body safety gap for the CV
+      // only; the 32 mm visible header itself is unchanged.
+      const minTop = twips(warmRecipe && scope === "cv" ? chromeTopMm - 0.35 : chromeTopMm);
       properties = properties.replace(
         /w:top="(\d+)"/,
         (_m, value) => `w:top="${Math.max(Number(value), minTop)}"`,
