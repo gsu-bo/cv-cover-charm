@@ -63,6 +63,29 @@ function contactFromCv(data: CvData): DossierChromeContact {
   };
 }
 
+/**
+ * The CV editor is the live authority while it is on screen. Synced dossier
+ * contact may fill a blank CV field, but it must never mask a newly typed value.
+ */
+export function resolveCvChromeContact(
+  live: DossierChromeContact,
+  fallback?: DossierChromeContact,
+): DossierChromeContact {
+  const pick = (key: keyof DossierChromeContact) => {
+    const liveValue = live[key]?.trim();
+    if (liveValue) return liveValue;
+    return fallback?.[key]?.trim() ?? "";
+  };
+
+  return {
+    name: pick("name"),
+    address: pick("address"),
+    place: pick("place"),
+    phone: pick("phone"),
+    email: pick("email"),
+  };
+}
+
 /** Pure snapshot adapter: no dossier-chrome store reads happen below the route/editor boundary. */
 export function CvCanvas({
   chromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
@@ -78,6 +101,10 @@ export function CvCanvas({
   // preview, pagination and hidden PDF canvases on one geometry path.
   useSyncExternalStore(subscribeDossierPageMargins, getDossierPageMarginsSnapshot, () => "{}");
   const localContact = useMemo(() => contactFromCv(props.data), [props.data]);
+  const resolvedContact = useMemo(
+    () => resolveCvChromeContact(localContact, chromeContact),
+    [chromeContact, localContact],
+  );
   const design = useMemo(() => cvDesignWithFullSectionRules(props.design), [props.design]);
   const citrusRubric = useMemo(() => resolveCitrusRubricOptions(design), [design]);
   const resolvedChromeOptions = useMemo(
@@ -150,7 +177,7 @@ export function CvCanvas({
         data={data}
         design={design}
         chromeOptions={resolvedChromeOptions}
-        chromeContact={chromeContact ?? localContact}
+        chromeContact={resolvedContact}
       />
       {!props.exportMode ? (
         <CvTextAlignmentPortal
