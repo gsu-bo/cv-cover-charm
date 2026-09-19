@@ -20,8 +20,8 @@ export const CV_LAYOUTS: Array<{
   },
   {
     id: "modern",
-    name: "Sidebar",
-    description: "Seitenspalte plus Hauptspalte, Breite einstellbar",
+    name: "Sidebar links",
+    description: "Seitenspalte links, Hauptspalte rechts, Breite einstellbar",
   },
   {
     id: "minimal",
@@ -39,6 +39,51 @@ export const CV_LAYOUTS: Array<{
     description: "Asymmetrisches Print-Raster",
   },
 ];
+
+export type CvLayoutPickerOption = {
+  key: string;
+  layout: CvLayoutId;
+  name: string;
+  description: string;
+  infoPosition?: CvInfoPosition;
+};
+
+/**
+ * Links/rechts sind im Picker zwei klare Entscheidungen, teilen intern aber
+ * weiterhin den bewährten Sidebar-Renderer. So bleiben gespeicherte "modern"-
+ * Dokumente kompatibel und die bestehende Spiegelungslogik bleibt die einzige
+ * Quelle für die physische Seite.
+ */
+export const CV_LAYOUT_PICKER_OPTIONS: CvLayoutPickerOption[] = CV_LAYOUTS.flatMap(
+  (layout): CvLayoutPickerOption[] => {
+    if (layout.id !== "modern") {
+      return [
+        {
+          key: layout.id,
+          layout: layout.id,
+          name: layout.name,
+          description: layout.description,
+        },
+      ];
+    }
+    return [
+      {
+        key: "sidebar-left",
+        layout: "modern",
+        name: "Sidebar links",
+        description: "Seitenspalte links, Hauptspalte rechts, Breite einstellbar",
+        infoPosition: "standard",
+      },
+      {
+        key: "sidebar-right",
+        layout: "modern",
+        name: "Sidebar rechts",
+        description: "Seitenspalte rechts, Hauptspalte links, Breite einstellbar",
+        infoPosition: "mirrored",
+      },
+    ];
+  },
+);
 
 const STORAGE_KEY = "lebenslauf:layout:v1";
 const MIRROR_STORAGE_KEY = "lebenslauf:layout-mirror:v1";
@@ -227,6 +272,10 @@ export function setCvLayoutMirror(mirrored: boolean) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(MIRROR_STORAGE_KEY, mirrored ? "true" : "false");
+    // Alte Projektdateien kennen nur den Boolean. Halte beim Schreiben auch
+    // die neue, explizite Seitenwahl synchron, damit ein bereits vorhandener
+    // info-position-Wert den importierten Altzustand nicht unsichtbar macht.
+    window.localStorage.setItem(CV_INFO_POSITION_STORAGE_KEY, mirrored ? "mirrored" : "standard");
   } catch {
     // Die laufende Seite reagiert trotzdem über das Event.
   }
@@ -238,6 +287,10 @@ export function setCvInfoPosition(position: CvInfoPosition) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(CV_INFO_POSITION_STORAGE_KEY, position);
+    // Einige ältere Export-/Foto-Pfade lesen weiterhin den kompatiblen
+    // Boolean. Beide Schlüssel beschreiben dieselbe Wahl und dürfen deshalb
+    // nicht auseinanderlaufen.
+    window.localStorage.setItem(MIRROR_STORAGE_KEY, position === "mirrored" ? "true" : "false");
   } catch {
     // Die laufende Seite reagiert trotzdem über das Event.
   }

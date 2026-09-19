@@ -54,3 +54,84 @@
   > :is([data-cv-main], [data-cv-sidebar], [data-cv-band-header], [data-cv-footer]) {
   z-index: 2;
 }
+
+/* -------------------------------------------------------------------------- */
+/* COMPACT HEADER CLEANUP — CV ONLY                                            */
+/* -------------------------------------------------------------------------- */
+/*
+ * The stored motif slider remains authoritative. Compact suppression below is
+ * presentation-only and deliberately scoped to the page's effective chrome
+ * mode. Switching to contact/none therefore restores the user's configured
+ * --dossier-motif-opacity immediately without rewriting CV state.
+ */
+
+/* FULL COMPACT MOTIF SUPPRESSION: Orbit / Prism / Frame / Ribbon / Mono Luxe. */
+[data-dossier-document="cv"]:is(
+    [data-cv-template="orbit"],
+    [data-cv-template="prism"],
+    [data-cv-template="frame"],
+    [data-cv-template="ribbon"],
+    [data-cv-template="monoLuxe"]
+  )
+  [data-cv-page]:has(
+    [data-dossier-chrome="cv"][data-dossier-effective-header-mode="compact"]
+  )
+  [data-dossier-sheet-motif]:not(#compact-motif-suppression-a):not(
+    #compact-motif-suppression-b
+  ):not(#compact-motif-suppression-c) {
+  opacity: 0 !important;
+}
+
+/* SELECTIVE COMPACT CLEANUP — keep each template's core identity intact. */
+
+/* Glow: keep both large soft circles; only remove the isolated short trace. */
+[data-dossier-document="cv"][data-cv-template="glow"]
+  [data-cv-page]:has(
+    [data-dossier-chrome="cv"][data-dossier-effective-header-mode="compact"]
+  )
+  [data-dossier-sheet-background="glow"]
+  > [data-dossier-sheet-motif]:first-child
+  > div:nth-child(3) {
+  display: none !important;
+}
+
+/* Colorful: the compact header no longer gets the detached blue/yellow bar. */
+[data-dossier-document="cv"][data-cv-template="colorful"]
+  [data-cv-page]:has(
+    [data-dossier-chrome="cv"][data-dossier-effective-header-mode="compact"]
+  )
+  [data-cv-header]::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Cove: compact keeps the primary band, but loses only its secondary bay blob. */
+[data-dossier-document="cv"][data-cv-template="cove"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="cove"][data-dossier-effective-header-mode="compact"]
+  [data-dossier-compact-header]::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Aurora: preserve the gradient masthead; remove only the protruding right lobe. */
+[data-dossier-document="cv"][data-cv-template="aurora"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="aurora"][data-dossier-effective-header-mode="compact"]
+  [data-dossier-compact-header]::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Edel Light: one continuous top gold treatment, with no added layout height.
+ * The existing ::after diamond and lower gold hairlines remain untouched. */
+[data-dossier-document="cv"][data-cv-template="edel"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="edel"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header]::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 0.55mm;
+  background: var(--chrome-accent);
+  opacity: 0.92;
+  pointer-events: none;
+}

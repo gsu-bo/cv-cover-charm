@@ -66,6 +66,10 @@ const contactChromeOptions = {
   textFont: null,
 } as const;
 
+function personSection(page: Page) {
+  return page.locator('[data-editor-section-title="Persönliche Angaben"]');
+}
+
 async function seedStaleDossier(page: Page) {
   await page.addInitScript(
     ({ chromeOptions }) => {
@@ -168,35 +172,65 @@ async function seedStaleDossier(page: Page) {
   await page
     .locator('[data-dossier-document="cv"][data-export-mode="false"] [data-cv-page="0"]')
     .waitFor({ state: "visible" });
+
+  // The route restores localStorage in an effect after the first paint. Do not
+  // race a real user edit against that hydration: first prove the seeded CV has
+  // reached the controlled editor fields, then replace it with this run's data.
+  const section = personSection(page);
+  await expect(section).toBeVisible();
+  await expect(section.getByLabel("Vorname", { exact: true })).toHaveValue("Alt");
+  await expect(section.getByLabel("Nachname", { exact: true })).toHaveValue("Titelblatt");
+  await expect(section.getByLabel("E-Mail", { exact: true })).toHaveValue("stale@example.test");
 }
 
 async function fillLiveContact(page: Page, contact: RunContact) {
-  const section = page.locator('[data-editor-section-title="Persönliche Angaben"]');
+  const section = personSection(page);
   await expect(section).toBeVisible();
 
-  await section.getByLabel("Vorname", { exact: true }).fill(contact.firstName);
-  await section.getByLabel("Nachname", { exact: true }).fill(contact.lastName);
-  await section.getByLabel("Adresse", { exact: true }).fill(contact.address);
-  await section.getByLabel("PLZ und Ort", { exact: true }).fill(contact.place);
-  await section.getByLabel("Telefon", { exact: true }).fill(contact.phone);
-  await section.getByLabel("E-Mail", { exact: true }).fill(contact.email);
+  const fields = [
+    ["Vorname", contact.firstName],
+    ["Nachname", contact.lastName],
+    ["Adresse", contact.address],
+    ["PLZ und Ort", contact.place],
+    ["Telefon", contact.phone],
+    ["E-Mail", contact.email],
+  ] as const;
+
+  for (const [label, value] of fields) {
+    await section.getByLabel(label, { exact: true }).fill(value);
+  }
+
+  // Prove that the controlled CV state accepted every live edit before we test
+  // the rendered contact chrome. This makes a state reset distinguishable from
+  // a header/contact-resolution bug.
+  for (const [label, value] of fields) {
+    await expect(
+      section.getByLabel(label, { exact: true }),
+      `${label}: live CV edit was reset or not accepted`,
+    ).toHaveValue(value);
+  }
 }
 
 async function expectCurrentContact(page: Page, contact: RunContact, templateName: string) {
-  const header = page
-    .locator(
-      '[data-dossier-document="cv"][data-export-mode="false"] [data-cv-page="0"] [data-dossier-integrated-contact]',
-    )
+  const cvPage = page
+    .locator('[data-dossier-document="cv"][data-export-mode="false"] [data-cv-page="0"]')
     .first();
 
-  await expect(header, `${templateName}: contact header missing`).toBeVisible();
+  await expect(cvPage, `${templateName}: first CV page missing`).toBeVisible();
+
+  // Contact presentation is intentionally template-specific. Most templates
+  // use the integrated contact header, while Kolumne renders the same data in
+  // its sidebar and deliberately hides the duplicate header. Test the product
+  // contract instead of one implementation detail: every live contact value
+  // must be visible somewhere on page 1 and no stale title-page identity may
+  // leak into the visible CV.
   await expect
-    .poll(() => header.innerText(), {
-      message: `${templateName}: contact header did not receive the live CV values`,
+    .poll(() => cvPage.innerText(), {
+      message: `${templateName}: visible CV did not receive the live CV values`,
     })
     .toContain(contact.fullName);
 
-  const text = await header.innerText();
+  const text = await cvPage.innerText();
   for (const value of [
     contact.fullName,
     contact.address,
@@ -204,10 +238,10 @@ async function expectCurrentContact(page: Page, contact: RunContact, templateNam
     contact.phone,
     contact.email,
   ]) {
-    expect(text, `${templateName}: missing ${value}`).toContain(value);
+    expect(text, `${templateName}: missing visible ${value}`).toContain(value);
   }
 
-  expect(text, `${templateName}: stale title-page identity leaked into the CV header`).not.toContain(
+  expect(text, `${templateName}: stale title-page identity leaked into the visible CV`).not.toContain(
     "Alt Titelblatt",
   );
   expect(text).not.toContain("stale@example.test");

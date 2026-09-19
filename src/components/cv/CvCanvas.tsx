@@ -21,6 +21,7 @@ import { getCvTextAlignment, subscribeCvTextAlignment } from "./text-alignment";
 import { cvContentBox, cvFrameFor } from "./archetype";
 import { CV_LAYOUT_EVENT } from "./layout";
 import { CvCanvas as BaseCvCanvas } from "./CvCanvasBase";
+import { resolveCitrusRubricOptions } from "./citrus-rubric";
 import type { CvData, CvDesign } from "./types";
 import "@/components/dossier/edel-stationery.css";
 import "@/components/dossier/human-polish.css";
@@ -29,6 +30,7 @@ import "./full-section-rules.css";
 import "./fresh-modern-sidebar-geometry.css";
 import "./default-pagination-density.css";
 import "./user-typography.css";
+import "./citrus-rubric.css";
 
 export type { CvLayoutWarning } from "./CvCanvasBase";
 
@@ -61,6 +63,29 @@ function contactFromCv(data: CvData): DossierChromeContact {
   };
 }
 
+/**
+ * The CV editor is the live authority while it is on screen. Synced dossier
+ * contact may fill a blank CV field, but it must never mask a newly typed value.
+ */
+export function resolveCvChromeContact(
+  live: DossierChromeContact,
+  fallback?: DossierChromeContact,
+): DossierChromeContact {
+  const pick = (key: keyof DossierChromeContact) => {
+    const liveValue = live[key]?.trim();
+    if (liveValue) return liveValue;
+    return fallback?.[key]?.trim() ?? "";
+  };
+
+  return {
+    name: pick("name"),
+    address: pick("address"),
+    place: pick("place"),
+    phone: pick("phone"),
+    email: pick("email"),
+  };
+}
+
 /** Pure snapshot adapter: no dossier-chrome store reads happen below the route/editor boundary. */
 export function CvCanvas({
   chromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
@@ -76,14 +101,33 @@ export function CvCanvas({
   // preview, pagination and hidden PDF canvases on one geometry path.
   useSyncExternalStore(subscribeDossierPageMargins, getDossierPageMarginsSnapshot, () => "{}");
   const localContact = useMemo(() => contactFromCv(props.data), [props.data]);
+  const resolvedContact = useMemo(
+    () => resolveCvChromeContact(localContact, chromeContact),
+    [chromeContact, localContact],
+  );
   const design = useMemo(() => cvDesignWithFullSectionRules(props.design), [props.design]);
+  const citrusRubric = useMemo(() => resolveCitrusRubricOptions(design), [design]);
   const resolvedChromeOptions = useMemo(
     () => resolveTemplateChromeOptions(design.template, design.colors, chromeOptions),
     [chromeOptions, design.colors, design.template],
   );
+  const canvasChromeOptions = useMemo<DossierChromeOptions>(() => {
+    if (design.template !== "terracotta" || resolvedChromeOptions.headerMode !== "contact") {
+      return resolvedChromeOptions;
+    }
+    // Kolumne intentionally hides the shared contact copy and presents these
+    // fields in its sidebar. Keep the same contact-header geometry, but tell the
+    // body de-duplication path that the hidden chrome does not own these fields.
+    return {
+      ...resolvedChromeOptions,
+      headerShowAddress: false,
+      headerShowPhone: false,
+      headerShowEmail: false,
+    };
+  }, [design.template, resolvedChromeOptions]);
   const data = useMemo(
-    () => cvBodyData(props.data, resolvedChromeOptions),
-    [props.data, resolvedChromeOptions],
+    () => cvBodyData(props.data, canvasChromeOptions),
+    [canvasChromeOptions, props.data],
   );
 
   // Layout defaults are template-aware, but an explicit student choice remains
@@ -103,20 +147,20 @@ export function CvCanvas({
     };
   }, [design.template]);
 
-  const modernBox = cvContentBox(
-    cvFrameFor(design.template),
-    0,
-    "modern",
-    design.sidebarPct,
-    resolvedChromeOptions,
-  );
+  const frame = cvFrameFor(design.template);
+  const classicBox = cvContentBox(frame, 0, "classic", design.sidebarPct, canvasChromeOptions);
+  const modernBox = cvContentBox(frame, 0, "modern", design.sidebarPct, canvasChromeOptions);
   const primary = design.colors.primary ?? design.colors.accent ?? design.colors.ink ?? "#111111";
   const secondary = design.colors.secondary ?? design.colors.accent ?? primary;
   const tertiary = design.colors.tertiary ?? design.colors.accent ?? secondary;
   const geometryStyle = {
     display: "contents",
+    "--cv-classic-main-left": `${classicBox.left}mm`,
+    "--cv-classic-main-right": `${classicBox.right}mm`,
     "--cv-modern-main-left": `${modernBox.left}mm`,
     "--cv-modern-main-right": `${modernBox.right}mm`,
+    "--cv-citrus-rubric-x": `${citrusRubric.horizontalMm}mm`,
+    "--cv-citrus-content-indent": `${citrusRubric.contentIndentMm}mm`,
     "--cover-primary": primary,
     "--cover-secondary": secondary,
     "--cover-tertiary": tertiary,
@@ -134,19 +178,26 @@ export function CvCanvas({
       data-cv-body-align={bodyAlignment}
       data-cv-heading-rule={design.headingRule}
       data-cv-user-heading-rule={props.design.headingRule === "full" ? "full" : undefined}
+      data-cv-citrus-pill={
+        design.template === "citrus" ? (citrusRubric.pill ? "true" : "false") : undefined
+      }
+      data-cv-citrus-rubric-x={design.template === "citrus" ? citrusRubric.horizontalMm : undefined}
+      data-cv-citrus-content-indent={
+        design.template === "citrus" ? citrusRubric.contentIndentMm : undefined
+      }
     >
       <BaseCvCanvas
         {...props}
         data={data}
         design={design}
-        chromeOptions={resolvedChromeOptions}
-        chromeContact={chromeContact ?? localContact}
+        chromeOptions={canvasChromeOptions}
+        chromeContact={resolvedContact}
       />
       {!props.exportMode ? (
         <CvTextAlignmentPortal
           template={design.template}
           sidebarPct={design.sidebarPct}
-          chromeOptions={resolvedChromeOptions}
+          chromeOptions={canvasChromeOptions}
           accentColor={design.colors.accent ?? secondary}
         />
       ) : null}
