@@ -1,0 +1,36 @@
+/* PACKAGE 2 — targeted production polish only. Keep template geometry intact. */
+
+/* Citrus: the coral/amber masthead needs a confident light contact treatment. */
+html
+  [data-dossier-template-chrome="citrus"][data-dossier-header-custom-surface="false"]
+  :is([data-dossier-integrated-contact], [data-dossier-continuation-contact-header]) {
+  color: #ffffff !important;
+}
+
+/* Edel: replace the detached double hairline with a restrained gold lower band.
+ * The small paper diamond sits inside that band so it reads as one intentional seal. */
+html
+  [data-dossier-template-chrome="edel"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  border-bottom: 0 !important;
+  box-shadow: inset 0 -1.35mm 0 var(--chrome-accent) !important;
+}
+
+html
+  [data-dossier-template-chrome="edel"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::after {
+  bottom: 0.2mm;
+  width: 1.65mm;
+  height: 1.65mm;
+  border: 0.22mm solid var(--chrome-accent);
+  background: var(--chrome-paper);
+  transform: translate(-50%, 0) rotate(45deg);
+}
