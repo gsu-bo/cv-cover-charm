@@ -148,3 +148,19 @@ html
   background: var(--cover-primary);
   opacity: clamp(0, calc(var(--dossier-motif-opacity, 1) * 2.4), 0.68);
 }
+
+/* Kolumne owns contact in the sidebar only while that sidebar layout is
+ * actually active. When users switch to Kolumne from a classic layout in the
+ * same session, the historic Terracotta cleanup must not hide the shared
+ * contact header as well, or address/phone/email disappear completely. */
+html[data-dossier-template="terracotta"]:not([data-cv-variant="modern"])
+  [data-dossier-chrome="cv"]
+  [data-dossier-contact-header-background] {
+  display: block !important;
+}
+
+html[data-dossier-template="terracotta"]:not([data-cv-variant="modern"])
+  [data-dossier-chrome="cv"]
+  :is([data-dossier-integrated-contact], [data-dossier-continuation-contact-header]) {
+  display: flex !important;
+}
