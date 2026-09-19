@@ -72,7 +72,7 @@ describe("shared dossier form UI", () => {
     expect(letterLayoutControls).toContain("Briefspezifische Positionen");
     expect(letterLayoutControls).toContain("data-letter-specific-layout-controls");
     expect(letterLayoutControls).toContain("data-letter-recipient-offset-control");
-    expect(letterLayoutControls).toContain('label="Eigene Anschrift"');
+    expect(letterLayoutControls).toContain('label="Meine Kontaktdaten"');
     expect(letterLayoutControls.indexOf("<DossierChromeControls")).toBeLessThan(
       letterLayoutControls.indexOf("Briefspezifische Positionen"),
     );
