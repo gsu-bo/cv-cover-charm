@@ -49,6 +49,7 @@ const DOSSIER_DOCX_TEMPLATE_LOADERS = {
   cove: () => import("./dossier-docx-templates/cove"),
   warm4: () => import("./dossier-docx-templates/warm4"),
   warm5: () => import("./dossier-docx-templates/warm5"),
+  diagonal: () => import("./dossier-docx-templates/diagonal"),
 } satisfies Record<string, DossierDocxTemplateLoader>;
 
 export const DOSSIER_DOCX_LAZY_TEMPLATE_IDS = Object.freeze(

@@ -1,0 +1,40 @@
+/*
+ * Explicit document-title formatting is user-owned state.
+ *
+ * Several template identity layers use highly specific `!important` typography
+ * declarations. Once the student explicitly toggles Fett / Kursiv /
+ * Unterstrichen, that choice must outrank every template default in preview,
+ * measurement and PDF rendering. Untouched titles are not targeted here.
+ *
+ * Vertical document-title spacing is dossier-wide rather than template-owned.
+ * The shared chrome first computes the safe CV content box; this rule then adds
+ * only the user's requested whitespace above the title inside that box.
+ */
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-dossier-document="cv"][data-dossier-document="cv"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-doc-title] {
+  margin-top: var(--cv-doc-title-margin-top, 0px) !important;
+}
+
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-dossier-document="cv"][data-dossier-document="cv"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-doc-title][data-cv-user-doc-weight="true"] {
+  font-weight: var(--cv-user-doc-weight) !important;
+}
+
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-dossier-document="cv"][data-dossier-document="cv"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-doc-title][data-cv-user-doc-style="true"] {
+  font-style: var(--cv-user-doc-style) !important;
+}
+
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-dossier-document="cv"][data-dossier-document="cv"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-doc-title][data-cv-user-doc-decoration="true"] {
+  text-decoration: var(--cv-user-doc-decoration) !important;
+  text-decoration-line: var(--cv-user-doc-decoration) !important;
+}

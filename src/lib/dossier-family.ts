@@ -100,6 +100,9 @@ const TEMPLATE_FAMILY: Record<string, DossierFamilyId> = {
   ribbon: "modern",
   cove: "modern",
 
+  // New standalone geometric template. It is intentionally separate from Frame.
+  diagonal: "modern",
+
   // Dark Edel variant: same premium typography family as Edel, with a true dark sheet.
   edelDark: "executive",
 };

@@ -22,9 +22,11 @@ import "./templatefix-27-28.css";
 import "./templatefix-29-31.css";
 import "./templatefix-prism.css";
 import "./templatefix-32-36.css";
+import "./ribbon-cover-redesign.css";
 import "./templatefix-32-36-cv-masthead.css";
 import "./templatefix-glow-density.css";
 import "./templatefix-frame.css";
+import "./template-diagonal.css";
 import "./templatefix-mono-luxe.css";
 import "./warm2-redesign.css";
 import "./templatefix-studio-pdf-scale.css";
@@ -116,6 +118,26 @@ for (let index = TEMPLATES.length - 1; index >= 0; index -= 1) {
 }
 
 /**
+ * Diagonal is a new standalone template. It deliberately does not replace or
+ * rename Frame: existing saved Frame dossiers keep their original identity.
+ * The cover reuses the stable three-field structural scaffold, while its own
+ * stylesheet turns that scaffold into two large corner masses with a clean
+ * diagonal paper band between them.
+ */
+const diagonalDefinition: TemplateDefinition = {
+  id: "diagonal" as TemplateId,
+  name: "Diagonal",
+  description: "Klare Diagonalen in Blau und Teal, modern und editorial",
+  slots: [
+    { key: "bg", label: "Papier", default: "#f8fafc" },
+    { key: "primary", label: "Blau", default: "#1d4ed8" },
+    { key: "secondary", label: "Teal", default: "#0f766e" },
+    { key: "accent", label: "Akzent", default: "#0891b2" },
+    { key: "ink", label: "Text", default: "#172033" },
+  ],
+};
+
+/**
  * Edel Dark deliberately reuses the proven Edel composition instead of
  * entering the Fresh geometry system. Its extra `sheet` slot is semantic:
  * title page and text-heavy interior pages can share a genuinely dark surface
@@ -138,12 +160,20 @@ const edelDarkDefinition: TemplateDefinition = {
 for (const definition of freshDefinitions) {
   if (!TEMPLATES.some((template) => template.id === definition.id)) TEMPLATES.push(definition);
 }
+if (!TEMPLATES.some((template) => (template.id as string) === "diagonal")) {
+  TEMPLATES.push(diagonalDefinition);
+}
 if (!TEMPLATES.some((template) => (template.id as string) === "edelDark")) {
   TEMPLATES.push(edelDarkDefinition);
 }
 
-export function isFreshTemplate(template: TemplateId): template is TemplateId & FreshTemplateId {
-  return isFreshTemplateId(template as string);
+/**
+ * CoverBackground only needs to know whether the stable three-field structural
+ * scaffold is available. Diagonal uses that scaffold too, but stays outside the
+ * historic Fresh 21-42 registry so adding it cannot renumber or replace Frame.
+ */
+export function isFreshTemplate(template: TemplateId): boolean {
+  return isFreshTemplateId(template as string) || (template as string) === "diagonal";
 }
 
 /** Compatibility helper; the family itself is owned centrally. */
