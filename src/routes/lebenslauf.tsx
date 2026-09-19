@@ -1078,6 +1078,10 @@ function Lebenslauf() {
       onLayout={(patch) => setSectionLayout(key, patch)}
     />
   );
+  const editorSectionOrder = (key: CvLayoutSectionKey) => {
+    const index = cvSectionOrder(data).indexOf(key);
+    return index < 0 ? cvSectionOrder(data).length + 1 : index + 1;
+  };
 
   const selectedSectionLayout = selectedSection ? cvSectionLayout(data, selectedSection) : null;
   const selectedSectionLabel = selectedSection ? sectionDisplayLabel(selectedSection) : "";
@@ -1457,415 +1461,433 @@ function Lebenslauf() {
               </div>
             ) : null}
 
-            <Section
-              title="Vom Dossier übernehmen"
-              open={open.uebernehmen}
-              onToggle={() => toggle("uebernehmen")}
-              hint={cover ? "Titelblatt bereit" : "nichts verfügbar"}
-            >
-              <div className="flex flex-col gap-3 rounded-md border border-dashed p-2.5">
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  Gemeinsame Angaben und Design kommen im Lebenslauf aus dem Titelblatt. Deine
-                  CV-eigenen Inhalte wie Schule und Erfahrung bleiben erhalten.
-                </p>
+            <div data-cv-content-editor className="flex flex-col gap-3">
+              <Section
+                title="Vom Dossier übernehmen"
+                open={open.uebernehmen}
+                onToggle={() => toggle("uebernehmen")}
+                order={0}
+                hint={cover ? "Titelblatt bereit" : "nichts verfügbar"}
+              >
+                <div className="flex flex-col gap-3 rounded-md border border-dashed p-2.5">
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    Gemeinsame Angaben und Design kommen im Lebenslauf aus dem Titelblatt. Deine
+                    CV-eigenen Inhalte wie Schule und Erfahrung bleiben erhalten.
+                  </p>
 
-                <button
-                  type="button"
-                  onClick={syncAllFromCover}
-                  disabled={!cover}
-                  className="w-full rounded-md bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-45"
-                >
-                  Alles übernehmen
-                </button>
-
-                {coverChanged ? (
-                  <div
-                    role="status"
-                    className="rounded-md border border-sky-300/70 bg-sky-50 p-2.5 text-sky-950 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
+                  <button
+                    type="button"
+                    onClick={syncAllFromCover}
+                    disabled={!cover}
+                    className="w-full rounded-md bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-45"
                   >
-                    <div className="text-xs font-semibold">Titelblatt wurde geändert</div>
-                    <p className="mt-1 text-[11px] leading-relaxed opacity-80">
-                      Du kannst alles neu übernehmen oder unten nur die gewünschte Auswahl.
-                    </p>
-                  </div>
-                ) : null}
+                    Alles übernehmen
+                  </button>
 
-                <details className="rounded-md border bg-background">
-                  <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium">
-                    Auswahl anpassen
-                  </summary>
-                  <div className="grid gap-2 border-t p-3">
-                    {TAKEOVER_LABELS.map(({ key, label, hint }) => (
-                      <label key={key} className="flex items-start gap-2 text-xs">
+                  {coverChanged ? (
+                    <div
+                      role="status"
+                      className="rounded-md border border-sky-300/70 bg-sky-50 p-2.5 text-sky-950 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
+                    >
+                      <div className="text-xs font-semibold">Titelblatt wurde geändert</div>
+                      <p className="mt-1 text-[11px] leading-relaxed opacity-80">
+                        Du kannst alles neu übernehmen oder unten nur die gewünschte Auswahl.
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <details className="rounded-md border bg-background">
+                    <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium">
+                      Auswahl anpassen
+                    </summary>
+                    <div className="grid gap-2 border-t p-3">
+                      {TAKEOVER_LABELS.map(({ key, label, hint }) => (
+                        <label key={key} className="flex items-start gap-2 text-xs">
+                          <input
+                            type="checkbox"
+                            className="mt-0.5"
+                            checked={takeover[key]}
+                            disabled={!cover}
+                            onChange={(e) =>
+                              setTakeover((t) => ({ ...t, [key]: e.target.checked }))
+                            }
+                          />
+                          <span>
+                            <span className="block font-medium">{label}</span>
+                            <span className="block text-muted-foreground">{hint}</span>
+                          </span>
+                        </label>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={syncFromCover}
+                        disabled={!cover}
+                        className="mt-1 self-start rounded-md border border-input px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                      >
+                        Auswahl übernehmen
+                      </button>
+
+                      <label className="mt-1 flex items-start gap-2 border-t pt-2 text-xs">
                         <input
                           type="checkbox"
                           className="mt-0.5"
-                          checked={takeover[key]}
-                          disabled={!cover}
-                          onChange={(e) => setTakeover((t) => ({ ...t, [key]: e.target.checked }))}
+                          checked={design.useElements}
+                          onChange={(e) =>
+                            setDesign((d) => ({ ...d, useElements: e.target.checked }))
+                          }
                         />
                         <span>
-                          <span className="block font-medium">{label}</span>
-                          <span className="block text-muted-foreground">{hint}</span>
+                          Übernommene Formen anzeigen
+                          <span className="block text-muted-foreground">
+                            {elements.length > 0
+                              ? `${elements.length} übernommen.`
+                              : "Noch keine übernommen."}
+                          </span>
                         </span>
                       </label>
-                    ))}
-
-                    <button
-                      type="button"
-                      onClick={syncFromCover}
-                      disabled={!cover}
-                      className="mt-1 self-start rounded-md border border-input px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
-                    >
-                      Auswahl übernehmen
-                    </button>
-
-                    <label className="mt-1 flex items-start gap-2 border-t pt-2 text-xs">
-                      <input
-                        type="checkbox"
-                        className="mt-0.5"
-                        checked={design.useElements}
-                        onChange={(e) =>
-                          setDesign((d) => ({ ...d, useElements: e.target.checked }))
-                        }
-                      />
-                      <span>
-                        Übernommene Formen anzeigen
-                        <span className="block text-muted-foreground">
-                          {elements.length > 0
-                            ? `${elements.length} übernommen.`
-                            : "Noch keine übernommen."}
-                        </span>
-                      </span>
-                    </label>
-                  </div>
-                </details>
-              </div>
-            </Section>
-
-            <Section
-              title="Persönliche Angaben"
-              open={open.person}
-              onToggle={() => toggle("person")}
-              hint={data.person.vorname || data.person.nachname ? "gesetzt" : "leer"}
-            >
-              <div className="flex flex-col gap-3">
-                <SectionLayoutControls
-                  section="person"
-                  layout={cvSectionLayout(data, "person")}
-                  onLayout={(patch) => setSectionLayout("person", patch)}
-                />
-
-                <label className="flex flex-col gap-1 text-xs">
-                  <span className="text-muted-foreground">Titel des Dokuments</span>
-                  <input
-                    type="text"
-                    value={data.titel ?? ""}
-                    placeholder={DEFAULT_CV_TITLE}
-                    onChange={(e) => patchData({ titel: e.target.value })}
-                    className="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                  <span className="text-muted-foreground/80">
-                    Steht über dem Namen. Leer lassen blendet ihn aus.
-                  </span>
-                </label>
-
-                <div className="grid gap-3 rounded-md border bg-muted/20 p-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-xs font-semibold">Dokumenttitel gestalten</div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDesign((current) => ({
-                          ...current,
-                          docTitleFontSizePx: undefined,
-                          docTitleColor: undefined,
-                          docTitleBold: undefined,
-                          docTitleItalic: undefined,
-                          docTitleUnderline: undefined,
-                          docTitleMarginBottomPx: undefined,
-                        }))
-                      }
-                      className="text-xs text-muted-foreground underline hover:text-foreground"
-                    >
-                      Vorlage
-                    </button>
-                  </div>
-                  <label className="flex flex-col gap-1 text-xs">
-                    <span className="text-muted-foreground">
-                      Schriftgrösse {design.docTitleFontSizePx ?? CV_DOC_TITLE_DEFAULTS.fontSizePx}{" "}
-                      px
-                    </span>
-                    <input
-                      type="range"
-                      min={CV_DOC_TITLE_FONT_SIZE_MIN}
-                      max={CV_DOC_TITLE_FONT_SIZE_MAX}
-                      step={1}
-                      value={design.docTitleFontSizePx ?? CV_DOC_TITLE_DEFAULTS.fontSizePx}
-                      onChange={(event) =>
-                        setDesign((current) => ({
-                          ...current,
-                          docTitleFontSizePx: Number(event.target.value),
-                        }))
-                      }
-                      className="w-full accent-primary"
-                      aria-label="Schriftgrösse Dokumenttitel"
-                    />
-                  </label>
-
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-muted-foreground">Schriftfarbe</span>
-                    <input
-                      type="color"
-                      value={design.docTitleColor ?? "#6b7280"}
-                      onChange={(event) =>
-                        setDesign((current) => ({ ...current, docTitleColor: event.target.value }))
-                      }
-                      className="h-7 w-10 cursor-pointer rounded border border-input bg-background"
-                      aria-label="Schriftfarbe Dokumenttitel"
-                    />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDesign((current) => ({ ...current, docTitleColor: undefined }))
-                      }
-                      className="text-muted-foreground underline hover:text-foreground"
-                    >
-                      Standardfarbe
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-1">
-                    {(
-                      [
-                        ["docTitleBold", "Fett", CV_DOC_TITLE_DEFAULTS.bold, "font-bold"],
-                        ["docTitleItalic", "Kursiv", CV_DOC_TITLE_DEFAULTS.italic, "italic"],
-                        [
-                          "docTitleUnderline",
-                          "Unterstrichen",
-                          CV_DOC_TITLE_DEFAULTS.underline,
-                          "underline",
-                        ],
-                      ] as const
-                    ).map(([key, label, fallback, textClass]) => {
-                      const active = design[key] ?? fallback;
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          aria-pressed={active}
-                          onClick={() =>
-                            setDesign((current) => ({
-                              ...current,
-                              [key]: !(current[key] ?? fallback),
-                            }))
-                          }
-                          className={`rounded-md border px-2 py-1.5 text-xs ${textClass} ${
-                            active
-                              ? "border-foreground bg-accent"
-                              : "border-input hover:border-foreground/40"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <label className="flex flex-col gap-1 text-xs">
-                    <span className="text-muted-foreground">
-                      Abstand nach unten{" "}
-                      {design.docTitleMarginBottomPx ?? CV_DOC_TITLE_DEFAULTS.marginBottomPx} px
-                    </span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={CV_DOC_TITLE_MARGIN_BOTTOM_MAX}
-                      step={1}
-                      value={design.docTitleMarginBottomPx ?? CV_DOC_TITLE_DEFAULTS.marginBottomPx}
-                      onChange={(event) =>
-                        setDesign((current) => ({
-                          ...current,
-                          docTitleMarginBottomPx: Number(event.target.value),
-                        }))
-                      }
-                      className="w-full accent-primary"
-                      aria-label="Abstand unter Dokumenttitel"
-                    />
-                  </label>
+                    </div>
+                  </details>
                 </div>
+              </Section>
 
-                <FormCvPerson
-                  person={data.person}
-                  onChange={patchPerson}
-                  contactLabel={data.labels.kontakt ?? ""}
-                  onContactLabel={(v) => setLabel("kontakt", v)}
-                />
-              </div>
-            </Section>
+              <Section
+                title="Persönliche Angaben"
+                open={open.person}
+                onToggle={() => toggle("person")}
+                order={editorSectionOrder("person")}
+                hint={data.person.vorname || data.person.nachname ? "gesetzt" : "leer"}
+              >
+                <div className="flex flex-col gap-3">
+                  <SectionLayoutControls
+                    section="person"
+                    layout={cvSectionLayout(data, "person")}
+                    onLayout={(patch) => setSectionLayout("person", patch)}
+                  />
 
-            <Section
-              title={sectionLabel("schule")}
-              open={open.schule}
-              onToggle={() => toggle("schule")}
-              hint={`${data.schule.length}`}
-            >
-              {opts("schule")}
-              <FormCvEntries
-                entries={data.schule}
-                onChange={(schule) => patchData({ schule })}
-                titelLabel="Schule / Stufe"
-                ortLabel="Schulhaus, Ort"
-              />
-            </Section>
+                  <label className="flex flex-col gap-1 text-xs">
+                    <span className="text-muted-foreground">Titel des Dokuments</span>
+                    <input
+                      type="text"
+                      value={data.titel ?? ""}
+                      placeholder={DEFAULT_CV_TITLE}
+                      onChange={(e) => patchData({ titel: e.target.value })}
+                      className="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                    <span className="text-muted-foreground/80">
+                      Steht über dem Namen. Leer lassen blendet ihn aus.
+                    </span>
+                  </label>
 
-            <Section
-              title={sectionLabel("erfahrung")}
-              open={open.erfahrung}
-              onToggle={() => toggle("erfahrung")}
-              hint={`${data.erfahrung.length}`}
-            >
-              {opts("erfahrung")}
-              <FormCvEntries
-                entries={data.erfahrung}
-                onChange={(erfahrung) => patchData({ erfahrung })}
-                titelLabel="Was hast du gemacht?"
-                ortLabel="Betrieb, Ort"
-              />
-            </Section>
-
-            <Section
-              title={sectionLabel("sprachen")}
-              open={open.sprachen}
-              onToggle={() => toggle("sprachen")}
-              hint={`${data.sprachen.length}`}
-            >
-              {opts("sprachen")}
-              <FormCvSprachen
-                list={data.sprachen}
-                onChange={(sprachen) => patchData({ sprachen })}
-              />
-            </Section>
-
-            <Section
-              title={sectionLabel("staerken")}
-              open={open.staerken}
-              onToggle={() => toggle("staerken")}
-              hint={`${data.staerken.length}`}
-            >
-              {opts("staerken")}
-              <FormCvLines
-                list={data.staerken}
-                onChange={(staerken) => patchData({ staerken })}
-                placeholder="z. B. Zuverlässig und pünktlich"
-                addLabel="+ Stärke"
-              />
-            </Section>
-
-            <Section
-              title={sectionLabel("hobbys")}
-              open={open.hobbys}
-              onToggle={() => toggle("hobbys")}
-              hint={`${data.hobbys.length}`}
-            >
-              {opts("hobbys")}
-              <FormCvLines
-                list={data.hobbys}
-                onChange={(hobbys) => patchData({ hobbys })}
-                placeholder="z. B. Volleyball im Verein"
-                addLabel="+ Hobby"
-              />
-            </Section>
-
-            <Section
-              title={sectionLabel("referenzen")}
-              open={open.referenzen}
-              onToggle={() => toggle("referenzen")}
-              hint={`${data.referenzen.length}`}
-            >
-              {opts("referenzen")}
-              <FormCvReferenzen
-                list={data.referenzen}
-                onChange={(referenzen) => patchData({ referenzen })}
-              />
-            </Section>
-
-            {(data.customSections ?? []).map((section) => {
-              const key = customSectionKey(section.id);
-              return (
-                <Section
-                  key={section.id}
-                  title={section.title.trim() || "Eigene Rubrik"}
-                  open={!!open[key]}
-                  onToggle={() => toggle(key)}
-                  hint={`${section.entries.length}`}
-                  action={
-                    section.preset === "familie" ? undefined : (
+                  <div className="grid gap-3 rounded-md border bg-muted/20 p-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs font-semibold">Dokumenttitel gestalten</div>
                       <button
                         type="button"
-                        onClick={() => removeCustomSection(section.id)}
-                        className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        aria-label={`${section.title || "Eigene Rubrik"} löschen`}
-                        title="Rubrik löschen"
-                      >
-                        Löschen
-                      </button>
-                    )
-                  }
-                >
-                  <div className="mb-2 flex flex-col gap-2 border-b pb-2">
-                    <label className="flex flex-col gap-1 text-xs">
-                      <span className="text-muted-foreground">Rubriktitel</span>
-                      <input
-                        value={section.title}
-                        onChange={(event) =>
-                          patchCustomSection(section.id, { title: event.target.value })
+                        onClick={() =>
+                          setDesign((current) => ({
+                            ...current,
+                            docTitleFontSizePx: undefined,
+                            docTitleColor: undefined,
+                            docTitleBold: undefined,
+                            docTitleItalic: undefined,
+                            docTitleUnderline: undefined,
+                            docTitleMarginBottomPx: undefined,
+                          }))
                         }
-                        placeholder="z. B. Projekte oder Kurse"
-                        className="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="text-xs text-muted-foreground underline hover:text-foreground"
+                      >
+                        Vorlage
+                      </button>
+                    </div>
+                    <label className="flex flex-col gap-1 text-xs">
+                      <span className="text-muted-foreground">
+                        Schriftgrösse{" "}
+                        {design.docTitleFontSizePx ?? CV_DOC_TITLE_DEFAULTS.fontSizePx} px
+                      </span>
+                      <input
+                        type="range"
+                        min={CV_DOC_TITLE_FONT_SIZE_MIN}
+                        max={CV_DOC_TITLE_FONT_SIZE_MAX}
+                        step={1}
+                        value={design.docTitleFontSizePx ?? CV_DOC_TITLE_DEFAULTS.fontSizePx}
+                        onChange={(event) =>
+                          setDesign((current) => ({
+                            ...current,
+                            docTitleFontSizePx: Number(event.target.value),
+                          }))
+                        }
+                        className="w-full accent-primary"
+                        aria-label="Schriftgrösse Dokumenttitel"
                       />
                     </label>
-                    <SectionLayoutControls
-                      section={key}
-                      layout={cvSectionLayout(data, key)}
-                      onLayout={(patch) => setSectionLayout(key, patch)}
-                    />
+
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="text-muted-foreground">Schriftfarbe</span>
+                      <input
+                        type="color"
+                        value={design.docTitleColor ?? "#6b7280"}
+                        onChange={(event) =>
+                          setDesign((current) => ({
+                            ...current,
+                            docTitleColor: event.target.value,
+                          }))
+                        }
+                        className="h-7 w-10 cursor-pointer rounded border border-input bg-background"
+                        aria-label="Schriftfarbe Dokumenttitel"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDesign((current) => ({ ...current, docTitleColor: undefined }))
+                        }
+                        className="text-muted-foreground underline hover:text-foreground"
+                      >
+                        Standardfarbe
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-1">
+                      {(
+                        [
+                          ["docTitleBold", "Fett", CV_DOC_TITLE_DEFAULTS.bold, "font-bold"],
+                          ["docTitleItalic", "Kursiv", CV_DOC_TITLE_DEFAULTS.italic, "italic"],
+                          [
+                            "docTitleUnderline",
+                            "Unterstrichen",
+                            CV_DOC_TITLE_DEFAULTS.underline,
+                            "underline",
+                          ],
+                        ] as const
+                      ).map(([key, label, fallback, textClass]) => {
+                        const active = design[key] ?? fallback;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() =>
+                              setDesign((current) => ({
+                                ...current,
+                                [key]: !(current[key] ?? fallback),
+                              }))
+                            }
+                            className={`rounded-md border px-2 py-1.5 text-xs ${textClass} ${
+                              active
+                                ? "border-foreground bg-accent"
+                                : "border-input hover:border-foreground/40"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <label className="flex flex-col gap-1 text-xs">
+                      <span className="text-muted-foreground">
+                        Abstand nach unten{" "}
+                        {design.docTitleMarginBottomPx ?? CV_DOC_TITLE_DEFAULTS.marginBottomPx} px
+                      </span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={CV_DOC_TITLE_MARGIN_BOTTOM_MAX}
+                        step={1}
+                        value={
+                          design.docTitleMarginBottomPx ?? CV_DOC_TITLE_DEFAULTS.marginBottomPx
+                        }
+                        onChange={(event) =>
+                          setDesign((current) => ({
+                            ...current,
+                            docTitleMarginBottomPx: Number(event.target.value),
+                          }))
+                        }
+                        className="w-full accent-primary"
+                        aria-label="Abstand unter Dokumenttitel"
+                      />
+                    </label>
                   </div>
-                  {section.preset === "familie" ? (
-                    <p className="mb-2 rounded-md bg-muted/40 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
-                      Optionaler Bereich. Sinnvolle Aufteilung: „Eltern“ mit Namen und Berufen sowie
-                      „Geschwister“ mit Jahrgang und Tätigkeit. Die Angaben erscheinen erst im CV,
-                      wenn du sie einträgst.
-                    </p>
-                  ) : section.preset === "digitale-kenntnisse" ? (
-                    <p className="mb-2 rounded-md bg-muted/40 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
-                      Programme und Technologien mit Niveau oder konkreter Anwendung angeben, z. B.
-                      „Excel – Grundkenntnisse, einfache Formeln“. Allgemeine PC-Nutzung musst du
-                      nicht aufführen.
-                    </p>
-                  ) : null}
-                  <FormCvEntries
-                    entries={section.entries}
-                    onChange={(entries) => patchCustomSection(section.id, { entries })}
-                    titelLabel={
-                      section.preset === "familie"
-                        ? "Bezug"
-                        : section.preset === "digitale-kenntnisse"
-                          ? "Programm / Technologie"
-                          : "Titel"
-                    }
-                    ortLabel={
-                      section.preset === "familie"
-                        ? "Name / Beruf"
-                        : section.preset === "digitale-kenntnisse"
-                          ? "Niveau / Anwendung"
-                          : "Ort / Organisation"
-                    }
-                    placement={null}
+
+                  <FormCvPerson
+                    person={data.person}
+                    onChange={patchPerson}
+                    contactLabel={data.labels.kontakt ?? ""}
+                    onContactLabel={(v) => setLabel("kontakt", v)}
                   />
-                </Section>
-              );
-            })}
+                </div>
+              </Section>
+
+              <Section
+                title={sectionLabel("schule")}
+                open={open.schule}
+                onToggle={() => toggle("schule")}
+                order={editorSectionOrder("schule")}
+                hint={`${data.schule.length}`}
+              >
+                {opts("schule")}
+                <FormCvEntries
+                  entries={data.schule}
+                  onChange={(schule) => patchData({ schule })}
+                  titelLabel="Schule / Stufe"
+                  ortLabel="Schulhaus, Ort"
+                />
+              </Section>
+
+              <Section
+                title={sectionLabel("erfahrung")}
+                open={open.erfahrung}
+                onToggle={() => toggle("erfahrung")}
+                order={editorSectionOrder("erfahrung")}
+                hint={`${data.erfahrung.length}`}
+              >
+                {opts("erfahrung")}
+                <FormCvEntries
+                  entries={data.erfahrung}
+                  onChange={(erfahrung) => patchData({ erfahrung })}
+                  titelLabel="Was hast du gemacht?"
+                  ortLabel="Betrieb, Ort"
+                />
+              </Section>
+
+              <Section
+                title={sectionLabel("sprachen")}
+                open={open.sprachen}
+                onToggle={() => toggle("sprachen")}
+                order={editorSectionOrder("sprachen")}
+                hint={`${data.sprachen.length}`}
+              >
+                {opts("sprachen")}
+                <FormCvSprachen
+                  list={data.sprachen}
+                  onChange={(sprachen) => patchData({ sprachen })}
+                />
+              </Section>
+
+              <Section
+                title={sectionLabel("staerken")}
+                open={open.staerken}
+                onToggle={() => toggle("staerken")}
+                order={editorSectionOrder("staerken")}
+                hint={`${data.staerken.length}`}
+              >
+                {opts("staerken")}
+                <FormCvLines
+                  list={data.staerken}
+                  onChange={(staerken) => patchData({ staerken })}
+                  placeholder="z. B. Zuverlässig und pünktlich"
+                  addLabel="+ Stärke"
+                />
+              </Section>
+
+              <Section
+                title={sectionLabel("hobbys")}
+                open={open.hobbys}
+                onToggle={() => toggle("hobbys")}
+                order={editorSectionOrder("hobbys")}
+                hint={`${data.hobbys.length}`}
+              >
+                {opts("hobbys")}
+                <FormCvLines
+                  list={data.hobbys}
+                  onChange={(hobbys) => patchData({ hobbys })}
+                  placeholder="z. B. Volleyball im Verein"
+                  addLabel="+ Hobby"
+                />
+              </Section>
+
+              <Section
+                title={sectionLabel("referenzen")}
+                open={open.referenzen}
+                onToggle={() => toggle("referenzen")}
+                order={editorSectionOrder("referenzen")}
+                hint={`${data.referenzen.length}`}
+              >
+                {opts("referenzen")}
+                <FormCvReferenzen
+                  list={data.referenzen}
+                  onChange={(referenzen) => patchData({ referenzen })}
+                />
+              </Section>
+
+              {(data.customSections ?? []).map((section) => {
+                const key = customSectionKey(section.id);
+                return (
+                  <Section
+                    key={section.id}
+                    title={section.title.trim() || "Eigene Rubrik"}
+                    open={!!open[key]}
+                    onToggle={() => toggle(key)}
+                    order={editorSectionOrder(key)}
+                    hint={`${section.entries.length}`}
+                    action={
+                      section.preset === "familie" ? undefined : (
+                        <button
+                          type="button"
+                          onClick={() => removeCustomSection(section.id)}
+                          className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          aria-label={`${section.title || "Eigene Rubrik"} löschen`}
+                          title="Rubrik löschen"
+                        >
+                          Löschen
+                        </button>
+                      )
+                    }
+                  >
+                    <div className="mb-2 flex flex-col gap-2 border-b pb-2">
+                      <label className="flex flex-col gap-1 text-xs">
+                        <span className="text-muted-foreground">Rubriktitel</span>
+                        <input
+                          value={section.title}
+                          onChange={(event) =>
+                            patchCustomSection(section.id, { title: event.target.value })
+                          }
+                          placeholder="z. B. Projekte oder Kurse"
+                          className="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                      </label>
+                      <SectionLayoutControls
+                        section={key}
+                        layout={cvSectionLayout(data, key)}
+                        onLayout={(patch) => setSectionLayout(key, patch)}
+                      />
+                    </div>
+                    {section.preset === "familie" ? (
+                      <p className="mb-2 rounded-md bg-muted/40 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
+                        Optionaler Bereich. Sinnvolle Aufteilung: „Eltern“ mit Namen und Berufen
+                        sowie „Geschwister“ mit Jahrgang und Tätigkeit. Die Angaben erscheinen erst
+                        im CV, wenn du sie einträgst.
+                      </p>
+                    ) : section.preset === "digitale-kenntnisse" ? (
+                      <p className="mb-2 rounded-md bg-muted/40 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
+                        Programme und Technologien mit Niveau oder konkreter Anwendung angeben, z.
+                        B. „Excel – Grundkenntnisse, einfache Formeln“. Allgemeine PC-Nutzung musst
+                        du nicht aufführen.
+                      </p>
+                    ) : null}
+                    <FormCvEntries
+                      entries={section.entries}
+                      onChange={(entries) => patchCustomSection(section.id, { entries })}
+                      titelLabel={
+                        section.preset === "familie"
+                          ? "Bezug"
+                          : section.preset === "digitale-kenntnisse"
+                            ? "Programm / Technologie"
+                            : "Titel"
+                      }
+                      ortLabel={
+                        section.preset === "familie"
+                          ? "Name / Beruf"
+                          : section.preset === "digitale-kenntnisse"
+                            ? "Niveau / Anwendung"
+                            : "Ort / Organisation"
+                      }
+                      placement={null}
+                    />
+                  </Section>
+                );
+              })}
+            </div>
 
             <Section
               title="Rubriken anordnen"
@@ -2307,7 +2329,7 @@ function Lebenslauf() {
                     </label>
 
                     <div className="flex flex-col gap-1 text-xs">
-                      <span className="text-muted-foreground">Linie nach rechts</span>
+                      <span className="text-muted-foreground">Trennlinie nach Rubriktitel</span>
                       <div className="flex gap-1">
                         {(
                           [

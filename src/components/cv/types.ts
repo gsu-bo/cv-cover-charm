@@ -50,7 +50,12 @@ export type CvPerson = {
 
 /** Welche Abschnitte gibt es und wie heissen sie in der Vorgabe? */
 export type CvSectionKey =
-  "schule" | "erfahrung" | "sprachen" | "hobbys" | "staerken" | "referenzen";
+  | "schule"
+  | "erfahrung"
+  | "sprachen"
+  | "hobbys"
+  | "staerken"
+  | "referenzen";
 
 export const CV_SECTION_LABELS: Record<CvSectionKey, string> = {
   schule: "Schulbildung",
@@ -447,8 +452,11 @@ export function ensureFixedFamilySection(data: CvData): CvData {
               ? { ...section, preset: "familie" as const }
               : section,
           );
-    const nextOrder = usesLegacyDefaultOrder ? defaultCvSectionOrder(customKeys) : cvSectionOrder(data);
-    if (normalizedSections === sections && sameSectionOrder(nextOrder, currentSavedOrder)) return data;
+    const nextOrder = usesLegacyDefaultOrder
+      ? defaultCvSectionOrder(customKeys)
+      : cvSectionOrder(data);
+    if (normalizedSections === sections && sameSectionOrder(nextOrder, currentSavedOrder))
+      return data;
     return {
       ...data,
       customSections: normalizedSections,
@@ -534,7 +542,7 @@ export const DEMO_CV: CvData = {
     telefon: "079 123 45 67",
     email: "lea.mueller@example.ch",
     geburtsdatum: "14.03.2010",
-    nationalitaet: "Schweiz",
+    nationalitaet: "",
     untertitel: "",
     foto: null,
   },

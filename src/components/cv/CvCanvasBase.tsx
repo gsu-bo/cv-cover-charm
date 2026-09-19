@@ -800,7 +800,9 @@ export function CvCanvas({
             ))}
             {angaben.length > 0 && (
               <div data-cv-muted style={{ marginTop: "1mm", color: pal.muted }}>
-                {angaben.join(" · ")}
+                {angaben.map((line) => (
+                  <div key={line}>{line}</div>
+                ))}
               </div>
             )}
           </div>
@@ -923,10 +925,12 @@ export function CvCanvas({
                   fontSize: pt(9.2),
                   color: pal.muted,
                   lineHeight: 1.35,
-                  textAlign: infoMirrored ? "right" : "left",
+                  textAlign: "left",
                 }}
               >
-                {angaben.join(" · ")}
+                {angaben.map((line) => (
+                  <div key={line}>{line}</div>
+                ))}
               </div>
             )}
           </div>
@@ -1102,10 +1106,12 @@ export function CvCanvas({
                   fontSize: pt(9.2),
                   color: pal.muted,
                   lineHeight: 1.35,
-                  textAlign: infoMirrored ? "right" : "left",
+                  textAlign: "left",
                 }}
               >
-                {angaben.join(" · ")}
+                {angaben.map((line) => (
+                  <div key={line}>{line}</div>
+                ))}
               </div>
             )}
           </div>
@@ -2465,7 +2471,7 @@ export function CvCanvas({
                     )}
                     {p.nationalitaet && (
                       <div data-cv-muted style={{ color: side.muted }}>
-                        {p.nationalitaet}
+                        Nationalität {p.nationalitaet}
                       </div>
                     )}
                   </div>
@@ -2792,6 +2798,7 @@ export function CvCanvas({
       data-cv-archetype={frame.id}
       data-cv-photo-position={photoPosition}
       data-cv-info-position={infoPosition}
+      data-cv-heading-rule={headingRule}
       data-cv-band-head={frame.headFirstMm > 0 ? "true" : "false"}
       data-export-mode={exportMode ? "true" : "false"}
       style={{

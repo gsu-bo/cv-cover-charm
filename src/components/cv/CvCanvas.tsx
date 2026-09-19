@@ -128,6 +128,7 @@ export function CvCanvas({
     <div
       style={geometryStyle}
       data-cv-body-align={bodyAlignment}
+      data-cv-heading-rule={design.headingRule}
       data-cv-user-heading-rule={props.design.headingRule === "full" ? "full" : undefined}
     >
       <BaseCvCanvas
