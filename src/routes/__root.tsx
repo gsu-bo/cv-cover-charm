@@ -15,6 +15,7 @@ import editorActionMenuCss from "../components/dossier/editor-action-menu.css?ur
 import humanPolishCss from "../components/dossier/human-polish.css?url";
 import letterAlignmentCss from "../components/letter/letter-alignment.css?url";
 import headerProductionPolishCss from "../components/dossier/header-production-polish.css?url";
+import motifVisibilityCss from "../components/dossier/motif-visibility.css?url";
 import { DossierHyphenationBridge } from "../components/dossier/DossierHyphenationControl";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -25,7 +26,7 @@ function NotFoundComponent() {
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          Something went wrong on our end. You can try refreshing or head back home.
         </p>
         <div className="mt-6">
           <Link
@@ -136,6 +137,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: headerProductionPolishCss,
+      },
+      {
+        rel: "stylesheet",
+        href: motifVisibilityCss,
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
