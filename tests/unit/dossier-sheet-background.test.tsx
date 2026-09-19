@@ -50,8 +50,8 @@ describe("shared dossier sheet background", () => {
 
     // Contact is the dossier default in both CV and motivation letter. The
     // common chrome plus the default 12 mm post-header gap owns the text top.
-    expect(letterLayoutFor("modern").top).toBe(43);
-    expect(letterLayoutFor("freundlich").top).toBe(43);
+    expect(letterLayoutFor("modern").top).toBe(53);
+    expect(letterLayoutFor("freundlich").top).toBe(53);
     expect(letterLayoutFor("blockig").left).toBe(27);
     expect(letterLayoutFor("studio").left).toBe(80);
     expect(letterLayoutFor("edel").left).toBe(19);

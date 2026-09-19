@@ -68,7 +68,7 @@ describe("configurable CV and motivation-letter page margins", () => {
       undefined,
       DEFAULT_DOSSIER_CHROME_OPTIONS,
     );
-    expect(minimums).toEqual({ top: 27, right: 5, bottom: 7.5, left: 80 });
+    expect(minimums).toEqual({ top: 37, right: 5, bottom: 7.5, left: 80 });
     expect(
       clampDossierPageMarginsToMinimums({ top: 5, right: 5, bottom: 5, left: 5 }, minimums),
     ).toEqual(minimums);
@@ -89,7 +89,7 @@ describe("configurable CV and motivation-letter page margins", () => {
         undefined,
         DEFAULT_DOSSIER_CHROME_OPTIONS,
       ),
-    ).toEqual({ top: 27, right: 19, bottom: 19, left: 19 });
+    ).toEqual({ top: 37, right: 19, bottom: 19, left: 19 });
     expect(
       cvSafePageMarginMinimums(
         cvFrameFor("klassisch"),
@@ -98,7 +98,7 @@ describe("configurable CV and motivation-letter page margins", () => {
         undefined,
         DEFAULT_DOSSIER_CHROME_OPTIONS,
       ),
-    ).toEqual({ top: 27, right: 15, bottom: 15, left: 15 });
+    ).toEqual({ top: 37, right: 15, bottom: 15, left: 15 });
   });
 
   test("wide structural sidebars can still be enlarged above their safe minimum", () => {
