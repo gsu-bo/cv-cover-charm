@@ -32,11 +32,12 @@ function compactVerlaufCv(source: string) {
   const cv = source.slice(cvStart);
 
   // The shared body-contact parity pass added two useful contact rows to the CV.
-  // Verlauf was already close to LibreOffice's page boundary, so its last
-  // reference phone number alone spilled onto a fourth dossier page. Preserve
-  // all content and typography; reclaim only the tiny legacy after-paragraph
-  // padding inside the Verlauf CV section.
-  const compactCv = cv.replace(/w:after="28"/g, 'w:after="12"');
+  // Verlauf sits right on LibreOffice's page boundary, so that extra body copy
+  // can push the final reference phone line onto a fourth dossier page. Keep all
+  // content and spacing roles intact and tighten only the standard CV auto line
+  // pitch by 2 twips (0.1 pt), which is visually negligible but restores the
+  // intended single-page CV in LibreOffice/Word-style pagination.
+  const compactCv = cv.replace(/w:line="276"/g, 'w:line="274"');
   return source.slice(0, cvStart) + compactCv;
 }
 
