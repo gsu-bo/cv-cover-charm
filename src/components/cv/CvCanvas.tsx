@@ -32,6 +32,7 @@ import "./default-pagination-density.css";
 import "./user-typography.css";
 import "./citrus-rubric.css";
 import "./content-geometry-contract.css";
+import "./document-title-user-override.css";
 
 export type { CvLayoutWarning } from "./CvCanvasBase";
 
