@@ -3,6 +3,12 @@ import { TEMPLATES } from "@/components/cover/types";
 
 const TEMPLATE_DESCRIPTIONS = new Set(TEMPLATES.map((template) => template.description));
 const SWITCH_ID = "template-qa-keyboard-switch";
+const DEVTOOLS_FUNCTION = "cvDevTools";
+const DEVTOOLS_CODE = "555";
+
+type QaWindow = Window & {
+  cvDevTools?: () => boolean;
+};
 
 function editableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
@@ -16,9 +22,13 @@ function visibleTemplateButtons(): HTMLButtonElement[] {
 }
 
 /**
- * Hidden production-QA helper. It is inert until the checkbox is manually
- * revealed and enabled in DevTools.
+ * Hidden production-QA helper.
  *
+ * Browser console:
+ *   cvDevTools()
+ *   code: 555
+ *
+ * After successful activation:
  * Ctrl + ArrowLeft  = previous template
  * Ctrl + ArrowRight = next template
  *
@@ -58,6 +68,18 @@ export function TemplateQaKeyboardSwitch() {
     const observer = new MutationObserver(attachNearDownload);
     observer.observe(document.body, { childList: true, subtree: true });
 
+    const qaWindow = window as QaWindow;
+    const activateDevTools = () => {
+      const code = window.prompt("Dev Tools Code");
+      if (code !== DEVTOOLS_CODE) return false;
+      attachNearDownload();
+      wrapper.style.display = "inline-flex";
+      toggle.checked = true;
+      wrapper.dataset.templateQaActive = "true";
+      return true;
+    };
+    qaWindow[DEVTOOLS_FUNCTION] = activateDevTools;
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (!toggle.checked) return;
       if (!event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
@@ -80,6 +102,7 @@ export function TemplateQaKeyboardSwitch() {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       observer.disconnect();
+      if (qaWindow[DEVTOOLS_FUNCTION] === activateDevTools) delete qaWindow[DEVTOOLS_FUNCTION];
       wrapper.remove();
     };
   }, []);
