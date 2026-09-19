@@ -112,8 +112,12 @@ export function CvCanvas({
     [chromeOptions, design.colors, design.template],
   );
   const data = useMemo(
-    () => cvBodyData(props.data, resolvedChromeOptions),
-    [props.data, resolvedChromeOptions],
+    () =>
+      // Kolumne deliberately hides the shared CV contact header and owns the
+      // contact block in its sidebar. Generic contact-mode de-duplication would
+      // otherwise blank address/phone/email before that sidebar can render them.
+      design.template === "terracotta" ? props.data : cvBodyData(props.data, resolvedChromeOptions),
+    [design.template, props.data, resolvedChromeOptions],
   );
 
   // Layout defaults are template-aware, but an explicit student choice remains
