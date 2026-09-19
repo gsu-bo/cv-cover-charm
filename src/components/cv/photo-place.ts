@@ -41,8 +41,9 @@ export const CV_PHOTO_MIN_MM = 15;
 export const CV_PHOTO_MAX_MM = 90;
 
 export const DEFAULT_CV_PHOTO_PLACEMENT: CvPhotoPlacement = {
-  // Template-aware default/legacy sentinel. UI never exposes "auto".
-  mode: "auto",
+  // Fresh CVs start with the photo on the right. "auto" remains accepted below
+  // only so older saved dossiers keep their historical template-aware layout.
+  mode: "right",
   xMm: 150,
   yMm: 20,
   widthMm: 34,
