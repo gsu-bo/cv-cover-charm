@@ -88,6 +88,7 @@ jobs:
               tests/e2e/dossier-state-roundtrip.spec.ts
               tests/e2e/dossier-state-isolation.spec.ts
               tests/e2e/dossier-chrome-sync.spec.ts
+              tests/e2e/devtools-keyboard.spec.ts
               tests/e2e/dossier-docx-reference.spec.ts
               tests/e2e/dossier-docx-alignment.spec.ts
               tests/e2e/dossier-docx-warm.spec.ts
@@ -120,6 +121,7 @@ jobs:
             files: >-
               tests/e2e/cover-edge-smoke.spec.ts
               tests/e2e/template-cleanup.spec.ts
+              tests/e2e/prism-neon-header-identity.spec.ts
               tests/e2e/gradient-edge-smoke.spec.ts
           - group: fresh-dossier-templates
             files: >-

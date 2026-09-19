@@ -283,6 +283,26 @@ describe("configurable CV and motivation-letter page margins", () => {
     clearDossierPageMargins();
   });
 
+  test("CV custom margins remain final when header spacing changes", () => {
+    clearDossierPageMargins();
+    const frame = cvFrameFor("klassisch");
+    const chrome = {
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      headerMode: "contact" as const,
+      headerHeightMm: 22,
+      headerGapMm: 40,
+    };
+
+    setDossierPageMargins("cv", { top: 72, right: 23, bottom: 17, left: 24 });
+    expect(cvContentBox(frame, 0, "classic", 0.3, chrome)).toEqual({
+      top: 72,
+      right: 23,
+      bottom: 17,
+      left: 24,
+    });
+    clearDossierPageMargins();
+  });
+
   test("page margins travel with the dossier project without changing v1 compatibility", () => {
     expect(project).toContain("pageMargins?: DossierPageMarginsState");
     expect(project).toContain("readPortableDossierPageMarginsState");

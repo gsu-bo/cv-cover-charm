@@ -4,6 +4,7 @@ const SWITCH_ID = "template-qa-keyboard-switch";
 const DEVTOOLS_CODE = "555";
 const OFFSET_STORAGE_KEY = "cv-cover-charm:qa-layout-offsets:v1";
 const PAGE_SELECTOR = "[data-letter-page], [data-cv-page]";
+const QA_PRIMARY_SELECT_SELECTOR = "[data-dossier-header-mode-control]";
 const QA_TARGETS = [
   "[data-letter-section]",
   "[data-letter-pdf-richtext]",
@@ -50,6 +51,32 @@ type OffsetMap = Record<string, Offset>;
 function editableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
   return Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
+}
+
+function visibleQaSelect(target: EventTarget | null): HTMLSelectElement | null {
+  if (target instanceof HTMLSelectElement && target.offsetParent !== null) return target;
+  return (
+    Array.from(document.querySelectorAll<HTMLSelectElement>(QA_PRIMARY_SELECT_SELECTOR))
+      .filter((select) => select.offsetParent !== null)
+      .at(-1) ?? null
+  );
+}
+
+function stepQaSelect(select: HTMLSelectElement, direction: -1 | 1): boolean {
+  const enabledOptions = Array.from(select.options).filter((option) => !option.disabled);
+  if (enabledOptions.length < 2) return false;
+
+  const currentOption = select.options[select.selectedIndex];
+  const currentIndex = enabledOptions.indexOf(currentOption);
+  const baseIndex = currentIndex < 0 ? (direction === 1 ? -1 : 0) : currentIndex;
+  const nextIndex = (baseIndex + direction + enabledOptions.length) % enabledOptions.length;
+  const nextOption = enabledOptions[nextIndex];
+  if (!nextOption) return false;
+
+  select.value = nextOption.value;
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+  select.focus({ preventScroll: true });
+  return true;
 }
 
 function readOffsets(): OffsetMap {
@@ -111,6 +138,8 @@ function clearOffset(element: HTMLElement) {
  *
  * Active mode:
  * - Ctrl + ArrowLeft / ArrowRight cycles templates in the exact GUI order.
+ * - Ctrl + ArrowDown / ArrowUp advances/reverses the focused visible select;
+ *   without select focus it targets the visible Header dropdown.
  * - Visible semantic blocks inside CV/letter sheets can be clicked and dragged.
  * - The drag is clamped to the current paper and stored only for this browser tab.
  * - Arrow keys nudge the currently selected QA block; Escape clears selection.
@@ -134,7 +163,7 @@ export function TemplateQaKeyboardSwitch() {
         </svg>
         <span data-template-qa-label>Dev Tools</span>
       </span>
-      <span class="text-xs text-muted-foreground">Ctrl + ←/→</span>
+      <span class="text-xs text-muted-foreground">Ctrl + ←/→ · ↑/↓</span>
     `;
     button.title = "QA-Tools aktivieren";
     button.className =
@@ -192,7 +221,7 @@ export function TemplateQaKeyboardSwitch() {
       button.dataset.templateQaActive = "true";
       const label = button.querySelector<HTMLElement>("[data-template-qa-label]");
       if (label) label.textContent = "Dev Tools ✓";
-      button.title = "QA aktiv: Ctrl+←/→ Vorlage · Dokumentblöcke ziehen";
+      button.title = "QA aktiv: Ctrl+←/→ Vorlage · Ctrl+↑/↓ Dropdown · Dokumentblöcke ziehen";
       applyStoredOffsets();
     };
 
@@ -285,6 +314,25 @@ export function TemplateQaKeyboardSwitch() {
         dispatchTemplateQaTemplateStep(event.key === "ArrowRight" ? 1 : -1);
         requestAnimationFrame(applyStoredOffsets);
         return;
+      }
+
+      // Dropdown stepping is also global. If a select has focus, step that one;
+      // otherwise use the currently visible primary Header dropdown. This makes
+      // Compact -> next mode a one-key QA action without opening the native menu.
+      if (
+        event.ctrlKey &&
+        !event.altKey &&
+        !event.metaKey &&
+        !event.shiftKey &&
+        (event.key === "ArrowUp" || event.key === "ArrowDown")
+      ) {
+        const select = visibleQaSelect(event.target);
+        if (select && stepQaSelect(select, event.key === "ArrowDown" ? 1 : -1)) {
+          event.preventDefault();
+          event.stopPropagation();
+          requestAnimationFrame(applyStoredOffsets);
+          return;
+        }
       }
 
       if (editableTarget(event.target)) return;

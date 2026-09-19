@@ -66,7 +66,9 @@ html[data-dossier-template="horizon"] [data-dossier-document="cv"] [data-dossier
 /* ========================================================================== */
 
 /* Cover: a deep vertical grove anchors the page; one large sage canopy opens
- * into the paper. No circles, floating pills or local micro-rule suppression. */
+ * into the paper. Structural artwork stays CSS-owned. Editable block geometry
+ * is deliberately NOT set here: forest-flow-cover-defaults.ts owns those
+ * defaults so drag, resize and reset all use the same editor state. */
 html[data-dossier-template="forestFlow"]
   [data-dossier-document="cover"]
   [data-fresh-cover-field="primary"] {
@@ -112,86 +114,11 @@ html[data-dossier-template="forestFlow"]
   transform: none !important;
 }
 
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="eyebrow"] {
-  left: 7mm !important;
-  top: 17mm !important;
-  width: 38mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="ortDatum"] {
-  left: 7mm !important;
-  top: 268mm !important;
-  width: 38mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="foto"] {
-  left: 143mm !important;
-  top: 27mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="name"] {
-  left: 72mm !important;
-  top: 111mm !important;
-  width: 112mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"]
-  [data-dossier-document="cover"]
-  [data-block-id="beruf"] {
-  left: 72mm !important;
-  top: 137mm !important;
-  width: 112mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"]
-  [data-dossier-document="cover"]
-  [data-block-id="lehrbeginn"] {
-  left: 72mm !important;
-  top: 159mm !important;
-  width: 112mm !important;
-  transform: none !important;
-}
-
 html[data-dossier-template="forestFlow"]
   [data-dossier-document="cover"]
   :is([data-block-id="name"], [data-block-id="beruf"], [data-block-id="lehrbeginn"])
   > div {
   text-align: left !important;
-}
-
-html[data-dossier-template="forestFlow"]
-  [data-dossier-document="cover"]
-  [data-block-id="kontaktTitel"] {
-  left: 7mm !important;
-  top: 192mm !important;
-  width: 38mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="kontakt"] {
-  left: 7mm !important;
-  top: 203mm !important;
-  width: 38mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="anTitel"] {
-  left: 72mm !important;
-  top: 239mm !important;
-  width: 112mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="empfaenger"] {
-  left: 72mm !important;
-  top: 250mm !important;
-  width: 112mm !important;
-  transform: none !important;
 }
 
 html[data-dossier-template="forestFlow"]

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { cvDefaultContentBox, cvFrameFor } from "../../src/components/cv/archetype";
 import {
   DEFAULT_DOSSIER_CHROME_OPTIONS,
   dossierHeaderContentTopMmForOptions,
@@ -16,6 +17,14 @@ const letterCanvas = readFileSync(
 );
 const letterLayout = readFileSync(
   new URL("../../src/components/letter/layout-system.ts", import.meta.url),
+  "utf8",
+);
+const cvCanvas = readFileSync(
+  new URL("../../src/components/cv/CvCanvas.tsx", import.meta.url),
+  "utf8",
+);
+const cvGeometryContract = readFileSync(
+  new URL("../../src/components/cv/content-geometry-contract.css", import.meta.url),
   "utf8",
 );
 
@@ -55,6 +64,32 @@ describe("dossier header spacing", () => {
     ).toBe(40);
   });
 
+  test("moves every formerly overridden CV template by the selected gap", () => {
+    const base = {
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      headerMode: "contact" as const,
+      headerHeightMm: 22,
+      headerGapMm: 0,
+    };
+
+    for (const template of [
+      "cove",
+      "prism",
+      "orbit",
+      "ledger",
+      "studio",
+      "warm2",
+    ] as const) {
+      const frame = cvFrameFor(template);
+      const withoutGap = cvDefaultContentBox(frame, 0, "classic", 0.3, base);
+      const withGap = cvDefaultContentBox(frame, 0, "classic", 0.3, {
+        ...base,
+        headerGapMm: 40,
+      });
+      expect(withGap.top - withoutGap.top).toBe(40);
+    }
+  });
+
   test("exposes a 0–40 mm range control in the shared chrome UI", () => {
     expect(controls).toContain("data-dossier-header-gap-control");
     expect(controls).toContain("<span>Freiraum unter dem Header</span>");
@@ -68,5 +103,13 @@ describe("dossier header spacing", () => {
     expect(letterCanvas).not.toContain("const baseGeometry = letterPageGeometry");
     expect(letterLayout).toContain("context.headerGapMm ?? 0");
     expect(letterLayout).toContain("defaultTop + headerGapMm");
+  });
+
+  test("keeps renderer-resolved CV geometry authoritative over every template", () => {
+    expect(cvCanvas).toContain('import "./content-geometry-contract.css";');
+    expect(cvGeometryContract).toContain('[data-dossier-document="cv"][data-cv-template]');
+    expect(cvGeometryContract).toContain(":is([data-cv-page], [data-cv-measure-page])");
+    expect(cvGeometryContract).toContain("top: var(--cv-main-top) !important;");
+    expect(cvGeometryContract).toContain("bottom: var(--cv-main-bottom) !important;");
   });
 });

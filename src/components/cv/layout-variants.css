@@ -272,23 +272,6 @@ html[data-cv-variant="editorial"] [data-cv-layout="classic"]
 /* Die physische Seite wird vom Renderer gesetzt. Kein scaleX: Text, freie
  * Elemente und Bildausschnitte bleiben unverändert und PDF/Preview verwenden
  * dieselbe echte Geometrie. */
-/* -------------------------------------------------------------------------- */
-/* Bauform vor Aufbau: senkrechte Ränder                                      */
-/* -------------------------------------------------------------------------- */
-
-/*
- * Wo die Vorlage ein Kopfband hat, bestimmt dessen Höhe den oberen Rand des
- * Textbereichs – und zwar je Seite verschieden, weil Seite 1 das volle Band
- * trägt und die Folgeseiten nur einen Streifen.
- *
- * Die Aufbauten oben setzen feste `top`/`bottom`-Werte mit `!important`, die
- * von einer 55 mm hohen Kopffläche nichts wissen; der Text landete damit unter
- * dem Band. Diese Regel ist um ein Attribut spezifischer und gibt der Bauform
- * das letzte Wort zurück. Die Werte kommen aus `cvContentBox`, gesetzt vom
- * Renderer als `--cv-main-top` / `--cv-main-bottom`.
- */
-html[data-cv-variant] [data-cv-layout][data-cv-band-head="true"]
-  :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main] {
-  top: var(--cv-main-top) !important;
-  bottom: var(--cv-main-bottom) !important;
-}
+/* Vertical page geometry is intentionally absent here. It is resolved once by
+ * CvCanvasBase and enforced for every layout/template in
+ * content-geometry-contract.css. */

@@ -5,6 +5,10 @@ const css = readFileSync(
   new URL("../../src/components/dossier/motif-visibility.css", import.meta.url),
   "utf8",
 );
+const legacy = readFileSync(
+  new URL("../../src/components/dossier/legacy-template-refinements.css", import.meta.url),
+  "utf8",
+);
 
 describe("compact CV header cleanup", () => {
   test("full motif suppression is compact-only and limited to the approved five templates", () => {
@@ -30,15 +34,30 @@ describe("compact CV header cleanup", () => {
     expect(css).not.toContain("bgOpacity = 0");
   });
 
-  test("selective compact cleanup preserves Glow/Cove/Aurora/Colorful identity", () => {
+  test("selective compact cleanup preserves Glow/Cove/Aurora identity", () => {
     expect(css).toContain('[data-cv-template="glow"]');
     expect(css).toContain("> div:nth-child(3)");
-    expect(css).toContain('[data-cv-template="colorful"]');
-    expect(css).toContain("[data-cv-header]::after");
     expect(css).toContain('[data-cv-template="cove"]');
     expect(css).toContain("[data-dossier-compact-header]::after");
     expect(css).toContain('[data-cv-template="aurora"]');
     expect(css).toContain("[data-dossier-compact-header]::before");
+  });
+
+  test("Colorful removes the legacy blue/yellow CV-header fragment at the source", () => {
+    const colorful = legacy.match(/\/\* 06 Colorful([\s\S]*?)\/\* 11 Kolumne/)?.[1];
+    expect(colorful).toBeDefined();
+    expect(colorful).not.toContain("[data-cv-header]::after");
+    expect(colorful).not.toContain("width: 32mm");
+    expect(css).not.toContain('[data-cv-template="colorful"]');
+  });
+
+  test("Colorful contact and continuation typography are intentionally white", () => {
+    const colorful = legacy.match(/\/\* 06 Colorful([\s\S]*?)\/\* 11 Kolumne/)?.[1];
+    expect(colorful).toBeDefined();
+    expect(colorful).toContain('[data-dossier-chrome="cv"]');
+    expect(colorful).toContain("[data-dossier-integrated-contact]");
+    expect(colorful).toContain("[data-dossier-continuation-contact-header]");
+    expect(colorful).toContain("color: #fff !important");
   });
 
   test("Edel Light adds only an absolute full-width top gold treatment", () => {

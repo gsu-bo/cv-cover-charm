@@ -767,6 +767,7 @@ function Lebenslauf() {
           key,
           normalizeCvSectionLayout({
             ...value,
+            positioning: "flow",
             x: null,
             y: null,
             widthMm: null,
