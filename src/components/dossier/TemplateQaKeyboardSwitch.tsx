@@ -15,6 +15,8 @@ const QA_TARGETS = [
   "[data-cv-free-section]",
   "[data-cv-rubric]",
   "[data-cv-section]",
+  "[data-cv-doc-title]",
+  "[data-cv-name]",
   "[data-cv-photo]",
   "[data-cv-personal-info]",
   "[data-block-id]",
@@ -35,6 +37,8 @@ const STABLE_ATTRIBUTES = [
   "data-cv-free-section",
   "data-cv-rubric",
   "data-cv-section",
+  "data-cv-doc-title",
+  "data-cv-name",
   "data-block-id",
   "data-dossier-footer",
   "data-dossier-integrated-contact",
@@ -50,9 +54,9 @@ function editableTarget(target: EventTarget | null): boolean {
   return Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
 }
 
-function visibleTemplateButtons(): HTMLButtonElement[] {
+function templateButtons(): HTMLButtonElement[] {
   return Array.from(document.querySelectorAll<HTMLButtonElement>("button[aria-pressed][title]")).filter(
-    (button) => TEMPLATE_DESCRIPTIONS.has(button.title) && button.offsetParent !== null,
+    (button) => TEMPLATE_DESCRIPTIONS.has(button.title),
   );
 }
 
@@ -114,7 +118,7 @@ function clearOffset(element: HTMLElement) {
  * Production-QA helper, intentionally dormant until code 555 is entered.
  *
  * Active mode:
- * - Ctrl + ArrowLeft / ArrowRight cycles templates in the exact visible GUI order.
+ * - Ctrl + ArrowLeft / ArrowRight cycles templates in the exact GUI order.
  * - Visible semantic blocks inside CV/letter sheets can be clicked and dragged.
  * - The drag is clamped to the current paper and stored only for this browser tab.
  * - Arrow keys nudge the currently selected QA block; Escape clears selection.
@@ -272,7 +276,7 @@ export function TemplateQaKeyboardSwitch() {
 
       if (event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey) {
         if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-        const buttons = visibleTemplateButtons();
+        const buttons = templateButtons();
         if (buttons.length < 2) return;
         const currentIndex = buttons.findIndex(
           (candidate) => candidate.getAttribute("aria-pressed") === "true",
@@ -281,6 +285,7 @@ export function TemplateQaKeyboardSwitch() {
         const delta = event.key === "ArrowRight" ? 1 : -1;
         const nextIndex = (currentIndex + delta + buttons.length) % buttons.length;
         event.preventDefault();
+        event.stopPropagation();
         buttons[nextIndex]?.click();
         requestAnimationFrame(applyStoredOffsets);
         return;
@@ -314,7 +319,7 @@ export function TemplateQaKeyboardSwitch() {
 
     button.addEventListener("click", activate);
     document.addEventListener("pointerdown", onPointerDown, true);
-    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
 
     attachToDownloadMenu();
     const observer = new MutationObserver(() => {
@@ -324,7 +329,7 @@ export function TemplateQaKeyboardSwitch() {
     observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keydown", onKeyDown, true);
       document.removeEventListener("pointerdown", onPointerDown, true);
       observer.disconnect();
       button.removeEventListener("click", activate);
