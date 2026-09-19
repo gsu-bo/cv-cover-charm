@@ -342,7 +342,8 @@ test.describe("template cleanup", () => {
     const colorfulHeader = colorful.locator("[data-cv-header]").first();
     const colorfulCompact = colorful.locator("[data-dossier-compact-header]").first();
     await expect(colorfulCompact).toBeVisible();
-    expect((await pseudoStyle(colorfulHeader, "::after")).display).toBe("none");
+    const colorfulDecoration = await pseudoStyle(colorfulHeader, "::after");
+    expect(colorfulDecoration.content).toBe("none");
     const colorfulCompactBox = await colorfulCompact.boundingBox();
     expect(colorfulCompactBox).not.toBeNull();
     expect(colorfulCompactBox?.width ?? 0).toBeGreaterThan(100);
@@ -387,15 +388,16 @@ test.describe("template cleanup", () => {
     await expect(compact).toBeVisible();
 
     const geometry = await compact.evaluate((node) => {
-      const page = node.closest<HTMLElement>("[data-cv-page]");
-      const pageWidth = page?.getBoundingClientRect().width ?? 0;
+      const header = getComputedStyle(node);
       const topGold = getComputedStyle(node, "::before");
       const diamond = getComputedStyle(node, "::after");
       return {
-        pageWidth,
+        headerWidth: Number.parseFloat(header.width) || 0,
         goldWidth: Number.parseFloat(topGold.width) || 0,
         goldHeight: Number.parseFloat(topGold.height) || 0,
         goldContent: topGold.content,
+        goldLeft: topGold.left,
+        goldRight: topGold.right,
         diamondContent: diamond.content,
         diamondWidth: Number.parseFloat(diamond.width) || 0,
         diamondHeight: Number.parseFloat(diamond.height) || 0,
@@ -405,8 +407,10 @@ test.describe("template cleanup", () => {
 
     expect(geometry.goldContent).not.toBe("none");
     expect(geometry.goldHeight).toBeGreaterThan(0);
-    expect(geometry.pageWidth).toBeGreaterThan(0);
-    expect(geometry.goldWidth / geometry.pageWidth).toBeCloseTo(1, 2);
+    expect(geometry.headerWidth).toBeGreaterThan(0);
+    expect(geometry.goldLeft).toBe("0px");
+    expect(geometry.goldRight).toBe("0px");
+    expect(geometry.goldWidth / geometry.headerWidth).toBeCloseTo(1, 2);
     expect(geometry.diamondContent).not.toBe("none");
     expect(geometry.diamondWidth).toBeGreaterThan(0);
     expect(geometry.diamondHeight).toBeGreaterThan(0);
