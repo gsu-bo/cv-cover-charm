@@ -9,6 +9,10 @@ const controls = readFileSync(
   new URL("../../src/components/dossier/DossierChromeControls.tsx", import.meta.url),
   "utf8",
 );
+const letterLayoutControls = readFileSync(
+  new URL("../../src/components/letter/LetterLayoutControls.tsx", import.meta.url),
+  "utf8",
+);
 const chrome = readFileSync(
   new URL("../../src/components/dossier/DossierHeaderFooterChrome.tsx", import.meta.url),
   "utf8",
@@ -54,12 +58,18 @@ describe("dossier vertical positioning", () => {
     expect(synced.shared.letterRecipientOffsetYMm).toBe(7);
   });
 
-  test("controls expose sender/recipient and shared footer positioning", () => {
-    expect(controls).toContain("Eigene Anschrift – vertikale Position");
-    expect(controls).toContain("Firma / Lehrbetrieb – vertikale Position");
+  test("shared chrome exposes only shared content positioning", () => {
     expect(controls).toContain("Header-Inhalt – vertikale Position");
     expect(controls).toContain("Footer-Inhalt – vertikale Position");
+    expect(controls).not.toContain("Eigene Anschrift – vertikale Position");
+    expect(controls).not.toContain("Firma / Lehrbetrieb – vertikale Position");
     expect(controls).toContain("Standardposition");
+  });
+
+  test("letter-only recipient positioning lives in the letter-specific layout block", () => {
+    expect(letterLayoutControls).toContain("Briefspezifische Positionen");
+    expect(letterLayoutControls).toContain("Firma / Lehrbetrieb – vertikale Position");
+    expect(letterLayoutControls).toContain("data-letter-recipient-offset-control");
   });
 
   test("both editors expose their vertical-position controls in the visible UI", () => {
