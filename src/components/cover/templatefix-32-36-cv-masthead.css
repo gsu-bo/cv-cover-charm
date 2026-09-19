@@ -140,15 +140,18 @@ html:is(
  * field at the foot. Preserve that relationship on interior pages instead of
  * flattening Gallery into the generic 10 mm masthead shared by other families.
  *
- * IMPORTANT: the signature primitives now live inside [data-dossier-sheet-motif].
- * Reset that wrapper to the full sheet and position the actual primitives inside
- * it. This also preserves the generic 0/25/50/100 motif-opacity control.
+ * The doubled semantic selectors below are deliberate. Earlier 32–36 cleanup
+ * rules remain in the cascade with very specific `html[data-dossier-template]`
+ * selectors and `!important`. Gallery must decisively own its current DOM
+ * without changing Prism / Orbit / Ribbon / Cove while production is close.
  */
-:is(
-    [data-cv-template="gallery"] [data-dossier-sheet-background="gallery"],
-    [data-letter-page][data-letter-template="gallery"] [data-dossier-sheet-background="gallery"]
-  )
-  > [data-dossier-sheet-motif] {
+
+/* CV motif canvas: reset the wrapper that legacy rules incorrectly compressed
+ * to a 10 mm masthead. Motif opacity remains the single 0/25/50/100 control. */
+[data-dossier-document="cv"][data-cv-template="gallery"][data-cv-template="gallery"]
+  [data-cv-background="motif"]
+  > [data-dossier-sheet-background="gallery"]
+  > [data-dossier-sheet-motif][data-dossier-sheet-motif] {
   display: block !important;
   position: absolute !important;
   inset: 0 !important;
@@ -163,10 +166,11 @@ html:is(
   opacity: var(--dossier-motif-opacity, 1) !important;
 }
 
-/* CV: substantial but restrained 26 mm Plum tower on the right. */
-[data-cv-template="gallery"]
-  [data-dossier-sheet-background="gallery"]
-  > [data-dossier-sheet-motif]
+/* CV: substantial but restrained Plum portrait tower on the right. */
+[data-dossier-document="cv"][data-cv-template="gallery"][data-cv-template="gallery"]
+  [data-cv-background="motif"]
+  > [data-dossier-sheet-background="gallery"]
+  > [data-dossier-sheet-motif][data-dossier-sheet-motif]
   > div:nth-child(1) {
   display: block !important;
   left: auto !important;
@@ -179,14 +183,16 @@ html:is(
   border-radius: 0 !important;
   clip-path: none !important;
   transform: none !important;
+  filter: none !important;
   opacity: 1 !important;
+  overflow: visible !important;
 }
 
-/* CV: warm Sand grounding field. It meets the tower as one composition rather
- * than becoming a detached footer-style bar. */
-[data-cv-template="gallery"]
-  [data-dossier-sheet-background="gallery"]
-  > [data-dossier-sheet-motif]
+/* CV: warm Sand grounding field, joined to the tower rather than floating. */
+[data-dossier-document="cv"][data-cv-template="gallery"][data-cv-template="gallery"]
+  [data-cv-background="motif"]
+  > [data-dossier-sheet-background="gallery"]
+  > [data-dossier-sheet-motif][data-dossier-sheet-motif]
   > div:nth-child(2) {
   display: block !important;
   left: 0 !important;
@@ -199,42 +205,54 @@ html:is(
   border-radius: 12mm 0 0 0 !important;
   clip-path: none !important;
   transform: none !important;
+  filter: none !important;
   opacity: 0.72 !important;
 }
 
-[data-cv-template="gallery"]
-  [data-dossier-sheet-background="gallery"]
-  > [data-dossier-sheet-motif]
+[data-dossier-document="cv"][data-cv-template="gallery"][data-cv-template="gallery"]
+  [data-cv-background="motif"]
+  > [data-dossier-sheet-background="gallery"]
+  > [data-dossier-sheet-motif][data-dossier-sheet-motif]
   > div:nth-child(3) {
   display: none !important;
 }
 
-/* The persistent CV root is also used by gallery/PDF export, so restate the
- * intended reading surface without relying on transient html template markers. */
-[data-cv-template="gallery"] [data-cv-surface] {
+/* Persistent CV geometry also covers gallery/PDF export where transient html
+ * template markers may be absent. */
+[data-dossier-document="cv"][data-cv-template="gallery"][data-cv-template="gallery"]
+  [data-cv-surface][data-cv-surface] {
   left: 0 !important;
   right: 26mm !important;
+  top: 0 !important;
   bottom: 18mm !important;
+  border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
+  opacity: 1 !important;
 }
 
-[data-cv-template="gallery"] [data-cv-main],
-[data-cv-template="gallery"] [data-cv-measure-page] [data-cv-main] {
+[data-dossier-document="cv"][data-cv-template="gallery"][data-cv-template="gallery"]
+  > [data-cv-measure-page]
+  [data-cv-main],
+[data-dossier-document="cv"][data-cv-template="gallery"][data-cv-template="gallery"]
+  > [data-cv-page]
+  > [data-cv-main] {
+  left: 20mm !important;
   right: 36mm !important;
+  top: 17mm !important;
   bottom: 27mm !important;
 }
 
 /* Gallery owns its structural top/right identity. Keep the shared chrome state
- * and spacing, but do not paint a second generic full-width Plum strip over it. */
-[data-cv-template="gallery"]
+ * and spacing, but do not paint a second full-width Plum strip over it. */
+[data-dossier-document="cv"][data-cv-template="gallery"][data-cv-template="gallery"]
   [data-dossier-template-chrome="gallery"][data-dossier-header-custom-surface="false"]
   :is(
     [data-dossier-compact-header],
     [data-dossier-contact-header-background],
     [data-dossier-continuation-contact-header]
   ),
-[data-letter-page][data-letter-template="gallery"]
+[data-letter-page][data-letter-template="gallery"][data-letter-template="gallery"]
   [data-dossier-template-chrome="gallery"][data-dossier-header-custom-surface="false"]
   :is(
     [data-dossier-compact-header],
@@ -247,41 +265,41 @@ html:is(
 }
 
 /* Contact copy stays on clean paper and never enters the Plum tower. */
-[data-cv-template="gallery"]
+[data-dossier-document="cv"][data-cv-template="gallery"][data-cv-template="gallery"]
   [data-dossier-template-chrome="gallery"]
   [data-dossier-integrated-contact] {
   padding-right: 40mm !important;
   color: var(--chrome-ink) !important;
 }
 
-[data-cv-template="gallery"]
+[data-dossier-document="cv"][data-cv-template="gallery"][data-cv-template="gallery"]
   [data-dossier-template-chrome="gallery"]
   [data-dossier-continuation-contact-header] {
   padding-right: 40mm !important;
   color: var(--chrome-ink) !important;
 }
 
-/* Contact mode is taller than the compact signature. Keep the actual CV flow
- * below it while leaving compact Gallery's established 17 mm start untouched. */
-[data-cv-template="gallery"]:has(
+/* Contact mode is taller than compact. Keep the flow below it while leaving
+ * Gallery's compact 17 mm start unchanged. */
+[data-dossier-document="cv"][data-cv-template="gallery"][data-cv-template="gallery"]:has(
     [data-dossier-template-chrome="gallery"][data-dossier-effective-header-mode="contact"]
   )
-  [data-cv-main],
-[data-cv-template="gallery"]:has(
+  > [data-cv-page]
+  > [data-cv-main],
+[data-dossier-document="cv"][data-cv-template="gallery"][data-cv-template="gallery"]:has(
     [data-dossier-template-chrome="gallery"][data-dossier-effective-header-mode="contact"]
   )
-  [data-cv-measure-page]
+  > [data-cv-measure-page]
   [data-cv-main] {
   top: 28mm !important;
 }
 
-/* Let the warm grounding field remain visible under Gallery's default footer.
- * User-selected footer colours still win because only the default surface is
- * made transparent. Dark Gallery ink remains readable on the Sand field. */
-[data-cv-template="gallery"]
+/* The Sand field remains visible beneath the default shared footer. Explicit
+ * user footer colours stay authoritative. */
+[data-dossier-document="cv"][data-cv-template="gallery"][data-cv-template="gallery"]
   [data-dossier-template-chrome="gallery"][data-dossier-footer-custom-surface="false"]
   [data-dossier-footer],
-[data-letter-page][data-letter-template="gallery"]
+[data-letter-page][data-letter-template="gallery"][data-letter-template="gallery"]
   [data-dossier-template-chrome="gallery"][data-dossier-footer-custom-surface="false"]
   [data-dossier-footer] {
   background: transparent !important;
@@ -290,52 +308,51 @@ html:is(
   color: var(--chrome-ink) !important;
 }
 
-/* Letter: same family language at a quieter scale — a narrow right Plum edge
- * and a shallow Sand base, leaving the reading area almost entirely untouched. */
-[data-letter-page][data-letter-template="gallery"]
-  [data-dossier-sheet-background="gallery"]
-  > [data-dossier-sheet-motif]
-  > div:nth-child(1) {
+/* Letter uses FreshLetterBackground, not DossierSheetBackground. Target its
+ * named motifs directly so later legacy integrity rules cannot recreate the
+ * old tiny top-left block + detached Sand card hybrid. */
+[data-letter-page][data-letter-template="gallery"][data-letter-template="gallery"]
+  [data-letter-fresh-template="gallery"]
+  [data-letter-motif="rail"] {
   display: block !important;
   left: auto !important;
   right: 0 !important;
   top: 0 !important;
   bottom: 0 !important;
   width: 9mm !important;
-  height: auto !important;
+  height: 297mm !important;
   border: 0 !important;
   border-radius: 0 !important;
   transform: none !important;
   opacity: 1 !important;
 }
 
-[data-letter-page][data-letter-template="gallery"]
-  [data-dossier-sheet-background="gallery"]
-  > [data-dossier-sheet-motif]
-  > div:nth-child(2) {
+[data-letter-page][data-letter-template="gallery"][data-letter-template="gallery"]
+  [data-letter-fresh-template="gallery"]
+  [data-letter-motif="portrait-block"] {
   display: block !important;
   left: 0 !important;
   right: 0 !important;
   top: auto !important;
   bottom: 0 !important;
-  width: auto !important;
+  width: 210mm !important;
   height: 10mm !important;
+  border: 0 !important;
   border-radius: 8mm 0 0 0 !important;
   transform: none !important;
   opacity: 0.68 !important;
 }
 
-[data-letter-page][data-letter-template="gallery"]
-  [data-dossier-sheet-background="gallery"]
-  > [data-dossier-sheet-motif]
-  > div:nth-child(3) {
+[data-letter-page][data-letter-template="gallery"][data-letter-template="gallery"]
+  [data-letter-fresh-template="gallery"]
+  [data-letter-motif="signal"] {
   display: none !important;
 }
 
-[data-letter-page][data-letter-template="gallery"]
+[data-letter-page][data-letter-template="gallery"][data-letter-template="gallery"]
   [data-dossier-template-chrome="gallery"]
   [data-dossier-integrated-contact],
-[data-letter-page][data-letter-template="gallery"]
+[data-letter-page][data-letter-template="gallery"][data-letter-template="gallery"]
   [data-dossier-template-chrome="gallery"]
   [data-dossier-continuation-contact-header] {
   padding-right: 20mm !important;
