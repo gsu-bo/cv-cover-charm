@@ -95,16 +95,6 @@
   display: none !important;
 }
 
-/* Colorful: the compact header no longer gets the detached blue/yellow bar. */
-[data-dossier-document="cv"][data-cv-template="colorful"]
-  [data-cv-page]:has(
-    [data-dossier-chrome="cv"][data-dossier-effective-header-mode="compact"]
-  )
-  [data-cv-header]::after {
-  content: none !important;
-  display: none !important;
-}
-
 /* Cove: compact keeps the primary band, but loses only its secondary bay blob. */
 [data-dossier-document="cv"][data-cv-template="cove"]
   [data-dossier-chrome="cv"][data-dossier-template-chrome="cove"][data-dossier-effective-header-mode="compact"]
