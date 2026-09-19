@@ -49,7 +49,7 @@ describe("Forest Flow cover editability", () => {
     expect([photo.style.x, photo.style.y]).toEqual([143, 27]);
   });
 
-  test("explicit user drag and resize geometry always wins", () => {
+  test("explicit user drag and resize geometry already merged into the block always wins", () => {
     const overrides: StyleOverrides = {
       name: {
         x: 101.5,
@@ -60,7 +60,10 @@ describe("Forest Flow cover editability", () => {
         anchorBottom: false,
       },
     };
-    const resolved = applyForestFlowCoverDefaults(forest, block("name"), overrides);
+    const edited = block("name");
+    edited.style = { ...edited.style, ...overrides.name };
+
+    const resolved = applyForestFlowCoverDefaults(forest, edited, overrides);
     expect([resolved.style.x, resolved.style.y, resolved.style.w]).toEqual([101.5, 123.4, 76.2]);
   });
 
@@ -71,11 +74,11 @@ describe("Forest Flow cover editability", () => {
     );
     const forestCover = css.split("/* 25 FOREST FLOW")[1]?.split("/* Letter:")[0] ?? "";
 
-    expect(forestCover).not.toContain('left: 7mm !important');
-    expect(forestCover).not.toContain('left: 72mm !important');
-    expect(forestCover).not.toContain('left: 143mm !important');
-    expect(forestCover).not.toContain('top: 111mm !important');
-    expect(forestCover).not.toContain('top: 203mm !important');
+    expect(forestCover).not.toContain("left: 7mm !important");
+    expect(forestCover).not.toContain("left: 72mm !important");
+    expect(forestCover).not.toContain("left: 143mm !important");
+    expect(forestCover).not.toContain("top: 111mm !important");
+    expect(forestCover).not.toContain("top: 203mm !important");
     expect(forestCover).toContain("forest-flow-cover-defaults.ts");
   });
 });
