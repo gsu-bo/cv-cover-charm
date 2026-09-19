@@ -21,6 +21,11 @@ const TEMPLATES = [
   },
 ] as const;
 
+type SeedTemplate = {
+  id: string;
+  colors: Record<string, string>;
+};
+
 function data() {
   return {
     titel: "Lebenslauf",
@@ -66,7 +71,7 @@ function data() {
   };
 }
 
-async function seed(page: Page, template: (typeof TEMPLATES)[number]) {
+async function seed(page: Page, template: SeedTemplate) {
   await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
   await page.evaluate(
     ({ payload }) => {
@@ -106,6 +111,36 @@ async function seed(page: Page, template: (typeof TEMPLATES)[number]) {
       }),
   );
   return sheet;
+}
+
+async function motifSlider(page: Page) {
+  const slider = page
+    .locator("label")
+    .filter({ hasText: "Hintergrund-Motiv" })
+    .locator('input[type="range"]');
+
+  if ((await slider.count()) === 0) {
+    const toggles = page.locator('[data-editor-section-toggle][aria-expanded="false"]');
+    for (let index = 0; index < (await toggles.count()); index += 1) {
+      await toggles.nth(index).click();
+      if ((await slider.count()) > 0) break;
+    }
+  }
+
+  await expect(slider).toBeVisible();
+  return slider;
+}
+
+async function setMotifPercent(slider: Locator, percent: number) {
+  await slider.focus();
+  if (percent === 100) {
+    await slider.press("End");
+    return;
+  }
+  await slider.press("Home");
+  for (let value = 0; value < percent; value += 1) {
+    await slider.press("ArrowRight");
+  }
 }
 
 const hash = (buffer: Buffer) => createHash("sha256").update(buffer).digest("hex");
@@ -217,6 +252,67 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
     }
 
     expect(screenshots.size).toBe(TEMPLATES.length);
+  });
+
+  test("background motif slider updates decorative layers at 0/25/50/100 only", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1137, height: 913 });
+    const motifTemplates: SeedTemplate[] = [
+      {
+        id: "glow",
+        colors: {
+          primary: "#2563eb",
+          secondary: "#a855f7",
+          accent: "#06b6d4",
+          ink: "#111827",
+          bg: "#ffffff",
+        },
+      },
+      TEMPLATES[0],
+    ];
+
+    for (const template of motifTemplates) {
+      const sheet = await seed(page, template);
+      const slider = await motifSlider(page);
+      const motifLayers = sheet.locator("[data-dossier-sheet-motif]");
+      expect(await motifLayers.count(), `${template.id} should expose decorative motif layers`).toBeGreaterThan(0);
+      const name = sheet.locator("[data-cv-name]").first();
+
+      for (const percent of [0, 25, 50, 100]) {
+        await setMotifPercent(slider, percent);
+        await expect
+          .poll(async () => Number.parseFloat(await motifLayers.first().evaluate((node) => getComputedStyle(node).opacity)))
+          .toBeCloseTo(percent / 100, 2);
+        await expect(slider).toHaveValue(String(percent));
+        expect(await name.evaluate((node) => getComputedStyle(node).opacity)).toBe("1");
+      }
+    }
+
+    const stableSheet = await seed(page, {
+      id: "blockig",
+      colors: {
+        primary: "#334155",
+        secondary: "#94a3b8",
+        accent: "#0f766e",
+        ink: "#111827",
+        bg: "#ffffff",
+      },
+    });
+    const stableSlider = await motifSlider(page);
+    await setMotifPercent(stableSlider, 0);
+    await page.evaluate(
+      () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+    );
+    const zeroShot = await stableSheet.screenshot({ animations: "disabled" });
+    await setMotifPercent(stableSlider, 100);
+    await page.evaluate(
+      () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+    );
+    const fullShot = await stableSheet.screenshot({ animations: "disabled" });
+    expect(hash(fullShot), "template without a decorative motif should stay visually stable").toBe(
+      hash(zeroShot),
+    );
   });
 
   test("persisted recovered typography reaches preview and PDF export canvas identically", async ({

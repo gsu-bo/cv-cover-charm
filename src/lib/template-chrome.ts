@@ -67,6 +67,16 @@ export function defaultFooterModeForTemplate(template: string): "none" | "compac
 }
 
 /**
+ * Header height written only when a template is deliberately selected.
+ * Warm needs the taller reviewed masthead by default, while every other
+ * template falls back to its automatic mode-specific height. The stored value
+ * remains ordinary user-editable chrome state afterwards.
+ */
+export function defaultHeaderHeightMmForTemplate(template: string): number | null {
+  return template === "freundlich" ? 44 : null;
+}
+
+/**
  * Default whitespace after the selected template header. Contact mastheads
  * already carry substantial visual height, so they normally need much less
  * additional whitespace than the compact signature band. Aurora is the

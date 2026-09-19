@@ -122,6 +122,10 @@ export function CvCanvas({
     "--cover-tertiary": tertiary,
     "--cover-accent": design.colors.accent ?? secondary,
     "--cover-ink": design.colors.ink ?? "#111111",
+    // The generic background-motif slider owns only decorative motif intensity.
+    // Keep the value as a CSS variable so preview and hidden PDF canvases use
+    // the same live value without changing structural sheet geometry.
+    "--dossier-motif-opacity": String(Math.max(0, Math.min(1, design.bgOpacity))),
   } as CSSProperties;
 
   return (

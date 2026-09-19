@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { TEMPLATES, type TemplateId } from "@/components/cover/types";
 import { cvContentBox, cvFrameFor } from "@/components/cv/archetype";
 import { cvPalette, onColorRoles } from "@/components/cv/palette";
@@ -245,6 +245,23 @@ function color(colors: Record<string, string>, ...keys: string[]): string {
     if (colors[key]) return colors[key];
   }
   return "#111111";
+}
+
+/**
+ * Only decorative sheet motifs respond to the generic motif visibility slider.
+ * The variable is supplied by the CV editor; title page and letter rendering
+ * deliberately fall back to 1 so existing output remains unchanged there.
+ */
+function MotifLayer({ children }: { children: ReactNode }) {
+  return (
+    <div
+      data-dossier-sheet-motif
+      className="absolute inset-0"
+      style={{ opacity: "var(--dossier-motif-opacity, 1)" }}
+    >
+      {children}
+    </div>
+  );
 }
 
 function DossierSheetSignature({
@@ -607,14 +624,16 @@ export function DossierSheetBackground({
           className="absolute"
           style={{ inset: "19mm", backgroundColor: paperColor ?? palette.paper }}
         />
-        <div
-          className="absolute"
-          style={{ inset: "12mm", border: `0.55px solid ${accent}`, opacity: 0.5 }}
-        />
-        <div
-          className="absolute"
-          style={{ inset: "15mm", border: `0.35px solid ${accent}`, opacity: 0.3 }}
-        />
+        <MotifLayer>
+          <div
+            className="absolute"
+            style={{ inset: "12mm", border: `0.55px solid ${accent}`, opacity: 0.5 }}
+          />
+          <div
+            className="absolute"
+            style={{ inset: "15mm", border: `0.35px solid ${accent}`, opacity: 0.3 }}
+          />
+        </MotifLayer>
       </div>
     );
   }
@@ -630,26 +649,28 @@ export function DossierSheetBackground({
         className="absolute inset-0 overflow-hidden"
         aria-hidden="true"
       >
-        {template === "neon" && (
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(circle at 18% 18%, ${primary} 0, transparent 34%), radial-gradient(circle at 82% 78%, ${secondary} 0, transparent 34%), ${color(colors, "bg")}`,
-            }}
-          />
-        )}
-        {template === "verlauf" && (
-          <div
-            className="absolute inset-0"
-            style={{ background: `linear-gradient(145deg, ${primary}, ${secondary})` }}
-          />
-        )}
-        {template === "citrus" && (
-          <div
-            className="absolute inset-0"
-            style={{ background: `linear-gradient(160deg, ${primary}, ${secondary})` }}
-          />
-        )}
+        <MotifLayer>
+          {template === "neon" && (
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `radial-gradient(circle at 18% 18%, ${primary} 0, transparent 34%), radial-gradient(circle at 82% 78%, ${secondary} 0, transparent 34%), ${color(colors, "bg")}`,
+              }}
+            />
+          )}
+          {template === "verlauf" && (
+            <div
+              className="absolute inset-0"
+              style={{ background: `linear-gradient(145deg, ${primary}, ${secondary})` }}
+            />
+          )}
+          {template === "citrus" && (
+            <div
+              className="absolute inset-0"
+              style={{ background: `linear-gradient(160deg, ${primary}, ${secondary})` }}
+            />
+          )}
+        </MotifLayer>
         <div
           className="absolute shadow-sm"
           style={{
@@ -670,12 +691,14 @@ export function DossierSheetBackground({
       style={{ backgroundColor: paperColor ?? palette.paper }}
       aria-hidden="true"
     >
-      <DossierSheetSignature
-        template={template}
-        primary={primary}
-        secondary={secondary}
-        accent={accent}
-      />
+      <MotifLayer>
+        <DossierSheetSignature
+          template={template}
+          primary={primary}
+          secondary={secondary}
+          accent={accent}
+        />
+      </MotifLayer>
 
       {layout.kind === "column" && (
         <div
@@ -698,24 +721,10 @@ export function DossierSheetBackground({
         />
       )}
 
-      {template === "terracotta" && (
-        <div
-          className="absolute left-[6mm] top-[20mm] h-[38mm] w-[1px]"
-          style={{ backgroundColor: secondary, opacity: 0.75 }}
-        />
-      )}
-
       {layout.kind === "band" && (layout.bandMm ?? 0) > 0 && (
         <div
           className="absolute inset-x-0 top-0"
           style={{ height: `${layout.bandMm}mm`, backgroundColor: primary }}
-        />
-      )}
-
-      {template === "edelBlockig" && (
-        <div
-          className="absolute inset-x-0 top-[36mm] h-[0.3mm]"
-          style={{ backgroundColor: accent, opacity: 0.72 }}
         />
       )}
 
@@ -724,47 +733,60 @@ export function DossierSheetBackground({
           className="absolute inset-x-0 bottom-0"
           style={{
             height: `${layout.footMm}mm`,
-            backgroundColor: template === "sonne" || template === "edelBlockig" ? primary : accent,
+            backgroundColor:
+              template === "sonne" || template === "edelBlockig" || template === "welle"
+                ? primary
+                : accent,
           }}
         />
       )}
 
-      {template === "aurora" && (
-        <div
-          className="absolute inset-x-0 top-0"
-          style={{
-            height: `${layout.bandMm ?? 16}mm`,
-            background: `linear-gradient(90deg, ${primary}, ${secondary})`,
-          }}
-        />
-      )}
-
-      {template === "freundlich" && (
-        <>
+      <MotifLayer>
+        {template === "terracotta" && (
           <div
-            className="absolute right-[-14mm] top-[-13mm] h-[39mm] w-[39mm] rounded-full"
-            style={{ backgroundColor: secondary, opacity: 0.65 }}
+            className="absolute left-[6mm] top-[20mm] h-[38mm] w-[1px]"
+            style={{ backgroundColor: secondary, opacity: 0.75 }}
           />
-          <div
-            className="absolute right-[10mm] top-[8mm] h-[8mm] w-[8mm] rounded-full"
-            style={{ backgroundColor: accent, opacity: 0.75 }}
-          />
-        </>
-      )}
+        )}
 
-      {template === "sonne" && (
-        <div
-          className="absolute right-[12mm] top-[5mm] h-[24mm] w-[24mm] rounded-full"
-          style={{ backgroundColor: accent, opacity: 0.26 }}
-        />
-      )}
-
-      {template === "welle" && (
-        <>
+        {template === "edelBlockig" && (
           <div
-            className="absolute inset-x-0 bottom-0"
-            style={{ height: `${layout.footMm ?? 15}mm`, backgroundColor: primary }}
+            className="absolute inset-x-0 top-[36mm] h-[0.3mm]"
+            style={{ backgroundColor: accent, opacity: 0.72 }}
           />
+        )}
+
+        {template === "aurora" && (
+          <div
+            className="absolute inset-x-0 top-0"
+            style={{
+              height: `${layout.bandMm ?? 16}mm`,
+              background: `linear-gradient(90deg, ${primary}, ${secondary})`,
+            }}
+          />
+        )}
+
+        {template === "freundlich" && (
+          <>
+            <div
+              className="absolute right-[-14mm] top-[-13mm] h-[39mm] w-[39mm] rounded-full"
+              style={{ backgroundColor: secondary, opacity: 0.65 }}
+            />
+            <div
+              className="absolute right-[10mm] top-[8mm] h-[8mm] w-[8mm] rounded-full"
+              style={{ backgroundColor: accent, opacity: 0.75 }}
+            />
+          </>
+        )}
+
+        {template === "sonne" && (
+          <div
+            className="absolute right-[12mm] top-[5mm] h-[24mm] w-[24mm] rounded-full"
+            style={{ backgroundColor: accent, opacity: 0.26 }}
+          />
+        )}
+
+        {template === "welle" && (
           <div
             className="absolute left-0 h-[5mm] w-[62%] rounded-tr-[100%]"
             style={{
@@ -773,60 +795,60 @@ export function DossierSheetBackground({
               opacity: 0.8,
             }}
           />
-        </>
-      )}
+        )}
 
-      {template === "human" && (
-        <>
+        {template === "human" && (
+          <>
+            <div
+              className="absolute right-[-31mm] top-[-22mm] h-[78mm] w-[98mm] rounded-[50%]"
+              style={{ backgroundColor: secondary, opacity: 0.35 }}
+            />
+            <div
+              className="absolute bottom-[16mm] left-[-18mm] h-[34mm] w-[55mm] rounded-[50%]"
+              style={{ backgroundColor: primary, opacity: 0.08 }}
+            />
+          </>
+        )}
+
+        {template === "sonnig" && (
           <div
-            className="absolute right-[-31mm] top-[-22mm] h-[78mm] w-[98mm] rounded-[50%]"
-            style={{ backgroundColor: secondary, opacity: 0.35 }}
+            className="absolute right-[-25mm] top-[-28mm] h-[72mm] w-[72mm] rounded-full border-[8mm]"
+            style={{ borderColor: primary, opacity: 0.18 }}
           />
+        )}
+
+        {template === "modern" && (
           <div
-            className="absolute bottom-[16mm] left-[-18mm] h-[34mm] w-[55mm] rounded-[50%]"
-            style={{ backgroundColor: primary, opacity: 0.08 }}
+            className="absolute right-[-20mm] top-[14mm] h-[62mm] w-[62mm] rounded-full"
+            style={{ backgroundColor: accent, opacity: 0.07 }}
           />
-        </>
-      )}
+        )}
 
-      {template === "sonnig" && (
-        <div
-          className="absolute right-[-25mm] top-[-28mm] h-[72mm] w-[72mm] rounded-full border-[8mm]"
-          style={{ borderColor: primary, opacity: 0.18 }}
-        />
-      )}
+        {template === "serioes" && (
+          <div
+            className="absolute left-[24mm] right-[22mm] top-[22mm] h-px"
+            style={{ backgroundColor: accent, opacity: 0.75 }}
+          />
+        )}
 
-      {template === "modern" && (
-        <div
-          className="absolute right-[-20mm] top-[14mm] h-[62mm] w-[62mm] rounded-full"
-          style={{ backgroundColor: accent, opacity: 0.07 }}
-        />
-      )}
+        {layout.borderInsetMm && (
+          <div
+            className="absolute"
+            style={{
+              inset: `${layout.borderInsetMm}mm`,
+              border: `0.55px solid ${accent}`,
+              opacity: template === "klassisch" ? 0.3 : 0.46,
+            }}
+          />
+        )}
 
-      {template === "serioes" && (
-        <div
-          className="absolute left-[24mm] right-[22mm] top-[22mm] h-px"
-          style={{ backgroundColor: accent, opacity: 0.75 }}
-        />
-      )}
-
-      {layout.borderInsetMm && (
-        <div
-          className="absolute"
-          style={{
-            inset: `${layout.borderInsetMm}mm`,
-            border: `0.55px solid ${accent}`,
-            opacity: template === "klassisch" ? 0.3 : 0.46,
-          }}
-        />
-      )}
-
-      {template === "pastell" && (
-        <div
-          className="absolute inset-x-[11mm] top-[11mm] h-[6mm] rounded-sm"
-          style={{ backgroundColor: secondary, opacity: 0.58 }}
-        />
-      )}
+        {template === "pastell" && (
+          <div
+            className="absolute inset-x-[11mm] top-[11mm] h-[6mm] rounded-sm"
+            style={{ backgroundColor: secondary, opacity: 0.58 }}
+          />
+        )}
+      </MotifLayer>
     </div>
   );
 }

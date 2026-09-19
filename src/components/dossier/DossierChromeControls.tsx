@@ -246,7 +246,7 @@ export function DossierChromeControls({
       data-dossier-chrome-controls={scope}
       className="rounded-lg border bg-background p-3 shadow-sm"
     >
-      <div className="mt-3 grid gap-3 border-t pt-3">
+      <div className="mt-3 grid gap-3 pt-3">
         <div className="grid gap-2 rounded-md border p-2.5">
           <label className="block text-xs font-medium">
             Header

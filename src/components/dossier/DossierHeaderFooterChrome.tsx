@@ -1,4 +1,5 @@
 import { Mail, Smartphone } from "lucide-react";
+import type { CSSProperties } from "react";
 import { FONT_STACKS } from "@/components/cover/types";
 import { cvPalette, onColorRoles } from "@/components/cv/palette";
 import {
@@ -259,6 +260,13 @@ export function DossierHeaderFooterChrome({
   return (
     <div
       data-dossier-chrome={scope}
+      data-dossier-template-chrome={template}
+      data-dossier-header-custom-surface={
+        options.headerBackgroundColor || options.headerGradientColor ? "true" : "false"
+      }
+      data-dossier-footer-custom-surface={
+        options.footerBackgroundColor || options.footerGradientColor ? "true" : "false"
+      }
       data-dossier-header-mode={options.headerMode}
       data-dossier-effective-header-mode={headerMode}
       data-dossier-continuation-mode={
@@ -278,7 +286,16 @@ export function DossierHeaderFooterChrome({
       data-letter-chrome={letter ? "" : undefined}
       data-letter-header-mode={letter ? options.headerMode : undefined}
       className="pointer-events-none absolute inset-0 z-[3] overflow-hidden"
-      style={{ fontFamily: textFontFamily }}
+      style={
+        {
+          fontFamily: textFontFamily,
+          "--chrome-primary": primary,
+          "--chrome-secondary": colors.secondary ?? secondary,
+          "--chrome-accent": colors.accent ?? secondary,
+          "--chrome-paper": colors.bg ?? sourcePalette.paper,
+          "--chrome-ink": colors.ink ?? sourcePalette.ink,
+        } as CSSProperties
+      }
     >
       {headerMode === "compact" && !warmLetterOwnsFirstPageHeader ? (
         <div
