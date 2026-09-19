@@ -8,8 +8,8 @@ import type { Block, BlockStyle, TemplateId } from "./types";
  * it. Keep reviewed compositions as normal block defaults instead: reset returns
  * here, while explicit user overrides always remain authoritative.
  *
- * Ribbon and Frame follow the same ownership rule. Their visual structures are
- * CSS-owned, but all editable cover content remains editor-owned. The legacy
+ * Ribbon and Diagonal follow the same ownership rule. Their visual structures
+ * are CSS-owned, but all editable cover content remains editor-owned. The legacy
  * function name is kept for import stability while these reviewed compositions
  * share this small default adapter.
  */
@@ -179,11 +179,12 @@ const RIBBON_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
 };
 
 /**
- * Frame is no longer a frame. The replacement keeps all editable content in
- * the quiet white centre between two equal structural corner triangles. These
- * are defaults only: any user move, resize or typography edit remains final.
+ * Diagonal is a separate template, not a Frame replacement. Its editable cover
+ * content sits in the broad clean paper band between two structural corner
+ * masses. Defaults stay ordinary editor values so drag/resize/reset and user
+ * typography choices always win.
  */
-const FRAME_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
+const DIAGONAL_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
   eyebrow: {
     x: 14,
     y: 14,
@@ -282,7 +283,7 @@ const FRAME_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
   },
   anTitel: {
     x: 108,
-    y: 199,
+    y: 181,
     w: 72,
     size: 8,
     color: "primary",
@@ -296,7 +297,7 @@ const FRAME_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
   },
   empfaenger: {
     x: 108,
-    y: 210,
+    y: 192,
     w: 72,
     size: 9,
     color: "ink",
@@ -346,8 +347,8 @@ export function applyForestFlowCoverDefaults(
       ? FOREST_FLOW_COVER_DEFAULTS[block.id]
       : templateId === "ribbon"
         ? RIBBON_COVER_DEFAULTS[block.id]
-        : templateId === "frame"
-          ? FRAME_COVER_DEFAULTS[block.id]
+        : templateId === "diagonal"
+          ? DIAGONAL_COVER_DEFAULTS[block.id]
           : undefined;
   if (!defaults) return block;
 

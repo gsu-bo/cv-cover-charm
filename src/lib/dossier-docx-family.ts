@@ -66,6 +66,9 @@ export const DOSSIER_DOCX_TEMPLATE_PLANS: Readonly<Record<string, DossierDocxTem
   orbit: { label: "Orbit", family: "geometric", fallback: "individual" },
   ribbon: { label: "Ribbon", family: "banded", fallback: "individual" },
   cove: { label: "Cove", family: "masthead", fallback: "individual" },
+
+  // Standalone slot added without replacing Frame.
+  diagonal: { label: "Diagonal", family: "geometric", fallback: "individual" },
 };
 
 export function dossierDocxTemplatePlan(templateId: string) {

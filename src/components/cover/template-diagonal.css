@@ -1,0 +1,283 @@
+/*
+ * DIAGONAL — standalone blue/teal Swiss-editorial template.
+ *
+ * IMPORTANT: this is a NEW template. It must never replace, alias or restyle
+ * Frame. The identity is deliberately simple: two strong corner masses and a
+ * broad clean paper diagonal between them. Editable content remains owned by
+ * the normal editor defaults so user moves/resizes always win.
+ */
+
+/* -------------------------------------------------------------------------- */
+/* COVER — two large corner masses, broad white diagonal band                 */
+/* -------------------------------------------------------------------------- */
+
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cover"]
+  [data-fresh-cover-field="primary"] {
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  clip-path: none !important;
+  overflow: visible !important;
+  opacity: 1 !important;
+}
+
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cover"]
+  [data-fresh-cover-field="primary"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 92mm;
+  height: 76mm;
+  background: var(--cover-primary);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+  pointer-events: none;
+}
+
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cover"]
+  [data-fresh-cover-field="secondary"] {
+  left: auto !important;
+  right: 0 !important;
+  top: auto !important;
+  bottom: 0 !important;
+  width: 92mm !important;
+  height: 76mm !important;
+  background: var(--cover-secondary) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%) !important;
+  opacity: 1 !important;
+}
+
+/* No third decorative object: the clean paper diagonal is the third field. */
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cover"]
+  [data-fresh-cover-field="accent"] {
+  display: none !important;
+}
+
+/* Generic Fresh cleanup must never create presentation offsets for the new
+ * cover. Geometry lives in normal block defaults / explicit user overrides. */
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cover"]
+  :is(
+    [data-block-id="foto"],
+    [data-block-id="name"],
+    [data-block-id="beruf"],
+    [data-block-id="lehrbeginn"]
+  ) {
+  transform: none !important;
+}
+
+/* Fresh cover data stores application kicker + profession as two logical lines
+ * in one editable block. Keep one scalable editor font-size control while the
+ * first line reads as a small Swiss eyebrow and the profession stays dominant. */
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cover"]
+  [data-block-id="beruf"]
+  > div
+  > div:first-child {
+  font-size: 0.38em;
+  line-height: 1.15;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 2mm;
+}
+
+/* -------------------------------------------------------------------------- */
+/* CV + LETTER — same diagonal identity, reduced to quiet edge wedges         */
+/* -------------------------------------------------------------------------- */
+
+/* Diagonal is intentionally not a replacement for the old Frame archetype.
+ * The generic quiet fallback may still emit its historical inset line; remove
+ * only that anonymous motif content for Diagonal, then draw the two owned
+ * corner wedges on the sheet itself. */
+[data-dossier-sheet-background="diagonal"]
+  > [data-dossier-sheet-motif]
+  > div {
+  display: none !important;
+}
+
+[data-dossier-sheet-background="diagonal"]::before,
+[data-dossier-sheet-background="diagonal"]::after {
+  content: "";
+  position: absolute;
+  width: 30mm;
+  height: 22mm;
+  border: 0;
+  border-radius: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+[data-dossier-sheet-background="diagonal"]::before {
+  left: 0;
+  top: 0;
+  background: var(--cover-primary, #1d4ed8);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+[data-dossier-sheet-background="diagonal"]::after {
+  right: 0;
+  bottom: 0;
+  background: var(--cover-secondary, #0f766e);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+/* Letter stationery is deliberately more restrained than CV. */
+[data-letter-page][data-letter-template="diagonal"]
+  [data-dossier-sheet-background="diagonal"]::before,
+[data-letter-page][data-letter-template="diagonal"]
+  [data-dossier-sheet-background="diagonal"]::after {
+  width: 22mm;
+  height: 15mm;
+  opacity: 0.92;
+}
+
+/* -------------------------------------------------------------------------- */
+/* SHARED CHROME — support compact and integrated-contact modes               */
+/* -------------------------------------------------------------------------- */
+
+/* Default compact header is paper, not a third full-width colour band. The
+ * two small diagonal wedges repeat the page gesture without stealing CV space. */
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cv"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="diagonal"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header],
+[data-letter-page][data-letter-template="diagonal"]
+  [data-dossier-template-chrome="diagonal"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header] {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  overflow: hidden !important;
+}
+
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cv"]
+  [data-dossier-template-chrome="diagonal"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header]::before,
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cv"]
+  [data-dossier-template-chrome="diagonal"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header]::after,
+[data-letter-page][data-letter-template="diagonal"]
+  [data-dossier-template-chrome="diagonal"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header]::before,
+[data-letter-page][data-letter-template="diagonal"]
+  [data-dossier-template-chrome="diagonal"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 20mm;
+  height: 100%;
+  pointer-events: none;
+}
+
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cv"]
+  [data-dossier-template-chrome="diagonal"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header]::before,
+[data-letter-page][data-letter-template="diagonal"]
+  [data-dossier-template-chrome="diagonal"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header]::before {
+  left: 0;
+  background: var(--chrome-primary);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cv"]
+  [data-dossier-template-chrome="diagonal"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header]::after,
+[data-letter-page][data-letter-template="diagonal"]
+  [data-dossier-template-chrome="diagonal"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header]::after {
+  right: 0;
+  background: var(--chrome-secondary);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+/* Integrated-contact mode stays on clean paper; custom surfaces remain fully
+ * user-owned and are therefore excluded by the custom-surface attribute. */
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cv"]
+  [data-dossier-template-chrome="diagonal"][data-dossier-header-custom-surface="false"]
+  [data-dossier-contact-header-background],
+[data-letter-page][data-letter-template="diagonal"]
+  [data-dossier-template-chrome="diagonal"][data-dossier-header-custom-surface="false"]
+  [data-dossier-contact-header-background] {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cv"]
+  [data-dossier-integrated-contact],
+[data-letter-page][data-letter-template="diagonal"]
+  [data-dossier-integrated-contact] {
+  left: 34mm !important;
+  right: 24mm !important;
+  width: auto !important;
+  padding: 2.5mm 0 1mm !important;
+  align-items: flex-start !important;
+  color: var(--chrome-ink, #172033) !important;
+}
+
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cv"]
+  [data-dossier-continuation-contact-header],
+[data-letter-page][data-letter-template="diagonal"]
+  [data-dossier-continuation-contact-header] {
+  left: 34mm !important;
+  right: 24mm !important;
+  width: auto !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  color: var(--chrome-ink, #172033) !important;
+}
+
+/* Keep footer content but never create a third architectural band. Explicit
+ * user footer surfaces still win through the custom-surface contract. */
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cv"]
+  [data-dossier-template-chrome="diagonal"][data-dossier-footer-custom-surface="false"]
+  [data-dossier-footer],
+[data-letter-page][data-letter-template="diagonal"]
+  [data-dossier-template-chrome="diagonal"][data-dossier-footer-custom-surface="false"]
+  [data-dossier-footer] {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* CV stays predominantly typographic/white. Do not add generic rules/cards on
+ * top of the diagonal signature. */
+html[data-dossier-template="diagonal"]
+  [data-dossier-document="cv"]
+  [data-cv-surface] {
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+html[data-dossier-template="diagonal"][data-dossier-template="diagonal"]
+  [data-dossier-document="cv"]
+  :is([data-cv-accent="section"], [data-cv-accent="header"]) {
+  display: none !important;
+}

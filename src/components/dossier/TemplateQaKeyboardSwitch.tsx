@@ -297,6 +297,27 @@ export function TemplateQaKeyboardSwitch() {
       selectElement(null);
     };
 
+    /**
+     * The normal editor reset and the hidden QA translation layer must behave as
+     * one operation. Listen in capture phase so offsets are cleared before React
+     * rerenders the document; the MutationObserver then sees an empty map and can
+     * no longer resurrect the previous Dev Tools positions.
+     *
+     * "Alles zurücksetzen" is intentionally cleared only on the destructive
+     * confirmation button, not when the first menu item merely opens the prompt.
+     */
+    const onEditorResetClick = (event: MouseEvent) => {
+      if (!(event.target instanceof Element)) return;
+      const resetButton = event.target.closest<HTMLButtonElement>("button");
+      if (!resetButton) return;
+      const label = (resetButton.textContent ?? "").replace(/\s+/g, " ").trim();
+      const layoutReset = label.includes("Positionen & Grössen zurücksetzen");
+      const confirmedFullReset =
+        label === "Ja" &&
+        (resetButton.parentElement?.textContent ?? "").replace(/\s+/g, " ").includes("Wirklich alles?");
+      if (layoutReset || confirmedFullReset) resetOffsets();
+    };
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (!active) return;
 
@@ -370,6 +391,7 @@ export function TemplateQaKeyboardSwitch() {
 
     button.addEventListener("click", activate);
     document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("click", onEditorResetClick, true);
     window.addEventListener("keydown", onKeyDown, true);
 
     attachToDownloadMenu();
@@ -382,6 +404,7 @@ export function TemplateQaKeyboardSwitch() {
     return () => {
       window.removeEventListener("keydown", onKeyDown, true);
       document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("click", onEditorResetClick, true);
       observer.disconnect();
       button.removeEventListener("click", activate);
       selectElement(null);

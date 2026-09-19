@@ -19,7 +19,7 @@ describe("Fresh title-page background contract", () => {
   test("canonical Fresh registry remains complete after retired legacy templates are removed", () => {
     expect(FRESH_TEMPLATE_REGISTRY).toHaveLength(22);
     expect(FRESH_TEMPLATE_IDS).toHaveLength(22);
-    expect(TEMPLATES).toHaveLength(41);
+    expect(TEMPLATES).toHaveLength(42);
     expect(TEMPLATES.map(({ id }) => id as string)).not.toContain("edelBlockig");
     expect(TEMPLATES.map(({ id }) => id as string)).not.toContain("sonnig");
     expect(
