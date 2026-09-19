@@ -17,6 +17,7 @@ import letterAlignmentCss from "../components/letter/letter-alignment.css?url";
 import headerProductionPolishCss from "../components/dossier/header-production-polish.css?url";
 import motifVisibilityCss from "../components/dossier/motif-visibility.css?url";
 import { DossierHyphenationBridge } from "../components/dossier/DossierHyphenationControl";
+import { TemplateQaKeyboardSwitch } from "../components/dossier/TemplateQaKeyboardSwitch";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -171,6 +172,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <DossierHyphenationBridge />
+      <TemplateQaKeyboardSwitch />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
