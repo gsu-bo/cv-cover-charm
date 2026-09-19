@@ -126,7 +126,7 @@ export function TemplateQaKeyboardSwitch() {
     button.type = "button";
     button.dataset.templateQaSwitch = "true";
     button.innerHTML = `
-      <span data-editor-menu-label class="flex min-w-0 items-center gap-2">
+      <span data-template-qa-menu-label class="flex min-w-0 items-center gap-2">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
           class="h-4 w-4 shrink-0">
