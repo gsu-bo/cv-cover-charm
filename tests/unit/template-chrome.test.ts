@@ -4,6 +4,7 @@ import {
   defaultFooterModeForTemplate,
   defaultHeaderGapMmForTemplate,
   defaultHeaderModeForTemplate,
+  recommendedHeaderPatchForTemplate,
   resolveTemplateChromeOptions,
 } from "../../src/lib/template-chrome";
 
@@ -14,7 +15,7 @@ describe("template-owned dossier chrome", () => {
     expect(defaultHeaderGapMmForTemplate("brief")).toBe(12);
   });
 
-  test("ordinary quiet templates default to compact headers", () => {
+  test("all normal visual templates default to compact headers", () => {
     for (const template of [
       "klassisch",
       "modern",
@@ -27,20 +28,7 @@ describe("template-owned dossier chrome", () => {
       "welle",
       "edge",
       "ribbon",
-    ]) {
-      expect(defaultHeaderModeForTemplate(template)).toBe("compact");
-      expect(defaultHeaderGapMmForTemplate(template)).toBe(12);
-    }
-  });
-
-  test("Aurora keeps the reviewed deep contact clearance", () => {
-    expect(defaultHeaderModeForTemplate("aurora")).toBe("contact");
-    expect(defaultHeaderGapMmForTemplate("aurora")).toBe(12);
-  });
-
-  test("designed masthead families opt into contact headers", () => {
-    for (const template of [
-      "freundlich",
+      "aurora",
       "horizon",
       "violetPulse",
       "studio",
@@ -54,13 +42,30 @@ describe("template-owned dossier chrome", () => {
       "verlauf2",
       "verlauf3",
       "prism",
+      "cove",
+      "neon",
     ]) {
-      expect(defaultHeaderModeForTemplate(template)).toBe("contact");
-      expect(defaultHeaderGapMmForTemplate(template)).toBe(4);
+      expect(defaultHeaderModeForTemplate(template)).toBe("compact");
+      expect(defaultHeaderGapMmForTemplate(template)).toBe(12);
+      expect(recommendedHeaderPatchForTemplate(template)).toBeNull();
     }
   });
 
-  test("contact gradient families inherit both template colours", () => {
+  test("Warm and Citrus intentionally recommend stacked contact headers", () => {
+    for (const template of ["freundlich", "citrus"]) {
+      expect(defaultHeaderModeForTemplate(template)).toBe("contact");
+      expect(defaultHeaderGapMmForTemplate(template)).toBe(4);
+      expect(recommendedHeaderPatchForTemplate(template)).toMatchObject({
+        headerMode: "contact",
+        headerTextLayout: "stacked",
+        headerGapMm: 4,
+      });
+    }
+    expect(recommendedHeaderPatchForTemplate("freundlich")?.headerHeightMm).toBe(44);
+    expect(recommendedHeaderPatchForTemplate("citrus")?.headerHeightMm).toBeNull();
+  });
+
+  test("contact gradient families inherit both template colours when contact is explicit", () => {
     const source = {
       ...DEFAULT_DOSSIER_CHROME_OPTIONS,
       headerMode: "contact" as const,
