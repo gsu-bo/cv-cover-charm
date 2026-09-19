@@ -22,6 +22,7 @@ import "./templatefix-27-28.css";
 import "./templatefix-29-31.css";
 import "./templatefix-prism.css";
 import "./templatefix-32-36.css";
+import "./ribbon-cover-redesign.css";
 import "./templatefix-32-36-cv-masthead.css";
 import "./templatefix-glow-density.css";
 import "./templatefix-frame.css";
