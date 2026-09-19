@@ -1,0 +1,81 @@
+import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { applyForestFlowCoverDefaults } from "../../src/components/cover/forest-flow-cover-defaults";
+import type { StyleOverrides } from "../../src/components/cover/layouts-base";
+import type { Block, TemplateId } from "../../src/components/cover/types";
+
+const forest = "forestFlow" as TemplateId;
+
+function block(id: string): Block {
+  return {
+    id,
+    label: id,
+    kind: "text",
+    lines: [id],
+    style: {
+      x: 1,
+      y: 2,
+      w: 3,
+      follows: "name",
+      above: null,
+      anchorBottom: true,
+    },
+  } as unknown as Block;
+}
+
+describe("Forest Flow cover editability", () => {
+  test("keeps the reviewed cover composition as normal editor defaults", () => {
+    const expected = {
+      eyebrow: [7, 17, 38],
+      ortDatum: [7, 268, 38],
+      name: [72, 111, 112],
+      beruf: [72, 137, 112],
+      lehrbeginn: [72, 159, 112],
+      kontaktTitel: [7, 192, 38],
+      kontakt: [7, 203, 38],
+      anTitel: [72, 239, 112],
+      empfaenger: [72, 250, 112],
+    } as const;
+
+    for (const [id, [x, y, w]] of Object.entries(expected)) {
+      const resolved = applyForestFlowCoverDefaults(forest, block(id), {});
+      expect([resolved.style.x, resolved.style.y, resolved.style.w]).toEqual([x, y, w]);
+      expect(resolved.style.follows).toBeNull();
+      expect(resolved.style.above).toBeNull();
+      expect(resolved.style.anchorBottom).toBe(false);
+    }
+
+    const photo = applyForestFlowCoverDefaults(forest, block("foto"), {});
+    expect([photo.style.x, photo.style.y]).toEqual([143, 27]);
+  });
+
+  test("explicit user drag and resize geometry always wins", () => {
+    const overrides: StyleOverrides = {
+      name: {
+        x: 101.5,
+        y: 123.4,
+        w: 76.2,
+        follows: null,
+        above: null,
+        anchorBottom: false,
+      },
+    };
+    const resolved = applyForestFlowCoverDefaults(forest, block("name"), overrides);
+    expect([resolved.style.x, resolved.style.y, resolved.style.w]).toEqual([101.5, 123.4, 76.2]);
+  });
+
+  test("late Forest CSS no longer owns editable cover geometry", () => {
+    const css = readFileSync(
+      new URL("../../src/components/cover/templatefix-24-25.css", import.meta.url),
+      "utf8",
+    );
+    const forestCover = css.split("/* 25 FOREST FLOW")[1]?.split("/* Letter:")[0] ?? "";
+
+    expect(forestCover).not.toContain('left: 7mm !important');
+    expect(forestCover).not.toContain('left: 72mm !important');
+    expect(forestCover).not.toContain('left: 143mm !important');
+    expect(forestCover).not.toContain('top: 111mm !important');
+    expect(forestCover).not.toContain('top: 203mm !important');
+    expect(forestCover).toContain("forest-flow-cover-defaults.ts");
+  });
+});
