@@ -72,3 +72,11 @@ jobs:
       - name: Show application log on failure
         if: failure()
         run: cat /tmp/cv-cover-charm.log || true
+
+      - name: Stop application
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/cv-cover-charm.pid ]; then
+            kill "$(cat /tmp/cv-cover-charm.pid)" || true
+          fi
