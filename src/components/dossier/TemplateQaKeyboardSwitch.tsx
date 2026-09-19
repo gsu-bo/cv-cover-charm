@@ -3,12 +3,7 @@ import { TEMPLATES } from "@/components/cover/types";
 
 const TEMPLATE_DESCRIPTIONS = new Set(TEMPLATES.map((template) => template.description));
 const SWITCH_ID = "template-qa-keyboard-switch";
-const DEVTOOLS_FUNCTION = "cvDevTools";
 const DEVTOOLS_CODE = "555";
-
-type QaWindow = Window & {
-  cvDevTools?: () => boolean;
-};
 
 function editableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
@@ -22,13 +17,9 @@ function visibleTemplateButtons(): HTMLButtonElement[] {
 }
 
 /**
- * Hidden production-QA helper.
+ * Small production-QA helper next to the Download button.
  *
- * Browser console:
- *   cvDevTools()
- *   code: 555
- *
- * After successful activation:
+ * Click "Dev Tools" and enter code 555 to enable:
  * Ctrl + ArrowLeft  = previous template
  * Ctrl + ArrowRight = next template
  *
@@ -37,51 +28,52 @@ function visibleTemplateButtons(): HTMLButtonElement[] {
  */
 export function TemplateQaKeyboardSwitch() {
   useEffect(() => {
-    const wrapper = document.createElement("label");
-    wrapper.id = SWITCH_ID;
-    wrapper.dataset.templateQaSwitch = "true";
-    wrapper.style.display = "none";
-    wrapper.style.alignItems = "center";
-    wrapper.style.gap = "6px";
-    wrapper.style.marginRight = "8px";
-    wrapper.style.fontSize = "12px";
-    wrapper.style.whiteSpace = "nowrap";
-    wrapper.title = "QA: Ctrl + Pfeil links/rechts wechselt die Vorlage";
+    let active = false;
 
-    const toggle = document.createElement("input");
-    toggle.type = "checkbox";
-    toggle.setAttribute("aria-label", "QA Template-Tastatursteuerung aktivieren");
-
-    const text = document.createElement("span");
-    text.textContent = "QA Ctrl+←/→";
-
-    wrapper.append(toggle, text);
+    const button = document.createElement("button");
+    button.id = SWITCH_ID;
+    button.type = "button";
+    button.dataset.templateQaSwitch = "true";
+    button.textContent = "Dev Tools";
+    button.title = "QA-Tools aktivieren";
+    button.style.display = "inline-flex";
+    button.style.alignItems = "center";
+    button.style.justifyContent = "center";
+    button.style.height = "36px";
+    button.style.padding = "0 10px";
+    button.style.border = "1px solid hsl(var(--border))";
+    button.style.borderRadius = "6px";
+    button.style.background = "hsl(var(--background))";
+    button.style.color = "hsl(var(--foreground))";
+    button.style.fontSize = "12px";
+    button.style.fontWeight = "500";
+    button.style.whiteSpace = "nowrap";
+    button.style.cursor = "pointer";
 
     const attachNearDownload = () => {
       const downloadButton = document.querySelector<HTMLButtonElement>("button[data-editor-ready]");
       const host = downloadButton?.parentElement;
-      if (!host || wrapper.parentElement === host) return;
-      host.insertBefore(wrapper, downloadButton);
+      if (!host || button.parentElement === host) return;
+      host.insertBefore(button, downloadButton);
     };
 
+    const activate = () => {
+      if (active) return;
+      const code = window.prompt("Dev Tools Code");
+      if (code !== DEVTOOLS_CODE) return;
+      active = true;
+      button.dataset.templateQaActive = "true";
+      button.textContent = "Dev Tools ✓";
+      button.title = "QA-Tools aktiv: Ctrl + ← / → wechselt die Vorlage";
+    };
+
+    button.addEventListener("click", activate);
     attachNearDownload();
     const observer = new MutationObserver(attachNearDownload);
     observer.observe(document.body, { childList: true, subtree: true });
 
-    const qaWindow = window as QaWindow;
-    const activateDevTools = () => {
-      const code = window.prompt("Dev Tools Code");
-      if (code !== DEVTOOLS_CODE) return false;
-      attachNearDownload();
-      wrapper.style.display = "inline-flex";
-      toggle.checked = true;
-      wrapper.dataset.templateQaActive = "true";
-      return true;
-    };
-    qaWindow[DEVTOOLS_FUNCTION] = activateDevTools;
-
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!toggle.checked) return;
+      if (!active) return;
       if (!event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
       if (editableTarget(event.target)) return;
@@ -89,7 +81,7 @@ export function TemplateQaKeyboardSwitch() {
       const buttons = visibleTemplateButtons();
       if (buttons.length < 2) return;
 
-      const currentIndex = buttons.findIndex((button) => button.getAttribute("aria-pressed") === "true");
+      const currentIndex = buttons.findIndex((candidate) => candidate.getAttribute("aria-pressed") === "true");
       if (currentIndex < 0) return;
 
       const delta = event.key === "ArrowRight" ? 1 : -1;
@@ -102,8 +94,8 @@ export function TemplateQaKeyboardSwitch() {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       observer.disconnect();
-      if (qaWindow[DEVTOOLS_FUNCTION] === activateDevTools) delete qaWindow[DEVTOOLS_FUNCTION];
-      wrapper.remove();
+      button.removeEventListener("click", activate);
+      button.remove();
     };
   }, []);
 
