@@ -16,12 +16,14 @@ function defaultColors(template: TemplateId) {
 }
 
 describe("Fresh title-page background contract", () => {
-  test("canonical Fresh registry remains complete after retired legacy templates are removed", () => {
-    expect(FRESH_TEMPLATE_REGISTRY).toHaveLength(22);
-    expect(FRESH_TEMPLATE_IDS).toHaveLength(22);
-    expect(TEMPLATES).toHaveLength(42);
-    expect(TEMPLATES.map(({ id }) => id as string)).not.toContain("edelBlockig");
-    expect(TEMPLATES.map(({ id }) => id as string)).not.toContain("sonnig");
+  test("canonical Fresh registry remains complete after retired templates are removed", () => {
+    expect(FRESH_TEMPLATE_REGISTRY).toHaveLength(21);
+    expect(FRESH_TEMPLATE_IDS).toHaveLength(21);
+    expect(TEMPLATES).toHaveLength(41);
+    const ids = TEMPLATES.map(({ id }) => id as string);
+    expect(ids).not.toContain("edelBlockig");
+    expect(ids).not.toContain("sonnig");
+    expect(ids).not.toContain("frame");
     expect(
       TEMPLATES.filter(({ id }) => FRESH_TEMPLATE_IDS.includes(id as never)).map(
         ({ id }) => id as string,

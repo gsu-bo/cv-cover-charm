@@ -10,21 +10,10 @@ export type DossierDocxGeometryFamily =
 export type DossierDocxTemplatePlan = {
   label: string;
   family: DossierDocxGeometryFamily;
-  /**
-   * Family rendering is attempted first. `individual` is the safety valve:
-   * visual QA may promote one template to a dedicated mapper without changing
-   * the rest of its family.
-   */
   fallback: "individual";
-  /** Existing, visually audited DOCX implementations. */
   audited?: boolean;
 };
 
-/**
- * Word needs a much more concrete geometry classification than the product's
- * broad typography families. Keep every selectable dossier template here so
- * adding DOCX coverage is an explicit, reviewable decision.
- */
 export const DOSSIER_DOCX_TEMPLATE_PLANS: Readonly<Record<string, DossierDocxTemplatePlan>> = {
   brief: { label: "Brief", family: "plain", fallback: "individual", audited: true },
   klassisch: { label: "Editorial", family: "editorial-frame", fallback: "individual" },
@@ -48,7 +37,6 @@ export const DOSSIER_DOCX_TEMPLATE_PLANS: Readonly<Record<string, DossierDocxTem
 
   edge: { label: "Edge", family: "side-rail", fallback: "individual" },
   glow: { label: "Glow", family: "gradient", fallback: "individual" },
-  frame: { label: "Frame", family: "editorial-frame", fallback: "individual" },
   monoLuxe: { label: "Mono Luxe", family: "editorial-frame", fallback: "individual" },
   horizon: { label: "Horizon", family: "banded", fallback: "individual" },
   sunrise: { label: "Sunrise", family: "gradient", fallback: "individual" },
@@ -66,8 +54,6 @@ export const DOSSIER_DOCX_TEMPLATE_PLANS: Readonly<Record<string, DossierDocxTem
   orbit: { label: "Orbit", family: "geometric", fallback: "individual" },
   ribbon: { label: "Ribbon", family: "banded", fallback: "individual" },
   cove: { label: "Cove", family: "masthead", fallback: "individual" },
-
-  // Standalone slot added without replacing Frame.
   diagonal: { label: "Diagonal", family: "geometric", fallback: "individual" },
 };
 

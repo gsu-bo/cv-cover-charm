@@ -25,7 +25,6 @@ import "./templatefix-32-36.css";
 import "./ribbon-cover-redesign.css";
 import "./templatefix-32-36-cv-masthead.css";
 import "./templatefix-glow-density.css";
-import "./templatefix-frame.css";
 import "./template-diagonal.css";
 import "./templatefix-mono-luxe.css";
 import "./warm2-redesign.css";
@@ -107,32 +106,30 @@ const freshDefinitions: TemplateDefinition[] = FRESH_TEMPLATE_REGISTRY.map((defi
 }));
 
 /**
- * Edel blockig and Bogen were retired from the product catalogue. Keep their
- * old ids in the persisted type boundary only so old JSON cannot crash while
- * loading; once this module registers the live catalogue they are no longer
- * selectable, exportable gallery cases, or valid normalized document designs.
+ * Retired templates must not remain selectable after HMR or old drafts. Keep
+ * their ids only at the persisted type boundary; there is no runtime alias or
+ * replacement mapping. Frame is intentionally retired outright rather than
+ * falling back to Diagonal.
  */
-const RETIRED_TEMPLATE_IDS = new Set(["edelBlockig", "sonnig"]);
+const RETIRED_TEMPLATE_IDS = new Set(["edelBlockig", "sonnig", "frame"]);
 for (let index = TEMPLATES.length - 1; index >= 0; index -= 1) {
   if (RETIRED_TEMPLATE_IDS.has(TEMPLATES[index].id as string)) TEMPLATES.splice(index, 1);
 }
 
 /**
- * Diagonal is a new standalone template. It deliberately does not replace or
- * rename Frame: existing saved Frame dossiers keep their original identity.
- * The cover reuses the stable three-field structural scaffold, while its own
- * stylesheet turns that scaffold into two large corner masses with a clean
- * diagonal paper band between them.
+ * Diagonal is the surviving geometric corner template. It is a standalone
+ * dossier style with two equal, same-colour diagonal masses and a quiet paper
+ * centre.
  */
 const diagonalDefinition: TemplateDefinition = {
   id: "diagonal" as TemplateId,
   name: "Diagonal",
-  description: "Klare Diagonalen in Blau und Teal, modern und editorial",
+  description: "Klare blaue Diagonalen, modern und editorial",
   slots: [
     { key: "bg", label: "Papier", default: "#f8fafc" },
-    { key: "primary", label: "Blau", default: "#1d4ed8" },
-    { key: "secondary", label: "Teal", default: "#0f766e" },
-    { key: "accent", label: "Akzent", default: "#0891b2" },
+    { key: "primary", label: "Fläche", default: "#1d4ed8" },
+    { key: "secondary", label: "Akzent", default: "#0f766e" },
+    { key: "accent", label: "Akzent 2", default: "#0891b2" },
     { key: "ink", label: "Text", default: "#172033" },
   ],
 };
@@ -170,7 +167,7 @@ if (!TEMPLATES.some((template) => (template.id as string) === "edelDark")) {
 /**
  * CoverBackground only needs to know whether the stable three-field structural
  * scaffold is available. Diagonal uses that scaffold too, but stays outside the
- * historic Fresh 21-42 registry so adding it cannot renumber or replace Frame.
+ * historic Fresh registry.
  */
 export function isFreshTemplate(template: TemplateId): boolean {
   return isFreshTemplateId(template as string) || (template as string) === "diagonal";
