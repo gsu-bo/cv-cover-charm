@@ -13,9 +13,9 @@ const warmColors = {
 };
 
 describe("Warm 1 dossier chrome", () => {
-  test("defaults to the reviewed stacked-contact geometry", () => {
-    expect(defaultHeaderModeForTemplate("freundlich")).toBe("contact");
-    expect(defaultHeaderGapMmForTemplate("freundlich")).toBe(4);
+  test("uses the compact contract that drives the reviewed letter masthead and CV edge", () => {
+    expect(defaultHeaderModeForTemplate("freundlich")).toBe("compact");
+    expect(defaultHeaderGapMmForTemplate("freundlich")).toBe(12);
   });
 
   test("preserves an explicit contact header and user geometry", () => {
