@@ -22,6 +22,7 @@ export function LetterTemplatePicker({ value, onChange }: Props) {
     patchDossierChrome("letter", {
       headerMode: defaultHeaderModeForTemplate(template),
       headerGapMm: defaultHeaderGapMmForTemplate(template),
+      ...(template === "freundlich" ? { headerTextLayout: "stacked" as const } : {}),
     });
     onChange(template);
   };
