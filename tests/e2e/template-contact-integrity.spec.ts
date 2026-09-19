@@ -212,20 +212,25 @@ async function fillLiveContact(page: Page, contact: RunContact) {
 }
 
 async function expectCurrentContact(page: Page, contact: RunContact, templateName: string) {
-  const header = page
-    .locator(
-      '[data-dossier-document="cv"][data-export-mode="false"] [data-cv-page="0"] [data-dossier-integrated-contact]',
-    )
+  const cvPage = page
+    .locator('[data-dossier-document="cv"][data-export-mode="false"] [data-cv-page="0"]')
     .first();
 
-  await expect(header, `${templateName}: contact header missing`).toBeVisible();
+  await expect(cvPage, `${templateName}: first CV page missing`).toBeVisible();
+
+  // Contact presentation is intentionally template-specific. Most templates
+  // use the integrated contact header, while Kolumne renders the same data in
+  // its sidebar and deliberately hides the duplicate header. Test the product
+  // contract instead of one implementation detail: every live contact value
+  // must be visible somewhere on page 1 and no stale title-page identity may
+  // leak into the visible CV.
   await expect
-    .poll(() => header.innerText(), {
-      message: `${templateName}: contact header did not receive the live CV values`,
+    .poll(() => cvPage.innerText(), {
+      message: `${templateName}: visible CV did not receive the live CV values`,
     })
     .toContain(contact.fullName);
 
-  const text = await header.innerText();
+  const text = await cvPage.innerText();
   for (const value of [
     contact.fullName,
     contact.address,
@@ -233,10 +238,10 @@ async function expectCurrentContact(page: Page, contact: RunContact, templateNam
     contact.phone,
     contact.email,
   ]) {
-    expect(text, `${templateName}: missing ${value}`).toContain(value);
+    expect(text, `${templateName}: missing visible ${value}`).toContain(value);
   }
 
-  expect(text, `${templateName}: stale title-page identity leaked into the CV header`).not.toContain(
+  expect(text, `${templateName}: stale title-page identity leaked into the visible CV`).not.toContain(
     "Alt Titelblatt",
   );
   expect(text).not.toContain("stale@example.test");
