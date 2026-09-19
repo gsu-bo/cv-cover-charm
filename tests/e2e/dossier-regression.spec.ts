@@ -1227,6 +1227,19 @@ test.describe("M5.8 dossier regression", () => {
     const coverDownload = page.getByRole("button", { name: "Download", exact: true });
     await expect(coverDownload).toHaveAttribute("data-editor-ready", "true");
 
+    const emptyCover = page.locator('[data-dossier-document="cover"]').first();
+    await expect(emptyCover.locator('[data-block-id="kontaktTitel"]')).toHaveCount(0);
+    const emptyAttachments = emptyCover.locator('[data-block-id="beilagen"]');
+    await expect(emptyAttachments).toBeVisible();
+    const emptyFooterGeometry = await emptyCover.evaluate((cover) => {
+      const attachments = cover.querySelector<HTMLElement>('[data-block-id="beilagen"]');
+      if (!attachments) throw new Error("Default cover attachments are missing");
+      const coverRect = cover.getBoundingClientRect();
+      const attachmentsRect = attachments.getBoundingClientRect();
+      return { coverBottom: coverRect.bottom, attachmentsBottom: attachmentsRect.bottom };
+    });
+    expect(emptyFooterGeometry.attachmentsBottom).toBeLessThan(emptyFooterGeometry.coverBottom - 1);
+
     const companyHeader = page.getByRole("button", { name: /^Firma \/ Lehrbetrieb/ });
     if ((await companyHeader.getAttribute("aria-expanded")) !== "true") await companyHeader.click();
     const companyPanelId = await companyHeader.getAttribute("aria-controls");
