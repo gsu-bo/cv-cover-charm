@@ -245,7 +245,23 @@ html[data-dossier-template="ribbon"] [data-dossier-document="cover"] [data-block
   box-shadow: inset 0 0.35mm 0 color-mix(in srgb, var(--chrome-paper) 48%, transparent);
 }
 
-/* Cove: one plum masthead with the same coral bay in compact/contact states. */
+/* Cove: the shared header owns the masthead whenever one is enabled. Suppress
+ * the duplicated sheet-top planes in that case, then reuse one coherent coral
+ * bay shape in compact and contact states. With header=none the original Cove
+ * sheet motif remains untouched. */
+:is([data-cv-template="cove"], [data-letter-page][data-letter-template="cove"])
+  :has(
+    [data-dossier-template-chrome="cove"]:is(
+        [data-dossier-effective-header-mode="compact"],
+        [data-dossier-effective-header-mode="contact"]
+      )
+  )
+  [data-dossier-sheet-background="cove"]
+  [data-dossier-sheet-motif]
+  > :is(div:nth-child(1), div:nth-child(2)) {
+  display: none !important;
+}
+
 [data-dossier-template-chrome="cove"][data-dossier-header-custom-surface="false"]
   :is(
     [data-dossier-compact-header],
@@ -253,31 +269,31 @@ html[data-dossier-template="ribbon"] [data-dossier-document="cover"] [data-block
     [data-dossier-continuation-contact-header]
   ) {
   background: var(--chrome-primary) !important;
+  overflow: visible;
 }
 
-[data-dossier-template-chrome="cove"]
-  :is(
-    [data-dossier-compact-header],
-    [data-dossier-contact-header-background],
-    [data-dossier-continuation-contact-header]
-  ) {
-  overflow: hidden;
-}
-
-[data-dossier-template-chrome="cove"]
-  :is(
-    [data-dossier-compact-header],
-    [data-dossier-contact-header-background],
-    [data-dossier-continuation-contact-header]
-  )::after {
+[data-dossier-template-chrome="cove"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header]::after {
   content: "";
   position: absolute;
   right: 0;
   top: 0;
-  width: 52mm;
+  width: 48mm;
+  height: 8mm;
+  border-radius: 0 0 0 8mm;
+  background: var(--chrome-secondary);
+  opacity: 0.94;
+}
+
+[data-dossier-template-chrome="cove"][data-dossier-header-custom-surface="false"]
+  :is([data-dossier-contact-header-background], [data-dossier-continuation-contact-header])::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 54mm;
   height: 100%;
-  min-height: 3mm;
-  border-radius: 0 0 0 13mm;
+  border-radius: 0 0 0 17mm;
   background: var(--chrome-secondary);
   opacity: 0.94;
 }
