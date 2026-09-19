@@ -88,6 +88,7 @@ jobs:
               tests/e2e/dossier-state-roundtrip.spec.ts
               tests/e2e/dossier-state-isolation.spec.ts
               tests/e2e/dossier-chrome-sync.spec.ts
+              tests/e2e/devtools-keyboard.spec.ts
               tests/e2e/dossier-docx-reference.spec.ts
               tests/e2e/dossier-docx-alignment.spec.ts
               tests/e2e/dossier-docx-warm.spec.ts
@@ -241,7 +242,7 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha}}" \
             -d "{\"state\":\"$state\",\"context\":\"M6 Release Candidate\",\"description\":\"$description\",\"target_url\":\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
 
           test "$state" = "success"
