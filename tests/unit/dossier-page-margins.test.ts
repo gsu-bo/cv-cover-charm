@@ -29,6 +29,8 @@ const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta
 const control = read("src/components/dossier/DossierPageMarginsControl.tsx");
 const cvPortal = read("src/components/cv/CvTextAlignmentPortal.tsx");
 const cvCanvas = read("src/components/cv/CvCanvas.tsx");
+const cvCanvasBase = read("src/components/cv/CvCanvasBase.tsx");
+const cvLayoutState = read("src/components/cv/layout.ts");
 const cvLayoutVariants = read("src/components/cv/layout-variants.css");
 const cvLayoutOptions = read("src/components/cv/layout-options.css");
 const letterCanvas = read("src/components/letter/LetterCanvas.tsx");
@@ -78,6 +80,40 @@ describe("configurable CV and motivation-letter page margins", () => {
     ]) {
       expect(cvLayoutVariants).not.toContain(staleRule);
     }
+  });
+
+  test("Luftig keeps Standard's reading direction and adds only moderate measured spacing", () => {
+    const airyStart = cvLayoutVariants.indexOf("/* Luftig");
+    const timelineStart = cvLayoutVariants.indexOf("/* Timeline", airyStart);
+    const airy = cvLayoutVariants.slice(airyStart, timelineStart);
+
+    expect(airy).toContain(":is([data-cv-page], [data-cv-measure-page])");
+    expect(airy).toContain("margin-top: 5.2mm !important;");
+    expect(airy).toContain("margin-bottom: 2.5mm !important;");
+    expect(airy).not.toContain("grid-template-columns");
+    expect(airy).not.toContain("text-align: right");
+    expect(airy).not.toContain("margin-left");
+  });
+
+  test("mirror uses physical geometry, shared state and identical measurement geometry", () => {
+    expect(cvLayoutVariants).not.toContain("scaleX(-1)");
+    expect(cvCanvasBase).toContain("legacyMirrored: infoMirrored");
+    expect(cvCanvasBase).toContain("data-cv-sidebar-side={sidebarPhysicalSide}");
+    expect(cvCanvasBase).toContain("left: logicalBox.right, right: logicalBox.left");
+    expect(cvLayoutOptions).toContain("left: var(--cv-modern-main-right) !important;");
+    expect(cvLayoutOptions).toContain("right: var(--cv-modern-main-left) !important;");
+    expect(cvLayoutOptions).toContain(":is([data-cv-page], [data-cv-measure-page])");
+
+    const legacySetter = cvLayoutState.slice(
+      cvLayoutState.indexOf("export function setCvLayoutMirror"),
+      cvLayoutState.indexOf("export function setCvInfoPosition"),
+    );
+    const explicitSetter = cvLayoutState.slice(
+      cvLayoutState.indexOf("export function setCvInfoPosition"),
+      cvLayoutState.indexOf("export function setCvSectionGapMm"),
+    );
+    expect(legacySetter).toContain("CV_INFO_POSITION_STORAGE_KEY");
+    expect(explicitSetter).toContain("MIRROR_STORAGE_KEY");
   });
 
   test("CV custom margins respect template and chrome collision minimums", () => {

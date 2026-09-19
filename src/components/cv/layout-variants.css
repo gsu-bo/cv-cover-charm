@@ -31,15 +31,15 @@ html[data-cv-variant="minimal"] [data-cv-layout="classic"]
 
 html[data-cv-variant="minimal"] [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page]) [data-cv-header] {
-  margin-bottom: 7.5mm !important;
-  gap: 8.5mm !important;
+  margin-bottom: 5.2mm !important;
+  gap: 8mm !important;
 }
 
 /* Keep layout spacing inside the measured row wrapper. Margins on the direct
  * pagination wrappers are not part of getBoundingClientRect().height. */
 html[data-cv-variant="minimal"] [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page]) [data-cv-section] {
-  margin-top: 6.3mm !important;
+  margin-top: 5.2mm !important;
 }
 
 html[data-cv-variant="minimal"] [data-cv-layout="classic"]
@@ -49,28 +49,8 @@ html[data-cv-variant="minimal"] [data-cv-layout="classic"]
 }
 
 html[data-cv-variant="minimal"] [data-cv-layout="classic"]
-  :is([data-cv-page], [data-cv-measure-page]) [data-cv-entry]:has(> [data-cv-rail]) {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) auto !important;
-  column-gap: 7mm !important;
-  align-items: start !important;
-}
-
-html[data-cv-variant="minimal"] [data-cv-layout="classic"]
-  :is([data-cv-page], [data-cv-measure-page]) [data-cv-entry] > [data-cv-rail] {
-  grid-column: 2 !important;
-  grid-row: 1 !important;
-  width: auto !important;
-  min-width: 23mm !important;
-  text-align: right !important;
-  padding-top: 0.45mm !important;
-}
-
-html[data-cv-variant="minimal"] [data-cv-layout="classic"]
-  :is([data-cv-page], [data-cv-measure-page]) [data-cv-entry]:has(> [data-cv-rail])
-  > :not([data-cv-rail]) {
-  grid-column: 1 !important;
-  grid-row: 1 !important;
+  :is([data-cv-page], [data-cv-measure-page]) [data-cv-entry] {
+  margin-bottom: 2.5mm !important;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -289,31 +269,9 @@ html[data-cv-variant="editorial"] [data-cv-layout="classic"]
 /* Zweispalten-Aufbauten spiegeln                                             */
 /* -------------------------------------------------------------------------- */
 
-html[data-cv-mirrored="true"] [data-cv-layout="modern"] [data-cv-page] {
-  transform: scaleX(-1);
-  transform-origin: center;
-}
-
-/*
- * Die Seite wird gespiegelt, damit Spalte und Hauptteil die Seite tauschen –
- * und jedes Kind, das Text trägt, wird zurückgespiegelt, sonst stünde die
- * Schrift verkehrt herum. Wer hier ein neues Textelement einhängt, muss es in
- * diese Liste aufnehmen: Kopfband und Fusszeile fehlten und der Name stand
- * seitenverkehrt auf dem Blatt.
- */
-html[data-cv-mirrored="true"] [data-cv-layout="modern"] [data-cv-page]
-  > [data-cv-sidebar],
-html[data-cv-mirrored="true"] [data-cv-layout="modern"] [data-cv-page]
-  > [data-cv-main],
-html[data-cv-mirrored="true"] [data-cv-layout="modern"] [data-cv-page]
-  > [data-cv-band-header],
-html[data-cv-mirrored="true"] [data-cv-layout="modern"] [data-cv-page]
-  > [data-cv-page-label],
-html[data-cv-mirrored="true"] [data-cv-layout="modern"] [data-cv-page]
-  > [data-cv-photo-free] {
-  transform: scaleX(-1);
-  transform-origin: center;
-}
+/* Die physische Seite wird vom Renderer gesetzt. Kein scaleX: Text, freie
+ * Elemente und Bildausschnitte bleiben unverändert und PDF/Preview verwenden
+ * dieselbe echte Geometrie. */
 /* -------------------------------------------------------------------------- */
 /* Bauform vor Aufbau: senkrechte Ränder                                      */
 /* -------------------------------------------------------------------------- */

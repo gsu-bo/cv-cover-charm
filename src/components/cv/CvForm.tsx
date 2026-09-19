@@ -15,7 +15,6 @@ import {
   CV_SECTION_GAP_MIN_MM,
   getCvInfoPosition,
   getCvLayout,
-  getCvLayoutMirror,
   getCvSectionGapMm,
   setCvInfoPosition,
   setCvSectionGapMm,
@@ -321,7 +320,7 @@ function CvPhotoPlaceControls({ borderWidth }: { borderWidth: number }) {
   const photoPosition = resolveCvPhotoPosition(place, {
     template,
     layout,
-    legacyMirrored: getCvLayoutMirror(),
+    legacyMirrored: infoPosition === "mirrored",
   });
   const free = photoPosition === "free";
 

@@ -272,6 +272,10 @@ export function setCvLayoutMirror(mirrored: boolean) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(MIRROR_STORAGE_KEY, mirrored ? "true" : "false");
+    // Alte Projektdateien kennen nur den Boolean. Halte beim Schreiben auch
+    // die neue, explizite Seitenwahl synchron, damit ein bereits vorhandener
+    // info-position-Wert den importierten Altzustand nicht unsichtbar macht.
+    window.localStorage.setItem(CV_INFO_POSITION_STORAGE_KEY, mirrored ? "mirrored" : "standard");
   } catch {
     // Die laufende Seite reagiert trotzdem über das Event.
   }
@@ -283,6 +287,10 @@ export function setCvInfoPosition(position: CvInfoPosition) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(CV_INFO_POSITION_STORAGE_KEY, position);
+    // Einige ältere Export-/Foto-Pfade lesen weiterhin den kompatiblen
+    // Boolean. Beide Schlüssel beschreiben dieselbe Wahl und dürfen deshalb
+    // nicht auseinanderlaufen.
+    window.localStorage.setItem(MIRROR_STORAGE_KEY, position === "mirrored" ? "true" : "false");
   } catch {
     // Die laufende Seite reagiert trotzdem über das Event.
   }

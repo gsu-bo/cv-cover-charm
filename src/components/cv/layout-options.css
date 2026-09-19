@@ -126,17 +126,36 @@ html[data-cv-photo-shape="circle"]
 /* Spiegelverkehrt – alle Aufbauten                                           */
 /* -------------------------------------------------------------------------- */
 
+/* Sidebar ist eine echte Seitenwahl. Diese Regeln gewinnen auch gegen ältere
+ * template-spezifische left:0-Regeln; gespiegelt wird kein Pixel und kein Text. */
+html[data-cv-mirrored="true"][data-cv-info-position="mirrored"]
+  [data-dossier-document="cv"][data-cv-layout="modern"]
+  :is([data-cv-page], [data-cv-measure-page])
+  > [data-cv-main] {
+  left: var(--cv-modern-main-right) !important;
+  right: var(--cv-modern-main-left) !important;
+}
+
+html[data-cv-mirrored="true"][data-cv-info-position="mirrored"]
+  [data-dossier-document="cv"][data-cv-layout="modern"]
+  [data-cv-page]
+  > [data-cv-sidebar] {
+  left: auto !important;
+  right: var(--cv-sidebar-edge, 0mm) !important;
+  background: var(--cv-sidebar-mirrored-bg) !important;
+}
+
 /* Datums-/Sprachspalten spiegeln; die Foto-Seite ist davon unabhängig. */
 html[data-cv-mirrored="true"]
   [data-cv-layout="classic"]
-  [data-cv-page]
+  :is([data-cv-page], [data-cv-measure-page])
   [data-cv-entry]:has(> [data-cv-rail]) {
   flex-direction: row-reverse !important;
 }
 
 html[data-cv-mirrored="true"]
   [data-cv-layout="classic"]
-  [data-cv-page]
+  :is([data-cv-page], [data-cv-measure-page])
   [data-cv-entry]
   > [data-cv-rail] {
   text-align: right !important;
@@ -147,36 +166,19 @@ html[data-cv-mirrored="true"] [data-cv-layout="classic"] [data-cv-page] > [data-
   left: 18mm !important;
 }
 
-/* Luftig: Signatur und die absichtlich rechts stehende Rail-Spalte tauschen. */
+/* Luftig behält den Standard-Lesefluss; nur der dezente Seitenakzent tauscht. */
 html[data-cv-mirrored="true"][data-cv-variant="minimal"]
   [data-cv-layout="classic"]
-  [data-cv-page]
+  :is([data-cv-page], [data-cv-measure-page])
   > [data-cv-accent="page"] {
   left: auto !important;
   right: var(--cv-classic-main-right) !important;
 }
 
-html[data-cv-mirrored="true"][data-cv-variant="minimal"]
-  [data-cv-layout="classic"]
-  [data-cv-page]
-  [data-cv-entry]
-  > [data-cv-rail] {
-  grid-column: 1 !important;
-  text-align: left !important;
-}
-
-html[data-cv-mirrored="true"][data-cv-variant="minimal"]
-  [data-cv-layout="classic"]
-  [data-cv-page]
-  [data-cv-entry]:has(> [data-cv-rail])
-  > :not([data-cv-rail]) {
-  grid-column: 2 !important;
-}
-
 /* Timeline: Achse, Marker und Einrückung wandern vollständig nach rechts. */
 html[data-cv-mirrored="true"][data-cv-variant="timeline"]
   [data-cv-layout="classic"]
-  [data-cv-page]
+  :is([data-cv-page], [data-cv-measure-page])
   > [data-cv-main] {
   left: var(--cv-classic-main-left) !important;
   right: max(0mm, calc(var(--cv-classic-main-right) - 11mm)) !important;
@@ -184,7 +186,7 @@ html[data-cv-mirrored="true"][data-cv-variant="timeline"]
 
 html[data-cv-mirrored="true"][data-cv-variant="timeline"]
   [data-cv-layout="classic"]
-  [data-cv-page]
+  :is([data-cv-page], [data-cv-measure-page])
   > [data-cv-main]::before {
   left: auto !important;
   right: 4mm !important;
@@ -192,7 +194,7 @@ html[data-cv-mirrored="true"][data-cv-variant="timeline"]
 
 html[data-cv-mirrored="true"][data-cv-variant="timeline"]
   [data-cv-layout="classic"]
-  [data-cv-page]
+  :is([data-cv-page], [data-cv-measure-page])
   > [data-cv-main]
   > div:not(:has([data-cv-header])) {
   padding-left: 0 !important;
@@ -201,7 +203,7 @@ html[data-cv-mirrored="true"][data-cv-variant="timeline"]
 
 html[data-cv-mirrored="true"][data-cv-variant="timeline"]
   [data-cv-layout="classic"]
-  [data-cv-page]
+  :is([data-cv-page], [data-cv-measure-page])
   > [data-cv-main]
   > div:has([data-cv-header]) {
   padding-left: 0 !important;
@@ -210,7 +212,7 @@ html[data-cv-mirrored="true"][data-cv-variant="timeline"]
 
 html[data-cv-mirrored="true"][data-cv-variant="timeline"]
   [data-cv-layout="classic"]
-  [data-cv-page]
+  :is([data-cv-page], [data-cv-measure-page])
   > [data-cv-main]
   > div:has([data-cv-entry])::before {
   left: auto !important;
@@ -219,7 +221,7 @@ html[data-cv-mirrored="true"][data-cv-variant="timeline"]
 
 html[data-cv-mirrored="true"][data-cv-variant="timeline"]
   [data-cv-layout="classic"]
-  [data-cv-page]
+  :is([data-cv-page], [data-cv-measure-page])
   > [data-cv-main]
   > div:has([data-cv-section-title])::before {
   left: auto !important;
@@ -229,7 +231,7 @@ html[data-cv-mirrored="true"][data-cv-variant="timeline"]
 /* Magazin: die komplette asymmetrische Print-Komposition tauscht die Seite. */
 html[data-cv-mirrored="true"][data-cv-variant="editorial"]
   [data-cv-layout="classic"]
-  [data-cv-page]
+  :is([data-cv-page], [data-cv-measure-page])
   > [data-cv-accent="page"] {
   left: auto !important;
   right: max(0mm, calc(var(--cv-classic-main-right) - 3mm)) !important;
@@ -237,7 +239,7 @@ html[data-cv-mirrored="true"][data-cv-variant="editorial"]
 
 html[data-cv-mirrored="true"][data-cv-variant="editorial"]
   [data-cv-layout="classic"]
-  [data-cv-page]
+  :is([data-cv-page], [data-cv-measure-page])
   > [data-cv-main] {
   left: var(--cv-classic-main-right) !important;
   right: var(--cv-classic-main-left) !important;

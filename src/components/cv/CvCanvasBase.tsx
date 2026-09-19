@@ -14,7 +14,6 @@ import {
   getCvInfoPosition,
   getCvLayout,
   getCvLayoutChoice,
-  getCvLayoutMirror,
   subscribeCvLayout,
   subscribeCvLayoutChoice,
   type CvLayoutId,
@@ -342,12 +341,16 @@ export function CvCanvas({
     p.nationalitaet && `Nationalität ${p.nationalitaet}`,
   ].filter(Boolean) as string[];
   const nameSize = smartNameSize(name, layout) * TYPE_BASE * titleScale;
+  const infoMirrored = infoPosition === "mirrored";
+  const physicalContentBox = <T extends { left: number; right: number }>(logicalBox: T): T =>
+    layout === "modern" && infoMirrored
+      ? { ...logicalBox, left: logicalBox.right, right: logicalBox.left }
+      : logicalBox;
   const photoPosition = resolveCvPhotoPosition(place, {
     template: design.template,
     layout,
-    legacyMirrored: getCvLayoutMirror(),
+    legacyMirrored: infoMirrored,
   });
-  const infoMirrored = infoPosition === "mirrored";
   const sidebarPhysicalSide = infoMirrored ? "right" : "left";
 
   /**
@@ -1582,9 +1585,11 @@ export function CvCanvas({
    * waren zwei Darstellungen derselben Vorlage, die nie ganz zusammenpassten.
    * Jetzt zeichnet der Hintergrund sie – er ist ja derselbe wie auf dem
    * Titelblatt – und hier kommt nur noch die Schreibfläche darüber.
-   */
+  */
   const chrome = (pageIndex: number) => {
-    const surface = cvSurface(frame, pageIndex, layout, sidebarPct, chromeOptions);
+    const surface = physicalContentBox(
+      cvSurface(frame, pageIndex, layout, sidebarPct, chromeOptions),
+    );
     return (
       <>
         <div
@@ -2349,6 +2354,7 @@ export function CvCanvas({
         : surface.top;
     const sidebarTopMm = onColumn ? 0 : Math.max(surface.top, cardHeaderClearanceMm);
     const sidebarLeftMm = onColumn ? 0 : frame.id === "card" ? surface.left : 0;
+    const sidebarRightMm = onColumn ? 0 : frame.id === "card" ? surface.right : 0;
     const {
       hasContact,
       hasSchool,
@@ -2371,19 +2377,23 @@ export function CvCanvas({
     return (
       <div
         data-cv-sidebar
+        data-cv-sidebar-side={sidebarPhysicalSide}
         style={{
           position: "absolute",
-          left: `${sidebarLeftMm}mm`,
+          left: infoMirrored ? undefined : `${sidebarLeftMm}mm`,
+          right: infoMirrored ? `${sidebarRightMm}mm` : undefined,
           top: `${sidebarTopMm}mm`,
           bottom: onColumn ? 0 : `${surface.bottom}mm`,
           width: `${sidebarWidth}mm`,
+          ["--cv-sidebar-edge" as string]: `${sidebarRightMm}mm`,
+          ["--cv-sidebar-mirrored-bg" as string]: side.bg,
           padding: onColumn
             ? `${sidebarPhoto ? "16mm" : "13mm"} 9mm ${Math.max(12, frame.footMm + 8)}mm 10mm`
             : `${sidebarPhoto ? "12.5mm" : "9.5mm"} 7.5mm 12mm 8mm`,
           boxSizing: "border-box",
           // Die Spalte selbst liegt schon im Seitengrund; hier nur bei der
           // getönten Papierspalte einen eigenen Grund zeichnen.
-          background: onColumn ? "transparent" : side.bg,
+          background: onColumn && !infoMirrored ? "transparent" : side.bg,
           // Kein Trennstrich: Die getönte Spalte setzt sich schon von selbst
           // vom Papier ab, die Linie darüber lag als grüner Strich dazwischen.
           fontFamily: SHEET_FONT,
@@ -2692,14 +2702,15 @@ export function CvCanvas({
     // Rechts der Seitenspalte beginnen, sonst verschwindet der Vorname
     // dahinter – gemessen fehlten so die ersten 117 px des Namens.
     const clear = Math.max(bandLeftMm(frame, layout), sidebarWidthMm(frame, layout, sidebarPct));
-    const left = clear + (clear > 0 ? 10 : MARGIN_X);
+    const bandInset = clear + (clear > 0 ? 10 : MARGIN_X);
+    const mirrorBand = layout === "modern" && infoMirrored;
     return (
       <div
         data-cv-band-header
         style={{
           position: "absolute",
-          left: `${left}mm`,
-          right: `${MARGIN_X}mm`,
+          left: `${mirrorBand ? MARGIN_X : bandInset}mm`,
+          right: `${mirrorBand ? bandInset : MARGIN_X}mm`,
           top: `${headTopMm(frame, pageIndex)}mm`,
           height: `${head}mm`,
           display: "flex",
@@ -2754,7 +2765,9 @@ export function CvCanvas({
    */
   const footer = (pageIndex: number) => {
     if (pageIndex === 0 || pageMarker(frame) !== "footer") return null;
-    const box = cvContentBox(frame, pageIndex, layout, sidebarPct, chromeOptions);
+    const box = physicalContentBox(
+      cvContentBox(frame, pageIndex, layout, sidebarPct, chromeOptions),
+    );
     return (
       <div
         data-cv-page-label
@@ -2786,7 +2799,8 @@ export function CvCanvas({
     );
   };
 
-  const firstBox = cvContentBox(frame, 0, layout, sidebarPct, chromeOptions);
+  const firstLogicalBox = cvContentBox(frame, 0, layout, sidebarPct, chromeOptions);
+  const firstBox = physicalContentBox(firstLogicalBox);
 
   return (
     <div
@@ -2859,7 +2873,8 @@ export function CvCanvas({
       </div>
 
       {pages.map((page, i) => {
-        const box = cvContentBox(frame, i, layout, sidebarPct, chromeOptions);
+        const logicalBox = cvContentBox(frame, i, layout, sidebarPct, chromeOptions);
+        const box = physicalContentBox(logicalBox);
         return (
           <div
             key={i}
