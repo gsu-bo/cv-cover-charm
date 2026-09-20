@@ -14,9 +14,16 @@ old_cv = '''    await openSection(page, "Vorlage");
 '''
 new_cv = '''    await openSection(page, "Vorlage");
     const cvTemplate = page.locator('[data-editor-section-title="Vorlage"]');
-    const cvControl = cvTemplate.locator('input[type="range"][min="0"][max="100"]');
+    await expect(cvTemplate.getByText(/Hintergrund-Motiv/).first()).toBeVisible();
+    const cvControl = cvTemplate.locator('input[type="range"]');
     await expect(cvControl).toHaveCount(1);
     await expect(cvControl).toHaveValue("25");
+    expect(
+      await cvControl.evaluate((node) => {
+        const input = node as HTMLInputElement;
+        return { min: input.min, max: input.max };
+      }),
+    ).toEqual({ min: "0", max: "100" });
 '''
 if text.count(old_cv) != 1:
     raise SystemExit("expected old CV motif browser assertion exactly once")
