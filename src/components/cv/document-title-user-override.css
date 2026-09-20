@@ -1,20 +1,35 @@
 /*
- * Explicit document-title formatting is user-owned state.
+ * Explicit document-title and name formatting is user-owned state.
  *
  * Several template identity layers use highly specific `!important` typography
- * declarations. Once the student explicitly toggles Fett / Kursiv /
- * Unterstrichen, that choice must outrank every template default in preview,
- * measurement and PDF rendering. Untouched titles are not targeted here.
+ * declarations. Once the student explicitly changes one of these roles, that
+ * choice must outrank every template default in preview, measurement and PDF
+ * rendering. Untouched roles are not targeted here.
  *
  * Vertical document-title spacing is dossier-wide rather than template-owned.
- * The shared chrome first computes the safe CV content box; this rule then adds
- * only the user's requested whitespace above the title inside that box.
+ * The shared chrome first computes the safe CV content box; these rules then
+ * add only the user's requested whitespace inside that box.
  */
 html[data-dossier-template][data-dossier-template][data-dossier-template]
   [data-dossier-document="cv"][data-dossier-document="cv"]
   :is([data-cv-page], [data-cv-measure-page])
   [data-cv-doc-title] {
   margin-top: var(--cv-doc-title-margin-top, 0px) !important;
+}
+
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-dossier-document="cv"][data-dossier-document="cv"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-doc-title][data-cv-user-doc-size="true"] {
+  font-size: var(--cv-user-doc-font-size) !important;
+}
+
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-dossier-document="cv"][data-dossier-document="cv"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-doc-title][data-cv-user-doc-color="true"] {
+  color: var(--cv-user-doc-color) !important;
+  opacity: 1 !important;
 }
 
 html[data-dossier-template][data-dossier-template][data-dossier-template]
@@ -37,4 +52,55 @@ html[data-dossier-template][data-dossier-template][data-dossier-template]
   [data-cv-doc-title][data-cv-user-doc-decoration="true"] {
   text-decoration: var(--cv-user-doc-decoration) !important;
   text-decoration-line: var(--cv-user-doc-decoration) !important;
+}
+
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-dossier-document="cv"][data-dossier-document="cv"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-doc-title][data-cv-user-doc-margin="true"] {
+  margin-bottom: var(--cv-user-doc-margin-bottom) !important;
+}
+
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-cv-user-name-font="true"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-name] {
+  font-family: var(--cv-user-name-font) !important;
+}
+
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-cv-user-name-size="true"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-name] {
+  font-size: var(--cv-user-name-size) !important;
+}
+
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-cv-user-name-color="true"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-name] {
+  color: var(--cv-user-name-color) !important;
+  opacity: 1 !important;
+}
+
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-cv-user-name-weight="true"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-name] {
+  font-weight: var(--cv-user-name-weight) !important;
+}
+
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-cv-user-name-style="true"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-name] {
+  font-style: var(--cv-user-name-style) !important;
+}
+
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-cv-user-name-decoration="true"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-name] {
+  text-decoration: var(--cv-user-name-decoration) !important;
+  text-decoration-line: var(--cv-user-name-decoration) !important;
 }

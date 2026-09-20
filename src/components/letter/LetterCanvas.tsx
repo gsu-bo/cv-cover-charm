@@ -13,11 +13,14 @@ import { letterPageGeometry, visibleLetterAttachments } from "./layout-system";
 import {
   DEFAULT_LETTER_CLOSING_GAP_MM,
   DEFAULT_LETTER_SIGNATURE_GAP_MM,
+  LETTER_ROLE_FONT_SIZE_MAX,
+  LETTER_ROLE_FONT_SIZE_MIN,
   normalizeLetterMotifOpacity,
   normalizeLetterSpacingMm,
   type LetterData,
   type LetterDesign,
   type LetterFlowImage,
+  type LetterRoleTypography,
 } from "./types";
 import { letterRichHtml, plainTextToRichHtml } from "./rich-text";
 import { LetterFlowImages } from "./LetterFlowImages";
@@ -31,6 +34,7 @@ import {
   isWarmFirstPageCompactHeader,
   WARM_FIRST_PAGE_HEADER_HEIGHT_MM,
 } from "./warm-letter-layout";
+import "./letter-user-typography.css";
 
 function Lines({
   values,
@@ -99,6 +103,16 @@ function resolveLetterChrome(
 ): DossierChromeOptions {
   const requested = chromeOptions ?? legacyChromeFromDesign(design);
   return resolveTemplateChromeOptions(design.template, design.colors, requested);
+}
+
+function roleSize(value?: LetterRoleTypography): number | undefined {
+  if (typeof value?.fontSizePt !== "number" || !Number.isFinite(value.fontSizePt)) return undefined;
+  return Math.max(LETTER_ROLE_FONT_SIZE_MIN, Math.min(LETTER_ROLE_FONT_SIZE_MAX, value.fontSizePt));
+}
+
+function roleColor(value?: LetterRoleTypography): string | undefined {
+  const color = value?.color?.trim();
+  return color && /^#[0-9a-f]{6}$/i.test(color) ? color : undefined;
 }
 
 export function LetterCanvas({
@@ -209,6 +223,16 @@ export function LetterCanvas({
         : plainTextToRichHtml(placeholder);
   const textLayerRef = useRef<HTMLDivElement>(null);
 
+  const senderTypography = design.senderTypography;
+  const recipientTypography = design.recipientTypography;
+  const subjectTypography = design.subjectTypography;
+  const senderSize = roleSize(senderTypography);
+  const recipientSize = roleSize(recipientTypography);
+  const subjectSize = roleSize(subjectTypography);
+  const senderColor = roleColor(senderTypography);
+  const recipientColor = roleColor(recipientTypography);
+  const subjectColor = roleColor(subjectTypography);
+
   useEffect(() => {
     if (!onOverflowChange) return;
     const textLayer = textLayerRef.current;
@@ -244,6 +268,34 @@ export function LetterCanvas({
       data-letter-font-source={
         design.template === "brief" ? "standalone" : design.fontOverride ? "override" : "dossier"
       }
+      data-letter-user-sender-font={senderTypography?.font ? "true" : undefined}
+      data-letter-user-sender-size={senderSize !== undefined ? "true" : undefined}
+      data-letter-user-sender-color={senderColor ? "true" : undefined}
+      data-letter-user-sender-weight={senderTypography?.bold === undefined ? undefined : "true"}
+      data-letter-user-sender-style={senderTypography?.italic === undefined ? undefined : "true"}
+      data-letter-user-sender-decoration={
+        senderTypography?.underline === undefined ? undefined : "true"
+      }
+      data-letter-user-recipient-font={recipientTypography?.font ? "true" : undefined}
+      data-letter-user-recipient-size={recipientSize !== undefined ? "true" : undefined}
+      data-letter-user-recipient-color={recipientColor ? "true" : undefined}
+      data-letter-user-recipient-weight={
+        recipientTypography?.bold === undefined ? undefined : "true"
+      }
+      data-letter-user-recipient-style={
+        recipientTypography?.italic === undefined ? undefined : "true"
+      }
+      data-letter-user-recipient-decoration={
+        recipientTypography?.underline === undefined ? undefined : "true"
+      }
+      data-letter-user-subject-font={subjectTypography?.font ? "true" : undefined}
+      data-letter-user-subject-size={subjectSize !== undefined ? "true" : undefined}
+      data-letter-user-subject-color={subjectColor ? "true" : undefined}
+      data-letter-user-subject-weight={subjectTypography?.bold === undefined ? undefined : "true"}
+      data-letter-user-subject-style={subjectTypography?.italic === undefined ? undefined : "true"}
+      data-letter-user-subject-decoration={
+        subjectTypography?.underline === undefined ? undefined : "true"
+      }
       className="relative h-[1123px] w-[794px] overflow-hidden bg-white shadow-xl"
       style={
         {
@@ -251,6 +303,68 @@ export function LetterCanvas({
           fontFamily,
           backgroundColor: paperColor,
           "--dossier-motif-opacity": String(motifOpacity),
+          "--letter-user-sender-font": senderTypography?.font
+            ? FONT_STACKS[senderTypography.font]
+            : undefined,
+          "--letter-user-sender-size": senderSize !== undefined ? `${senderSize}pt` : undefined,
+          "--letter-user-sender-color": senderColor,
+          "--letter-user-sender-weight":
+            senderTypography?.bold === undefined ? undefined : senderTypography.bold ? "700" : "400",
+          "--letter-user-sender-style":
+            senderTypography?.italic === undefined
+              ? undefined
+              : senderTypography.italic
+                ? "italic"
+                : "normal",
+          "--letter-user-sender-decoration":
+            senderTypography?.underline === undefined
+              ? undefined
+              : senderTypography.underline
+                ? "underline"
+                : "none",
+          "--letter-user-recipient-font": recipientTypography?.font
+            ? FONT_STACKS[recipientTypography.font]
+            : undefined,
+          "--letter-user-recipient-size":
+            recipientSize !== undefined ? `${recipientSize}pt` : undefined,
+          "--letter-user-recipient-color": recipientColor,
+          "--letter-user-recipient-weight":
+            recipientTypography?.bold === undefined
+              ? undefined
+              : recipientTypography.bold
+                ? "700"
+                : "400",
+          "--letter-user-recipient-style":
+            recipientTypography?.italic === undefined
+              ? undefined
+              : recipientTypography.italic
+                ? "italic"
+                : "normal",
+          "--letter-user-recipient-decoration":
+            recipientTypography?.underline === undefined
+              ? undefined
+              : recipientTypography.underline
+                ? "underline"
+                : "none",
+          "--letter-user-subject-font": subjectTypography?.font
+            ? FONT_STACKS[subjectTypography.font]
+            : undefined,
+          "--letter-user-subject-size": subjectSize !== undefined ? `${subjectSize}pt` : undefined,
+          "--letter-user-subject-color": subjectColor,
+          "--letter-user-subject-weight":
+            subjectTypography?.bold === undefined ? undefined : subjectTypography.bold ? "700" : "400",
+          "--letter-user-subject-style":
+            subjectTypography?.italic === undefined
+              ? undefined
+              : subjectTypography.italic
+                ? "italic"
+                : "normal",
+          "--letter-user-subject-decoration":
+            subjectTypography?.underline === undefined
+              ? undefined
+              : subjectTypography.underline
+                ? "underline"
+                : "none",
         } as React.CSSProperties
       }
       aria-label={ariaLabel}

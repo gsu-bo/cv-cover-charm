@@ -1,0 +1,81 @@
+/* Explicit letter-role typography is user-owned and must outrank template utility classes. */
+[data-letter-page][data-letter-user-sender-font="true"] [data-letter-section="sender"],
+[data-letter-page][data-letter-user-sender-font="true"] [data-letter-section="sender"] * {
+  font-family: var(--letter-user-sender-font) !important;
+}
+[data-letter-page][data-letter-user-sender-size="true"] [data-letter-section="sender"],
+[data-letter-page][data-letter-user-sender-size="true"] [data-letter-section="sender"] * {
+  font-size: var(--letter-user-sender-size) !important;
+}
+[data-letter-page][data-letter-user-sender-color="true"] [data-letter-section="sender"],
+[data-letter-page][data-letter-user-sender-color="true"] [data-letter-section="sender"] * {
+  color: var(--letter-user-sender-color) !important;
+  opacity: 1 !important;
+}
+[data-letter-page][data-letter-user-sender-weight="true"] [data-letter-section="sender"],
+[data-letter-page][data-letter-user-sender-weight="true"] [data-letter-section="sender"] * {
+  font-weight: var(--letter-user-sender-weight) !important;
+}
+[data-letter-page][data-letter-user-sender-style="true"] [data-letter-section="sender"],
+[data-letter-page][data-letter-user-sender-style="true"] [data-letter-section="sender"] * {
+  font-style: var(--letter-user-sender-style) !important;
+}
+[data-letter-page][data-letter-user-sender-decoration="true"] [data-letter-section="sender"],
+[data-letter-page][data-letter-user-sender-decoration="true"] [data-letter-section="sender"] * {
+  text-decoration: var(--letter-user-sender-decoration) !important;
+  text-decoration-line: var(--letter-user-sender-decoration) !important;
+}
+
+[data-letter-page][data-letter-user-recipient-font="true"] [data-letter-section="recipient"],
+[data-letter-page][data-letter-user-recipient-font="true"] [data-letter-section="recipient"] * {
+  font-family: var(--letter-user-recipient-font) !important;
+}
+[data-letter-page][data-letter-user-recipient-size="true"] [data-letter-section="recipient"],
+[data-letter-page][data-letter-user-recipient-size="true"] [data-letter-section="recipient"] * {
+  font-size: var(--letter-user-recipient-size) !important;
+}
+[data-letter-page][data-letter-user-recipient-color="true"] [data-letter-section="recipient"],
+[data-letter-page][data-letter-user-recipient-color="true"] [data-letter-section="recipient"] * {
+  color: var(--letter-user-recipient-color) !important;
+  opacity: 1 !important;
+}
+[data-letter-page][data-letter-user-recipient-weight="true"] [data-letter-section="recipient"],
+[data-letter-page][data-letter-user-recipient-weight="true"] [data-letter-section="recipient"] * {
+  font-weight: var(--letter-user-recipient-weight) !important;
+}
+[data-letter-page][data-letter-user-recipient-style="true"] [data-letter-section="recipient"],
+[data-letter-page][data-letter-user-recipient-style="true"] [data-letter-section="recipient"] * {
+  font-style: var(--letter-user-recipient-style) !important;
+}
+[data-letter-page][data-letter-user-recipient-decoration="true"] [data-letter-section="recipient"],
+[data-letter-page][data-letter-user-recipient-decoration="true"] [data-letter-section="recipient"] * {
+  text-decoration: var(--letter-user-recipient-decoration) !important;
+  text-decoration-line: var(--letter-user-recipient-decoration) !important;
+}
+
+[data-letter-page][data-letter-user-subject-font="true"] [data-letter-pdf-text="subject"],
+[data-letter-page][data-letter-user-subject-font="true"] [data-letter-pdf-text="subject"] * {
+  font-family: var(--letter-user-subject-font) !important;
+}
+[data-letter-page][data-letter-user-subject-size="true"] [data-letter-pdf-text="subject"],
+[data-letter-page][data-letter-user-subject-size="true"] [data-letter-pdf-text="subject"] * {
+  font-size: var(--letter-user-subject-size) !important;
+}
+[data-letter-page][data-letter-user-subject-color="true"] [data-letter-pdf-text="subject"],
+[data-letter-page][data-letter-user-subject-color="true"] [data-letter-pdf-text="subject"] * {
+  color: var(--letter-user-subject-color) !important;
+  opacity: 1 !important;
+}
+[data-letter-page][data-letter-user-subject-weight="true"] [data-letter-pdf-text="subject"],
+[data-letter-page][data-letter-user-subject-weight="true"] [data-letter-pdf-text="subject"] * {
+  font-weight: var(--letter-user-subject-weight) !important;
+}
+[data-letter-page][data-letter-user-subject-style="true"] [data-letter-pdf-text="subject"],
+[data-letter-page][data-letter-user-subject-style="true"] [data-letter-pdf-text="subject"] * {
+  font-style: var(--letter-user-subject-style) !important;
+}
+[data-letter-page][data-letter-user-subject-decoration="true"] [data-letter-pdf-text="subject"],
+[data-letter-page][data-letter-user-subject-decoration="true"] [data-letter-pdf-text="subject"] * {
+  text-decoration: var(--letter-user-subject-decoration) !important;
+  text-decoration-line: var(--letter-user-subject-decoration) !important;
+}

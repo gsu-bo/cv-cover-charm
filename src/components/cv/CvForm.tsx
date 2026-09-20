@@ -9,6 +9,7 @@ import {
   type DossierPhotoStyle,
 } from "@/lib/dossier-photo";
 import { PhotoStyleControls } from "@/components/photo/PhotoStyleControls";
+import { CvNameTypographyControls } from "./CvNameTypographyControls";
 import {
   CV_SECTION_GAP_CUSTOM_DEFAULT_MM,
   CV_SECTION_GAP_MAX_MM,
@@ -565,6 +566,7 @@ export function FormCvPerson({
           />
         </Field>
       </div>
+      <CvNameTypographyControls person={person} onChange={onChange} />
       <Field label="Zeile unter dem Namen">
         <input
           className={inputCls}

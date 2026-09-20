@@ -1,10 +1,18 @@
 import { useSyncExternalStore } from "react";
+import { FONT_LABELS, type FontKey } from "@/components/cover/types";
 import { DossierPageMarginsControl } from "@/components/dossier/DossierPageMarginsControl";
 import {
   letterDefaultPageMargins,
   letterSafePageMarginMinimums,
 } from "@/components/letter/layout-system";
-import type { LetterAlignment, LetterData, LetterDesign } from "@/components/letter/types";
+import {
+  LETTER_ROLE_FONT_SIZE_MAX,
+  LETTER_ROLE_FONT_SIZE_MIN,
+  type LetterAlignment,
+  type LetterData,
+  type LetterDesign,
+  type LetterRoleTypography,
+} from "@/components/letter/types";
 import {
   DEFAULT_DOSSIER_CHROME_STATE,
   getDossierChromeState,
@@ -17,6 +25,8 @@ const buttonClass =
   "rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const smallButtonClass =
   "rounded border border-input bg-background px-2 py-1 text-[11px] font-medium hover:bg-accent";
+const selectClass =
+  "w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-ring";
 
 export function legacyLetterChromePatch(
   patch: Partial<DossierChromeOptions>,
@@ -138,6 +148,135 @@ function VerticalOffsetControl({
   );
 }
 
+function TypographyRoleControl({
+  label,
+  value,
+  fallbackSize,
+  fallbackBold,
+  onChange,
+}: {
+  label: string;
+  value?: LetterRoleTypography;
+  fallbackSize: number;
+  fallbackBold: boolean;
+  onChange: (value: LetterRoleTypography | undefined) => void;
+}) {
+  const current = value ?? {};
+  const patch = (next: Partial<LetterRoleTypography>) => onChange({ ...current, ...next });
+  const size = Math.max(
+    LETTER_ROLE_FONT_SIZE_MIN,
+    Math.min(LETTER_ROLE_FONT_SIZE_MAX, current.fontSizePt ?? fallbackSize),
+  );
+
+  return (
+    <div data-letter-role-typography={label} className="grid gap-2 rounded-md border bg-muted/20 p-2.5">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="text-xs font-semibold">{label}</div>
+          <div className="text-[11px] text-muted-foreground">
+            Ohne eigene Auswahl bleibt die Typografie der Vorlage erhalten.
+          </div>
+        </div>
+        {value ? (
+          <button type="button" className={smallButtonClass} onClick={() => onChange(undefined)}>
+            Vorlage
+          </button>
+        ) : null}
+      </div>
+
+      <label className="grid gap-1 text-xs">
+        <span className="text-muted-foreground">Schriftart</span>
+        <select
+          className={selectClass}
+          value={current.font ?? "template"}
+          onChange={(event) =>
+            patch({
+              font: event.target.value === "template" ? undefined : (event.target.value as FontKey),
+            })
+          }
+          aria-label={`${label} Schriftart`}
+        >
+          <option value="template">Wie Vorlage</option>
+          {(Object.entries(FONT_LABELS) as Array<[FontKey, string]>).map(([key, fontLabel]) => (
+            <option key={key} value={key}>
+              {fontLabel}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="grid gap-1 text-xs">
+        <span className="flex items-center justify-between gap-2 text-muted-foreground">
+          <span>Schriftgrösse</span>
+          <span>{size.toFixed(size % 1 ? 1 : 0)} pt</span>
+        </span>
+        <input
+          type="range"
+          min={LETTER_ROLE_FONT_SIZE_MIN}
+          max={LETTER_ROLE_FONT_SIZE_MAX}
+          step={0.5}
+          value={size}
+          onChange={(event) => patch({ fontSizePt: Number(event.target.value) })}
+          className="w-full accent-primary"
+          aria-label={`${label} Schriftgrösse`}
+        />
+        {current.fontSizePt !== undefined ? (
+          <button
+            type="button"
+            className={`${smallButtonClass} justify-self-start`}
+            onClick={() => patch({ fontSizePt: undefined })}
+          >
+            Vorlagengrösse
+          </button>
+        ) : null}
+      </label>
+
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-muted-foreground">Schriftfarbe</span>
+        <input
+          type="color"
+          value={current.color ?? "#111111"}
+          onChange={(event) => patch({ color: event.target.value })}
+          className="h-7 w-10 cursor-pointer rounded border border-input bg-background"
+          aria-label={`${label} Schriftfarbe`}
+        />
+        {current.color ? (
+          <button type="button" className={smallButtonClass} onClick={() => patch({ color: undefined })}>
+            Standardfarbe
+          </button>
+        ) : (
+          <span className="text-[11px] text-muted-foreground">Wie Vorlage</span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-1">
+        {(
+          [
+            ["bold", "Fett", fallbackBold, "font-bold"],
+            ["italic", "Kursiv", false, "italic"],
+            ["underline", "Unterstrichen", false, "underline"],
+          ] as const
+        ).map(([key, text, fallback, textClass]) => {
+          const active = current[key] ?? fallback;
+          return (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={active}
+              onClick={() => patch({ [key]: !active })}
+              className={`rounded-md border px-2 py-2 text-xs ${textClass} ${
+                active ? "border-foreground bg-muted text-foreground" : "border-input text-muted-foreground"
+              }`}
+            >
+              {text}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function LetterLayoutControls({
   data,
   design,
@@ -166,7 +305,7 @@ export function LetterLayoutControls({
         className="grid gap-2.5 rounded-lg border bg-background p-3 shadow-sm"
       >
         <div>
-          <div className="text-xs font-semibold">Briefspezifische Positionen</div>
+          <div className="text-xs font-semibold">Briefspezifische Positionen &amp; Typografie</div>
           <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
             Diese Einstellungen gelten nur fürs Motivationsschreiben. Header und Footer findest du
             im eigenen Bereich „Header & Footer“.
@@ -195,6 +334,34 @@ export function LetterLayoutControls({
           label="Ort & Datum"
           value={design.dateAlign ?? "left"}
           onChange={(dateAlign) => onChange({ dateAlign })}
+        />
+
+        <TypographyRoleControl
+          label="Eigene Anschrift"
+          value={design.senderTypography}
+          fallbackSize={9.5}
+          fallbackBold={false}
+          onChange={(senderTypography) => onChange({ senderTypography })}
+        />
+        {chromeOptions.headerMode === "contact" ? (
+          <p className="-mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            Die eigene Anschrift ist aktuell im Kontakt-Header integriert. Dort gelten zusätzlich
+            die Einstellungen aus „Header & Footer“.
+          </p>
+        ) : null}
+        <TypographyRoleControl
+          label="Empfängeranschrift"
+          value={design.recipientTypography}
+          fallbackSize={10}
+          fallbackBold={false}
+          onChange={(recipientTypography) => onChange({ recipientTypography })}
+        />
+        <TypographyRoleControl
+          label="Betreff"
+          value={design.subjectTypography}
+          fallbackSize={12}
+          fallbackBold={true}
+          onChange={(subjectTypography) => onChange({ subjectTypography })}
         />
 
         <div className="grid gap-2 rounded-md border p-2.5">

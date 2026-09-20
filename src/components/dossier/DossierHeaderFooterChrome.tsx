@@ -242,6 +242,14 @@ export function DossierHeaderFooterChrome({
       ? { key: "email", value: resolvedContact.email, strong: false }
       : null,
   ].filter((row): row is ContactRow => row !== null);
+  const stackedName = contactRows.find((row) => row.key === "name");
+  const stackedAddressRows = contactRows.filter(
+    (row) => row.key === "address" || row.key === "place",
+  );
+  const stackedPhoneRows = contactRows.filter(
+    (row) => row.key === "phone" || row.key === "email",
+  );
+  const stackedGroups = [stackedAddressRows, stackedPhoneRows].filter((rows) => rows.length > 0);
   const continuationRows = [
     options.headerShowName && resolvedContact.name
       ? { key: "name", value: resolvedContact.name, strong: true }
@@ -430,16 +438,33 @@ export function DossierHeaderFooterChrome({
             >
               {stackedHeader ? (
                 <div
+                  data-dossier-stacked-contact
                   className="my-auto min-w-0"
                   style={{ overflowWrap: "anywhere", transform: headerContentTransform }}
                 >
-                  {contactRows.map((row) => (
+                  {stackedName ? (
+                    <div className="font-semibold" style={{ fontSize: "9.5pt", marginBottom: "0.2mm" }}>
+                      {stackedName.value}
+                    </div>
+                  ) : null}
+                  {stackedGroups.map((rows) => (
                     <div
-                      key={row.key}
-                      className={row.strong ? "font-semibold" : "opacity-95"}
-                      style={row.strong ? { fontSize: "9.5pt", marginBottom: "0.2mm" } : undefined}
+                      key={rows.map((row) => row.key).join("-")}
+                      className="flex min-w-0 flex-wrap items-center opacity-95"
                     >
-                      {row.value}
+                      {rows.map((row, index) => (
+                        <span key={row.key} className="inline-flex min-w-0 items-center">
+                          <InlineContactSeparator
+                            style={inlineSeparator}
+                            rowKey={row.key}
+                            index={index}
+                            compact
+                          />
+                          <span className="min-w-0" style={{ overflowWrap: "anywhere" }}>
+                            {row.value}
+                          </span>
+                        </span>
+                      ))}
                     </div>
                   ))}
                 </div>

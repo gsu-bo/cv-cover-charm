@@ -17,6 +17,19 @@ export type LetterBodyColumns = 1 | 2 | 3;
 export type LetterHeaderMode = "compact" | "contact" | "none";
 export type LetterFooterMode = "compact" | "attachments" | "none";
 
+/** Optional role-specific typography. Missing values preserve the template. */
+export type LetterRoleTypography = {
+  font?: FontKey;
+  fontSizePt?: number;
+  color?: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+};
+
+export const LETTER_ROLE_FONT_SIZE_MIN = 7;
+export const LETTER_ROLE_FONT_SIZE_MAX = 30;
+
 /** Frei platzierbares Bild im Anschreiben mit proportionaler Skalierung und automatischem Textfluss. */
 export type LetterFlowImage = {
   id: string;
@@ -84,6 +97,12 @@ export type LetterDesign = {
   ruleAfterSender?: boolean;
   ruleAfterRecipient?: boolean;
   ruleAfterSubject?: boolean;
+  /** Eigene Typografie für die Absenderanschrift; fehlt = wie Vorlage. */
+  senderTypography?: LetterRoleTypography;
+  /** Eigene Typografie für die Empfängeranschrift; fehlt = wie Vorlage. */
+  recipientTypography?: LetterRoleTypography;
+  /** Eigene Typografie für den Betreff; fehlt = wie Vorlage. */
+  subjectTypography?: LetterRoleTypography;
   /** @deprecated Legacy-/SSR-Kompatibilität. Live ist DossierChromeState kanonisch. */
   headerMode?: LetterHeaderMode;
   headerShowName?: boolean;
@@ -252,6 +271,27 @@ function normalizedColor(value: unknown): string | null {
     : null;
 }
 
+export function normalizeLetterRoleTypography(value: unknown): LetterRoleTypography | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const incoming = value as Partial<LetterRoleTypography>;
+  const next: LetterRoleTypography = {};
+  if (typeof incoming.font === "string" && incoming.font in FONT_LABELS) {
+    next.font = incoming.font as FontKey;
+  }
+  if (typeof incoming.fontSizePt === "number" && Number.isFinite(incoming.fontSizePt)) {
+    next.fontSizePt = Math.min(
+      LETTER_ROLE_FONT_SIZE_MAX,
+      Math.max(LETTER_ROLE_FONT_SIZE_MIN, Math.round(incoming.fontSizePt * 10) / 10),
+    );
+  }
+  const color = normalizedColor(incoming.color);
+  if (color) next.color = color;
+  if (typeof incoming.bold === "boolean") next.bold = incoming.bold;
+  if (typeof incoming.italic === "boolean") next.italic = incoming.italic;
+  if (typeof incoming.underline === "boolean") next.underline = incoming.underline;
+  return Object.keys(next).length ? next : undefined;
+}
+
 function normalizedHeaderInlineSeparator(value: unknown): DossierChromeInlineSeparator {
   return value === "dot" ||
     value === "icons" ||
@@ -350,6 +390,9 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
     ruleAfterSender: incoming.ruleAfterSender === true,
     ruleAfterRecipient: incoming.ruleAfterRecipient === true,
     ruleAfterSubject: incoming.ruleAfterSubject === true,
+    senderTypography: normalizeLetterRoleTypography(incoming.senderTypography),
+    recipientTypography: normalizeLetterRoleTypography(incoming.recipientTypography),
+    subjectTypography: normalizeLetterRoleTypography(incoming.subjectTypography),
     headerMode,
     headerShowName: incoming.headerShowName !== false,
     headerShowAddress: incoming.headerShowAddress !== false,
