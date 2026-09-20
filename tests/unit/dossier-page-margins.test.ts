@@ -67,12 +67,14 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(cvCanvas).toContain('"--cv-classic-main-right"');
     expect(cvLayoutVariants).toContain("left: var(--cv-classic-main-left) !important;");
     expect(cvLayoutVariants).toContain("right: var(--cv-classic-main-right) !important;");
-    expect(cvLayoutVariants).toContain(
+    expect(cvLayoutVariants).not.toContain(
       "left: max(0mm, calc(var(--cv-classic-main-left) - 11mm)) !important;",
     );
-    expect(cvLayoutOptions).toContain(
+    expect(cvLayoutOptions).not.toContain(
       "right: max(0mm, calc(var(--cv-classic-main-right) - 11mm)) !important;",
     );
+    expect(cvLayoutVariants).toContain("padding-left: 11mm;");
+    expect(cvLayoutOptions).toContain("padding-right: 11mm !important;");
     for (const staleRule of [
       "left: 24mm !important;",
       "left: 30mm !important;",
