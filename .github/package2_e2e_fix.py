@@ -2,6 +2,24 @@ from pathlib import Path
 
 path = Path("tests/e2e/dossier-motif-parity.spec.ts")
 text = path.read_text(encoding="utf-8")
+old_helper = '''async function openSection(page: Page, name: string) {
+  const button = page.getByRole("button", { name, exact: true }).first();
+  await expect(button).toBeVisible();
+  if ((await button.getAttribute("aria-expanded")) !== "true") await button.click();
+}
+'''
+new_helper = '''async function openSection(page: Page, name: string) {
+  const section = page.locator(`[data-editor-section-title="${name}"]`);
+  await expect(section).toHaveCount(1);
+  const button = section.locator("[data-editor-section-toggle]");
+  await expect(button).toBeVisible();
+  if ((await button.getAttribute("aria-expanded")) !== "true") await button.click();
+  return section;
+}
+'''
+if text.count(old_helper) != 1:
+    raise SystemExit("expected old motif section helper exactly once")
+text = text.replace(old_helper, new_helper, 1)
 old_cv = '''    await openSection(page, "Vorlage");
     const cvControl = page.locator("input[type=range]").filter({
       has: page.locator("xpath=..", { hasText: "Hintergrund-Motiv" }),
@@ -12,8 +30,7 @@ old_cv = '''    await openSection(page, "Vorlage");
     )).toBe(true);
     void cvControl;
 '''
-new_cv = '''    await openSection(page, "Vorlage");
-    const cvTemplate = page.locator('[data-editor-section-title="Vorlage"]');
+new_cv = '''    const cvTemplate = await openSection(page, "Vorlage");
     await expect(cvTemplate.getByText(/Hintergrund-Motiv/).first()).toBeVisible();
     const cvControl = cvTemplate.locator('input[type="range"]');
     await expect(cvControl).toHaveCount(1);
