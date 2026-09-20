@@ -13,6 +13,7 @@ import {
 } from "../../src/lib/dossier-page-margins";
 import { WARM_FIRST_PAGE_HEADER_HEIGHT_MM } from "../../src/components/letter/warm-letter-layout";
 
+// This suite is the final Package 3 release-gate anchor for shared page geometry.
 afterEach(() => clearDossierPageMargins());
 
 const contactChrome: DossierChromeOptions = {
