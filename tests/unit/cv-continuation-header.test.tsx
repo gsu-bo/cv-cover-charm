@@ -33,6 +33,7 @@ function markup(
       options: {
         ...DEFAULT_DOSSIER_CHROME_OPTIONS,
         headerMode,
+        headerDifferentFirstPage: true,
         footerMode: "compact",
       },
     }),
@@ -53,7 +54,7 @@ describe("shared dossier continuation headers", () => {
     }
   });
 
-  test("contact defaults to a compact identity header on continuation pages", () => {
+  test("legacy contact uses a reduced identity header on continuation pages", () => {
     for (const scope of ["cv", "letter"] as const) {
       const html = markup(scope, "contact");
 
@@ -95,7 +96,7 @@ describe("shared dossier continuation headers", () => {
     expect(html).toContain("079 123 45 67");
   });
 
-  test("contact continuation respects the existing visibility switches", () => {
+  test("legacy contact continuation respects the existing visibility switches", () => {
     const html = renderToStaticMarkup(
       createElement(DossierHeaderFooterChrome, {
         scope: "cv",
@@ -106,6 +107,7 @@ describe("shared dossier continuation headers", () => {
         options: {
           ...DEFAULT_DOSSIER_CHROME_OPTIONS,
           headerMode: "contact",
+          headerDifferentFirstPage: true,
           headerShowPhone: false,
           footerMode: "compact",
         },

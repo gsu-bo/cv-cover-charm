@@ -51,11 +51,11 @@ export function resolveDossierChromeDocumentContent(
   const fallbackTitle = defaultTitle.trim();
   return {
     headerTitle: value?.headerTitleEnabled
-      ? cleanText(value.headerTitle, 120) ?? fallbackTitle || undefined
+      ? (cleanText(value.headerTitle, 120) ?? fallbackTitle) || undefined
       : undefined,
     headerText: value?.headerTextEnabled ? cleanText(value.headerText, 240) : undefined,
     footerTitle: value?.footerTitleEnabled
-      ? cleanText(value.footerTitle, 120) ?? fallbackTitle || undefined
+      ? (cleanText(value.footerTitle, 120) ?? fallbackTitle) || undefined
       : undefined,
     footerText: value?.footerTextEnabled ? cleanText(value.footerText, 240) : undefined,
   };
