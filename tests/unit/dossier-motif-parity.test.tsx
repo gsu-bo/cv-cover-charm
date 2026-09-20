@@ -81,6 +81,19 @@ describe("CV / letter background motif parity", () => {
     expect(markup).toContain("opacity:0.22");
   });
 
+  test("Ledger keeps its full-height index sidebar structural", () => {
+    const markup = renderToStaticMarkup(
+      <LetterSheetBackground template={"ledger" as never} colors={colors} pageIndex={0} />,
+    );
+    expect(markup).toContain('data-letter-structural-surface="index-strip"');
+    expect(markup).toContain('data-letter-structural-surface="index-rule"');
+    expect(markup).not.toContain('data-letter-decorative-motif-layer="index-strip"');
+    expect(markup).not.toContain('data-letter-decorative-motif-layer="index-rule"');
+    expect(markup).toContain('data-letter-decorative-motif-layer="top-rule"');
+    expect(markup).toContain("opacity:0.42");
+    expect(markup).toContain("opacity:0.6");
+  });
+
   test("generic dossier backgrounds remain on the shared motif layer", () => {
     const markup = renderToStaticMarkup(
       <LetterSheetBackground template="modern" colors={colors} pageIndex={0} />,

@@ -30,17 +30,15 @@ test.describe("CV / letter background motif parity", () => {
     await resetStorage(page);
     await page.goto(`${BASE_URL}/lebenslauf`);
     await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();
-    const cvTemplate = await openSection(page, "Vorlage");
-    await expect(cvTemplate.getByText(/Hintergrund-Motiv/).first()).toBeVisible();
-    const cvControl = cvTemplate.locator('input[type="range"]');
+    await openSection(page, "Vorlage");
+    const cvControl = page.getByRole("slider", { name: "Hintergrund-Motiv" });
     await expect(cvControl).toHaveCount(1);
+    await expect(cvControl).toBeVisible();
+    await expect(cvControl).toHaveAttribute("min", "0");
+    await expect(cvControl).toHaveAttribute("max", "100");
     await expect(cvControl).toHaveValue("25");
-    expect(
-      await cvControl.evaluate((node) => {
-        const input = node as HTMLInputElement;
-        return { min: input.min, max: input.max };
-      }),
-    ).toEqual({ min: "0", max: "100" });
+    await cvControl.fill("63");
+    await expect(cvControl).toHaveValue("63");
 
     await resetStorage(page);
     const letterSlider = await openLetterMotifControl(page);
@@ -134,6 +132,31 @@ test.describe("CV / letter background motif parity", () => {
     expect(await decorative.evaluate((node) => getComputedStyle(node).opacity)).toBe("0");
   });
 
+  test("Ledger keeps its index sidebar at 0 percent while decoration follows motif visibility", async ({
+    page,
+  }) => {
+    await resetStorage(page);
+    const slider = await openLetterMotifControl(page);
+    await page.getByRole("button", { name: "Ledger", exact: true }).click();
+    await slider.fill("0");
+
+    const visiblePage = page
+      .locator(
+        "[data-letter-document-root]:not([data-letter-pagination-measurements]) [data-letter-page]",
+      )
+      .first();
+    await expect(visiblePage).toHaveAttribute("data-letter-template", "ledger");
+
+    const strip = visiblePage.locator('[data-letter-structural-surface="index-strip"]');
+    const rule = visiblePage.locator('[data-letter-structural-surface="index-rule"]');
+    const decorative = visiblePage.locator('[data-letter-decorative-motif-layer="top-rule"]');
+    await expect(strip).toBeVisible();
+    await expect(rule).toBeVisible();
+    expect(await strip.evaluate((node) => getComputedStyle(node).opacity)).toBe("0.42");
+    expect(await rule.evaluate((node) => getComputedStyle(node).opacity)).toBe("0.6");
+    expect(await decorative.evaluate((node) => getComputedStyle(node).opacity)).toBe("0");
+  });
+
   test("CV design transfer carries motif visibility into the letter", async ({ page }) => {
     await resetStorage(page);
     await page.evaluate(() => {
@@ -151,17 +174,17 @@ test.describe("CV / letter background motif parity", () => {
               ink: "#0b1f24",
             },
             font: "freundlich",
-            bgOpacity: 0.25,
+            bgOpacity: 0.63,
           },
         }),
       );
     });
 
     const slider = await openLetterMotifControl(page);
-    await expect(slider).toHaveValue("25");
+    await expect(slider).toHaveValue("63");
     await expect(page.locator("[data-letter-page]").first()).toHaveAttribute(
       "data-letter-motif-opacity",
-      "0.25",
+      "0.63",
     );
   });
 });

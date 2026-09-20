@@ -20,6 +20,8 @@ const FRESH_STRUCTURAL_MOTIFS = new Set([
   "warm-gradient-band",
   "top-ribbon",
   "top-cove",
+  "index-strip",
+  "index-rule",
 ]);
 
 function pick(colors: Record<string, string>, ...keys: string[]): string {

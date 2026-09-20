@@ -247,12 +247,14 @@ export function LetterCanvas({
         design.template === "brief" ? "standalone" : design.fontOverride ? "override" : "dossier"
       }
       className="relative h-[1123px] w-[794px] overflow-hidden bg-white shadow-xl"
-      style={{
-        color: palette.ink,
-        fontFamily,
-        backgroundColor: paperColor,
-        "--dossier-motif-opacity": String(motifOpacity),
-      } as React.CSSProperties}
+      style={
+        {
+          color: palette.ink,
+          fontFamily,
+          backgroundColor: paperColor,
+          "--dossier-motif-opacity": String(motifOpacity),
+        } as React.CSSProperties
+      }
       aria-label={ariaLabel}
     >
       <LetterSheetBackground
