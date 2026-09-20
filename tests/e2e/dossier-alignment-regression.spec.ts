@@ -156,7 +156,7 @@ async function expectAlignmentControlIsBodyOnly(page: Page) {
 }
 
 async function openCvAlignmentControl(page: Page) {
-  const section = page.locator('[data-editor-section-title="Schrift"]');
+  const section = page.locator('[data-editor-section-title="Layout"]');
   await expect(section).toBeVisible();
   const toggle = section.locator("[data-editor-section-toggle]");
   if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();

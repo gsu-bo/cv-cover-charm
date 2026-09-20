@@ -22,14 +22,6 @@ html[data-cv-variant="minimal"] [data-cv-layout="classic"]
 }
 
 html[data-cv-variant="minimal"] [data-cv-layout="classic"]
-  :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main] {
-  left: var(--cv-classic-main-left) !important;
-  right: var(--cv-classic-main-right) !important;
-  top: var(--cv-main-top) !important;
-  bottom: var(--cv-main-bottom) !important;
-}
-
-html[data-cv-variant="minimal"] [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page]) [data-cv-header] {
   margin-bottom: 5.2mm !important;
   gap: 8mm !important;
@@ -202,14 +194,6 @@ html[data-cv-variant="editorial"] [data-cv-layout="classic"]
   top: 19mm !important;
   width: var(--dossier-line-thickness) !important;
   height: 34mm !important;
-}
-
-html[data-cv-variant="editorial"] [data-cv-layout="classic"]
-  :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main] {
-  left: var(--cv-classic-main-left) !important;
-  right: var(--cv-classic-main-right) !important;
-  top: var(--cv-main-top) !important;
-  bottom: var(--cv-main-bottom) !important;
 }
 
 /*

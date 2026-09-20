@@ -5,6 +5,7 @@ const cv = readFileSync("src/routes/lebenslauf.tsx", "utf8");
 const letter = readFileSync("src/routes/anschreiben.tsx", "utf8");
 const letterLayout = readFileSync("src/components/letter/LetterLayoutControls.tsx", "utf8");
 const cvMargins = readFileSync("src/components/cv/CvPageMarginsControl.tsx", "utf8");
+const cvAlignmentPortal = readFileSync("src/components/cv/CvTextAlignmentPortal.tsx", "utf8");
 const typographyControl = readFileSync(
   "src/components/dossier/DossierHyphenationControl.tsx",
   "utf8",
@@ -37,6 +38,7 @@ describe("shared CV / letter editor control ownership", () => {
     expect(count(cv, /<CvPageMarginsControl\b/g)).toBe(1);
     expect(count(cvMargins, /<DossierPageMarginsControl\b/g)).toBe(1);
     expect(cvMargins).toContain('scope="cv"');
+    expect(cvAlignmentPortal).not.toContain("DossierPageMarginsControl");
     expect(count(letterLayout, /<DossierPageMarginsControl\b/g)).toBe(1);
     expect(letterLayout).toContain('scope="letter"');
     expect(letter).not.toContain("<DossierPageMarginsControl");
@@ -63,6 +65,9 @@ describe("shared CV / letter editor control ownership", () => {
     const cvLayout = section(cv, "Layout");
     expect(cvLayout).toContain("<CvPageMarginsControl");
     expect(cvLayout).toContain("Seitenspalte");
+    expect(cvAlignmentPortal).toContain('data-editor-section-title="Layout"');
+    expect(cvAlignmentPortal).toContain("data-cv-text-alignment-control");
+    expect(cvAlignmentPortal).not.toContain("Schrift und Layout");
     expect(cv).toContain("Rubriktitel gestalten");
 
     expect(letterLayout).toContain("Firma / Lehrbetrieb – vertikale Position");

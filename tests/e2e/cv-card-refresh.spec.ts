@@ -359,11 +359,13 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
     expect(defaultExport.contentIndentMm).toBeCloseTo(defaultPreview.contentIndentMm, 1);
     expect(defaultExport.ruleRightMm).toBeCloseTo(defaultPreview.ruleRightMm, 1);
 
-    const layoutSection = page.locator('[data-editor-section-title="Layout"]');
-    await expect(layoutSection).toHaveCount(1);
-    const layoutToggle = layoutSection.locator("[data-editor-section-toggle]");
-    await expect(layoutToggle).toBeVisible();
-    if ((await layoutToggle.getAttribute("aria-expanded")) !== "true") await layoutToggle.click();
+    const typographySection = page.locator('[data-editor-section-title="Schrift"]');
+    await expect(typographySection).toHaveCount(1);
+    const typographyToggle = typographySection.locator("[data-editor-section-toggle]");
+    await expect(typographyToggle).toBeVisible();
+    if ((await typographyToggle.getAttribute("aria-expanded")) !== "true") {
+      await typographyToggle.click();
+    }
 
     const controls = page.locator("[data-citrus-rubric-controls]");
     await expect(controls).toBeVisible();
