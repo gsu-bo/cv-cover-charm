@@ -7,14 +7,14 @@
 export const CANONICAL_DOSSIER_PRESENTATION = {
   template: "brief",
   letter: {
-    headerMode: "none",
-    footerMode: "none",
-    continuationHeaderMode: "none",
-    continuationFooterMode: "none",
+    headerMode: "compact",
+    footerMode: "compact",
+    continuationHeaderMode: "compact",
+    continuationFooterMode: "compact",
   },
   cv: {
     layout: "classic",
-    headerMode: "none",
-    footerMode: "none",
+    headerMode: "compact",
+    footerMode: "compact",
   },
 } as const;

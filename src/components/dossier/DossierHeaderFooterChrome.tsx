@@ -13,6 +13,7 @@ import {
   type DossierChromeScope,
 } from "@/lib/dossier-chrome";
 import { getDossierPageMargins } from "@/lib/dossier-page-margins";
+import type { DossierChromeDocumentContent } from "@/lib/dossier-chrome-content";
 import { resolveTemplateChromeOptions } from "@/lib/template-chrome";
 import "./chrome-policy.css";
 
@@ -137,6 +138,7 @@ export function DossierHeaderFooterChrome({
   footerDetails = [],
   footerLeft,
   footerRight,
+  documentContent,
 }: {
   scope: DossierChromeScope;
   template: string;
@@ -149,6 +151,7 @@ export function DossierHeaderFooterChrome({
   footerDetails?: string[];
   footerLeft?: string;
   footerRight?: string;
+  documentContent?: DossierChromeDocumentContent;
 }) {
   const resolvedContact = contact;
   const headerMode = effectiveDossierHeaderModeForOptions(options, pageIndex);
@@ -225,6 +228,14 @@ export function DossierHeaderFooterChrome({
   const cvPageNumberFooter =
     scope === "cv" && footerRight ? /^seite\s+\d+$/i.test(footerRight.trim()) : false;
   const resolvedFooterRight = cvPageNumberFooter ? undefined : footerRight;
+  const headerTitle = documentContent?.headerTitle?.trim() ?? "";
+  const headerText = documentContent?.headerText?.trim() ?? "";
+  const footerTitle = documentContent?.footerTitle?.trim() ?? "";
+  const footerText = documentContent?.footerText?.trim() ?? "";
+  const headerDocumentContentMm = (headerTitle ? 5 : 0) + (headerText ? 4 : 0);
+  const footerCustomValues = [footerTitle, footerText].filter(
+    (value): value is string => !!value,
+  );
   const contactRows = [
     options.headerShowName && resolvedContact.name
       ? { key: "name", value: resolvedContact.name, strong: true }
@@ -427,8 +438,8 @@ export function DossierHeaderFooterChrome({
               style={{
                 height: `${headerVisualHeight}mm`,
                 padding: stackedHeader
-                  ? `1mm ${chromeContentRightMm}mm 1mm ${chromeContentLeftMm}mm`
-                  : `2mm ${chromeContentRightMm}mm 2mm ${chromeContentLeftMm}mm`,
+                  ? `${1 + headerDocumentContentMm}mm ${chromeContentRightMm}mm 1mm ${chromeContentLeftMm}mm`
+                  : `${2 + headerDocumentContentMm}mm ${chromeContentRightMm}mm 2mm ${chromeContentLeftMm}mm`,
                 boxSizing: "border-box",
                 color: headerRoles.ink,
                 fontSize: stackedHeader ? "8pt" : "8.5pt",
@@ -496,6 +507,38 @@ export function DossierHeaderFooterChrome({
         )
       ) : null}
 
+      {headerMode !== "none" &&
+      !continuationContact &&
+      (headerTitle || headerText) ? (
+        <div
+          data-dossier-header-document-content
+          className="absolute inset-x-0 top-0 flex min-w-0 flex-col justify-start"
+          style={{
+            height: `${headerVisualHeight}mm`,
+            padding: `1.1mm ${chromeContentRightMm}mm 0 ${chromeContentLeftMm}mm`,
+            boxSizing: "border-box",
+            color: headerRoles.ink,
+            lineHeight: 1.05,
+            overflow: "hidden",
+            transform: headerContentTransform,
+          }}
+        >
+          {headerTitle ? (
+            <div data-dossier-header-title className="truncate text-[7.6pt] font-semibold">
+              {headerTitle}
+            </div>
+          ) : null}
+          {headerText ? (
+            <div
+              data-dossier-header-custom-text
+              className="truncate text-[6.6pt] opacity-95"
+            >
+              {headerText}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {options.footerMode === "compact" ? (
         <div
           data-dossier-footer="compact"
@@ -512,6 +555,25 @@ export function DossierHeaderFooterChrome({
           }}
           aria-hidden="true"
         />
+      ) : null}
+
+      {options.footerMode === "compact" && footerCustomValues.length ? (
+        <div
+          data-dossier-footer-custom-content
+          className="absolute inset-x-0 bottom-0 flex min-w-0 items-center text-[6.6pt]"
+          style={{
+            height: `${compactFooterHeight}mm`,
+            padding: `0 ${chromeContentRightMm}mm 0 ${chromeContentLeftMm}mm`,
+            boxSizing: "border-box",
+            color: footerRoles.ink,
+            overflow: "hidden",
+            transform: footerContentTransform,
+          }}
+        >
+          {footerTitle ? <span className="shrink-0 font-semibold">{footerTitle}</span> : null}
+          {footerTitle && footerText ? <span className="mx-[1.2mm] opacity-60">·</span> : null}
+          {footerText ? <span className="min-w-0 truncate opacity-95">{footerText}</span> : null}
+        </div>
       ) : null}
 
       {options.footerMode === "details" ? (
@@ -531,7 +593,28 @@ export function DossierHeaderFooterChrome({
             overflow: "hidden",
           }}
         >
-          {footerLabel && footerDetails.length ? (
+          {footerCustomValues.length ? (
+            options.footerTextLayout === "stacked" ? (
+              <div
+                data-dossier-footer-custom-content
+                className="flex h-full min-w-0 flex-col justify-center"
+                style={{ transform: footerContentTransform }}
+              >
+                {footerTitle ? <div className="font-semibold">{footerTitle}</div> : null}
+                {footerText ? <div className="min-w-0 break-words opacity-95">{footerText}</div> : null}
+              </div>
+            ) : (
+              <div
+                data-dossier-footer-custom-content
+                className="flex h-full min-w-0 items-center"
+                style={{ transform: footerContentTransform }}
+              >
+                {footerTitle ? <span className="shrink-0 font-semibold">{footerTitle}</span> : null}
+                {footerTitle && footerText ? <span className="mx-[2mm] opacity-60">·</span> : null}
+                {footerText ? <span className="min-w-0 break-words opacity-95">{footerText}</span> : null}
+              </div>
+            )
+          ) : footerLabel && footerDetails.length ? (
             options.footerTextLayout === "inline" ? (
               <div
                 data-letter-footer-attachments={letter ? "" : undefined}

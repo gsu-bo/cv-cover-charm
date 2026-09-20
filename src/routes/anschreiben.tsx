@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/cover/ThemeToggle";
 import { FileDown, History, RotateCcw, Sparkles } from "lucide-react";
 import { EditorMenuLabel } from "@/components/dossier/EditorMenuLabel";
 import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";
+import { DossierChromeDocumentContentControls } from "@/components/dossier/DossierChromeDocumentContentControls";
 import { useForeignWrite, usePageVisible } from "@/lib/autosave";
 import {
   HISTORY_KEYS,
@@ -1088,6 +1089,13 @@ function Anschreiben() {
                 scope="letter"
                 onOptionsChange={(patch) =>
                   setDesign((current) => ({ ...current, ...legacyLetterChromePatch(patch) }))
+                }
+              />
+              <DossierChromeDocumentContentControls
+                value={design.chromeContent}
+                defaultTitle="Motivationsschreiben"
+                onChange={(chromeContent) =>
+                  setDesign((current) => ({ ...current, chromeContent }))
                 }
               />
             </Section>

@@ -10,7 +10,7 @@ import {
 import { DEFAULT_DOSSIER_CHROME_OPTIONS } from "../../src/lib/dossier-chrome";
 
 describe("plain letter default", () => {
-  test("fresh Brief template renders without shared header or footer chrome", () => {
+  test("fresh Brief template renders the shared compact header and footer", () => {
     const design = emptyLetterDesign();
     const markup = renderToStaticMarkup(
       createElement(LetterCanvas, {
@@ -20,14 +20,14 @@ describe("plain letter default", () => {
     );
 
     expect(design.template).toBe("brief");
-    expect(design.headerMode).toBe("none");
-    expect(design.footerMode).toBe("none");
+    expect(design.headerMode).toBe("compact");
+    expect(design.footerMode).toBe("compact");
     expect(markup).toContain('data-letter-template="brief"');
-    expect(markup).toContain('data-letter-header-mode="none"');
-    expect(markup).toContain('data-letter-footer-mode="none"');
+    expect(markup).toContain('data-letter-header-mode="compact"');
+    expect(markup).toContain('data-letter-footer-mode="compact"');
   });
 
-  test("an un-normalized fresh Brief design cannot re-invent legacy chrome in SSR", () => {
+  test("an un-normalized fresh Brief design keeps the compact canonical chrome in SSR", () => {
     const design = { ...emptyLetterDesign(), headerMode: undefined, footerMode: undefined };
     const markup = renderToStaticMarkup(
       createElement(LetterCanvas, {
@@ -36,8 +36,8 @@ describe("plain letter default", () => {
       }),
     );
 
-    expect(markup).toContain('data-letter-header-mode="none"');
-    expect(markup).toContain('data-letter-footer-mode="none"');
+    expect(markup).toContain('data-letter-header-mode="compact"');
+    expect(markup).toContain('data-letter-footer-mode="compact"');
   });
 
   test("an explicitly selected shared contact header still renders on the Brief template", () => {
@@ -55,7 +55,7 @@ describe("plain letter default", () => {
 
   test("missing saved modes inherit Brief while explicit legacy settings remain supported", () => {
     const normalized = normalizeLetterDesign({ template: "brief", colors: {}, font: "freundlich" });
-    expect(normalized.headerMode).toBe("none");
+    expect(normalized.headerMode).toBe("compact");
     expect(
       normalizeLetterDesign({ template: "brief", headerMode: "contact", footerMode: "compact" })
         .headerMode,

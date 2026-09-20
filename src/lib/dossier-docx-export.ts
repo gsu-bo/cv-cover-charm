@@ -210,7 +210,11 @@ export async function createDossierDocxBlob(
     throw new Error("DOCX benötigt dieselbe aktive Vorlage in allen drei Dossierteilen.");
   }
   const resolved = resolveDossierChromeSnapshot({ cover, letter, cv }, getDossierChromeState());
-  const bodyCv = { ...cv, data: cvBodyData(cv.data, resolved.cv.options) };
+  const cvData = cvBodyData(cv.data, resolved.cv.options);
+  const bodyCv = {
+    ...cv,
+    data: cv.design.showDocumentTitle === false ? { ...cvData, titel: "" } : cvData,
+  };
   const layout = getCvLayoutChoiceForTemplate(cv.design.template);
   const placements = { ...getCvPlacements() };
   const blob = await profile.createBlob({
