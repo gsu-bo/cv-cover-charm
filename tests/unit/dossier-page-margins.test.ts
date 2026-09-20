@@ -28,6 +28,7 @@ const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta
 
 const control = read("src/components/dossier/DossierPageMarginsControl.tsx");
 const cvPortal = read("src/components/cv/CvTextAlignmentPortal.tsx");
+const cvMargins = read("src/components/cv/CvPageMarginsControl.tsx");
 const cvCanvas = read("src/components/cv/CvCanvas.tsx");
 const cvCanvasBase = read("src/components/cv/CvCanvasBase.tsx");
 const cvLayoutState = read("src/components/cv/layout.ts");
@@ -62,11 +63,13 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(cvContentBox(frame, 0, "classic")).toEqual(expected);
   });
 
-  test("all CV layout variants use the resolved page-margin edges", () => {
+  test("CV renderer owns the resolved page-margin edges while variants stay internal", () => {
     expect(cvCanvas).toContain('"--cv-classic-main-left"');
     expect(cvCanvas).toContain('"--cv-classic-main-right"');
-    expect(cvLayoutVariants).toContain("left: var(--cv-classic-main-left) !important;");
-    expect(cvLayoutVariants).toContain("right: var(--cv-classic-main-right) !important;");
+    expect(cvCanvasBase).toContain('left: `${firstBox.left}mm`');
+    expect(cvCanvasBase).toContain('right: `${firstBox.right}mm`');
+    expect(cvCanvasBase).toContain('left: `${box.left}mm`');
+    expect(cvCanvasBase).toContain('right: `${box.right}mm`');
     expect(cvLayoutVariants).not.toContain(
       "left: max(0mm, calc(var(--cv-classic-main-left) - 11mm)) !important;",
     );
@@ -237,15 +240,17 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(letterRoute).toContain("<LetterLayoutControls\n                data={data}");
   });
 
-  test("both editors expose the same secondary collapsed control", () => {
+  test("both editors expose the same secondary collapsed control through their current owners", () => {
     expect(control).toContain("<details");
     expect(control).toContain("Seitenränder");
     expect(control).toContain("Vorlage wiederherstellen");
     for (const label of ["Oben", "Rechts", "Unten", "Links"]) expect(control).toContain(label);
     expect(control).toContain("borderLeftColor: accentColor");
-    expect(cvPortal).toContain('<DossierPageMarginsControl\n          scope="cv"');
-    expect(cvPortal).toContain("minimumMargins={minimumMargins}");
-    expect(cvPortal).toContain("cvDefaultPageMargins");
+    expect(cvMargins).toContain("<DossierPageMarginsControl");
+    expect(cvMargins).toContain('scope="cv"');
+    expect(cvMargins).toContain("minimumMargins={minimumMargins}");
+    expect(cvMargins).toContain("defaultMargins={defaultMargins}");
+    expect(cvPortal).not.toContain("DossierPageMarginsControl");
     expect(letterControls).toContain('<DossierPageMarginsControl\n        scope="letter"');
     expect(letterControls).toContain("minimumMargins={minimumMargins}");
   });
