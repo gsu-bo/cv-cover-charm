@@ -110,6 +110,7 @@ import {
 import { downloadBlob, safeFileName } from "@/lib/download";
 import { downloadCombinedDossierPdf } from "@/lib/dossier-pdf";
 import { registerCabinPdfFonts } from "@/lib/pdf-fonts";
+import { normalizeCssZoomForHtml2Canvas } from "@/lib/html2canvas-export";
 import { readDossierContact } from "@/lib/dossier-contact";
 import {
   COVER_STORAGE_KEY,
@@ -908,6 +909,9 @@ function Lebenslauf() {
           scale: PDF.SCALE,
           backgroundColor: "#ffffff",
           useCORS: true,
+          onclone: (_clonedDocument, clonedPage) => {
+            normalizeCssZoomForHtml2Canvas(clonedPage as HTMLElement);
+          },
         });
         if (i > 0) pdf.addPage();
         pdf.addImage(

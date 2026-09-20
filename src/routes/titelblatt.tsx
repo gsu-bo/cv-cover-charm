@@ -53,6 +53,7 @@ import { Section } from "@/components/cover/Section";
 import { buildBlocks, type StyleOverrides } from "@/components/cover/layouts";
 import { downloadBlob, safeFileName } from "@/lib/download";
 import { downloadCombinedDossierPdf } from "@/lib/dossier-pdf";
+import { normalizeCssZoomForHtml2Canvas } from "@/lib/html2canvas-export";
 import {
   COVER_STORAGE_KEY,
   CV_STORAGE_KEY,
@@ -826,6 +827,9 @@ function Titelblatt() {
         windowHeight: PAGE.HEIGHT,
         scrollX: 0,
         scrollY: 0,
+        onclone: (_clonedDocument, clonedPage) => {
+          normalizeCssZoomForHtml2Canvas(clonedPage as HTMLElement);
+        },
       });
       const img = canvas.toDataURL("image/jpeg", PDF.QUALITY);
       const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });

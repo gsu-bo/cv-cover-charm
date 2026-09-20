@@ -2,6 +2,7 @@ import type { jsPDF as JsPdf } from "jspdf";
 import { letterPageOverflows } from "@/components/letter/preflight";
 import { PAGE, PDF } from "@/default-config";
 import { addCvTextLayer } from "@/lib/cv-pdf-text";
+import { normalizeCssZoomForHtml2Canvas } from "@/lib/html2canvas-export";
 import { downloadBlob } from "@/lib/download";
 import { registerCabinPdfFonts } from "@/lib/pdf-fonts";
 
@@ -350,24 +351,25 @@ async function addRasterPage(
     windowHeight: PAGE.HEIGHT,
     scrollX: 0,
     scrollY: 0,
-    onclone: rebuildLetterVectors
-      ? (clonedDocument) => {
-          // Browser/html2canvas owns visible letter typography. Keep glyphs in
-          // the raster; only geometry that is intentionally rebuilt as crisp
-          // vectors is removed from the clone.
-          for (const rule of clonedDocument.querySelectorAll<HTMLElement>(
-            "[data-letter-pdf-rule], [data-letter-pdf-richtext] hr",
-          )) {
-            rule.style.setProperty("border-color", "transparent", "important");
-            rule.style.setProperty("background", "transparent", "important");
-          }
-          for (const cell of clonedDocument.querySelectorAll<HTMLElement>(
-            "[data-letter-pdf-richtext] table[data-letter-table] td",
-          )) {
-            cell.style.setProperty("border-color", "transparent", "important");
-          }
+    onclone: (_clonedDocument, clonedPage) => {
+      normalizeCssZoomForHtml2Canvas(clonedPage as HTMLElement);
+      if (rebuildLetterVectors) {
+        // Browser/html2canvas owns visible letter typography. Keep glyphs in
+        // the raster; only geometry that is intentionally rebuilt as crisp
+        // vectors is removed from the clone.
+        for (const rule of clonedPage.querySelectorAll<HTMLElement>(
+          "[data-letter-pdf-rule], [data-letter-pdf-richtext] hr",
+        )) {
+          rule.style.setProperty("border-color", "transparent", "important");
+          rule.style.setProperty("background", "transparent", "important");
         }
-      : undefined,
+        for (const cell of clonedPage.querySelectorAll<HTMLElement>(
+          "[data-letter-pdf-richtext] table[data-letter-table] td",
+        )) {
+          cell.style.setProperty("border-color", "transparent", "important");
+        }
+      }
+    },
   });
   pdf.addImage(
     canvas.toDataURL("image/jpeg", PDF.QUALITY),
