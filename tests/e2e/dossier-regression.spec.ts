@@ -162,11 +162,9 @@ async function seedCv(page: Page, options: SeedOptions = {}) {
     },
   );
   await page.waitForLoadState("domcontentloaded");
-  await previewRoot(page).locator("[data-cv-page]").first().waitFor({ state: "visible" });
-  await previewRoot(page)
-    .locator("[data-cv-main] [data-cv-entry]")
-    .first()
-    .waitFor({ state: "visible" });
+  const visiblePage = previewRoot(page).locator("[data-cv-page]").filter({ visible: true }).first();
+  await visiblePage.waitFor({ state: "visible" });
+  await visiblePage.locator("[data-cv-main] [data-cv-entry]").first().waitFor({ state: "visible" });
   await settlePagination(page);
 }
 
