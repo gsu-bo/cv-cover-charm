@@ -97,15 +97,10 @@ html:is(
 }
 
 /* Warm/Freundlich was the sole residual spiller after the scoped 90% pass,
- * missing page one by only 2 px. Keep the reviewed 89.5% visual density, but
- * never use CSS zoom for Warm: html2canvas applies that zoom a second time to
- * measured word positions and collapses spaces in the exported PDF. A transform
- * preserves the same on-page scale and remains safe for preview, pagination and
- * raster export. The flow wrapper has no other transform to preserve. */
+ * missing page one by only 2 px. Give that one template half a percentage
+ * point more room; all other templates retain the already-verified geometry. */
 html[data-dossier-template="freundlich"] [data-dossier-document="cv"] [data-cv-main] > div {
-  zoom: 1;
-  transform: scale(0.895);
-  transform-origin: 0 0;
+  zoom: 0.895;
 }
 
 /* Verlauf's original CV refresh assumed its document title/name/subtitle lived
