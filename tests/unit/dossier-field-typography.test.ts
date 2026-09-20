@@ -32,7 +32,7 @@ describe("dossier field typography DOCX pass", () => {
     expect(occurrences[0]).not.toContain("<w:b/>");
     expect(occurrences[1]).toContain("<w:b/>");
     expect(occurrences[1]).toContain("<w:i/>");
-    expect(result.slice(result.lastIndexOf("<w:p><w:r>")).toContain('<w:u w:val="single"/>');
+    expect(result.slice(result.lastIndexOf("<w:p><w:r>"))).toContain('<w:u w:val="single"/>');
   });
 
   test("supports explicit off overrides", () => {
