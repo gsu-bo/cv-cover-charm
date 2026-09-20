@@ -106,12 +106,8 @@ function resolveLetterChrome(
 }
 
 function roleSize(value?: LetterRoleTypography): number | undefined {
-  if (typeof value?.fontSizePt !== "number" || !Number.isFinite(value.fontSizePt))
-    return undefined;
-  return Math.max(
-    LETTER_ROLE_FONT_SIZE_MIN,
-    Math.min(LETTER_ROLE_FONT_SIZE_MAX, value.fontSizePt),
-  );
+  if (typeof value?.fontSizePt !== "number" || !Number.isFinite(value.fontSizePt)) return undefined;
+  return Math.max(LETTER_ROLE_FONT_SIZE_MIN, Math.min(LETTER_ROLE_FONT_SIZE_MAX, value.fontSizePt));
 }
 
 function roleColor(value?: LetterRoleTypography): string | undefined {
@@ -211,10 +207,7 @@ export function LetterCanvas({
   const beilagen = visibleLetterAttachments(data);
   const showBeilagen = data.showBeilagen !== false && beilagen.length > 0;
   const showBeilagenInBody = showBeilagen && geometry.requestedFooterMode !== "attachments";
-  const closingGapMm = normalizeLetterSpacingMm(
-    data.grussAbstandMm,
-    DEFAULT_LETTER_CLOSING_GAP_MM,
-  );
+  const closingGapMm = normalizeLetterSpacingMm(data.grussAbstandMm, DEFAULT_LETTER_CLOSING_GAP_MM);
   const signatureGapMm = normalizeLetterSpacingMm(
     data.unterschriftAbstandMm,
     DEFAULT_LETTER_SIGNATURE_GAP_MM,

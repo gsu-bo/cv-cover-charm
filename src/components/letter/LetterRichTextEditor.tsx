@@ -27,6 +27,12 @@ type ToolbarState = {
   list: LetterListStyle | null;
 };
 
+type SelectionBubble = {
+  left: number;
+  top: number;
+  placement: "above" | "below";
+};
+
 const LIST_OPTIONS: Array<{ value: LetterListStyle | "none"; marker: string; label: string }> = [
   { value: "bullet", marker: "•", label: "Bullet" },
   { value: "dash", marker: "–", label: "Strich" },
@@ -157,6 +163,7 @@ export function LetterRichTextEditor({
   const [listOpen, setListOpen] = useState(false);
   const [tableOpen, setTableOpen] = useState(false);
   const [tableHover, setTableHover] = useState<{ rows: number; columns: number } | null>(null);
+  const [selectionBubble, setSelectionBubble] = useState<SelectionBubble | null>(null);
   const [toolbar, setToolbar] = useState<ToolbarState>({
     bold: false,
     italic: false,
@@ -214,9 +221,22 @@ export function LetterRichTextEditor({
 
   const readToolbarState = () => {
     const editor = editorRef.current;
-    const range = rememberRange();
     const selection = window.getSelection();
-    if (!editor || !range || !selection?.anchorNode) return;
+    if (
+      !editor ||
+      !selection?.rangeCount ||
+      !selection.anchorNode ||
+      !editor.contains(selection.anchorNode)
+    ) {
+      setSelectionBubble(null);
+      return;
+    }
+
+    const range = rememberRange();
+    if (!range) {
+      setSelectionBubble(null);
+      return;
+    }
 
     const blocks = existingSelectedBlocks(editor, range);
     const fallback = topLevelBlock(editor, selection.anchorNode);
@@ -247,12 +267,37 @@ export function LetterRichTextEditor({
       columns,
       list,
     });
+
+    if (range.collapsed || !selection.toString().trim()) {
+      setSelectionBubble(null);
+      return;
+    }
+
+    const rect = range.getBoundingClientRect();
+    if (!rect.width && !rect.height) {
+      setSelectionBubble(null);
+      return;
+    }
+
+    const placement: SelectionBubble["placement"] = rect.top >= 64 ? "above" : "below";
+    const center = rect.left + rect.width / 2;
+    setSelectionBubble({
+      left: Math.min(Math.max(center, 92), Math.max(92, window.innerWidth - 92)),
+      top: placement === "above" ? rect.top - 10 : rect.bottom + 10,
+      placement,
+    });
   };
 
   useEffect(() => {
     const onSelectionChange = () => readToolbarState();
     document.addEventListener("selectionchange", onSelectionChange);
-    return () => document.removeEventListener("selectionchange", onSelectionChange);
+    window.addEventListener("resize", onSelectionChange);
+    window.addEventListener("scroll", onSelectionChange, true);
+    return () => {
+      document.removeEventListener("selectionchange", onSelectionChange);
+      window.removeEventListener("resize", onSelectionChange);
+      window.removeEventListener("scroll", onSelectionChange, true);
+    };
   });
 
   const emit = () => {
@@ -393,51 +438,67 @@ export function LetterRichTextEditor({
   return (
     <div className="grid gap-1.5">
       <span className="text-xs font-medium text-foreground">Brieftext</span>
+      {selectionBubble ? (
+        <div
+          data-letter-selection-toolbar
+          role="toolbar"
+          aria-label="Textauswahl formatieren"
+          className="fixed z-[80] flex items-center gap-1 rounded-xl border bg-popover p-1 shadow-xl"
+          style={{
+            left: selectionBubble.left,
+            top: selectionBubble.top,
+            transform:
+              selectionBubble.placement === "above"
+                ? "translate(-50%, -100%)"
+                : "translate(-50%, 0)",
+          }}
+        >
+          <button
+            type="button"
+            className={`${toolClass} border-0 px-2 py-1`}
+            aria-label="Formatierung entfernen"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => command("removeFormat")}
+          >
+            Text
+          </button>
+          <span aria-hidden="true" className="mx-0.5 h-6 w-px bg-border" />
+          <button
+            type="button"
+            className={`${toolClass} border-0 px-2 py-1 font-bold ${toolbar.bold ? activeToolClass : ""}`}
+            aria-label="Fett"
+            aria-pressed={toolbar.bold}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => command("bold")}
+          >
+            B
+          </button>
+          <button
+            type="button"
+            className={`${toolClass} border-0 px-2 py-1 italic ${toolbar.italic ? activeToolClass : ""}`}
+            aria-label="Kursiv"
+            aria-pressed={toolbar.italic}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => command("italic")}
+          >
+            I
+          </button>
+          <button
+            type="button"
+            className={`${toolClass} border-0 px-2 py-1 underline ${toolbar.underline ? activeToolClass : ""}`}
+            aria-label="Unterstrichen"
+            aria-pressed={toolbar.underline}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => command("underline")}
+          >
+            U
+          </button>
+        </div>
+      ) : null}
       <div
         data-letter-rich-toolbar
         className="relative flex flex-wrap gap-1.5 rounded-t-md border border-b-0 bg-muted/30 p-2"
       >
-        <button
-          type="button"
-          className={toolClass}
-          aria-label="Formatierung entfernen"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => command("removeFormat")}
-        >
-          Normal
-        </button>
-        <button
-          type="button"
-          className={`${toolClass} font-bold ${toolbar.bold ? activeToolClass : ""}`}
-          aria-label="Fett"
-          aria-pressed={toolbar.bold}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => command("bold")}
-        >
-          B
-        </button>
-        <button
-          type="button"
-          className={`${toolClass} italic ${toolbar.italic ? activeToolClass : ""}`}
-          aria-label="Kursiv"
-          aria-pressed={toolbar.italic}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => command("italic")}
-        >
-          I
-        </button>
-        <button
-          type="button"
-          className={`${toolClass} underline ${toolbar.underline ? activeToolClass : ""}`}
-          aria-label="Unterstrichen"
-          aria-pressed={toolbar.underline}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => command("underline")}
-        >
-          U
-        </button>
-
-        <span aria-hidden="true" className="mx-0.5 h-7 w-px self-center bg-border" />
         <TextAlignmentControl
           value={toolbar.align}
           onChange={setAlignment}
@@ -598,9 +659,10 @@ export function LetterRichTextEditor({
         />
       </div>
       <p className="text-[11px] leading-relaxed text-muted-foreground">
-        Wie in Word: Fett, Kursiv, Unterstrichen, Ausrichtung, Spalten und Listen gelten für die
-        aktuelle Auswahl oder den aktuellen Absatz. Neue Briefabsätze sind standardmässig im
-        Blocksatz. Tabellen werden beim aktuellen Absatz eingefügt.
+        Text markieren: Fett, Kursiv, Unterstrichen und Formatierung entfernen erscheinen direkt an
+        der Auswahl. Ausrichtung, Spalten und Listen gelten für den aktuellen Absatz. Neue
+        Briefabsätze sind standardmässig im Blocksatz. Tabellen werden beim aktuellen Absatz
+        eingefügt.
       </p>
     </div>
   );
