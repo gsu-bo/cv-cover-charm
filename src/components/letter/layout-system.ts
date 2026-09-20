@@ -163,7 +163,11 @@ export function letterFooterHeightMm(
 }
 
 function requestedHeaderMode(design: LetterDesign, context: LetterPageContext): LetterHeaderMode {
-  return context.chromeOptions?.headerMode ?? design.headerMode ?? defaultHeaderModeForTemplate(design.template);
+  return (
+    context.chromeOptions?.headerMode ??
+    design.headerMode ??
+    defaultHeaderModeForTemplate(design.template)
+  );
 }
 
 function requestedFooterMode(design: LetterDesign, context: LetterPageContext): LetterFooterMode {
@@ -179,7 +183,10 @@ function effectiveHeaderMode(
   context: LetterPageContext,
 ): LetterHeaderMode {
   if (context.chromeOptions) {
-    return effectiveDossierHeaderModeForOptions(context.chromeOptions, pageIndex) as LetterHeaderMode;
+    return effectiveDossierHeaderModeForOptions(
+      context.chromeOptions,
+      pageIndex,
+    ) as LetterHeaderMode;
   }
   return design.headerMode ?? defaultHeaderModeForTemplate(design.template);
 }
@@ -357,7 +364,9 @@ export function letterDefaultPageMargins(
   const contentMargins: DossierPageMargins = {
     left: insets.left,
     right: insets.right,
-    top: letterContentTopMm(design, pageIndex, headerMode, context) + letterHeaderGapMm(headerMode, context),
+    top:
+      letterContentTopMm(design, pageIndex, headerMode, context) +
+      letterHeaderGapMm(headerMode, context),
     bottom:
       footerMode === "none"
         ? 10
