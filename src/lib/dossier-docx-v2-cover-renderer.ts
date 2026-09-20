@@ -11,7 +11,7 @@ const xmlEscape = (value: string) =>
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
+    .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
 const wordHex = (value: string) => value.replace(/^#/, "").toUpperCase();
 
