@@ -136,3 +136,31 @@
   white-space: normal;
   text-overflow: clip;
 }
+
+/* CV/letter field typography is stored outside the form values so the existing
+ * data contracts stay backward-compatible. These attributes are also applied
+ * to the A4 preview and hidden PDF canvases; keeping the rules global makes the
+ * selected B/I/U choice visible after the contextual bubble closes. */
+[data-dossier-field-bold="true"] {
+  font-weight: 700 !important;
+}
+
+[data-dossier-field-bold="false"] {
+  font-weight: 400 !important;
+}
+
+[data-dossier-field-italic="true"] {
+  font-style: italic !important;
+}
+
+[data-dossier-field-italic="false"] {
+  font-style: normal !important;
+}
+
+[data-dossier-field-underline="true"] {
+  text-decoration: underline !important;
+}
+
+[data-dossier-field-underline="false"] {
+  text-decoration: none !important;
+}

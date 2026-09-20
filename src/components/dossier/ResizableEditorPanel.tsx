@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { ContextualFieldTypography } from "./ContextualFieldTypography";
 import "./EditorPanelIntro.css";
 
 const STORAGE_KEY = "bewerbungsdossier:editor-panel-width";
@@ -88,6 +89,8 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
       >
         {children}
       </aside>
+
+      <ContextualFieldTypography />
 
       {open ? (
         <div
