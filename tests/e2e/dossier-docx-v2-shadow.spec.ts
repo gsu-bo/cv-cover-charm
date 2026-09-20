@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { mkdir, writeFile } from "node:fs/promises";
 
 const BASE_URL = "http://127.0.0.1:4173";
+const SHADOW_ARTIFACT_DIR = "artifacts/dossier-docx-v2-shadow";
 
 const COLORS = {
   freundlich: {
@@ -20,6 +22,15 @@ const COLORS = {
 } as const;
 
 type Template = keyof typeof COLORS;
+
+type ShadowResult = {
+  size: number;
+  documentXml: string;
+  coreXml: string;
+  mediaNames: string[];
+  pageBreakCount: number;
+  base64: string;
+};
 
 async function seed(page: import("@playwright/test").Page, template: Template, long = false) {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
@@ -162,7 +173,7 @@ async function seed(page: import("@playwright/test").Page, template: Template, l
   await page.waitForLoadState("networkidle");
 }
 
-async function generateShadow(page: import("@playwright/test").Page) {
+async function generateShadow(page: import("@playwright/test").Page): Promise<ShadowResult> {
   return page.evaluate(async () => {
     const documentModule = await import("/src/lib/dossier-pdf-document.ts");
     const previewModule = await import("/src/lib/dossier-docx-v2-preview.ts");
@@ -180,10 +191,8 @@ async function generateShadow(page: import("@playwright/test").Page) {
     if (!cover || !letter || !cv) throw new Error("DOCX V2 shadow fixture incomplete");
 
     const blob = await previewModule.createDossierDocxV2FlowPreviewBlob(cover, letter, cv);
-    const entries = packageModule.readStoredDocxEntries(
-      new Uint8Array(await blob.arrayBuffer()),
-      "DOCX V2 E2E",
-    );
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const entries = packageModule.readStoredDocxEntries(bytes, "DOCX V2 E2E");
     const decoder = new TextDecoder();
     const text = (name: string) => {
       const entry = entries.find((candidate) => candidate.name === name);
@@ -191,6 +200,11 @@ async function generateShadow(page: import("@playwright/test").Page) {
     };
     const documentXml = text("word/document.xml");
     const coreXml = text("docProps/core.xml");
+    let binary = "";
+    const chunkSize = 0x8000;
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+    }
     return {
       size: blob.size,
       documentXml,
@@ -199,16 +213,33 @@ async function generateShadow(page: import("@playwright/test").Page) {
         .map((entry) => entry.name)
         .filter((name) => name.startsWith("word/media/docx-v2-flow-cv-artwork-p")),
       pageBreakCount: (documentXml.match(/<w:br w:type="page"\/>/g) ?? []).length,
+      base64: btoa(binary),
     };
   });
+}
+
+async function saveShadow(result: ShadowResult, fileName: string) {
+  await mkdir(SHADOW_ARTIFACT_DIR, { recursive: true });
+  await writeFile(`${SHADOW_ARTIFACT_DIR}/${fileName}`, Buffer.from(result.base64, "base64"));
 }
 
 test.describe("DOCX V2 shadow browser contract", () => {
   test.setTimeout(120_000);
 
+  test("Warm produces a real V2 shadow DOCX artifact", async ({ page }) => {
+    await seed(page, "freundlich");
+    const result = await generateShadow(page);
+    await saveShadow(result, "warm-shadow.docx");
+    expect(result.size).toBeGreaterThan(2_000);
+    expect(result.documentXml).toContain("docx-v2-");
+    expect(result.documentXml).toContain("Lea");
+    expect(result.coreXml).toContain("Bewerbungsdossier – Warm");
+  });
+
   test("Neon is rebuilt by V2 without leaking Warm package identity", async ({ page }) => {
     await seed(page, "neon");
     const result = await generateShadow(page);
+    await saveShadow(result, "neon-shadow.docx");
     expect(result.size).toBeGreaterThan(2_000);
     expect(result.documentXml).toContain("docx-v2-");
     expect(result.documentXml).toContain("Lea");
@@ -219,6 +250,7 @@ test.describe("DOCX V2 shadow browser contract", () => {
   test("measured multi-page Letter/CV emits explicit browser-derived Word page breaks", async ({ page }) => {
     await seed(page, "freundlich", true);
     const result = await generateShadow(page);
+    await saveShadow(result, "warm-long-shadow.docx");
     expect(result.size).toBeGreaterThan(2_000);
     expect(result.pageBreakCount).toBeGreaterThanOrEqual(2);
     expect(result.documentXml).toContain("Absatz 1:");
@@ -253,6 +285,7 @@ test.describe("DOCX V2 shadow browser contract", () => {
     await page.waitForLoadState("networkidle");
 
     const result = await generateShadow(page);
+    await saveShadow(result, "modern-shadow.docx");
     expect(result.documentXml).toContain("cv-main-p1-grid-");
     expect(result.documentXml).toContain("<w:tbl>");
     expect(result.documentXml).toContain('behindDoc="1"');
