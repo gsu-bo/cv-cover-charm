@@ -22,14 +22,17 @@ function compactChromeState() {
 }
 
 async function openChromeControls(page: Page) {
+  await page.locator('button[data-editor-ready="true"]').waitFor({ state: "visible" });
   const section = page
     .locator("[data-editor-section-toggle]")
     .filter({ hasText: "Header & Footer" })
     .first();
   await expect(section).toBeVisible();
   if ((await section.getAttribute("aria-expanded")) !== "true") await section.click();
+  await expect(section).toHaveAttribute("aria-expanded", "true");
 
   const controls = page.locator('[data-dossier-chrome-controls="cv"]');
+  await expect(controls).toHaveCount(1);
   await expect(controls).toBeVisible();
   return { section, controls };
 }
@@ -52,7 +55,7 @@ test.describe("Dev Tools keyboard shortcuts", () => {
   test("Ctrl+Down advances the visible compact Header dropdown and Ctrl+Up reverses it", async ({
     page,
   }) => {
-    await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${BASE_URL}/lebenslauf?qa=1`, { waitUntil: "domcontentloaded" });
     await page.evaluate(
       ({ key, state }) => {
         localStorage.setItem(key, JSON.stringify(state));
