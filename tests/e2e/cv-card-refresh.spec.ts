@@ -144,9 +144,34 @@ async function setMotifPercent(slider: Locator, percent: number) {
 }
 
 async function setRangeValue(slider: Locator, value: number) {
+  const range = await slider.evaluate((node) => {
+    if (!(node instanceof HTMLInputElement) || node.type !== "range") {
+      throw new Error("setRangeValue expects an input[type=range]");
+    }
+    return {
+      min: Number(node.min || "0"),
+      max: Number(node.max || "100"),
+      step: node.step === "any" ? 1 : Number(node.step || "1"),
+    };
+  });
+  if (
+    !Number.isFinite(range.min) ||
+    !Number.isFinite(range.max) ||
+    !Number.isFinite(range.step) ||
+    range.step <= 0 ||
+    value < range.min ||
+    value > range.max
+  ) {
+    throw new Error(`Range target ${value} is outside ${range.min}..${range.max}`);
+  }
+  const steps = Math.round((value - range.min) / range.step);
+  if (Math.abs(range.min + steps * range.step - value) > 1e-9) {
+    throw new Error(`Range target ${value} does not align to step ${range.step}`);
+  }
+
   await slider.focus();
   await slider.press("Home");
-  for (let current = 0; current < value; current += 1) {
+  for (let current = 0; current < steps; current += 1) {
     await slider.press("ArrowRight");
   }
 }

@@ -165,6 +165,18 @@ export function DossierHeaderFooterChrome({
       : headerMode === "contact"
         ? resolveTemplateChromeOptions(template, colors, { ...options, headerMode })
         : visualOptions;
+  const templateHeaderVisualOptions = resolveTemplateChromeOptions(template, colors, {
+    ...options,
+    headerBackgroundColor: null,
+    headerGradientColor: null,
+  });
+  const hasHeaderSurface = Boolean(options.headerBackgroundColor || options.headerGradientColor);
+  const headerHasCustomSurface =
+    hasHeaderSurface &&
+    (normalizedHex(options.headerBackgroundColor) !==
+      normalizedHex(templateHeaderVisualOptions.headerBackgroundColor) ||
+      normalizedHex(options.headerGradientColor) !==
+        normalizedHex(templateHeaderVisualOptions.headerGradientColor));
   const continuationContact = hasReducedContinuationHeader(options, pageIndex);
   const sourcePalette = cvPalette(colors);
   const primary =
@@ -261,9 +273,7 @@ export function DossierHeaderFooterChrome({
     <div
       data-dossier-chrome={scope}
       data-dossier-template-chrome={template}
-      data-dossier-header-custom-surface={
-        options.headerBackgroundColor || options.headerGradientColor ? "true" : "false"
-      }
+      data-dossier-header-custom-surface={headerHasCustomSurface ? "true" : "false"}
       data-dossier-footer-custom-surface={
         options.footerBackgroundColor || options.footerGradientColor ? "true" : "false"
       }

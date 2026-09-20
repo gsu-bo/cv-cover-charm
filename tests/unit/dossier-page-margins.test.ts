@@ -159,6 +159,19 @@ describe("configurable CV and motivation-letter page margins", () => {
     ).toEqual({ top: 37, right: 15, bottom: 15, left: 15 });
   });
 
+  test("Neon first-page headroom stays shared by default and custom-margin geometry", () => {
+    const noChrome = {
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      headerMode: "none" as const,
+      footerMode: "none" as const,
+    };
+    const frame = cvFrameFor("neon");
+
+    expect(cvDefaultContentBox(frame, 0, "classic", undefined, noChrome).top).toBe(15);
+    expect(cvDefaultContentBox(frame, 1, "classic", undefined, noChrome).top).toBe(23);
+    expect(cvSafePageMarginMinimums(frame, 0, "classic", undefined, noChrome).top).toBe(15);
+  });
+
   test("wide structural sidebars can still be enlarged above their safe minimum", () => {
     const minimums = cvSafePageMarginMinimums(
       cvFrameFor("klassisch"),

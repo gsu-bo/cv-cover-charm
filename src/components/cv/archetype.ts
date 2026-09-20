@@ -5,6 +5,7 @@ import {
   dossierFooterVisualHeightMmForOptions,
   dossierHeaderContentTopMmForOptions,
   dossierHeaderVisualHeightMmForOptions,
+  effectiveDossierHeaderModeForOptions,
   type DossierChromeOptions,
 } from "@/lib/dossier-chrome";
 import {
@@ -34,6 +35,7 @@ export type CvFrame = {
   footRule: boolean;
   cardInsetMm: number;
   cardRadiusMm: number;
+  firstPageContentTopMm: number | null;
   borderInsetMm: number;
   borderDouble: boolean;
 };
@@ -48,6 +50,7 @@ const base: CvFrame = {
   footRule: false,
   cardInsetMm: 0,
   cardRadiusMm: 0,
+  firstPageContentTopMm: null,
   borderInsetMm: 0,
   borderDouble: false,
 };
@@ -67,11 +70,16 @@ const band = (headFirstMm: number, extra: Partial<CvFrame> = {}): CvFrame => ({
   ...extra,
 });
 
-const card = (cardInsetMm: number, cardRadiusMm: number): CvFrame => ({
+const card = (
+  cardInsetMm: number,
+  cardRadiusMm: number,
+  extra: Partial<CvFrame> = {},
+): CvFrame => ({
   ...base,
   id: "card",
   cardInsetMm,
   cardRadiusMm,
+  ...extra,
 });
 
 const quiet = (borderInsetMm: number, extra: Partial<CvFrame> = {}): CvFrame => ({
@@ -101,7 +109,7 @@ const FRAMES: Record<TemplateId, CvFrame> = {
 
   citrus: card(12, 8),
   verlauf: card(12, 6),
-  neon: card(12, 6),
+  neon: card(12, 6, { firstPageContentTopMm: 15 }),
 
   klassisch: quiet(10),
   edel: quiet(12, { borderDouble: true }),
@@ -213,11 +221,17 @@ export function cvDefaultContentBox(
 
   if (frame.id === "card") {
     const inset = frame.cardInsetMm + 11;
+    const contentTop =
+      pageIndex === 0 &&
+      frame.firstPageContentTopMm !== null &&
+      effectiveDossierHeaderModeForOptions(chrome, pageIndex) === "none"
+        ? frame.firstPageContentTopMm
+        : Math.max(top, inset);
     const side = sidebarWidthMm(frame, layout, sidebarPct);
     return {
       left: side > 0 ? frame.cardInsetMm + side + GAP : inset,
       right: inset,
-      top: Math.max(top, inset),
+      top: contentTop,
       bottom: Math.max(bottom, inset),
     };
   }
@@ -261,10 +275,16 @@ export function cvSafePageMarginMinimums(
 
   if (frame.id === "card") {
     const edge = frame.cardInsetMm + 7;
+    const contentTopEdge =
+      pageIndex === 0 &&
+      frame.firstPageContentTopMm !== null &&
+      effectiveDossierHeaderModeForOptions(chrome, pageIndex) === "none"
+        ? frame.firstPageContentTopMm
+        : Math.max(top, edge);
     return {
       left: roundHalfMm(side > 0 ? frame.cardInsetMm + side + GAP : edge),
       right: roundHalfMm(edge),
-      top: roundHalfMm(Math.max(top, edge)),
+      top: roundHalfMm(contentTopEdge),
       bottom: roundHalfMm(Math.max(bottom, edge)),
     };
   }
