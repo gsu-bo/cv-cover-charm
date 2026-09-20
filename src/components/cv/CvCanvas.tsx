@@ -6,6 +6,7 @@ import {
   type ComponentProps,
   type CSSProperties,
 } from "react";
+import { FONT_STACKS } from "@/components/cover/types";
 import {
   DEFAULT_DOSSIER_CHROME_OPTIONS,
   type DossierChromeContact,
@@ -21,8 +22,13 @@ import { getCvTextAlignment, subscribeCvTextAlignment } from "./text-alignment";
 import { cvContentBox, cvFrameFor } from "./archetype";
 import { CV_LAYOUT_EVENT } from "./layout";
 import { CvCanvas as BaseCvCanvas } from "./CvCanvasBase";
-import { resolveCitrusRubricOptions } from "./citrus-rubric";
-import type { CvData, CvDesign } from "./types";
+import { resolveCvRubricOptions } from "./citrus-rubric";
+import {
+  CV_NAME_FONT_SIZE_MAX,
+  CV_NAME_FONT_SIZE_MIN,
+  type CvData,
+  type CvDesign,
+} from "./types";
 import "@/components/dossier/edel-stationery.css";
 import "@/components/dossier/human-polish.css";
 import "@/components/dossier/legacy-template-refinements.css";
@@ -108,7 +114,7 @@ export function CvCanvas({
     [chromeContact, localContact],
   );
   const design = useMemo(() => cvDesignWithFullSectionRules(props.design), [props.design]);
-  const citrusRubric = useMemo(() => resolveCitrusRubricOptions(design), [design]);
+  const rubric = useMemo(() => resolveCvRubricOptions(design), [design]);
   const resolvedChromeOptions = useMemo(
     () => resolveTemplateChromeOptions(design.template, design.colors, chromeOptions),
     [chromeOptions, design.colors, design.template],
@@ -155,19 +161,37 @@ export function CvCanvas({
   const primary = design.colors.primary ?? design.colors.accent ?? design.colors.ink ?? "#111111";
   const secondary = design.colors.secondary ?? design.colors.accent ?? primary;
   const tertiary = design.colors.tertiary ?? design.colors.accent ?? secondary;
+  const nameStyle = props.data.person.nameStyle;
+  const nameFontSizePt =
+    typeof nameStyle?.fontSizePt === "number" && Number.isFinite(nameStyle.fontSizePt)
+      ? Math.max(CV_NAME_FONT_SIZE_MIN, Math.min(CV_NAME_FONT_SIZE_MAX, nameStyle.fontSizePt))
+      : undefined;
+  const nameColor =
+    typeof nameStyle?.color === "string" && /^#[0-9a-f]{6}$/i.test(nameStyle.color.trim())
+      ? nameStyle.color.trim()
+      : undefined;
   const geometryStyle = {
     display: "contents",
     "--cv-classic-main-left": `${classicBox.left}mm`,
     "--cv-classic-main-right": `${classicBox.right}mm`,
     "--cv-modern-main-left": `${modernBox.left}mm`,
     "--cv-modern-main-right": `${modernBox.right}mm`,
-    "--cv-citrus-rubric-x": `${citrusRubric.horizontalMm}mm`,
-    "--cv-citrus-content-indent": `${citrusRubric.contentIndentMm}mm`,
+    "--cv-rubric-x": `${rubric.horizontalMm}mm`,
+    "--cv-rubric-content-indent": `${rubric.contentIndentMm}mm`,
     "--cover-primary": primary,
     "--cover-secondary": secondary,
     "--cover-tertiary": tertiary,
     "--cover-accent": design.colors.accent ?? secondary,
     "--cover-ink": design.colors.ink ?? "#111111",
+    "--cv-user-name-font": nameStyle?.font ? FONT_STACKS[nameStyle.font] : undefined,
+    "--cv-user-name-size": nameFontSizePt ? `${nameFontSizePt}pt` : undefined,
+    "--cv-user-name-color": nameColor,
+    "--cv-user-name-weight":
+      nameStyle?.bold === undefined ? undefined : nameStyle.bold ? "700" : "400",
+    "--cv-user-name-style":
+      nameStyle?.italic === undefined ? undefined : nameStyle.italic ? "italic" : "normal",
+    "--cv-user-name-decoration":
+      nameStyle?.underline === undefined ? undefined : nameStyle.underline ? "underline" : "none",
     // The generic background-motif slider owns only decorative motif intensity.
     // Keep the value as a CSS variable so preview and hidden PDF canvases use
     // the same live value without changing structural sheet geometry.
@@ -180,12 +204,23 @@ export function CvCanvas({
       data-cv-body-align={bodyAlignment}
       data-cv-heading-rule={design.headingRule}
       data-cv-user-heading-rule={props.design.headingRule === "full" ? "full" : undefined}
+      data-cv-user-name-font={nameStyle?.font ? "true" : undefined}
+      data-cv-user-name-size={nameFontSizePt !== undefined ? "true" : undefined}
+      data-cv-user-name-color={nameColor ? "true" : undefined}
+      data-cv-user-name-weight={nameStyle?.bold === undefined ? undefined : "true"}
+      data-cv-user-name-style={nameStyle?.italic === undefined ? undefined : "true"}
+      data-cv-user-name-decoration={nameStyle?.underline === undefined ? undefined : "true"}
+      data-cv-rubric-pill={rubric.pill ? "true" : "false"}
+      data-cv-rubric-offset={rubric.horizontalOverride ? "custom" : undefined}
+      data-cv-rubric-indent={rubric.contentIndentOverride ? "custom" : undefined}
+      data-cv-rubric-x={rubric.horizontalMm}
+      data-cv-rubric-content-indent={rubric.contentIndentMm}
       data-cv-citrus-pill={
-        design.template === "citrus" ? (citrusRubric.pill ? "true" : "false") : undefined
+        design.template === "citrus" ? (rubric.pill ? "true" : "false") : undefined
       }
-      data-cv-citrus-rubric-x={design.template === "citrus" ? citrusRubric.horizontalMm : undefined}
+      data-cv-citrus-rubric-x={design.template === "citrus" ? rubric.horizontalMm : undefined}
       data-cv-citrus-content-indent={
-        design.template === "citrus" ? citrusRubric.contentIndentMm : undefined
+        design.template === "citrus" ? rubric.contentIndentMm : undefined
       }
     >
       <BaseCvCanvas

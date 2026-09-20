@@ -5,6 +5,7 @@ import { Section } from "@/components/cover/Section";
 import { ThemeToggle } from "@/components/cover/ThemeToggle";
 import { FileDown, History, RotateCcw, Sparkles } from "lucide-react";
 import { EditorMenuLabel } from "@/components/dossier/EditorMenuLabel";
+import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";
 import { useForeignWrite, usePageVisible } from "@/lib/autosave";
 import {
   HISTORY_KEYS,
@@ -20,14 +21,14 @@ import { ResizableEditorPanel } from "@/components/dossier/ResizableEditorPanel"
 import { AttachmentListEditor } from "@/components/dossier/AttachmentListEditor";
 import { SaveStatus, type SaveState } from "@/components/dossier/SaveStatus";
 import { LetterDocument, type LetterPaginationState } from "@/components/letter/LetterDocument";
-import { LetterLayoutControls } from "@/components/letter/LetterLayoutControls";
+import {
+  LetterLayoutControls,
+  legacyLetterChromePatch,
+} from "@/components/letter/LetterLayoutControls";
 import { LetterRichTextEditor } from "@/components/letter/LetterRichTextEditor";
 import { LetterTemplatePicker } from "@/components/letter/LetterTemplatePicker";
 import { useTemplateQaTemplateSwitch } from "@/lib/template-qa-switch";
-import {
-  resolveLetterPalette,
-  resolveLetterPaperColor,
-} from "@/components/letter/letter-paper";
+import { resolveLetterPalette, resolveLetterPaperColor } from "@/components/letter/letter-paper";
 import { DocumentTextColorControl } from "@/components/dossier/DocumentTextColorControl";
 import { downloadLetterPdf } from "@/lib/dossier-pdf";
 import { readPhoto } from "@/lib/image";
@@ -211,6 +212,7 @@ function Anschreiben() {
     absender: false,
     empfaenger: false,
     layout: false,
+    chrome: false,
     brief: true,
     beilagen: false,
     vorlage: false,
@@ -1070,16 +1072,32 @@ function Anschreiben() {
               </div>
             </Section>
 
+            <Section title="Vorlage" open={open.vorlage} onToggle={() => toggle("vorlage")}>
+              <LetterTemplatePicker
+                value={design.template}
+                onChange={changeTemplate}
+                motifOpacity={design.bgOpacity}
+                onMotifOpacityChange={(bgOpacity) =>
+                  setDesign((current) => ({ ...current, bgOpacity }))
+                }
+              />
+            </Section>
+
+            <Section title="Header & Footer" open={open.chrome} onToggle={() => toggle("chrome")}>
+              <DossierChromeControls
+                scope="letter"
+                onOptionsChange={(patch) =>
+                  setDesign((current) => ({ ...current, ...legacyLetterChromePatch(patch) }))
+                }
+              />
+            </Section>
+
             <Section title="Layout" open={open.layout} onToggle={() => toggle("layout")}>
               <LetterLayoutControls
                 data={data}
                 design={design}
                 onChange={(value) => setDesign((current) => ({ ...current, ...value }))}
               />
-            </Section>
-
-            <Section title="Vorlage" open={open.vorlage} onToggle={() => toggle("vorlage")}>
-              <LetterTemplatePicker value={design.template} onChange={changeTemplate} />
             </Section>
 
             <Section title="Farben" open={open.farben} onToggle={() => toggle("farben")}>
@@ -1125,9 +1143,7 @@ function Anschreiben() {
                   customValue={design.textColor}
                   paperColor={resolveLetterPaperColor(design)}
                   description="Gilt für den normalen Text im Anschreiben. Datum und Gestaltungselemente behalten ihre eigene Farbe."
-                  onChange={(textColor) =>
-                    setDesign((current) => ({ ...current, textColor }))
-                  }
+                  onChange={(textColor) => setDesign((current) => ({ ...current, textColor }))}
                   onAuto={() => setDesign((current) => ({ ...current, textColor: null }))}
                 />
 

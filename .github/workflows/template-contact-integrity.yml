@@ -6,6 +6,7 @@ on:
     branches:
       - dev
       - render
+      - main
     paths:
       - "tests/e2e/template-contact-integrity.spec.ts"
       - ".github/workflows/template-contact-integrity.yml"

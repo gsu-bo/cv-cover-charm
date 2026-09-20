@@ -25,7 +25,6 @@ function blockStyle(id: string) {
 
 describe("template typography contracts", () => {
   test.each([
-    ["frame", "executive", "serif", "Palatino"],
     ["forestFlow", "executive", "serif", "Palatino"],
     ["monoLuxe", "editorial", "serif", "Georgia"],
     ["edge", "modern", "sans", "Helvetica"],

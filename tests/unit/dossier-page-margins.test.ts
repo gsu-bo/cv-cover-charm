@@ -28,6 +28,7 @@ const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta
 
 const control = read("src/components/dossier/DossierPageMarginsControl.tsx");
 const cvPortal = read("src/components/cv/CvTextAlignmentPortal.tsx");
+const cvMargins = read("src/components/cv/CvPageMarginsControl.tsx");
 const cvCanvas = read("src/components/cv/CvCanvas.tsx");
 const cvCanvasBase = read("src/components/cv/CvCanvasBase.tsx");
 const cvLayoutState = read("src/components/cv/layout.ts");
@@ -62,17 +63,21 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(cvContentBox(frame, 0, "classic")).toEqual(expected);
   });
 
-  test("all CV layout variants use the resolved page-margin edges", () => {
+  test("CV renderer owns the resolved page-margin edges while variants stay internal", () => {
     expect(cvCanvas).toContain('"--cv-classic-main-left"');
     expect(cvCanvas).toContain('"--cv-classic-main-right"');
-    expect(cvLayoutVariants).toContain("left: var(--cv-classic-main-left) !important;");
-    expect(cvLayoutVariants).toContain("right: var(--cv-classic-main-right) !important;");
-    expect(cvLayoutVariants).toContain(
+    expect(cvCanvasBase).toContain('left: `${firstBox.left}mm`');
+    expect(cvCanvasBase).toContain('right: `${firstBox.right}mm`');
+    expect(cvCanvasBase).toContain('left: `${box.left}mm`');
+    expect(cvCanvasBase).toContain('right: `${box.right}mm`');
+    expect(cvLayoutVariants).not.toContain(
       "left: max(0mm, calc(var(--cv-classic-main-left) - 11mm)) !important;",
     );
-    expect(cvLayoutOptions).toContain(
+    expect(cvLayoutOptions).not.toContain(
       "right: max(0mm, calc(var(--cv-classic-main-right) - 11mm)) !important;",
     );
+    expect(cvLayoutVariants).toContain("padding-left: 11mm;");
+    expect(cvLayoutOptions).toContain("padding-right: 11mm !important;");
     for (const staleRule of [
       "left: 24mm !important;",
       "left: 30mm !important;",
@@ -116,7 +121,7 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(explicitSetter).toContain("MIRROR_STORAGE_KEY");
   });
 
-  test("CV custom margins respect template and chrome collision minimums", () => {
+  test("CV custom margins respect template structure while chrome reserve stays separate", () => {
     clearDossierPageMargins();
     const frame = cvFrameFor("studio");
     const minimums = cvSafePageMarginMinimums(
@@ -126,19 +131,22 @@ describe("configurable CV and motivation-letter page margins", () => {
       undefined,
       DEFAULT_DOSSIER_CHROME_OPTIONS,
     );
-    expect(minimums).toEqual({ top: 37, right: 5, bottom: 7.5, left: 80 });
+    expect(minimums).toEqual({ top: 5, right: 5, bottom: 5, left: 80 });
     expect(
       clampDossierPageMarginsToMinimums({ top: 5, right: 5, bottom: 5, left: 5 }, minimums),
     ).toEqual(minimums);
 
     setDossierPageMargins("cv", { top: 5, right: 5, bottom: 5, left: 5 });
-    expect(cvContentBox(frame, 0, "classic", undefined, DEFAULT_DOSSIER_CHROME_OPTIONS)).toEqual(
-      minimums,
-    );
+    expect(cvContentBox(frame, 0, "classic", undefined, DEFAULT_DOSSIER_CHROME_OPTIONS)).toEqual({
+      top: 49,
+      right: 5,
+      bottom: 7.4,
+      left: 80,
+    });
     clearDossierPageMargins();
   });
 
-  test("card and framed CV templates retain a text-safe inset", () => {
+  test("card and framed CV templates retain structural margin minimums", () => {
     expect(
       cvSafePageMarginMinimums(
         cvFrameFor("citrus"),
@@ -147,7 +155,7 @@ describe("configurable CV and motivation-letter page margins", () => {
         undefined,
         DEFAULT_DOSSIER_CHROME_OPTIONS,
       ),
-    ).toEqual({ top: 37, right: 19, bottom: 19, left: 19 });
+    ).toEqual({ top: 5, right: 19, bottom: 17, left: 19 });
     expect(
       cvSafePageMarginMinimums(
         cvFrameFor("klassisch"),
@@ -156,7 +164,20 @@ describe("configurable CV and motivation-letter page margins", () => {
         undefined,
         DEFAULT_DOSSIER_CHROME_OPTIONS,
       ),
-    ).toEqual({ top: 37, right: 15, bottom: 15, left: 15 });
+    ).toEqual({ top: 5, right: 15, bottom: 13, left: 15 });
+  });
+
+  test("Neon first-page headroom stays shared by default and custom-margin geometry", () => {
+    const noChrome = {
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      headerMode: "none" as const,
+      footerMode: "none" as const,
+    };
+    const frame = cvFrameFor("neon");
+
+    expect(cvDefaultContentBox(frame, 0, "classic", undefined, noChrome).top).toBe(15);
+    expect(cvDefaultContentBox(frame, 1, "classic", undefined, noChrome).top).toBe(23);
+    expect(cvSafePageMarginMinimums(frame, 0, "classic", undefined, noChrome).top).toBe(15);
   });
 
   test("wide structural sidebars can still be enlarged above their safe minimum", () => {
@@ -175,7 +196,7 @@ describe("configurable CV and motivation-letter page margins", () => {
     ).toBe(110);
   });
 
-  test("motivation-letter custom margins protect header, footer and template structure", () => {
+  test("motivation-letter custom margins compose with header and footer reserve", () => {
     clearDossierPageMargins();
     const design = {
       ...emptyLetterDesign(),
@@ -183,8 +204,7 @@ describe("configurable CV and motivation-letter page margins", () => {
       footerMode: "compact" as const,
     };
     const minimums = letterSafePageMarginMinimums(DEMO_LETTER, design);
-    expect(minimums.top).toBe(27);
-    expect(minimums.bottom).toBeGreaterThanOrEqual(7.5);
+    expect(minimums).toEqual({ top: 5, right: 5, bottom: 5, left: 5 });
 
     setDossierPageMargins("letter", { top: 5, right: 5, bottom: 5, left: 5 });
     const content = letterPageGeometry(DEMO_LETTER, design).content;
@@ -193,43 +213,44 @@ describe("configurable CV and motivation-letter page margins", () => {
       right: content.right,
       bottom: content.bottom,
       left: content.left,
-    }).toEqual(minimums);
+    }).toEqual({ top: 27, right: 5, bottom: 7.4, left: 5 });
     clearDossierPageMargins();
   });
 
-  test("Warm compact masthead remains a hard first-page safety zone", () => {
+  test("Warm compact masthead is a shared reserve, not a second page-margin minimum", () => {
     const design = {
       ...emptyLetterDesign(),
       template: "freundlich" as const,
       headerMode: "compact" as const,
     };
-    expect(letterSafePageMarginMinimums(DEMO_LETTER, design).top).toBe(57);
+    expect(letterSafePageMarginMinimums(DEMO_LETTER, design).top).toBe(5);
+
+    setDossierPageMargins("letter", { top: 5, right: 20, bottom: 10, left: 20 });
+    expect(letterPageGeometry(DEMO_LETTER, design).content.top).toBe(57);
+    clearDossierPageMargins();
   });
 
-  test("letter controls derive safety limits from the current letter data", () => {
-    const design = { ...emptyLetterDesign(), footerMode: "attachments" as const };
-    const short = letterSafePageMarginMinimums({ ...DEMO_LETTER, beilagen: ["Zeugnis"] }, design);
-    const long = letterSafePageMarginMinimums(
-      { ...DEMO_LETTER, beilagen: ["Sehr lange Beilage ".repeat(30)] },
-      design,
-    );
-    expect(long.bottom).toBeGreaterThan(short.bottom);
-
+  test("letter controls use pure geometry defaults from current data and chrome", () => {
     expect(letterControls).toContain("data: LetterData");
-    expect(letterControls).toContain("currentLetterDefaultMargins(data, design)");
-    expect(letterControls).toContain("letterSafePageMarginMinimums(data, design)");
+    expect(letterControls).toContain("letterDefaultPageMargins(data, design, geometryContext)");
+    expect(letterControls).toContain("letterSafePageMarginMinimums(data, design, geometryContext)");
+    expect(letterControls).toContain("const geometryContext = { chromeOptions }");
+    expect(letterControls).not.toContain("currentLetterDefaultMargins");
     expect(letterControls).not.toContain("DEMO_LETTER");
     expect(letterRoute).toContain("<LetterLayoutControls\n                data={data}");
   });
 
-  test("both editors expose the same secondary collapsed control", () => {
+  test("both editors expose the same secondary collapsed control through their current owners", () => {
     expect(control).toContain("<details");
     expect(control).toContain("Seitenränder");
     expect(control).toContain("Vorlage wiederherstellen");
     for (const label of ["Oben", "Rechts", "Unten", "Links"]) expect(control).toContain(label);
     expect(control).toContain("borderLeftColor: accentColor");
-    expect(cvPortal).toContain('<DossierPageMarginsControl\n          scope="cv"');
-    expect(cvPortal).toContain("minimumMargins={minimumMargins}");
+    expect(cvMargins).toContain("<DossierPageMarginsControl");
+    expect(cvMargins).toContain('scope="cv"');
+    expect(cvMargins).toContain("minimumMargins={minimumMargins}");
+    expect(cvMargins).toContain("defaultMargins={defaultMargins}");
+    expect(cvPortal).not.toContain("DossierPageMarginsControl");
     expect(letterControls).toContain('<DossierPageMarginsControl\n        scope="letter"');
     expect(letterControls).toContain("minimumMargins={minimumMargins}");
   });
@@ -258,12 +279,14 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(read("src/components/cv/archetype.ts")).toContain(
       "const box = cvDefaultContentBox(frame, pageIndex, layout, sidebarPct, chrome);",
     );
-    expect(letterCanvas).toContain("const geometry = letterPageGeometry(data, effectiveDesign, {");
+    expect(letterCanvas).toContain(
+      "const geometry = letterPageGeometry(data, effectiveDesign, { chromeOptions: chrome });",
+    );
     expect(letterCanvas).not.toContain("const baseGeometry = letterPageGeometry");
     expect(control).not.toContain('import "./page-margins.css"');
   });
 
-  test("letter custom top margin is final and never receives the header gap twice", () => {
+  test("letter custom top margin receives the header reserve and configured gap exactly once", () => {
     clearDossierPageMargins();
     const design = { ...emptyLetterDesign(), headerMode: "compact" as const };
     const withoutGap = letterPageGeometry(DEMO_LETTER, design, { headerGapMm: 0 });
@@ -273,17 +296,17 @@ describe("configurable CV and motivation-letter page margins", () => {
     setDossierPageMargins("letter", { top: 30, right: 23, bottom: 17, left: 24 });
     const custom = letterPageGeometry(DEMO_LETTER, design, { headerGapMm: 12 });
     expect(custom.content).toEqual({
-      top: 30,
+      top: 45,
       right: 23,
       bottom: 17,
       left: 24,
       width: 163,
-      height: 250,
+      height: 235,
     });
     clearDossierPageMargins();
   });
 
-  test("CV custom margins remain final when header spacing changes", () => {
+  test("CV custom margins receive shared header and footer reserve exactly once", () => {
     clearDossierPageMargins();
     const frame = cvFrameFor("klassisch");
     const chrome = {
@@ -295,9 +318,9 @@ describe("configurable CV and motivation-letter page margins", () => {
 
     setDossierPageMargins("cv", { top: 72, right: 23, bottom: 17, left: 24 });
     expect(cvContentBox(frame, 0, "classic", 0.3, chrome)).toEqual({
-      top: 72,
+      top: 134,
       right: 23,
-      bottom: 17,
+      bottom: 19.4,
       left: 24,
     });
     clearDossierPageMargins();

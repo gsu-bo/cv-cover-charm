@@ -109,7 +109,7 @@ async function seedCompleteDossier(page: import("@playwright/test").Page) {
 }
 
 test("real browser DOCX gallery covers every Fresh template", async ({ page }) => {
-  // This is a serial 22-template artifact gallery. A healthy run already takes
+  // This is a serial 21-template artifact gallery. A healthy run already takes
   // roughly 24 seconds on GitHub-hosted runners, so the Playwright 30 s default
   // is too tight and can fail mid-gallery under normal runner variance.
   test.setTimeout(90_000);
@@ -117,7 +117,7 @@ test("real browser DOCX gallery covers every Fresh template", async ({ page }) =
   await seedCompleteDossier(page);
   await mkdir(ARTIFACT_DIR, { recursive: true });
 
-  expect(CASES).toHaveLength(22);
+  expect(CASES).toHaveLength(21);
 
   for (const item of CASES) {
     await page.evaluate(({ id, colors }) => {

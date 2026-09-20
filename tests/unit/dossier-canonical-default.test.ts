@@ -21,6 +21,7 @@ import {
   cvPdfDocumentFromSaved,
   letterPdfDocumentFromSaved,
 } from "../../src/lib/dossier-pdf-document";
+import { normalizeActiveTemplateId } from "../../src/components/cover/fresh-templates";
 
 describe("canonical neutral dossier fallback", () => {
   test("one contract owns the fresh template and neutral chrome", () => {
@@ -92,6 +93,18 @@ describe("canonical neutral dossier fallback", () => {
     expect(letter?.design.template).toBe("brief");
     expect(letter?.design.headerMode).toBe("none");
     expect(letter?.design.footerMode).toBe("none");
+    expect(String(cv?.design.template)).toBe("brief");
+    expect(resolveDossierDocxProfile(cover, letter, cv)?.templateId).toBe("brief");
+  });
+
+  test("retired Frame data has one deterministic Brief fallback through PDF and DOCX", () => {
+    const cover = coverPdfDocumentFromSaved({ template: "frame", data: {} });
+    const letter = letterPdfDocumentFromSaved({ data: {}, design: { template: "frame" } });
+    const cv = cvPdfDocumentFromSaved({ data: {}, design: { template: "frame" } });
+
+    expect(normalizeActiveTemplateId("frame")).toBe("brief");
+    expect(String(cover?.template)).toBe("brief");
+    expect(letter?.design.template).toBe("brief");
     expect(String(cv?.design.template)).toBe("brief");
     expect(resolveDossierDocxProfile(cover, letter, cv)?.templateId).toBe("brief");
   });

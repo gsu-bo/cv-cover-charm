@@ -8,7 +8,7 @@ export type FreshTemplateRegistryEntry = {
 };
 
 /**
- * Canonical, side-effect-free definitions for dossier templates 21-42.
+ * Canonical, side-effect-free definitions for active Fresh dossier templates.
  *
  * Runtime registration, renderers, contracts and Node-side tests all derive
  * their Fresh ids/names/default palettes from this module. Keep CSS imports and
@@ -37,18 +37,6 @@ export const FRESH_TEMPLATE_REGISTRY = [
       { key: "secondary", label: "Glow 2", default: "#7dd3fc" },
       { key: "accent", label: "Akzent", default: "#4f46e5" },
       { key: "ink", label: "Text", default: "#172033" },
-    ],
-  },
-  {
-    id: "frame",
-    name: "Frame",
-    description: "Geometrischer Rahmen, ruhig und markant",
-    slots: [
-      { key: "bg", label: "Papier", default: "#f6f3ed" },
-      { key: "primary", label: "Rahmen", default: "#26352f" },
-      { key: "secondary", label: "Kontrast", default: "#d8894a" },
-      { key: "accent", label: "Akzent", default: "#b96b32" },
-      { key: "ink", label: "Text", default: "#1e2722" },
     ],
   },
   {

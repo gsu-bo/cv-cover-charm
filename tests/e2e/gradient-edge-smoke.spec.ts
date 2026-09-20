@@ -25,16 +25,6 @@ const TEMPLATES = [
     },
   },
   {
-    id: "frame",
-    colors: {
-      bg: "#f6f3ed",
-      primary: "#26352f",
-      secondary: "#d8894a",
-      accent: "#b96b32",
-      ink: "#1e2722",
-    },
-  },
-  {
     id: "monoLuxe",
     colors: {
       bg: "#f8f6f1",

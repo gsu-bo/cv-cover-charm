@@ -99,7 +99,9 @@ test.describe("shared CV and motivation-letter font", () => {
     await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
     await page.locator('button[data-editor-ready="true"]').waitFor({ state: "visible" });
 
-    const cvTypographySection = page.getByRole("button", { name: /Schrift und Layout/ });
+    const cvTypographySection = page.locator(
+      '[data-editor-section-title="Schrift"] [data-editor-section-toggle]',
+    );
     if ((await cvTypographySection.getAttribute("aria-expanded")) !== "true") {
       await cvTypographySection.click();
     }

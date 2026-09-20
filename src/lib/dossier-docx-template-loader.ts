@@ -29,7 +29,6 @@ const DOSSIER_DOCX_TEMPLATE_LOADERS = {
   edelDark: () => import("./dossier-docx-templates/edelDark"),
   edge: () => import("./dossier-docx-templates/edge"),
   glow: () => import("./dossier-docx-templates/glow"),
-  frame: () => import("./dossier-docx-templates/frame"),
   monoLuxe: () => import("./dossier-docx-templates/monoLuxe"),
   horizon: () => import("./dossier-docx-templates/horizon"),
   sunrise: () => import("./dossier-docx-templates/sunrise"),

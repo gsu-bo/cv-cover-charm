@@ -272,8 +272,7 @@ export function DossierChromeControls({
                     headerMode: "contact",
                     headerTextLayout: value === "contact-inline" ? "inline" : "stacked",
                     headerHeightMm: null,
-                    ...(value === "contact-inline" &&
-                    (options.headerInlineSeparator == null || options.headerInlineSeparator === "icons")
+                    ...(options.headerInlineSeparator == null || options.headerInlineSeparator === "icons"
                       ? { headerInlineSeparator: "dot" as DossierChromeInlineSeparator }
                       : {}),
                   });
@@ -287,16 +286,16 @@ export function DossierChromeControls({
               className={selectClass}
             >
               <option value="compact">Header kompakt</option>
-              <option value="contact-stacked">Kontaktdaten untereinander</option>
+              <option value="contact-stacked">Kontaktdaten in Zeilen</option>
               <option value="contact-inline">Kontaktdaten waagrecht · getrennt</option>
               <option value="none">Kein Header</option>
             </select>
           </label>
 
           <span className="text-[11px] leading-relaxed text-muted-foreground">
-            Kompakt zeigt nur das Designband. Die Kontaktvarianten integrieren Name,
-            Adresse/Wohnort, Telefon und E-Mail direkt in den farbigen Header. Bei der waagrechten
-            Variante kannst du die Trennung unten auswählen.
+            Kompakt zeigt nur das Designband. „In Zeilen“ zeigt den Namen separat und bündelt
+            Strasse · Ort sowie Telefon · E-Mail. Waagrecht setzt alle Angaben in eine Zeile bzw.
+            lässt sie bei Bedarf umbrechen. Das Trennzeichen kannst du unten wählen.
           </span>
 
           {options.headerMode !== "none" ? (
@@ -435,30 +434,31 @@ export function DossierChromeControls({
                     ))}
                   </div>
 
-                  {options.headerTextLayout === "inline" ? (
-                    <label className="block text-xs font-medium">
-                      Trennung der Angaben
-                      <select
-                        data-dossier-header-inline-separator-control
-                        value={headerInlineSeparator}
-                        onChange={(event) =>
-                          patchOptions({
-                            headerInlineSeparator: event.target
-                              .value as DossierChromeInlineSeparator,
-                          })
-                        }
-                        className={selectClass}
-                      >
-                        <option value="dot">Mittelpunkt ·</option>
-                        <option value="slash">Schrägstrich /</option>
-                        <option value="pipe">Senkrechter Strich |</option>
-                        <option value="space">Leerraum (5 Leerzeichen)</option>
-                      </select>
-                      <span className="mt-1 block text-[11px] font-normal leading-relaxed text-muted-foreground">
-                        Wähle eine ruhige Trennung für die waagrecht angeordneten Kontaktdaten.
-                      </span>
-                    </label>
-                  ) : null}
+                  <label className="block text-xs font-medium">
+                    {options.headerTextLayout === "stacked"
+                      ? "Trennung innerhalb der Kontaktzeilen"
+                      : "Trennung der Angaben"}
+                    <select
+                      data-dossier-header-inline-separator-control
+                      value={headerInlineSeparator}
+                      onChange={(event) =>
+                        patchOptions({
+                          headerInlineSeparator: event.target.value as DossierChromeInlineSeparator,
+                        })
+                      }
+                      className={selectClass}
+                    >
+                      <option value="dot">Mittelpunkt ·</option>
+                      <option value="slash">Schrägstrich /</option>
+                      <option value="pipe">Senkrechter Strich |</option>
+                      <option value="space">Leerraum (5 Leerzeichen)</option>
+                    </select>
+                    <span className="mt-1 block text-[11px] font-normal leading-relaxed text-muted-foreground">
+                      {options.headerTextLayout === "stacked"
+                        ? "Gilt zwischen Strasse und Ort sowie zwischen Telefon und E-Mail."
+                        : "Wähle eine ruhige Trennung für die waagrecht angeordneten Kontaktdaten."}
+                    </span>
+                  </label>
                 </>
               ) : null}
 

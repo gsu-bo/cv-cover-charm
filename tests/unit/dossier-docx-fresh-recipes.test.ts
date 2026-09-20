@@ -18,13 +18,14 @@ function documentsFor(templateId: string) {
 type LightSurface = { contentSurface?: "light" };
 
 describe("Fresh DOCX recipe registry", () => {
-  test("all Fresh templates are connected to an individual Word recipe", () => {
-    expect(FRESH_TEMPLATE_REGISTRY).toHaveLength(22);
+  test("all active Fresh templates are connected to an individual Word recipe", () => {
+    expect(FRESH_TEMPLATE_REGISTRY).toHaveLength(21);
     for (const template of FRESH_TEMPLATE_REGISTRY) {
       const recipe = dossierDocxTemplateRecipe(template.id);
       expect(recipe?.templateId).toBe(template.id);
       expect(recipe?.label).toBe(template.name);
     }
+    expect(dossierDocxTemplateRecipe("frame")).toBeNull();
   });
 
   test("Fresh templates resolve through template-recipe instead of family-fallback", () => {

@@ -8,7 +8,7 @@ import {
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import editorActionMenuCss from "../components/dossier/editor-action-menu.css?url";
@@ -166,13 +166,29 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Keep the powerful layout QA helper out of the normal production UI.
+ * Local Vite development enables it automatically; built render/main deployments
+ * require an explicit ?qa=1 opt-in and still keep the existing code prompt.
+ */
+function TemplateQaGate() {
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    const explicitlyEnabled = new URLSearchParams(window.location.search).get("qa") === "1";
+    setEnabled(import.meta.env.DEV || explicitlyEnabled);
+  }, []);
+
+  return enabled ? <TemplateQaKeyboardSwitch /> : null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
       <DossierHyphenationBridge />
-      <TemplateQaKeyboardSwitch />
+      <TemplateQaGate />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>

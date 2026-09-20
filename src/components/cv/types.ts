@@ -30,6 +30,16 @@ export type CvReferenz = {
   zusatz?: string;
 };
 
+/** Bewusste Überschreibung der Namens-Typografie. Fehlende Werte bleiben vorlagengesteuert. */
+export type CvNameStyle = {
+  font?: FontKey;
+  fontSizePt?: number;
+  color?: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+};
+
 /**
  * Angaben zur Person. Dieselben Felder wie im Titelblatt, damit der Lebenslauf
  * sie übernehmen kann.
@@ -46,6 +56,8 @@ export type CvPerson = {
   /** Zeile unter dem Namen, z. B. "Schülerin, 3. Sek B". */
   untertitel: string;
   foto: string | null;
+  /** Optional, damit ältere gespeicherte CVs ihre Vorlagen-Typografie unverändert behalten. */
+  nameStyle?: CvNameStyle;
 };
 
 /** Welche Abschnitte gibt es und wie heissen sie in der Vorgabe? */
@@ -316,6 +328,14 @@ export type CvDesign = {
   sectionTitleItalic?: boolean;
   sectionTitleUnderline?: boolean;
   sectionTitleMarginBottomPx?: number;
+  /** Shared rubric-title presentation. Missing values preserve template geometry. */
+  sectionTitlePill?: boolean;
+  sectionTitleOffsetMm?: number;
+  sectionContentIndentMm?: number;
+  /** Legacy Citrus-only aliases retained for explicit older user settings. */
+  citrusRubricPill?: boolean;
+  citrusRubricOffsetMm?: number;
+  citrusContentIndentMm?: number;
   /** Breite der Seitenspalte als Anteil der Blattbreite. */
   sidebarPct?: number;
 };
@@ -345,6 +365,15 @@ export const CV_DOC_TITLE_DEFAULTS = {
 export const CV_DOC_TITLE_FONT_SIZE_MIN = 10;
 export const CV_DOC_TITLE_FONT_SIZE_MAX = 48;
 export const CV_DOC_TITLE_MARGIN_BOTTOM_MAX = 100;
+
+export const CV_NAME_STYLE_DEFAULTS = {
+  fontSizePt: 24,
+  bold: true,
+  italic: false,
+  underline: false,
+} as const;
+export const CV_NAME_FONT_SIZE_MIN = 10;
+export const CV_NAME_FONT_SIZE_MAX = 48;
 
 export const CV_SECTION_TITLE_DEFAULTS = {
   fontSizePx: 16,

@@ -1,14 +1,13 @@
 /*
- * DIAGONAL — standalone blue/teal Swiss-editorial template.
+ * DIAGONAL — standalone Swiss-editorial corner template.
  *
- * IMPORTANT: this is a NEW template. It must never replace, alias or restyle
- * Frame. The identity is deliberately simple: two strong corner masses and a
- * broad clean paper diagonal between them. Editable content remains owned by
- * the normal editor defaults so user moves/resizes always win.
+ * Two equal same-colour corner masses frame a broad quiet paper centre. The
+ * cover triangles are intentionally 20% larger than the first iteration so the
+ * lower-right metadata cluster sits fully inside the colour field.
  */
 
 /* -------------------------------------------------------------------------- */
-/* COVER — two large corner masses, broad white diagonal band                 */
+/* COVER — two equal 110.4 x 91.2 mm triangles                               */
 /* -------------------------------------------------------------------------- */
 
 html[data-dossier-template="diagonal"]
@@ -35,8 +34,8 @@ html[data-dossier-template="diagonal"]
   position: absolute;
   left: 0;
   top: 0;
-  width: 92mm;
-  height: 76mm;
+  width: 110.4mm;
+  height: 91.2mm;
   background: var(--cover-primary);
   clip-path: polygon(0 0, 100% 0, 0 100%);
   pointer-events: none;
@@ -49,24 +48,21 @@ html[data-dossier-template="diagonal"]
   right: 0 !important;
   top: auto !important;
   bottom: 0 !important;
-  width: 92mm !important;
-  height: 76mm !important;
-  background: var(--cover-secondary) !important;
+  width: 110.4mm !important;
+  height: 91.2mm !important;
+  background: var(--cover-primary) !important;
   border: 0 !important;
   border-radius: 0 !important;
   clip-path: polygon(100% 0, 100% 100%, 0 100%) !important;
   opacity: 1 !important;
 }
 
-/* No third decorative object: the clean paper diagonal is the third field. */
 html[data-dossier-template="diagonal"]
   [data-dossier-document="cover"]
   [data-fresh-cover-field="accent"] {
   display: none !important;
 }
 
-/* Generic Fresh cleanup must never create presentation offsets for the new
- * cover. Geometry lives in normal block defaults / explicit user overrides. */
 html[data-dossier-template="diagonal"]
   [data-dossier-document="cover"]
   :is(
@@ -78,9 +74,6 @@ html[data-dossier-template="diagonal"]
   transform: none !important;
 }
 
-/* Fresh cover data stores application kicker + profession as two logical lines
- * in one editable block. Keep one scalable editor font-size control while the
- * first line reads as a small Swiss eyebrow and the profession stays dominant. */
 html[data-dossier-template="diagonal"]
   [data-dossier-document="cover"]
   [data-block-id="beruf"]
@@ -94,13 +87,9 @@ html[data-dossier-template="diagonal"]
 }
 
 /* -------------------------------------------------------------------------- */
-/* CV + LETTER — same diagonal identity, reduced to quiet edge wedges         */
+/* CV + LETTER — reduced same-colour corner pair                              */
 /* -------------------------------------------------------------------------- */
 
-/* Diagonal is intentionally not a replacement for the old Frame archetype.
- * The generic quiet fallback may still emit its historical inset line; remove
- * only that anonymous motif content for Diagonal, then draw the two owned
- * corner wedges on the sheet itself. */
 [data-dossier-sheet-background="diagonal"]
   > [data-dossier-sheet-motif]
   > div {
@@ -129,11 +118,10 @@ html[data-dossier-template="diagonal"]
 [data-dossier-sheet-background="diagonal"]::after {
   right: 0;
   bottom: 0;
-  background: var(--cover-secondary, #0f766e);
+  background: var(--cover-primary, #1d4ed8);
   clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
 
-/* Letter stationery is deliberately more restrained than CV. */
 [data-letter-page][data-letter-template="diagonal"]
   [data-dossier-sheet-background="diagonal"]::before,
 [data-letter-page][data-letter-template="diagonal"]
@@ -144,11 +132,9 @@ html[data-dossier-template="diagonal"]
 }
 
 /* -------------------------------------------------------------------------- */
-/* SHARED CHROME — support compact and integrated-contact modes               */
+/* SHARED CHROME                                                              */
 /* -------------------------------------------------------------------------- */
 
-/* Default compact header is paper, not a third full-width colour band. The
- * two small diagonal wedges repeat the page gesture without stealing CV space. */
 html[data-dossier-template="diagonal"]
   [data-dossier-document="cv"]
   [data-dossier-chrome="cv"][data-dossier-template-chrome="diagonal"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
@@ -183,6 +169,7 @@ html[data-dossier-template="diagonal"]
   width: 20mm;
   height: 100%;
   pointer-events: none;
+  background: var(--chrome-primary);
 }
 
 html[data-dossier-template="diagonal"]
@@ -193,7 +180,6 @@ html[data-dossier-template="diagonal"]
   [data-dossier-template-chrome="diagonal"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
   [data-dossier-compact-header]::before {
   left: 0;
-  background: var(--chrome-primary);
   clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 
@@ -205,12 +191,9 @@ html[data-dossier-template="diagonal"]
   [data-dossier-template-chrome="diagonal"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
   [data-dossier-compact-header]::after {
   right: 0;
-  background: var(--chrome-secondary);
   clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
 
-/* Integrated-contact mode stays on clean paper; custom surfaces remain fully
- * user-owned and are therefore excluded by the custom-surface attribute. */
 html[data-dossier-template="diagonal"]
   [data-dossier-document="cv"]
   [data-dossier-template-chrome="diagonal"][data-dossier-header-custom-surface="false"]
@@ -251,8 +234,6 @@ html[data-dossier-template="diagonal"]
   color: var(--chrome-ink, #172033) !important;
 }
 
-/* Keep footer content but never create a third architectural band. Explicit
- * user footer surfaces still win through the custom-surface contract. */
 html[data-dossier-template="diagonal"]
   [data-dossier-document="cv"]
   [data-dossier-template-chrome="diagonal"][data-dossier-footer-custom-surface="false"]
@@ -265,8 +246,6 @@ html[data-dossier-template="diagonal"]
   box-shadow: none !important;
 }
 
-/* CV stays predominantly typographic/white. Do not add generic rules/cards on
- * top of the diagonal signature. */
 html[data-dossier-template="diagonal"]
   [data-dossier-document="cv"]
   [data-cv-surface] {

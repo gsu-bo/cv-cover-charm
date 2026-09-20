@@ -2350,7 +2350,7 @@ export function CvCanvas({
     // vertikal hineinragen. Ab Seite 2 gilt wieder die normale Kartenfläche.
     const cardHeaderClearanceMm =
       frame.id === "card" && pageIndex === 0 && !personLayoutCustomized
-        ? contentBox.top + 32
+        ? contentBox.top + 38
         : surface.top;
     const sidebarTopMm = onColumn ? 0 : Math.max(surface.top, cardHeaderClearanceMm);
     const sidebarLeftMm = onColumn ? 0 : frame.id === "card" ? surface.left : 0;

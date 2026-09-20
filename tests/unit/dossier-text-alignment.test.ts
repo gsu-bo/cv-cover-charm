@@ -73,10 +73,11 @@ describe("shared dossier text alignment", () => {
     expect(letterCss).toContain('[data-columns="2"], [data-columns="3"]');
   });
 
-  test("CV alignment lives in the typography form and reaches preview/PDF body roles", () => {
+  test("CV alignment lives in the Layout form and reaches preview/PDF body roles", () => {
     expect(section).toContain("data-editor-section-title={title}");
     expect(section).toContain("data-editor-section-body");
-    expect(cvPortal).toContain("Schrift und Layout");
+    expect(cvPortal).toContain('data-editor-section-title="Layout"');
+    expect(cvPortal).not.toContain("Schrift und Layout");
     expect(cvPortal).toContain("Fliesstext ausrichten");
     expect(cvCanvas).toContain("data-cv-body-align={bodyAlignment}");
     for (const alignment of BODY_TEXT_ALIGNMENTS) {

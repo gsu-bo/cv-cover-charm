@@ -162,11 +162,9 @@ async function seedCv(page: Page, options: SeedOptions = {}) {
     },
   );
   await page.waitForLoadState("domcontentloaded");
-  await previewRoot(page).locator("[data-cv-page]").first().waitFor({ state: "visible" });
-  await previewRoot(page)
-    .locator("[data-cv-main] [data-cv-entry]")
-    .first()
-    .waitFor({ state: "visible" });
+  const visiblePage = previewRoot(page).locator("[data-cv-page]").filter({ visible: true }).first();
+  await visiblePage.waitFor({ state: "visible" });
+  await visiblePage.locator("[data-cv-main] [data-cv-entry]").first().waitFor({ state: "visible" });
   await settlePagination(page);
 }
 
@@ -951,10 +949,11 @@ test.describe("M5.8 dossier regression", () => {
       "data-editor-ready",
       "true",
     );
-    await page.getByRole("button", { name: "Layout", exact: true }).click();
+    await page.getByRole("button", { name: "Header & Footer", exact: true }).click();
     await page
       .locator('[data-dossier-chrome-controls="letter"] [data-dossier-header-mode-control]')
       .selectOption("compact");
+    await page.getByRole("button", { name: "Layout", exact: true }).click();
 
     await page.getByRole("button", { name: "Meine Kontaktdaten Rechts" }).click();
     await page.getByRole("button", { name: "Firma / Lehrbetrieb Rechts" }).click();
@@ -1010,9 +1009,11 @@ test.describe("M5.8 dossier regression", () => {
     };
 
     await selectBlock(0);
-    await page.getByRole("button", { name: "Fett" }).click();
-    await page.getByRole("button", { name: "Kursiv" }).click();
-    await page.getByRole("button", { name: "Unterstrichen" }).click();
+    const selectionToolbar = page.locator("[data-letter-selection-toolbar]");
+    await expect(selectionToolbar).toBeVisible();
+    await selectionToolbar.getByRole("button", { name: "Fett", exact: true }).click();
+    await selectionToolbar.getByRole("button", { name: "Kursiv", exact: true }).click();
+    await selectionToolbar.getByRole("button", { name: "Unterstrichen", exact: true }).click();
 
     await page.getByRole("button", { name: "Liste" }).click();
     await expect(page.getByRole("button", { name: "Bullet", exact: true })).toBeVisible();
@@ -1029,7 +1030,7 @@ test.describe("M5.8 dossier regression", () => {
     const twoColumnButton = columnsControl.getByRole("button", { name: "2 Spalten" });
     await expect(columnsControl).toBeVisible();
     const toolbarTop = await toolbar
-      .getByRole("button", { name: "Formatierung entfernen" })
+      .getByRole("button", { name: "Linksbündig" })
       .evaluate((button) => button.getBoundingClientRect().top);
     const columnsTop = await columnsControl.evaluate(
       (control) => control.getBoundingClientRect().top,
@@ -1491,6 +1492,7 @@ test.describe("M5.8 dossier regression", () => {
 
   test("card-template sidebar clears the header and stays inside the card", async ({ page }) => {
     await seedCv(page, { layout: "modern" });
+    await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
     await page.evaluate(() => {
       const saved = JSON.parse(localStorage.getItem("lebenslauf:v1") ?? "{}");
       saved.data = { ...saved.data, titel: "Lebenslauf" };
@@ -1500,9 +1502,8 @@ test.describe("M5.8 dossier regression", () => {
         colors: { bg: "#09071f", primary: "#7c3aed", accent: "#ec4899" },
       };
       localStorage.setItem("lebenslauf:v1", JSON.stringify(saved));
-      window.location.reload();
     });
-    await page.waitForLoadState("domcontentloaded");
+    await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
     await expect(previewRoot(page)).toHaveAttribute("data-cv-template", "neon");
 
     const sheet = previewRoot(page).locator('[data-cv-page="0"]');
