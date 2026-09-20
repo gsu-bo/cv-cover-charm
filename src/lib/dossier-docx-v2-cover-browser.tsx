@@ -86,7 +86,9 @@ function fontFamily(value: string, fallback: string) {
 }
 
 function textAlign(value: string, fallback: DossierDocxV2CoverNode["align"]) {
-  if (value === "center" || value === "right" || value === "left") return value;
+  if (value === "center" || value === "right" || value === "left" || value === "justify") {
+    return value;
+  }
   return fallback;
 }
 
@@ -290,7 +292,7 @@ export async function resolveDossierDocxV2RenderedCover(
   host.style.zIndex = "-2147483647";
   document.body.appendChild(host);
   const root = createRoot(host);
-  let page: HTMLDivElement | null = null;
+  const pageRef: { current: HTMLDivElement | null } = { current: null };
   const token = `docx-v2-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   try {
@@ -298,7 +300,7 @@ export async function resolveDossierDocxV2RenderedCover(
       root.render(
         <CoverCanvas
           ref={(node) => {
-            page = node;
+            pageRef.current = node;
           }}
           template={cover.template}
           data={cover.data}
@@ -315,6 +317,7 @@ export async function resolveDossierDocxV2RenderedCover(
     await document.fonts?.ready;
     await nextFrame();
     await nextFrame();
+    const page = pageRef.current as HTMLDivElement | null;
     if (!page) throw new Error("DOCX V2 hidden CoverCanvas did not mount.");
     page.dataset.docxV2Capture = token;
 
