@@ -9,7 +9,6 @@ type CleanupTemplate =
   | "colorful"
   | "orbit"
   | "prism"
-  | "frame"
   | "ribbon"
   | "monoLuxe"
   | "glow"
@@ -17,7 +16,7 @@ type CleanupTemplate =
   | "aurora"
   | "edel";
 
-const FULL_COMPACT_SUPPRESSION = ["orbit", "prism", "frame", "ribbon", "monoLuxe"] as const;
+const FULL_COMPACT_SUPPRESSION = ["orbit", "prism", "ribbon", "monoLuxe"] as const;
 
 function cvPayload(template: CleanupTemplate) {
   return {
