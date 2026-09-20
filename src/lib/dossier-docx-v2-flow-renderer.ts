@@ -46,9 +46,31 @@ function runXml(value: DossierDocxV2FlowRun) {
   return `<w:r><w:rPr>${properties}</w:rPr>${content}</w:r>`;
 }
 
+function paragraphLineSpacing(value: DossierDocxV2FlowParagraph) {
+  const fontSizePt = value.runs.reduce(
+    (largest, run) => Math.max(largest, run.fontSizePt),
+    0,
+  );
+  if (fontSizePt <= 0) {
+    return {
+      line: Math.max(1, Math.round(240 * value.lineHeight)),
+      rule: "auto" as const,
+    };
+  }
+  return {
+    // CSS line-height is a multiple of the actual font size. Word's "auto"
+    // line value is a multiple of Word's own single-line metric instead, so
+    // using 240 * ratio makes browser-measured paragraphs materially taller.
+    // Exact twips preserve the browser geometry: pt * ratio * 20 twips/pt.
+    line: Math.max(1, Math.round(fontSizePt * value.lineHeight * 20)),
+    rule: "exact" as const,
+  };
+}
+
 function paragraphProperties(value: DossierDocxV2FlowParagraph) {
+  const lineSpacing = paragraphLineSpacing(value);
   const properties = [
-    `<w:spacing w:before="${twips(value.beforeMm)}" w:after="${twips(value.afterMm)}" w:line="${Math.round(240 * value.lineHeight)}" w:lineRule="auto"/>`,
+    `<w:spacing w:before="${twips(value.beforeMm)}" w:after="${twips(value.afterMm)}" w:line="${lineSpacing.line}" w:lineRule="${lineSpacing.rule}"/>`,
     `<w:jc w:val="${value.align}"/>`,
     value.keepNext ? "<w:keepNext/>" : "",
     value.keepLines ? "<w:keepLines/>" : "",
