@@ -181,12 +181,18 @@ export function CvCanvas({
 }: Props) {
   const pal = resolveCvPalette(design);
   const paperColorOverride = normalizeCvPaperColor(design.paperColor);
+  // Die Bauform der Vorlage entscheidet über Flächen und Textbereich. Sie ist
+  // der eigentliche Träger der Verwandtschaft zum Titelblatt.
   const frame = useMemo(() => cvFrameFor(design.template), [design.template]);
+  // Die Auswahl im Aufbau-Picker gilt. Sie wurde früher bei Spalten- und
+  // Karten-Vorlagen überschrieben, was wie ein toter Knopf wirkte.
   const layout = useSyncExternalStore<CvRenderLayout>(
     subscribeCvLayout,
     getCvLayout,
     () => "classic",
   );
+  // Raw choice is separate from renderer mode. Classic/Luftig/Timeline/Magazin
+  // share the same renderer but have different real content geometry.
   const layoutChoice = useSyncExternalStore<CvLayoutId>(
     subscribeCvLayoutChoice,
     getCvLayoutChoice,
@@ -225,19 +231,38 @@ export function CvCanvas({
   >({});
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  /** Vom Nutzer einstellbare Typografie und Spaltenbreite. */
   const headingRule = design.headingRule ?? CV_TYPE_DEFAULTS.headingRule;
   const titleScale = design.titleScale ?? CV_TYPE_DEFAULTS.titleScale;
   const headingScale = design.headingScale ?? CV_TYPE_DEFAULTS.headingScale;
   const bodyScale = design.bodyScale ?? CV_TYPE_DEFAULTS.bodyScale;
   const sidebarPct = design.sidebarPct ?? CV_TYPE_DEFAULTS.sidebarPct;
+  /**
+   * Drei Regler, drei Rollen – und jeder Text auf dem Blatt gehört zu einer:
+   *
+   *   ptTitle  Name und Dokumenttitel
+   *   ptHead   Untertitel und Rubriken
+   *   pt       alles andere
+   *
+   * Fest eingetragene Grade gab es früher in der Seitenspalte und bei den
+   * Eintragstiteln; die Regler liessen sie unberührt und wirkten darum halb
+   * kaputt. TYPE_BASE hebt alle Grundwerte an: das frühere "120 %" ist der
+   * neue Normalzustand, die Regler stehen wieder auf 100 %.
+   */
   const TYPE_BASE = 1.2;
   const pt = (size: number) => `${(size * TYPE_BASE * bodyScale).toFixed(2)}pt`;
   const ptHead = (size: number) => `${(size * TYPE_BASE * headingScale).toFixed(2)}pt`;
 
+  /**
+   * Schriftbild der Dossier-Familie. Titelblatt und Lebenslauf lesen dieselbe
+   * Quelle, damit Editorials Serifen-Überschriften nicht wie Moderns
+   * Versalien aussehen.
+   */
   const theme = useMemo(() => dossierThemeFor(design.template), [design.template]);
   const headingStyle = theme.headingStyle;
   const sectionTitleFontSizePx =
-    typeof design.sectionTitleFontSizePx === "number" && Number.isFinite(design.sectionTitleFontSizePx)
+    typeof design.sectionTitleFontSizePx === "number" &&
+    Number.isFinite(design.sectionTitleFontSizePx)
       ? Math.max(
           CV_SECTION_TITLE_FONT_SIZE_MIN,
           Math.min(CV_SECTION_TITLE_FONT_SIZE_MAX, design.sectionTitleFontSizePx),
@@ -258,14 +283,20 @@ export function CvCanvas({
   const sectionTitleFontStyle = design.sectionTitleItalic ? "italic" : "normal";
   const sectionTitleDecoration = design.sectionTitleUnderline ? "underline" : "none";
 
+  /** Rahmenform des Fotos – dieselbe Einstellung wie im Titelblatt. */
   const photoStyle = useSyncExternalStore(subscribeCvPhotoStyle, getCvPhotoStyle, () =>
     getCvPhotoStyle(),
   );
+  /** Platz auf dem Blatt, Grösse und Rahmen – nur für den Lebenslauf. */
   const place = useSyncExternalStore(
     subscribeCvPhotoPlacement,
     getCvPhotoPlacement,
     () => DEFAULT_CV_PHOTO_PLACEMENT,
   );
+  /**
+   * Während des Ziehens liegen die Werte hier, damit nicht bei jedem
+   * Mausschritt in den Speicher geschrieben wird. Losgelassen wird übernommen.
+   */
   const [liveBox, setLiveBox] = useState<{
     xMm: number;
     yMm: number;
@@ -273,11 +304,17 @@ export function CvCanvas({
   } | null>(null);
   const photoBox = liveBox ?? { xMm: place.xMm, yMm: place.yMm, widthMm: place.widthMm };
 
+  /** Farbe der tragenden Fläche – dieselbe, die das Titelblatt dort verwendet. */
   const areaColor = design.colors.primary || design.colors.accent || pal.accent;
+  /**
+   * Schrift **auf** der farbigen Fläche. Die Fläche wird nicht aufgehellt,
+   * sondern bekommt eine Schrift, die darauf lesbar ist.
+   */
   const onArea = useMemo(
     () => onColorRoles(areaColor, design.colors.accent),
     [areaColor, design.colors.accent],
   );
+  /** Rollen für die Seitenspalte: auf Farbe bei "column", sonst auf Papier. */
   const side: CvOnColor =
     frame.id === "column"
       ? onArea
@@ -316,6 +353,10 @@ export function CvCanvas({
   });
   const sidebarPhysicalSide = infoMirrored ? "right" : "left";
 
+  /**
+   * Es gibt genau ein logisches Foto. Links/Rechts verwenden einen automatischen
+   * Slot, frei verwendet ausschliesslich den vorhandenen freien Renderer.
+   */
   const autoPhoto = !!p.foto && photoPosition !== "free";
   const freePhotoOn = !!p.foto && photoPosition === "free";
   const automaticPhotoInSidebar =
@@ -328,7 +369,19 @@ export function CvCanvas({
     layout === "modern" &&
     !personLayoutCustomized &&
     photoPosition !== sidebarPhysicalSide;
+  /*
+   * Der Rahmen selbst steht in `layout-options.css`: Stärke und Farbe kommen
+   * dort als CSS-Variablen an und tragen `!important`. Ein Inline-Ring hier
+   * käme nie zum Zug, darum steht keiner mehr im Renderer.
+   */
 
+  /**
+   * Foto mit der Maus verschieben und an der Ecke grösser ziehen.
+   *
+   * Die Vorschau ist gezoomt, darum wird nicht mit einem festen Faktor
+   * gerechnet: die gemessene Blattbreite auf dem Bildschirm entspricht 210 mm,
+   * daraus ergibt sich der Umrechnungsfaktor für diese Geste.
+   */
   const startPhotoGesture = (kind: "move" | "size") => (event: React.PointerEvent<HTMLElement>) => {
     if (exportMode || event.button !== 0) return;
     const pageEl = event.currentTarget.closest("[data-cv-page]") as HTMLElement | null;
@@ -368,6 +421,7 @@ export function CvCanvas({
     window.addEventListener("pointercancel", stop);
   };
 
+  /** Pfeiltasten für das letzte Millimeterchen; mit Shift feiner. */
   const nudgePhoto = (event: React.KeyboardEvent<HTMLElement>) => {
     const stepMm = event.shiftKey ? 0.5 : 2;
     const by: Record<string, [number, number]> = {
@@ -407,7 +461,9 @@ export function CvCanvas({
             data-cv-user-section-size={sectionTitleFontSizePx === null ? undefined : "true"}
             data-cv-user-section-color={sectionTitleColor ? "true" : undefined}
             data-cv-user-section-weight={design.sectionTitleBold === undefined ? undefined : "true"}
-            data-cv-user-section-style={design.sectionTitleItalic === undefined ? undefined : "true"}
+            data-cv-user-section-style={
+              design.sectionTitleItalic === undefined ? undefined : "true"
+            }
             data-cv-user-section-decoration={
               design.sectionTitleUnderline === undefined ? undefined : "true"
             }
@@ -418,6 +474,8 @@ export function CvCanvas({
               ["--cv-user-section-weight" as string]: `${sectionTitleWeight}`,
               ["--cv-user-section-style" as string]: sectionTitleFontStyle,
               ["--cv-user-section-decoration" as string]: sectionTitleDecoration,
+              // Versalien laufen breiter als Gemischtschrift; darum je nach
+              // Familie ein anderer Grundwert.
               fontSize:
                 sectionTitleFontSizePx === null
                   ? ptHead(headingStyle.uppercase ? 10.2 : 11.4)
@@ -463,6 +521,11 @@ export function CvCanvas({
 
   const heading = (key: CvLayoutSectionKey): Row => headingText(key, sectionTitle(key));
 
+  /**
+   * Titel des Dokuments – auf jeder Vorlage, im Formular änderbar, leer
+   * ausblendbar. Er nimmt den Ton der Familie auf, wie der Kicker auf dem
+   * Titelblatt.
+   */
   const docTitle = (color: string) => {
     const text = data.titel?.trim();
     if (!text) return null;
@@ -751,6 +814,7 @@ export function CvCanvas({
     ];
   };
 
+  /** Inhalt einer Rubrik als unteilbarer Block für Grid und freie Platzierung. */
   const sectionRows = (key: CvLayoutSectionKey): Row[] => {
     if (key === "person") return [];
     const custom = customSectionForKey(data, key);
@@ -780,6 +844,11 @@ export function CvCanvas({
     return referenceRows();
   };
 
+  /**
+   * Wird nur benutzt, wenn die persönlichen Angaben selbst ein abweichendes
+   * Layout erhalten. So bleibt der historische Kopf aller Vorlagen ohne
+   * Layoutänderung pixelgleich.
+   */
   const personalSectionRows = (): Row[] => [
     {
       id: "person-layout",
@@ -894,6 +963,7 @@ export function CvCanvas({
     </div>
   );
 
+  /** CSS Grid-Regeln als echte Zeilen packen – ohne absolute Positionierung. */
   const packSectionUnits = (units: SectionUnit[]): Row[] => {
     const packed: Row[] = [];
     let waiting: SectionUnit | null = null;
@@ -942,9 +1012,18 @@ export function CvCanvas({
   };
 
   let rows: Row[] = [];
+  // Trägt ein Kopfband den Namen, gehört er nicht in den Textfluss – sonst
+  // stünde er zweimal auf der Seite.
   const nameInBand = headerSitsInBand(frame);
 
   if (layout === "classic") {
+    /**
+     * Kopfblock: Foto, Name und die Angaben zur Person.
+     *
+     * Trägt ein Kopfband bereits Name und Zeile darunter, werden nur diese
+     * beiden weggelassen – Foto und Angaben bleiben, sonst fielen sie
+     * ersatzlos weg.
+     */
     const classicHeader = (withName: boolean): Row => ({
       id: "kopf",
       node: (
@@ -1042,6 +1121,8 @@ export function CvCanvas({
         </div>
       ),
     });
+    // Nur Name und Zeile darunter wandern ins Band; Foto und Angaben bleiben
+    // im Kopfblock.
     const hasHeaderContent = autoPhoto || kontaktZeilen.length > 0 || angaben.length > 0;
     if (!nameInBand || hasHeaderContent) rows.push(classicHeader(!nameInBand));
 
@@ -1234,6 +1315,16 @@ export function CvCanvas({
     return () => observer.disconnect();
   }, [shape, pages.length]);
 
+  /**
+   * Der Messkasten steckt in der verkleinerten Vorschau. Wird er gemessen,
+   * bevor die Verkleinerung steht, kommen zu kleine Zeilenhöhen heraus – und
+   * weil sich am Inhalt nichts geändert hat, wird nie neu gerechnet. Der Text
+   * lief dann unten aus der Seite, ohne dass eine zweite entstand.
+   *
+   * Diese Beobachtung stösst die Rechnung an, sobald sich die tatsächliche
+   * Grösse ändert; nebenbei stimmt die Seitenzahl damit auch nach einem
+   * Zoomwechsel.
+   */
   const [measuredAt, setMeasuredAt] = useState(0);
   const lastTotal = useRef(-1);
   useLayoutEffect(() => {
@@ -1246,6 +1337,8 @@ export function CvCanvas({
         0,
       );
 
+    // Nur bei einer echten Änderung neu rechnen, sonst löst schon das
+    // Anmelden der Beobachtung die nächste Runde aus.
     const check = () => {
       const now = total();
       if (Math.abs(now - lastTotal.current) < 0.5) return;
@@ -1253,9 +1346,13 @@ export function CvCanvas({
       setMeasuredAt((n) => n + 1);
     };
 
+    // Die Zeilen selbst beobachten, nicht nur ihren Kasten: dessen Höhe steht
+    // durch die Seitenränder fest und ändert sich nie, auch wenn der Text
+    // höher wird. Genau dann fehlte die zweite Seite.
     const observer = new ResizeObserver(check);
     observer.observe(box);
     for (const child of Array.from(box.children)) observer.observe(child);
+    // Mit der endgültigen Schrift fällt der Text anders um als mit der Ersatzschrift.
     document.fonts?.ready.then(check).catch(() => {});
     return () => observer.disconnect();
   }, [shape]);
@@ -1267,6 +1364,18 @@ export function CvCanvas({
     const scale = rect.width / (box.offsetWidth || 1) || 1;
     const measured = rect.height / scale;
 
+    /*
+     * Höhe je Seite.
+     *
+     * Gerechnet wird von der **gemessenen** Höhe aus, nicht aus den Rändern
+     * der Bauform: Die Aufbau-Stile setzen eigene Ränder mit `!important`, und
+     * eine Rechnung, die davon nichts weiss, kommt auf eine falsche Seitenhöhe
+     * – bei "Luftig" fiel damit die letzte Zeile unter den Rand.
+     *
+     * Der Messkasten zeigt also, was Seite 1 wirklich hergibt. Die Folgeseiten
+     * unterscheiden sich davon nur um das, was die Bauform selbst pro Seite
+     * ändert: das kürzere Kopfband und die Fusszeile.
+     */
     const first = cvContentBox(frame, 0, layout, sidebarPct, chromeOptions);
     const paginationSafetyPx = 2;
     const heightFor = (pageIndex: number) => {
@@ -1329,6 +1438,27 @@ export function CvCanvas({
     measuredAt,
   ]);
 
+  /**
+   * Papierfarbe für die Zierde.
+   *
+   * Eine Vorlage darf ein dunkles Blatt haben – Sonne etwa steht auf #333.
+   * Läge diese Farbe auch nur blass unter dem Text, wäre das Papier grau statt
+   * weiss. Für die Zierde zählen deshalb nur die *Formen* der Vorlage, nicht
+   * ihr Blattgrund. Bei "card" ist der Grund dagegen die tragende Fläche und
+   * bleibt, wie er ist.
+   */
+  /**
+   * Der Grund der Seite: der **echte Hintergrund des Titelblatts**, voll deckend.
+   *
+   * Vorher wurde er auf 11 % heruntergeblendet und die Vorlage stattdessen mit
+   * eigenen Bändern und Spalten nachgebaut. Das Ergebnis sah nie nach dem
+   * Titelblatt aus – wer dort Warm mit zwei grossen Kreisen auf Creme gewählt
+   * hatte, fand im Lebenslauf ein weisses Blatt mit einem Schleier.
+   *
+   * Jetzt steht dieselbe Fläche auf beiden Blättern. Lesbar wird der Text
+   * durch die Schreibfläche darüber, nicht dadurch, dass die Vorlage
+   * verschwindet.
+   */
   const ground = (pageIndex: number) => (
     <div data-cv-background="motif" style={{ position: "absolute", inset: 0 }}>
       <DossierSheetBackground
@@ -1340,6 +1470,15 @@ export function CvCanvas({
     </div>
   );
 
+  /**
+   * Eigene Felder und Formen – dieselben wie auf dem Titelblatt.
+   *
+   * Sie lagen früher als blasse Zierde im Hintergrund und liessen sich hier
+   * nicht anfassen; Textfelder und Bilder fielen sogar ganz weg. Jetzt tragen
+   * sie dieselbe Ebene wie auf dem Titelblatt: volle Deckkraft, anklickbar,
+   * mit der Maus verschiebbar. Jedes Element gehört genau zu seiner gewählten
+   * CV-Seite und wird deshalb nicht auf jedem Blatt wiederholt.
+   */
   const elementBlocks = useMemo(() => {
     const built = buildCustomBlocks(design.template, elements, elementStyles, slots);
     if (!design.font) return built;
@@ -1362,6 +1501,8 @@ export function CvCanvas({
     const shown = design.useElements
       ? elementBlocks.filter((block) => idsOnPage.has(block.id))
       : [];
+    // Im Zeichenmodus muss die Ebene auch dann da sein, wenn noch kein Element
+    // existiert – sonst gäbe es keine Fläche, auf der man ziehen kann.
     if (shown.length === 0 && !drawing) return null;
     const editable = !exportMode && !!onMoveElement;
     return (
@@ -1371,6 +1512,8 @@ export function CvCanvas({
           position: "absolute",
           inset: 0,
           zIndex: 5,
+          // Im Export darf die Ebene nichts abfangen; in der Vorschau nimmt ein
+          // Klick daneben die Auswahl zurück, genau wie auf dem Titelblatt.
           pointerEvents: editable ? undefined : "none",
         }}
         onPointerDown={
@@ -1400,6 +1543,7 @@ export function CvCanvas({
     );
   };
 
+  /** Ausschnitt des echten Titelblatt-Hintergrunds, oben bündig. */
   const bandMotif = (heightMm: number) => (
     <div
       style={{
@@ -1429,9 +1573,19 @@ export function CvCanvas({
     </div>
   );
 
+  /** Farbe des Kopfbands – bei Studio das Akzentband, sonst die Hauptfläche. */
   const bandColor = frame.id === "column" ? design.colors.accent || areaColor : areaColor;
   const onBand = onColorRoles(bandColor, design.colors.primary);
 
+  /**
+   * Alles, was hinter dem Text liegt.
+   *
+   * Früher hat diese Funktion Spalte, Kopfband, Fussband und Zierrahmen selbst
+   * nachgezeichnet, während der echte Hintergrund auf 11 % gedimmt war. Das
+   * waren zwei Darstellungen derselben Vorlage, die nie ganz zusammenpassten.
+   * Jetzt zeichnet der Hintergrund sie – er ist ja derselbe wie auf dem
+   * Titelblatt – und hier kommt nur noch die Schreibfläche darüber.
+  */
   const chrome = (pageIndex: number) => {
     const surface = physicalContentBox(
       cvSurface(frame, pageIndex, layout, sidebarPct, chromeOptions),
@@ -1455,6 +1609,9 @@ export function CvCanvas({
             bottom: `${surface.bottom}mm`,
             background: pal.paper,
             borderRadius: frame.id === "card" ? `${frame.cardRadiusMm}mm` : undefined,
+            // Der Regler bestimmt, wie viel Vorlage durch die Schreibfläche
+            // scheint. Der Bereich ist eng gehalten, damit der Text auf jeder
+            // Einstellung lesbar bleibt.
             opacity:
               frame.id === "quiet" ||
               (frame.id === "band" && frame.headFirstMm === 0 && frame.footMm === 0)
@@ -1687,8 +1844,13 @@ export function CvCanvas({
     </>
   );
 
+  /** Bei "column" ist die Spalte die Fläche der Vorlage – sonst getönte Papierspalte. */
   const onColumn = frame.id === "column";
   const sidebarWidth = sidebarWidthMm(frame, layout, sidebarPct);
+  /**
+   * Fotobreite in der Seitenspalte. Ein Hochportrait wird hoch, darum bleibt
+   * die Breite unter dem, was die Spalte abzüglich ihrer Ränder hergibt.
+   */
   const sidePhotoMm = Math.min(
     sidePlan.veryCompact ? 25 : 28,
     sidebarWidth - (onColumn ? 19 : 15.5),
@@ -1757,6 +1919,7 @@ export function CvCanvas({
       const step = (moveEvent: PointerEvent) => {
         const rawX = from.x + (moveEvent.clientX - startX) * mmPerPx;
         const rawY = from.y + (moveEvent.clientY - startY) * mmPerPx;
+        // Zwei-Millimeter-Raster: hilfreich, aber fein genug, um nicht zu stören.
         latest = {
           ...latest,
           x: Math.max(from.minX, Math.min(from.maxX, Math.round(rawX / 2) * 2)),
@@ -1964,6 +2127,11 @@ export function CvCanvas({
       );
     });
 
+  /**
+   * Frei gesetztes Foto. Es liegt über dem Satzspiegel, gehört keiner Spalte an
+   * und steht nur auf der ersten Seite. In der Vorschau lässt es sich ziehen,
+   * im Export ist es ein stilles Bild ohne Griffe.
+   */
   const freePhoto = (pageIndex: number) => {
     if (pageIndex !== 0 || !freePhotoOn) return null;
     const heightMm = photoBox.widthMm * dossierPhotoRatio(photoStyle.shape);
@@ -2028,6 +2196,11 @@ export function CvCanvas({
     );
   };
 
+  /**
+   * Warnungen aus der tatsächlich gezeichneten Vorschau ableiten. Dadurch
+   * stimmen sie mit Schriftumbruch, Vorlagengeometrie und PDF-Canvas überein,
+   * statt dieselben Masse ein zweites Mal grob nachzurechnen.
+   */
   useLayoutEffect(() => {
     if (!onLayoutWarnings || !canvasRef.current) return;
     const root = canvasRef.current;
@@ -2167,11 +2340,17 @@ export function CvCanvas({
   }, [elementBlocks, elements, exportMode, onLayoutWarnings, pages, shape]);
 
   const modernSidebar = (pageIndex: number) => {
+    // Eine farbige Spalte läuft über die volle Höhe, wie auf dem Titelblatt.
+    // Die getönte Papierspalte beginnt erst unter dem Kopfband, damit dieses
+    // über die ganze Breite sichtbar bleibt.
     const surface = cvSurface(frame, pageIndex, layout, sidebarPct, chromeOptions);
     const contentBox = cvContentBox(frame, pageIndex, layout, sidebarPct, chromeOptions);
+    // Card-Vorlagen tragen den Kopf bewusst auf der farbigen Oberzone. Die
+    // Sidebar darf diese Komposition auf Seite 1 weder links anschneiden noch
+    // vertikal hineinragen. Ab Seite 2 gilt wieder die normale Kartenfläche.
     const cardHeaderClearanceMm =
       frame.id === "card" && pageIndex === 0 && !personLayoutCustomized
-        ? contentBox.top + 35
+        ? contentBox.top + 32
         : surface.top;
     const sidebarTopMm = onColumn ? 0 : Math.max(surface.top, cardHeaderClearanceMm);
     const sidebarLeftMm = onColumn ? 0 : frame.id === "card" ? surface.left : 0;
@@ -2212,7 +2391,11 @@ export function CvCanvas({
             ? `${sidebarPhoto ? "16mm" : "13mm"} 9mm ${Math.max(12, frame.footMm + 8)}mm 10mm`
             : `${sidebarPhoto ? "12.5mm" : "9.5mm"} 7.5mm 12mm 8mm`,
           boxSizing: "border-box",
+          // Die Spalte selbst liegt schon im Seitengrund; hier nur bei der
+          // getönten Papierspalte einen eigenen Grund zeichnen.
           background: onColumn && !infoMirrored ? "transparent" : side.bg,
+          // Kein Trennstrich: Die getönte Spalte setzt sich schon von selbst
+          // vom Papier ab, die Linie darüber lag als grüner Strich dazwischen.
           fontFamily: SHEET_FONT,
           overflow: "hidden",
         }}
@@ -2477,7 +2660,7 @@ export function CvCanvas({
                 </div>
               )}
             </>
-          ) : pageMarker(frame) !== "sidebar" ? null : (
+          ) : pageMarker(frame) !== "sidebar" ? null : ( // Band oder Fusszeile tragen die Angabe schon – hier wäre sie doppelt.
             <div
               data-cv-header
               style={{
@@ -2508,10 +2691,16 @@ export function CvCanvas({
     );
   };
 
+  /**
+   * Name und Zeile darunter im Kopfband – dort, wo sie auf dem Titelblatt
+   * ebenfalls stehen. Auf Folgeseiten bleibt nur die Seitenangabe.
+   */
   const bandHeader = (pageIndex: number) => {
     const head = pageIndex === 0 ? frame.headFirstMm : frame.headRestMm;
     if (!nameInBand || personLayoutCustomized || head <= 0) return null;
     const roles = frame.bandMotif ? onArea : onBand;
+    // Rechts der Seitenspalte beginnen, sonst verschwindet der Vorname
+    // dahinter – gemessen fehlten so die ersten 117 px des Namens.
     const clear = Math.max(bandLeftMm(frame, layout), sidebarWidthMm(frame, layout, sidebarPct));
     const bandInset = clear + (clear > 0 ? 10 : MARGIN_X);
     const mirrorBand = layout === "modern" && infoMirrored;
@@ -2570,6 +2759,10 @@ export function CvCanvas({
     );
   };
 
+  /**
+   * Dezente Fusszeile ab Seite 2 – aber nur, wo nicht schon ein Kopfband oder
+   * eine Seitenspalte die Angabe trägt. Auf einem Blatt steht sie genau einmal.
+   */
   const footer = (pageIndex: number) => {
     if (pageIndex === 0 || pageMarker(frame) !== "footer") return null;
     const box = physicalContentBox(
@@ -2637,6 +2830,11 @@ export function CvCanvas({
             }
       }
     >
+      {/*
+        Hidden A4 measurement page. It deliberately uses a separate semantic
+        hook instead of data-cv-page so PDF export never mistakes it for a real
+        page. Variant CSS mirrors the real main-column geometry onto this box.
+      */}
       <div
         aria-hidden
         data-cv-measure-page
