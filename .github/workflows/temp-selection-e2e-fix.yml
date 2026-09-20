@@ -2,66 +2,24 @@ name: Temporary selection E2E patch
 
 on:
   push:
-    branches:
-      - dev
+    branches: [dev]
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
           ref: dev
           fetch-depth: 2
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - run: bun install --frozen-lockfile
       - name: Update selection toolbar E2E ownership
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path('tests/e2e/dossier-regression.spec.ts')
-          source = path.read_text()
-
-          old = '''    await selectBlock(0);
-    await page.getByRole("button", { name: "Fett" }).click();
-    await page.getByRole("button", { name: "Kursiv" }).click();
-    await page.getByRole("button", { name: "Unterstrichen" }).click();
-          '''
-          new = '''    await selectBlock(0);
-    const selectionToolbar = page.locator("[data-letter-selection-toolbar]");
-    await expect(selectionToolbar).toBeVisible();
-    await selectionToolbar.getByRole("button", { name: "Fett", exact: true }).click();
-    await selectionToolbar.getByRole("button", { name: "Kursiv", exact: true }).click();
-    await selectionToolbar.getByRole("button", { name: "Unterstrichen", exact: true }).click();
-          '''
-          if old not in source:
-              raise SystemExit('inline formatting test marker not found')
-          source = source.replace(old, new, 1)
-
-          old = '''    const toolbarTop = await toolbar
-      .getByRole("button", { name: "Formatierung entfernen" })
-      .evaluate((button) => button.getBoundingClientRect().top);
-          '''
-          new = '''    const toolbarTop = await toolbar
-      .getByRole("button", { name: "Linksbündig" })
-      .evaluate((button) => button.getBoundingClientRect().top);
-          '''
-          if old not in source:
-              raise SystemExit('toolbar geometry marker not found')
-          source = source.replace(old, new, 1)
-
-          path.write_text(source)
-          PY
-          bunx prettier --write tests/e2e/dossier-regression.spec.ts
+          python -c 'from pathlib import Path; p=Path("tests/e2e/dossier-regression.spec.ts"); s=p.read_text(); old="    await selectBlock(0);\n    await page.getByRole(\"button\", { name: \"Fett\" }).click();\n    await page.getByRole(\"button\", { name: \"Kursiv\" }).click();\n    await page.getByRole(\"button\", { name: \"Unterstrichen\" }).click();"; new="    await selectBlock(0);\n    const selectionToolbar = page.locator(\"[data-letter-selection-toolbar]\");\n    await expect(selectionToolbar).toBeVisible();\n    await selectionToolbar.getByRole(\"button\", { name: \"Fett\", exact: true }).click();\n    await selectionToolbar.getByRole(\"button\", { name: \"Kursiv\", exact: true }).click();\n    await selectionToolbar.getByRole(\"button\", { name: \"Unterstrichen\", exact: true }).click();"; assert old in s; s=s.replace(old,new,1); old2="    const toolbarTop = await toolbar\n      .getByRole(\"button\", { name: \"Formatierung entfernen\" })\n      .evaluate((button) => button.getBoundingClientRect().top);"; new2="    const toolbarTop = await toolbar\n      .getByRole(\"button\", { name: \"Linksbündig\" })\n      .evaluate((button) => button.getBoundingClientRect().top);"; assert old2 in s; p.write_text(s.replace(old2,new2,1))'
       - name: Commit test update
         shell: bash
         run: |
