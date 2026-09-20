@@ -94,6 +94,7 @@ jobs:
               tests/e2e/dossier-docx-warm.spec.ts
               tests/e2e/dossier-docx-studio3.spec.ts
               tests/e2e/dossier-docx-family-gallery.spec.ts
+              tests/e2e/dossier-docx-v2-shadow.spec.ts
           - group: letter-m1-m5
             files: >-
               tests/e2e/letter-header-modes.spec.ts
@@ -181,6 +182,15 @@ jobs:
         with:
           name: dossier-docx-reference
           path: artifacts/dossier-docx-reference
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload DOCX V2 shadow references
+        if: matrix.group == 'dossier-flow' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dossier-docx-v2-shadow
+          path: artifacts/dossier-docx-v2-shadow
           if-no-files-found: warn
           retention-days: 14
 
