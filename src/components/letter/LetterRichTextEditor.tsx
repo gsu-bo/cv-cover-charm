@@ -279,11 +279,26 @@ export function LetterRichTextEditor({
       return;
     }
 
-    const placement: SelectionBubble["placement"] = rect.top >= 64 ? "above" : "below";
+    const bubbleGap = 10;
+    const bubbleEdge = 12;
+    const bubbleHeight = 44;
+    const placement: SelectionBubble["placement"] =
+      rect.top >= bubbleHeight + bubbleGap + bubbleEdge ? "above" : "below";
     const center = rect.left + rect.width / 2;
+    const rawTop = placement === "above" ? rect.top - bubbleGap : rect.bottom + bubbleGap;
+    const top =
+      placement === "above"
+        ? Math.min(
+            Math.max(rawTop, bubbleHeight + bubbleEdge),
+            Math.max(bubbleHeight + bubbleEdge, window.innerHeight - bubbleEdge),
+          )
+        : Math.min(
+            Math.max(rawTop, bubbleEdge),
+            Math.max(bubbleEdge, window.innerHeight - bubbleHeight - bubbleEdge),
+          );
     setSelectionBubble({
       left: Math.min(Math.max(center, 92), Math.max(92, window.innerWidth - 92)),
-      top: placement === "above" ? rect.top - 10 : rect.bottom + 10,
+      top,
       placement,
     });
   };
