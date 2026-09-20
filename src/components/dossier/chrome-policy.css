@@ -63,13 +63,16 @@
   margin-top: 16mm !important;
 }
 
-/* Neon, Verlauf and Citrus deliberately place the CV heading in their hero.
- * The old hero refresh starts the main flow at 14–15 mm, which is now inside
- * the shared 22 mm contact header. A small first-flow margin preserves the hero
- * composition while clearing contact text. Mirror it in the hidden measure page
- * so pagination and the exported page use the same geometry. */
-[data-cv-template="neon"] :is([data-cv-page="0"], [data-cv-measure-page]) [data-cv-header],
-[data-cv-template="verlauf"] :is([data-cv-page="0"], [data-cv-measure-page]) [data-cv-header] {
+/* Neon and Verlauf deliberately place the CV heading in their hero. Only the
+ * tall contact header needs this extra clearance; applying it to the 4 mm
+ * compact default pushes the name below the hero boundary. Mirror the rule in
+ * the hidden measure page so pagination and export keep identical geometry. */
+[data-cv-template="neon"][data-cv-header-mode="contact"]
+  :is([data-cv-page="0"], [data-cv-measure-page])
+  [data-cv-header],
+[data-cv-template="verlauf"][data-cv-header-mode="contact"]
+  :is([data-cv-page="0"], [data-cv-measure-page])
+  [data-cv-header] {
   margin-top: 11mm !important;
 }
 
