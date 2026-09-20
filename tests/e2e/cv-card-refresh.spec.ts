@@ -231,7 +231,9 @@ async function citrusGeometrySnapshot(root: Locator) {
     const toCssMm = (pixels: number) => pixels / cssPxPerMm;
     const toPageMm = (pixels: number) => (pixels / pageRect.width) * 210;
     const rowTransform =
-      rowStyle.transform === "none" ? new DOMMatrixReadOnly() : new DOMMatrixReadOnly(rowStyle.transform);
+      rowStyle.transform === "none"
+        ? new DOMMatrixReadOnly()
+        : new DOMMatrixReadOnly(rowStyle.transform);
 
     return {
       // The controls are authored in CSS millimetres. Preview zoom changes DOM
@@ -334,7 +336,9 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
     await seed(page, TEMPLATES[2]);
 
     const preview = page.locator('[data-dossier-document="cv"][data-export-mode="false"]').first();
-    const exportRoot = page.locator('[data-dossier-document="cv"][data-export-mode="true"]').first();
+    const exportRoot = page
+      .locator('[data-dossier-document="cv"][data-export-mode="true"]')
+      .first();
     await expect(preview).toBeVisible();
 
     const defaultPreview = await citrusGeometrySnapshot(preview);
@@ -355,12 +359,11 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
     expect(defaultExport.contentIndentMm).toBeCloseTo(defaultPreview.contentIndentMm, 1);
     expect(defaultExport.ruleRightMm).toBeCloseTo(defaultPreview.ruleRightMm, 1);
 
-    const typographyToggle = page
-      .locator("[data-editor-section-toggle]")
-      .filter({ hasText: "Schrift und Layout" })
-      .first();
-    await expect(typographyToggle).toBeVisible();
-    await typographyToggle.click();
+    const layoutSection = page.locator('[data-editor-section-title="Layout"]');
+    await expect(layoutSection).toHaveCount(1);
+    const layoutToggle = layoutSection.locator("[data-editor-section-toggle]");
+    await expect(layoutToggle).toBeVisible();
+    if ((await layoutToggle.getAttribute("aria-expanded")) !== "true") await layoutToggle.click();
 
     const controls = page.locator("[data-citrus-rubric-controls]");
     await expect(controls).toBeVisible();
@@ -374,18 +377,20 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
     await setRangeValue(headingSlider, 5);
     await setRangeValue(indentSlider, 10);
 
-    await expect.poll(async () =>
-      page.evaluate(() => {
-        const saved = JSON.parse(localStorage.getItem("lebenslauf:v1") || "{}") as {
-          design?: Record<string, unknown>;
-        };
-        return [
-          saved.design?.citrusRubricPill,
-          saved.design?.citrusRubricOffsetMm,
-          saved.design?.citrusContentIndentMm,
-        ];
-      }),
-    ).toEqual([false, 5, 10]);
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const saved = JSON.parse(localStorage.getItem("lebenslauf:v1") || "{}") as {
+            design?: Record<string, unknown>;
+          };
+          return [
+            saved.design?.citrusRubricPill,
+            saved.design?.citrusRubricOffsetMm,
+            saved.design?.citrusContentIndentMm,
+          ];
+        }),
+      )
+      .toEqual([false, 5, 10]);
 
     const changedPreview = await citrusGeometrySnapshot(preview);
     const changedExport = await citrusGeometrySnapshot(exportRoot);
@@ -442,14 +447,21 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
       const sheet = await seed(page, template);
       const slider = await motifSlider(page);
       const motifLayers = sheet.locator("[data-dossier-sheet-motif]");
-      expect(await motifLayers.count(), `${template.id} should expose decorative motif layers`).toBeGreaterThan(0);
+      expect(
+        await motifLayers.count(),
+        `${template.id} should expose decorative motif layers`,
+      ).toBeGreaterThan(0);
       const name = sheet.locator("[data-cv-name]").first();
       let zeroShot: Buffer | null = null;
 
       for (const percent of [0, 25, 50, 100]) {
         await setMotifPercent(slider, percent);
         await expect
-          .poll(async () => Number.parseFloat(await motifLayers.first().evaluate((node) => getComputedStyle(node).opacity)))
+          .poll(async () =>
+            Number.parseFloat(
+              await motifLayers.first().evaluate((node) => getComputedStyle(node).opacity),
+            ),
+          )
           .toBeCloseTo(percent / 100, 2);
         await expect(slider).toHaveValue(String(percent));
         expect(await name.evaluate((node) => getComputedStyle(node).opacity)).toBe("1");
@@ -478,12 +490,18 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
     const stableSlider = await motifSlider(page);
     await setMotifPercent(stableSlider, 0);
     await page.evaluate(
-      () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
     );
     const zeroShot = await stableSheet.screenshot({ animations: "disabled" });
     await setMotifPercent(stableSlider, 100);
     await page.evaluate(
-      () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
     );
     const fullShot = await stableSheet.screenshot({ animations: "disabled" });
     expect(hash(fullShot), "template without a decorative motif should stay visually stable").toBe(

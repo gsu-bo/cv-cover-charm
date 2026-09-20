@@ -101,10 +101,13 @@ async function openCvChrome(page: Page) {
 
 async function openLetterLayout(page: Page) {
   await page.locator('button[data-editor-ready="true"]').waitFor({ state: "visible" });
-  const layout = page.locator("[data-editor-section-toggle]").filter({ hasText: "Layout" }).first();
-  await expect(layout).toBeVisible();
-  if ((await layout.getAttribute("aria-expanded")) !== "true") await layout.click();
-  await expect(layout).toHaveAttribute("aria-expanded", "true");
+  const chrome = page
+    .locator("[data-editor-section-toggle]")
+    .filter({ hasText: "Header & Footer" })
+    .first();
+  await expect(chrome).toBeVisible();
+  if ((await chrome.getAttribute("aria-expanded")) !== "true") await chrome.click();
+  await expect(chrome).toHaveAttribute("aria-expanded", "true");
   const controls = page.locator('[data-dossier-chrome-controls="letter"]');
   await expect(controls).toHaveCount(1);
   await expect(controls).toBeVisible();
@@ -196,7 +199,7 @@ test.describe("shared CV / motivation-letter chrome", () => {
       .toBeUndefined();
   });
 
-  test("sync uses one dossier contact source, splits cleanly, and rejoins from the active branch", async ({
+  test("sync shares chrome while each active editor keeps its live contact values", async ({
     page,
   }) => {
     await seedCv(page);
@@ -232,8 +235,8 @@ test.describe("shared CV / motivation-letter chrome", () => {
 
     await page.goto(`${BASE_URL}/anschreiben`, { waitUntil: "domcontentloaded" });
     const letterHeader = page.locator("[data-dossier-integrated-contact]").first();
-    await expect(letterHeader).toContainText("Lea Müller");
-    await expect(letterHeader).not.toContainText("Andere Person");
+    await expect(letterHeader).toContainText("Andere Person");
+    await expect(letterHeader).not.toContainText("Lea Müller");
 
     const letterControls = await openLetterLayout(page);
     await letterControls.locator("[data-dossier-chrome-sync]").uncheck();
@@ -263,8 +266,12 @@ test.describe("shared CV / motivation-letter chrome", () => {
       "contact",
     );
     await page.goto(`${BASE_URL}/anschreiben`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator("[data-letter-page]").first()).toHaveAttribute(
+      "data-letter-header-mode",
+      "contact",
+    );
     await expect(page.locator("[data-dossier-integrated-contact]").first()).toContainText(
-      "Lea Müller",
+      "Andere Person",
     );
   });
 

@@ -949,10 +949,11 @@ test.describe("M5.8 dossier regression", () => {
       "data-editor-ready",
       "true",
     );
-    await page.getByRole("button", { name: "Layout", exact: true }).click();
+    await page.getByRole("button", { name: "Header & Footer", exact: true }).click();
     await page
       .locator('[data-dossier-chrome-controls="letter"] [data-dossier-header-mode-control]')
       .selectOption("compact");
+    await page.getByRole("button", { name: "Layout", exact: true }).click();
 
     await page.getByRole("button", { name: "Meine Kontaktdaten Rechts" }).click();
     await page.getByRole("button", { name: "Firma / Lehrbetrieb Rechts" }).click();
@@ -1489,6 +1490,7 @@ test.describe("M5.8 dossier regression", () => {
 
   test("card-template sidebar clears the header and stays inside the card", async ({ page }) => {
     await seedCv(page, { layout: "modern" });
+    await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
     await page.evaluate(() => {
       const saved = JSON.parse(localStorage.getItem("lebenslauf:v1") ?? "{}");
       saved.data = { ...saved.data, titel: "Lebenslauf" };
@@ -1498,9 +1500,8 @@ test.describe("M5.8 dossier regression", () => {
         colors: { bg: "#09071f", primary: "#7c3aed", accent: "#ec4899" },
       };
       localStorage.setItem("lebenslauf:v1", JSON.stringify(saved));
-      window.location.reload();
     });
-    await page.waitForLoadState("domcontentloaded");
+    await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
     await expect(previewRoot(page)).toHaveAttribute("data-cv-template", "neon");
 
     const sheet = previewRoot(page).locator('[data-cv-page="0"]');
