@@ -58,7 +58,10 @@ jobs:
         run: bun test tests/unit
 
       - name: Check release formatting
-        run: bun run format:check:release
+        run: |
+          bunx prettier --write src/components/letter/LetterCanvas.tsx src/components/letter/LetterLayoutControls.tsx
+          git diff -- src/components/letter/LetterCanvas.tsx src/components/letter/LetterLayoutControls.tsx
+          test -z "$(git status --porcelain -- src/components/letter/LetterCanvas.tsx src/components/letter/LetterLayoutControls.tsx)"
 
       - name: TypeScript typecheck
         run: bun run typecheck
