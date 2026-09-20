@@ -59,11 +59,9 @@ describe("central motivation-letter layout system", () => {
           expect(geometry.content.bottom).toBeGreaterThanOrEqual(10);
           expect(geometry.content.width).toBeGreaterThan(140);
           const warmCompact = template === "freundlich" && headerMode === "compact";
-          const minimumContentHeight = warmCompact
-            ? 220
-            : headerMode === "contact"
-              ? 230
-              : 240;
+          let minimumContentHeight = 240;
+          if (warmCompact) minimumContentHeight = 220;
+          if (headerMode === "contact") minimumContentHeight = 230;
           expect(geometry.content.height).toBeGreaterThan(minimumContentHeight);
           expect(geometry.content.left + geometry.content.width + geometry.content.right).toBe(
             LETTER_PAGE_MM.width,
