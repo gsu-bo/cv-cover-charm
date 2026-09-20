@@ -1487,7 +1487,7 @@ function Titelblatt() {
                           key={b.id}
                           type="button"
                           onClick={() => patchStyle(b.id, { hidden: false })}
-                          className="rounded-md border border-dashed border-input px-2 py-1 text-xs hover:bg-accent"
+                          className="rounded-md border border-input px-2 py-1 text-xs hover:bg-accent"
                         >
                           {b.label} einblenden
                         </button>
