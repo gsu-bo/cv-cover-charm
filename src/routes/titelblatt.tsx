@@ -11,6 +11,7 @@ import {
 } from "@/components/cover/CoverForm";
 import { CoverCanvas, type Point } from "@/components/cover/CoverCanvas";
 import { TemplatePicker } from "@/components/cover/TemplatePicker";
+import { normalizeActiveTemplateId } from "@/components/cover/fresh-templates";
 import { useTemplateQaTemplateSwitch } from "@/lib/template-qa-switch";
 import { ColorChooser } from "@/components/cover/ColorChooser";
 import { ScaledPreview } from "@/components/cover/ScaledPreview";
@@ -601,7 +602,7 @@ function Titelblatt() {
     try {
       const p = JSON.parse(saved);
       if (p.data) setData(prefill({ ...emptyData, ...p.data }));
-      if (p.template && TEMPLATES.some((t) => t.id === p.template)) setTemplate(p.template);
+      if (p.template) setTemplate(normalizeActiveTemplateId(p.template));
       if (p.colors) setColorsByTemplate((c) => ({ ...c, ...p.colors }));
       if (p.layout) setLayoutByTemplate((l) => ({ ...l, ...p.layout }));
       setCustoms(sanitizeCustoms(p.customs));
@@ -762,7 +763,7 @@ function Titelblatt() {
       font?: FontKey | null;
     };
     if (p.data) setData(prefill({ ...emptyData, ...p.data, foto: data.foto }));
-    if (p.template && TEMPLATES.some((t) => t.id === p.template)) setTemplate(p.template);
+    if (p.template) setTemplate(normalizeActiveTemplateId(p.template));
     if (p.colors) setColorsByTemplate((c) => ({ ...c, ...p.colors }));
     setLayoutByTemplate({ ...allEmptyLayouts(), ...(p.layout ?? {}) });
     setCustoms(sanitizeCustoms(p.customs));
@@ -915,11 +916,8 @@ function Titelblatt() {
         }
         keepSnapshot("Vor dem Laden", true);
         setData(prefill({ ...emptyData, ...(legacy.data as Partial<CoverData>) }));
-        if (
-          typeof legacy.template === "string" &&
-          TEMPLATES.some((t) => t.id === legacy.template)
-        ) {
-          setTemplate(legacy.template as TemplateId);
+        if (typeof legacy.template === "string") {
+          setTemplate(normalizeActiveTemplateId(legacy.template));
         }
         if (legacy.colors)
           setColorsByTemplate((c) => ({
@@ -1489,7 +1487,7 @@ function Titelblatt() {
                           key={b.id}
                           type="button"
                           onClick={() => patchStyle(b.id, { hidden: false })}
-                          className="rounded-md border border-input px-2 py-1 text-xs hover:bg-accent"
+                          className="rounded-md border border-dashed border-input px-2 py-1 text-xs hover:bg-accent"
                         >
                           {b.label} einblenden
                         </button>
