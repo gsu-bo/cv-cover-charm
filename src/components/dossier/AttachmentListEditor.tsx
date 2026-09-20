@@ -14,7 +14,26 @@ const ATTACHMENT_LIST_STYLES: Array<{ value: AttachmentListStyle; label: string 
   { value: "number", label: "1." },
 ];
 
+// Invisible escape for user text that legitimately starts like a list marker,
+// e.g. "1. Lehrjahreszeugnis". Without it the editor would mistake that text
+// for its own presentation marker and silently strip/renumber it.
+const LITERAL_MARKER_ESCAPE = "\u2060";
+const MARKER_LIKE_TEXT = /^(?:•\s+|–\s+|\d+\.\s+)/;
+
+function escapeLiteralMarker(value: string): string {
+  const plain = value.startsWith(LITERAL_MARKER_ESCAPE) ? value.slice(1) : value;
+  return MARKER_LIKE_TEXT.test(plain) ? `${LITERAL_MARKER_ESCAPE}${plain}` : plain;
+}
+
+function displayAttachmentText(value: string): string {
+  return value.startsWith(LITERAL_MARKER_ESCAPE) ? value.slice(1) : value;
+}
+
 function attachmentMarker(value: string): { style: AttachmentListStyle; text: string } {
+  if (value.startsWith(LITERAL_MARKER_ESCAPE)) {
+    return { style: "none", text: value };
+  }
+
   const bullet = value.match(/^•\s+(.*)$/s);
   if (bullet) return { style: "bullet", text: bullet[1] };
 
@@ -38,7 +57,7 @@ function attachmentListStyle(values: string[]): AttachmentListStyle {
 
 function formatAttachment(value: string, style: AttachmentListStyle, index: number): string {
   const text = attachmentMarker(value).text;
-  if (!text.trim() || style === "none") return text;
+  if (!displayAttachmentText(text).trim() || style === "none") return text;
   if (style === "bullet") return `• ${text}`;
   if (style === "dash") return `– ${text}`;
   return `${index + 1}. ${text}`;
@@ -55,7 +74,9 @@ export function AttachmentListEditor({ values, onChange }: AttachmentListEditorP
 
   const changeEntry = (index: number, value: string) => {
     const next = [...values];
-    next[index] = letterEditor ? formatAttachment(value, listStyle, index) : value;
+    next[index] = letterEditor
+      ? formatAttachment(escapeLiteralMarker(value), listStyle, index)
+      : value;
     onChange(next);
   };
 
@@ -109,7 +130,11 @@ export function AttachmentListEditor({ values, onChange }: AttachmentListEditorP
               Beilage {index + 1}
               <input
                 type="text"
-                value={letterEditor && listStyle !== "none" ? attachmentMarker(value).text : value}
+                value={
+                  letterEditor
+                    ? displayAttachmentText(attachmentMarker(value).text)
+                    : value
+                }
                 onChange={(event) => changeEntry(index, event.target.value)}
                 className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
