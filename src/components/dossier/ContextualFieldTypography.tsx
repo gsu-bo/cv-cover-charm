@@ -5,8 +5,10 @@ import {
   DOSSIER_FIELD_TYPOGRAPHY_STORAGE_KEY,
   clearDossierFieldTypography,
   dossierFieldTypographyKey,
+  findDossierFieldTypographyEntry,
   getDossierFieldTypography,
   getDossierFieldTypographyEntries,
+  newDossierFieldTypographyFieldId,
   normalizeDossierFieldText,
   setDossierFieldTypography,
   type DossierFieldTypographyEntry,
@@ -22,6 +24,8 @@ const TOOLBAR_GAP = 8;
 const TOOLBAR_EDGE = 10;
 const TOOLBAR_HEIGHT = 46;
 const TOOLBAR_HALF_WIDTH = 116;
+const TEXT_CONTROL_SELECTOR =
+  'input[type="text"], input[type="email"], input[type="tel"], input[type="url"], input[type="search"], textarea';
 
 function currentScope(): DossierFieldTypographyScope | null {
   if (typeof window === "undefined") return null;
@@ -57,6 +61,51 @@ function labelText(control: TextControl): string {
   );
 }
 
+function textControls(root: ParentNode): TextControl[] {
+  return Array.from(root.querySelectorAll<TextControl>(TEXT_CONTROL_SELECTOR));
+}
+
+function contextRoot(control: TextControl): HTMLElement {
+  const panel = control.closest<HTMLElement>("[data-editor-panel]");
+  const section = control.closest<HTMLElement>("[data-editor-section-title]");
+  const stop = section ?? panel;
+  let candidate = control.parentElement;
+
+  while (candidate && candidate !== stop && candidate !== panel) {
+    const controls = textControls(candidate);
+    if (controls.length >= 2 && controls.length <= 8) return candidate;
+    candidate = candidate.parentElement;
+  }
+  return stop ?? panel ?? control.parentElement ?? document.body;
+}
+
+function fieldContextValues(control: TextControl): string[] {
+  const values: string[] = [];
+  const seen = new Set<string>();
+  for (const candidate of textControls(contextRoot(control))) {
+    if (candidate === control) continue;
+    const value = normalizeDossierFieldText(candidate.value);
+    const comparable = value.toLocaleLowerCase("de-CH");
+    if (!value || seen.has(comparable)) continue;
+    seen.add(comparable);
+    values.push(value);
+    if (values.length >= 8) break;
+  }
+  return values;
+}
+
+function fieldDocxOccurrence(control: TextControl): number {
+  const panel = control.closest<HTMLElement>("[data-editor-panel]");
+  if (!panel) return 0;
+  const value = normalizeDossierFieldText(control.value).toLocaleLowerCase("de-CH");
+  if (!value) return 0;
+  const matches = textControls(panel).filter(
+    (candidate) =>
+      normalizeDossierFieldText(candidate.value).toLocaleLowerCase("de-CH") === value,
+  );
+  return Math.max(0, matches.indexOf(control));
+}
+
 function fieldMeta(
   control: TextControl,
   scope: DossierFieldTypographyScope,
@@ -66,7 +115,17 @@ function fieldMeta(
   const section =
     control.closest<HTMLElement>("[data-editor-section-title]")?.dataset.editorSectionTitle ??
     (scope === "cv" ? "Lebenslauf" : "Motivationsschreiben");
-  return { scope, section, label: labelText(control), value };
+  const fieldId = control.dataset.dossierFieldId?.trim();
+  const contextValues = fieldContextValues(control);
+  return {
+    scope,
+    section,
+    label: labelText(control),
+    value,
+    ...(fieldId ? { fieldId } : {}),
+    ...(contextValues.length ? { contextValues } : {}),
+    docxOccurrence: fieldDocxOccurrence(control),
+  };
 }
 
 function hasExplicitStyle(style: DossierFieldTypographyStyle): boolean {
@@ -97,8 +156,72 @@ function normalizedElementText(element: Element): string {
   return normalizeDossierFieldText(element.textContent ?? "");
 }
 
-function leafMatches(rootSelector: string, value: string): HTMLElement[] {
-  const needle = normalizeDossierFieldText(value).toLocaleLowerCase("de-CH");
+function candidateContextText(element: HTMLElement): string {
+  const anchor =
+    element.closest<HTMLElement>(
+      "[data-cv-entry], [data-cv-header], [data-cv-sidebar], [data-letter-pdf-text]",
+    ) ?? element.parentElement;
+  return normalizeDossierFieldText(anchor?.textContent ?? element.textContent ?? "").toLocaleLowerCase(
+    "de-CH",
+  );
+}
+
+function replicaRoot(element: HTMLElement): HTMLElement {
+  return (
+    element.closest<HTMLElement>("[data-dossier-document]") ??
+    element.closest<HTMLElement>("[data-letter-page], [data-cv-page]") ??
+    document.body
+  );
+}
+
+function contextualCandidates(
+  candidates: HTMLElement[],
+  entry: DossierFieldTypographyEntry,
+): HTMLElement[] {
+  if (candidates.length <= 1) return candidates;
+
+  let selected = candidates;
+  const context = (entry.contextValues ?? []).map((value) =>
+    normalizeDossierFieldText(value).toLocaleLowerCase("de-CH"),
+  );
+  if (context.length) {
+    const scored = candidates.map((element) => {
+      const haystack = candidateContextText(element);
+      const score = context.reduce(
+        (sum, value) => sum + (value.length >= 2 && haystack.includes(value) ? 1 : 0),
+        0,
+      );
+      return { element, score };
+    });
+    const max = Math.max(...scored.map(({ score }) => score));
+    if (max > 0) selected = scored.filter(({ score }) => score === max).map(({ element }) => element);
+  }
+
+  const occurrence = entry.docxOccurrence;
+  if (typeof occurrence !== "number" || selected.length <= 1) return selected;
+
+  const groups = new Map<HTMLElement, HTMLElement[]>();
+  for (const element of selected) {
+    const root = replicaRoot(element);
+    groups.set(root, [...(groups.get(root) ?? []), element]);
+  }
+
+  const picked: HTMLElement[] = [];
+  for (const group of groups.values()) {
+    group.sort((a, b) => {
+      if (a === b) return 0;
+      return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+    });
+    picked.push(group[Math.min(occurrence, group.length - 1)]);
+  }
+  return picked;
+}
+
+function leafMatches(
+  rootSelector: string,
+  entry: DossierFieldTypographyEntry,
+): HTMLElement[] {
+  const needle = normalizeDossierFieldText(entry.value).toLocaleLowerCase("de-CH");
   if (!needle) return [];
   const candidates: HTMLElement[] = [];
   for (const root of document.querySelectorAll<HTMLElement>(rootSelector)) {
@@ -117,7 +240,8 @@ function leafMatches(rootSelector: string, value: string): HTMLElement[] {
     });
 
   const exact = pick(false);
-  return exact.length ? exact : needle.length >= 2 ? pick(true) : [];
+  const matches = exact.length ? exact : needle.length >= 2 ? pick(true) : [];
+  return contextualCandidates(matches, entry);
 }
 
 function directTargets(selector: string): HTMLElement[] {
@@ -129,14 +253,14 @@ function letterTargets(entry: DossierFieldTypographyEntry): HTMLElement[] {
   const label = entry.label.toLocaleLowerCase("de-CH");
 
   if (section.includes("meine kontaktdaten")) {
-    return leafMatches('[data-letter-pdf-text="sender"]', entry.value);
+    return leafMatches('[data-letter-pdf-text="sender"]', entry);
   }
   if (section.includes("firma / lehrbetrieb")) {
-    return leafMatches('[data-letter-pdf-text="recipient"]', entry.value);
+    return leafMatches('[data-letter-pdf-text="recipient"]', entry);
   }
   if (section.includes("briefinhalt")) {
     if (label === "ort" || label === "datum") {
-      return directTargets('[data-letter-pdf-text="date"]');
+      return leafMatches('[data-letter-pdf-text="date"]', entry);
     }
     if (label.includes("titel") || label.includes("betreff")) {
       return directTargets('[data-letter-pdf-text="subject"]');
@@ -147,15 +271,17 @@ function letterTargets(entry: DossierFieldTypographyEntry): HTMLElement[] {
       return directTargets('[data-letter-pdf-text="signature"]');
     }
   }
-  return leafMatches("[data-letter-page]", entry.value);
+  return leafMatches("[data-letter-page]", entry);
 }
 
 function cvTargets(entry: DossierFieldTypographyEntry): HTMLElement[] {
   const label = entry.label.toLocaleLowerCase("de-CH");
   if (label.includes("titel des dokuments")) return directTargets("[data-cv-doc-title]");
-  if (label === "vorname" || label === "nachname") return directTargets("[data-cv-name]");
+  if (label === "vorname" || label === "nachname") {
+    return contextualCandidates(directTargets("[data-cv-name]"), entry);
+  }
   if (label.includes("untertitel")) return directTargets("[data-cv-subtitle]");
-  return leafMatches("[data-cv-page]", entry.value);
+  return leafMatches("[data-cv-page]", entry);
 }
 
 function applyPreviewTypography(scope: DossierFieldTypographyScope) {
@@ -171,17 +297,37 @@ function applyPreviewTypography(scope: DossierFieldTypographyScope) {
   }
 }
 
+function resolveControlTypography(
+  control: TextControl,
+  scope: DossierFieldTypographyScope,
+): {
+  meta: DossierFieldTypographyMeta;
+  key: string;
+  style: DossierFieldTypographyStyle;
+} | null {
+  const meta = fieldMeta(control, scope);
+  if (!meta) return null;
+  const entry = findDossierFieldTypographyEntry(meta);
+  if (entry?.fieldId && control.dataset.dossierFieldId !== entry.fieldId) {
+    control.dataset.dossierFieldId = entry.fieldId;
+  }
+  const resolvedMeta = entry?.fieldId ? { ...meta, fieldId: entry.fieldId } : meta;
+  return {
+    meta: resolvedMeta,
+    key: entry?.key ?? dossierFieldTypographyKey(resolvedMeta),
+    style: entry?.style ?? getDossierFieldTypography(scope, dossierFieldTypographyKey(resolvedMeta)),
+  };
+}
+
 function syncInputTypography(scope: DossierFieldTypographyScope) {
   const panel = document.querySelector<HTMLElement>("[data-editor-panel]");
   if (!panel) return;
-  for (const control of panel.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
-    'input[type="text"], input[type="email"], input[type="tel"], input[type="url"], input[type="search"], textarea',
-  )) {
+  for (const control of textControls(panel)) {
     clearTypographyAttributes(control);
-    const meta = fieldMeta(control, scope);
-    if (!meta) continue;
-    const style = getDossierFieldTypography(scope, dossierFieldTypographyKey(meta));
-    if (hasExplicitStyle(style)) setTypographyAttributes(control, style);
+    const resolved = resolveControlTypography(control, scope);
+    if (resolved && hasExplicitStyle(resolved.style)) {
+      setTypographyAttributes(control, resolved.style);
+    }
   }
 }
 
@@ -221,19 +367,18 @@ export function ContextualFieldTypography() {
       return;
     }
 
-    const meta = fieldMeta(control, scope);
-    if (!meta) {
+    const resolved = resolveControlTypography(control, scope);
+    if (!resolved) {
       setBubble(null);
       setActiveKey(null);
       return;
     }
 
-    const key = dossierFieldTypographyKey(meta);
-    keyByControlRef.current.set(control, key);
+    keyByControlRef.current.set(control, resolved.key);
     activeControlRef.current = control;
     activeSelectionRef.current = { start, end };
-    setActiveKey(key);
-    setStyle(getDossierFieldTypography(scope, key));
+    setActiveKey(resolved.key);
+    setStyle(resolved.style);
 
     const rect = control.getBoundingClientRect();
     const placement: Bubble["placement"] =
@@ -249,7 +394,10 @@ export function ContextualFieldTypography() {
       top:
         placement === "above"
           ? Math.max(TOOLBAR_HEIGHT + TOOLBAR_EDGE, rawTop)
-          : Math.min(rawTop, Math.max(TOOLBAR_EDGE, window.innerHeight - TOOLBAR_HEIGHT - TOOLBAR_EDGE)),
+          : Math.min(
+              rawTop,
+              Math.max(TOOLBAR_EDGE, window.innerHeight - TOOLBAR_HEIGHT - TOOLBAR_EDGE),
+            ),
       placement,
     });
   }, [scope]);
@@ -267,9 +415,15 @@ export function ContextualFieldTypography() {
       if (!scope || !activeKey) return;
       const control = activeControlRef.current;
       if (!control) return;
-      const meta = fieldMeta(control, scope);
+      let meta = fieldMeta(control, scope);
       if (!meta) return;
+
       if (next) {
+        const existing = findDossierFieldTypographyEntry(meta);
+        const fieldId =
+          meta.fieldId ?? existing?.fieldId ?? newDossierFieldTypographyFieldId(scope);
+        control.dataset.dossierFieldId = fieldId;
+        meta = { ...meta, fieldId };
         const key = setDossierFieldTypography(meta, next, activeKey);
         keyByControlRef.current.set(control, key);
         setActiveKey(key);
@@ -291,17 +445,29 @@ export function ContextualFieldTypography() {
       if (!isTextControl(event.target) || !event.target.closest("[data-editor-panel]")) return;
       const control = event.target;
       const previousKey = keyByControlRef.current.get(control);
-      const meta = fieldMeta(control, scope);
-      if (meta) {
-        const nextKey = dossierFieldTypographyKey(meta);
-        if (previousKey && previousKey !== nextKey) {
-          const previousStyle = getDossierFieldTypography(scope, previousKey);
-          if (hasExplicitStyle(previousStyle)) {
-            setDossierFieldTypography(meta, previousStyle, previousKey);
+      let meta = fieldMeta(control, scope);
+
+      if (meta && previousKey) {
+        const previousStyle = getDossierFieldTypography(scope, previousKey);
+        if (hasExplicitStyle(previousStyle)) {
+          if (!meta.fieldId) {
+            const existing = findDossierFieldTypographyEntry(meta);
+            const fieldId =
+              existing?.fieldId ?? newDossierFieldTypographyFieldId(scope);
+            control.dataset.dossierFieldId = fieldId;
+            meta = { ...meta, fieldId };
           }
+          const nextKey = setDossierFieldTypography(meta, previousStyle, previousKey);
+          keyByControlRef.current.set(control, nextKey);
+          if (activeControlRef.current === control) setActiveKey(nextKey);
+        } else {
+          keyByControlRef.current.set(control, dossierFieldTypographyKey(meta));
         }
-        keyByControlRef.current.set(control, nextKey);
+      } else if (meta) {
+        const resolved = resolveControlTypography(control, scope);
+        if (resolved) keyByControlRef.current.set(control, resolved.key);
       }
+
       scheduleDecoration();
       window.requestAnimationFrame(readSelection);
     };
@@ -343,7 +509,7 @@ export function ContextualFieldTypography() {
     };
   }, [readSelection, scheduleDecoration, scope]);
 
-  if (!scope || !bubble || !activeKey || typeof document === "undefined") return null;
+  if (!scope || typeof document === "undefined") return null;
 
   return createPortal(
     <>
@@ -355,58 +521,69 @@ export function ContextualFieldTypography() {
         [data-dossier-field-underline="true"] { text-decoration: underline !important; }
         [data-dossier-field-underline="false"] { text-decoration: none !important; }
       `}</style>
-      <div
-        data-dossier-field-selection-toolbar
-        data-dossier-field-scope={scope}
-        role="toolbar"
-        aria-label="Textfeld formatieren"
-        className="fixed z-[90] flex items-center gap-1 rounded-xl border bg-popover p-1 shadow-xl"
-        style={{
-          left: bubble.left,
-          top: bubble.top,
-          transform: bubble.placement === "above" ? "translate(-50%, -100%)" : "translate(-50%, 0)",
-        }}
-        onPointerDown={(event) => event.preventDefault()}
-      >
-        <button
-          type="button"
-          aria-label="Feldformatierung entfernen"
-          className="rounded-md px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
-          onClick={() => updateStyle(null)}
+      {bubble && activeKey ? (
+        <div
+          data-dossier-field-selection-toolbar
+          data-dossier-field-scope={scope}
+          role="toolbar"
+          aria-label="Textfeld formatieren"
+          className="fixed z-[90] flex items-center gap-1 rounded-xl border bg-popover p-1 shadow-xl"
+          style={{
+            left: bubble.left,
+            top: bubble.top,
+            transform:
+              bubble.placement === "above" ? "translate(-50%, -100%)" : "translate(-50%, 0)",
+          }}
+          onPointerDown={(event) => event.preventDefault()}
         >
-          Text
-        </button>
-        <span aria-hidden="true" className="mx-0.5 h-6 w-px bg-border" />
-        <button
-          type="button"
-          aria-label="Fett"
-          aria-pressed={style.bold === true}
-          className={`rounded-md px-2.5 py-1.5 text-xs font-bold hover:bg-muted ${style.bold === true ? "bg-primary text-primary-foreground" : ""}`}
-          onClick={() => updateStyle({ ...style, bold: style.bold === true ? false : true })}
-        >
-          B
-        </button>
-        <button
-          type="button"
-          aria-label="Kursiv"
-          aria-pressed={style.italic === true}
-          className={`rounded-md px-2.5 py-1.5 text-xs italic hover:bg-muted ${style.italic === true ? "bg-primary text-primary-foreground" : ""}`}
-          onClick={() => updateStyle({ ...style, italic: style.italic === true ? false : true })}
-        >
-          I
-        </button>
-        <button
-          type="button"
-          aria-label="Unterstrichen"
-          aria-pressed={style.underline === true}
-          className={`rounded-md px-2.5 py-1.5 text-xs underline hover:bg-muted ${style.underline === true ? "bg-primary text-primary-foreground" : ""}`}
-          onClick={() =>
-            updateStyle({ ...style, underline: style.underline === true ? false : true })
-          }
-        >
-          U
-        </button>
-      </div>
+          <button
+            type="button"
+            aria-label="Feldformatierung entfernen"
+            className="rounded-md px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
+            onClick={() => updateStyle(null)}
+          >
+            Text
+          </button>
+          <span aria-hidden="true" className="mx-0.5 h-6 w-px bg-border" />
+          <button
+            type="button"
+            aria-label="Fett"
+            aria-pressed={style.bold === true}
+            className={`rounded-md px-2.5 py-1.5 text-xs font-bold hover:bg-muted ${
+              style.bold === true ? "bg-primary text-primary-foreground" : ""
+            }`}
+            onClick={() => updateStyle({ ...style, bold: style.bold === true ? false : true })}
+          >
+            B
+          </button>
+          <button
+            type="button"
+            aria-label="Kursiv"
+            aria-pressed={style.italic === true}
+            className={`rounded-md px-2.5 py-1.5 text-xs italic hover:bg-muted ${
+              style.italic === true ? "bg-primary text-primary-foreground" : ""
+            }`}
+            onClick={() =>
+              updateStyle({ ...style, italic: style.italic === true ? false : true })
+            }
+          >
+            I
+          </button>
+          <button
+            type="button"
+            aria-label="Unterstrichen"
+            aria-pressed={style.underline === true}
+            className={`rounded-md px-2.5 py-1.5 text-xs underline hover:bg-muted ${
+              style.underline === true ? "bg-primary text-primary-foreground" : ""
+            }`}
+            onClick={() =>
+              updateStyle({ ...style, underline: style.underline === true ? false : true })
+            }
+          >
+            U
+          </button>
+        </div>
+      ) : null}
     </>,
     document.body,
   );

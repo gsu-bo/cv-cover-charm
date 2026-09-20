@@ -11,6 +11,13 @@ import {
   type DossierChromeState,
 } from "@/lib/dossier-chrome";
 import {
+  applyPortableDossierFieldTypographyState,
+  clearDossierFieldTypographyState,
+  normalizeDossierFieldTypographyState,
+  readPortableDossierFieldTypographyState,
+  type PortableDossierFieldTypographyState,
+} from "@/lib/dossier-field-typography";
+import {
   applyPortableDossierHyphenationState,
   normalizeDossierHyphenationState,
   readPortableDossierHyphenationState,
@@ -30,8 +37,9 @@ export const CV_STORAGE_KEY = "lebenslauf:v1";
 
 export const DOSSIER_PROJECT_KIND = "cv-cover-charm-dossier";
 /**
- * `letter`, `chrome`, `hyphenation`, `pageMargins` and the optional CV portable state are additive
- * extensions of version 1. Older project files therefore stay readable without migration.
+ * `letter`, `chrome`, `hyphenation`, `pageMargins`, `fieldTypography` and the optional CV portable
+ * state are additive extensions of version 1. Older project files therefore stay readable without
+ * migration.
  */
 export const DOSSIER_PROJECT_VERSION = 1;
 
@@ -45,6 +53,7 @@ export type DossierProject = {
   chrome?: DossierChromeState;
   hyphenation?: DossierHyphenationState;
   pageMargins?: DossierPageMarginsState;
+  fieldTypography?: PortableDossierFieldTypographyState;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -88,6 +97,7 @@ export function createDossierProject(parts: {
   const chrome = readPortableDossierChromeState();
   const hyphenation = readPortableDossierHyphenationState();
   const pageMargins = readPortableDossierPageMarginsState();
+  const fieldTypography = readPortableDossierFieldTypographyState();
   return {
     kind: DOSSIER_PROJECT_KIND,
     version: DOSSIER_PROJECT_VERSION,
@@ -98,6 +108,7 @@ export function createDossierProject(parts: {
     chrome,
     hyphenation,
     ...(pageMargins ? { pageMargins } : {}),
+    ...(fieldTypography ? { fieldTypography } : {}),
   };
 }
 
@@ -121,6 +132,15 @@ export function parseDossierProject(value: unknown): DossierProject | null {
     normalizedPageMargins && Object.keys(normalizedPageMargins).length
       ? normalizedPageMargins
       : undefined;
+  const normalizedFieldTypography = isRecord(value.fieldTypography)
+    ? normalizeDossierFieldTypographyState(value.fieldTypography)
+    : undefined;
+  const fieldTypography =
+    normalizedFieldTypography &&
+    (Object.keys(normalizedFieldTypography.cv).length ||
+      Object.keys(normalizedFieldTypography.letter).length)
+      ? normalizedFieldTypography
+      : undefined;
 
   return {
     kind: DOSSIER_PROJECT_KIND,
@@ -132,6 +152,7 @@ export function parseDossierProject(value: unknown): DossierProject | null {
     ...(chrome ? { chrome } : {}),
     ...(hyphenation ? { hyphenation } : {}),
     ...(pageMargins ? { pageMargins } : {}),
+    ...(fieldTypography ? { fieldTypography } : {}),
   };
 }
 
@@ -161,6 +182,9 @@ export function storeDossierProject(project: DossierProject): {
   }
   if (project.hyphenation) applyPortableDossierHyphenationState(project.hyphenation);
   if (project.pageMargins) applyPortableDossierPageMarginsState(project.pageMargins);
+  if (project.fieldTypography) {
+    applyPortableDossierFieldTypographyState(project.fieldTypography);
+  }
   return { cover: !!project.cover, letter: !!project.letter, cv: !!project.cv };
 }
 
@@ -182,6 +206,7 @@ export function replaceDossierProject(project: DossierProject): {
   storage.removeItem(CV_STORAGE_KEY);
   clearPortableCvState();
   clearDossierPageMargins();
+  clearDossierFieldTypographyState();
 
   const restored = storeDossierProject(project);
   if (!project.chrome) {

@@ -51,7 +51,7 @@ function ensureRunTypography(run: string, style: DossierFieldTypographyStyle) {
   return run.replace(/<w:r(\s[^>]*)?>/, (open) => `${open}<w:rPr>${next}</w:rPr>`);
 }
 
-function patchRuns(source: string, entries: DossierFieldTypographyEntry[]) {
+function legacyPatchRuns(source: string, entries: DossierFieldTypographyEntry[]) {
   if (!entries.length) return source;
   const targets = entries
     .map((entry) => ({ ...entry, target: normalizedText(entry.value) }))
@@ -71,6 +71,128 @@ function patchRuns(source: string, entries: DossierFieldTypographyEntry[]) {
     }
     return patched;
   });
+}
+
+type Paragraph = {
+  start: number;
+  end: number;
+  xml: string;
+  text: string;
+};
+
+function paragraphs(source: string): Paragraph[] {
+  return Array.from(source.matchAll(/<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g))
+    .filter((match) => match.index !== undefined)
+    .map((match) => ({
+      start: match.index!,
+      end: match.index! + match[0].length,
+      xml: match[0],
+      text: visibleText(match[0]),
+    }));
+}
+
+function patchParagraphRuns(
+  paragraph: string,
+  target: string,
+  style: DossierFieldTypographyStyle,
+) {
+  return paragraph.replace(/<w:r(?:\s[^>]*)?>[\s\S]*?<\/w:r>/g, (run) => {
+    const text = visibleText(run);
+    if (!text) return run;
+    const overlaps =
+      text === target ||
+      (target.length >= 2 && text.includes(target)) ||
+      (text.length >= 2 && target.includes(text));
+    return overlaps ? ensureRunTypography(run, style) : run;
+  });
+}
+
+function contextualParagraphScore(
+  list: Paragraph[],
+  index: number,
+  entry: DossierFieldTypographyEntry,
+) {
+  const contextValues = (entry.contextValues ?? [])
+    .map((value) => normalizedText(value))
+    .filter((value) => value.length >= 2);
+  if (!contextValues.length) return 0;
+
+  let score = 0;
+  for (const value of contextValues) {
+    // Editor groups normally serialize top-to-bottom. Prefer context that
+    // precedes the target, but still accept following values as evidence.
+    for (let distance = 1; distance <= 3; distance += 1) {
+      const previous = list[index - distance]?.text ?? "";
+      const following = list[index + distance]?.text ?? "";
+      if (previous.includes(value)) score += 8 - distance;
+      if (following.includes(value)) score += 4 - distance;
+    }
+  }
+  return score;
+}
+
+function stablePatchEntry(source: string, entry: DossierFieldTypographyEntry) {
+  const target = normalizedText(entry.value);
+  if (!target) return source;
+
+  const list = paragraphs(source);
+  const exact = list
+    .map((paragraph, index) => ({ paragraph, index }))
+    .filter(({ paragraph }) => paragraph.text === target);
+  const candidates =
+    exact.length > 0
+      ? exact
+      : list
+          .map((paragraph, index) => ({ paragraph, index }))
+          .filter(
+            ({ paragraph }) =>
+              target.length >= 2 &&
+              (paragraph.text.includes(target) || target.includes(paragraph.text)),
+          );
+  if (!candidates.length) return source;
+
+  let pool = candidates;
+  if (entry.contextValues?.length) {
+    const scored = candidates.map((candidate) => ({
+      ...candidate,
+      score: contextualParagraphScore(list, candidate.index, entry),
+    }));
+    const max = Math.max(...scored.map(({ score }) => score));
+    if (max > 0) {
+      pool = scored
+        .filter(({ score }) => score === max)
+        .map(({ paragraph, index }) => ({ paragraph, index }));
+    }
+  }
+
+  const occurrence =
+    typeof entry.docxOccurrence === "number" && entry.docxOccurrence >= 0
+      ? entry.docxOccurrence
+      : 0;
+  const selected = pool[Math.min(occurrence, pool.length - 1)]?.paragraph;
+  if (!selected) return source;
+
+  const replacement = patchParagraphRuns(selected.xml, target, entry.style);
+  return source.slice(0, selected.start) + replacement + source.slice(selected.end);
+}
+
+function hasStableIdentity(entry: DossierFieldTypographyEntry) {
+  return (
+    !!entry.fieldId ||
+    !!entry.contextValues?.length ||
+    typeof entry.docxOccurrence === "number"
+  );
+}
+
+function patchRuns(source: string, entries: DossierFieldTypographyEntry[]) {
+  if (!entries.length) return source;
+
+  const legacy = entries.filter((entry) => !hasStableIdentity(entry));
+  const stable = entries.filter(hasStableIdentity);
+
+  let next = legacyPatchRuns(source, legacy);
+  for (const entry of stable) next = stablePatchEntry(next, entry);
+  return next;
 }
 
 type SectionBounds = { start: number; end: number };
@@ -118,6 +240,7 @@ export function applyDossierFieldTypographyToDocumentXml(
   if (!bounds) return source;
 
   let next = source;
+  // Patch the later section first so offsets for the earlier section stay valid.
   for (const [index, entries] of [
     [2, cvEntries],
     [1, letterEntries],
