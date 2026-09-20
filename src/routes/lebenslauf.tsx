@@ -20,6 +20,7 @@ import { useTemplateQaTemplateSwitch } from "@/lib/template-qa-switch";
 import { ColorChooser } from "@/components/cover/ColorChooser";
 import { ScaledPreview } from "@/components/cover/ScaledPreview";
 import { CvCanvas, type CvLayoutWarning } from "@/components/cv/CvCanvas";
+import { CvPageMarginsControl } from "@/components/cv/CvPageMarginsControl";
 import { CitrusRubricControls } from "@/components/cv/CitrusRubricControls";
 import { ElementBar } from "@/components/cover/ElementBar";
 import { AddElementMenu } from "@/components/cover/AddElementMenu";
@@ -311,6 +312,7 @@ function Lebenslauf() {
     uebernehmen: true,
     vorlage: false,
     chrome: false,
+    layout: false,
     farben: false,
     typo: false,
     rubriken: false,
@@ -2074,6 +2076,36 @@ function Lebenslauf() {
                 <DossierChromeControls scope="cv" />
               </Section>
 
+              <Section title="Layout" open={open.layout} onToggle={() => toggle("layout")}>
+                <div className="flex flex-col gap-3">
+                  <CvPageMarginsControl design={design} chromeOptions={chromeOptions} />
+
+                  <label className="flex flex-col gap-1 text-xs">
+                    <span className="text-muted-foreground">
+                      Seitenspalte{" "}
+                      {Math.round((design.sidebarPct ?? CV_TYPE_DEFAULTS.sidebarPct) * 100)}
+                      {" / "}
+                      {100 - Math.round((design.sidebarPct ?? CV_TYPE_DEFAULTS.sidebarPct) * 100)}
+                    </span>
+                    <input
+                      type="range"
+                      min={Math.round(SIDEBAR_PCT_MIN * 100)}
+                      max={Math.round(SIDEBAR_PCT_MAX * 100)}
+                      step={1}
+                      value={Math.round((design.sidebarPct ?? CV_TYPE_DEFAULTS.sidebarPct) * 100)}
+                      onChange={(e) =>
+                        setDesign((d) => ({ ...d, sidebarPct: Number(e.target.value) / 100 }))
+                      }
+                      className="w-full accent-primary"
+                    />
+                    <span className="text-muted-foreground/80">
+                      Gilt für den Aufbau „Sidebar". Vorlagen mit eigener Farbspalte behalten deren
+                      Breite vom Titelblatt.
+                    </span>
+                  </label>
+                </div>
+              </Section>
+
               <Section
                 title="Farben"
                 open={open.farben}
@@ -2153,7 +2185,7 @@ function Lebenslauf() {
               </Section>
 
               <Section
-                title="Schrift und Layout"
+                title="Schrift"
                 open={open.typo}
                 onToggle={() => toggle("typo")}
                 hint={`${Math.round((design.bodyScale ?? CV_TYPE_DEFAULTS.bodyScale) * 100)} %`}
@@ -2407,30 +2439,6 @@ function Lebenslauf() {
                       <span className="text-muted-foreground/80">{hint}</span>
                     </label>
                   ))}
-
-                  <label className="flex flex-col gap-1 text-xs">
-                    <span className="text-muted-foreground">
-                      Seitenspalte{" "}
-                      {Math.round((design.sidebarPct ?? CV_TYPE_DEFAULTS.sidebarPct) * 100)}
-                      {" / "}
-                      {100 - Math.round((design.sidebarPct ?? CV_TYPE_DEFAULTS.sidebarPct) * 100)}
-                    </span>
-                    <input
-                      type="range"
-                      min={Math.round(SIDEBAR_PCT_MIN * 100)}
-                      max={Math.round(SIDEBAR_PCT_MAX * 100)}
-                      step={1}
-                      value={Math.round((design.sidebarPct ?? CV_TYPE_DEFAULTS.sidebarPct) * 100)}
-                      onChange={(e) =>
-                        setDesign((d) => ({ ...d, sidebarPct: Number(e.target.value) / 100 }))
-                      }
-                      className="w-full accent-primary"
-                    />
-                    <span className="text-muted-foreground/80">
-                      Gilt für den Aufbau „Sidebar". Vorlagen mit eigener Farbspalte behalten deren
-                      Breite vom Titelblatt.
-                    </span>
-                  </label>
                 </div>
               </Section>
             </div>

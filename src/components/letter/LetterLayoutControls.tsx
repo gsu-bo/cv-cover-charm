@@ -1,6 +1,4 @@
 import { useSyncExternalStore } from "react";
-import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";
-import { DossierHyphenationControl } from "@/components/dossier/DossierHyphenationControl";
 import { DossierPageMarginsControl } from "@/components/dossier/DossierPageMarginsControl";
 import {
   letterPageGeometry,
@@ -21,7 +19,9 @@ const buttonClass =
 const smallButtonClass =
   "rounded border border-input bg-background px-2 py-1 text-[11px] font-medium hover:bg-accent";
 
-function legacyChromePatch(patch: Partial<DossierChromeOptions>): Partial<LetterDesign> {
+export function legacyLetterChromePatch(
+  patch: Partial<DossierChromeOptions>,
+): Partial<LetterDesign> {
   const next: Partial<LetterDesign> = {};
   if (patch.headerMode !== undefined) next.headerMode = patch.headerMode;
   if (patch.headerShowName !== undefined) next.headerShowName = patch.headerShowName;
@@ -185,11 +185,6 @@ export function LetterLayoutControls({
 
   return (
     <div className="grid gap-2.5">
-      <DossierChromeControls
-        scope="letter"
-        onOptionsChange={(patch) => onChange(legacyChromePatch(patch))}
-      />
-
       <div
         data-letter-specific-layout-controls
         className="grid gap-2.5 rounded-lg border bg-background p-3 shadow-sm"
@@ -197,8 +192,8 @@ export function LetterLayoutControls({
         <div>
           <div className="text-xs font-semibold">Briefspezifische Positionen</div>
           <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-            Diese Einstellungen gelten nur fürs Motivationsschreiben. Header und Footer darüber sind
-            identisch aufgebaut wie im Lebenslauf.
+            Diese Einstellungen gelten nur fürs Motivationsschreiben. Header und Footer findest du
+            im eigenen Bereich „Header & Footer“.
           </p>
         </div>
 
@@ -254,8 +249,6 @@ export function LetterLayoutControls({
           </label>
         </div>
       </div>
-
-      <DossierHyphenationControl />
 
       <DossierPageMarginsControl
         scope="letter"
