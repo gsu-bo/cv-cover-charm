@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 
 type AttachmentListEditorProps = {
   values: string[];
@@ -9,6 +9,15 @@ export function AttachmentListEditor({ values, onChange }: AttachmentListEditorP
   const changeEntry = (index: number, value: string) => {
     const next = [...values];
     next[index] = value;
+    onChange(next);
+  };
+
+  const moveEntry = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= values.length) return;
+
+    const next = [...values];
+    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
     onChange(next);
   };
 
@@ -30,6 +39,28 @@ export function AttachmentListEditor({ values, onChange }: AttachmentListEditorP
                 className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
             </label>
+            <div className="flex shrink-0 gap-1" aria-label={`Beilage ${index + 1} sortieren`}>
+              <button
+                type="button"
+                onClick={() => moveEntry(index, -1)}
+                disabled={index === 0}
+                className="inline-flex size-9 items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label={`Beilage ${index + 1} nach oben verschieben`}
+                title="Nach oben"
+              >
+                <ChevronUp className="size-4" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={() => moveEntry(index, 1)}
+                disabled={index === values.length - 1}
+                className="inline-flex size-9 items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label={`Beilage ${index + 1} nach unten verschieben`}
+                title="Nach unten"
+              >
+                <ChevronDown className="size-4" aria-hidden="true" />
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => removeEntry(index)}
