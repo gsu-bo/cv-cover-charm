@@ -61,13 +61,13 @@ test("a retired Frame cover import replaces the current template with canonical 
     localStorage.clear();
     localStorage.setItem(
       "titelblatt:v3",
-      JSON.stringify({ version: 8, template: "warm", data: {} }),
+      JSON.stringify({ version: 8, template: "diagonal", data: {} }),
     );
   });
   await page.reload({ waitUntil: "domcontentloaded" });
 
   const covers = page.locator('[data-dossier-document="cover"]');
-  await expect(covers.first()).toHaveAttribute("data-cover-template", "warm");
+  await expect(covers.first()).toHaveAttribute("data-cover-template", "diagonal");
 
   await page.getByRole("button", { name: "Download" }).click();
   await page.locator('input[type="file"][accept="application/json"]').setInputFiles({
