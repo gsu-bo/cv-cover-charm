@@ -162,14 +162,18 @@ function TypographyRoleControl({
   onChange: (value: LetterRoleTypography | undefined) => void;
 }) {
   const current = value ?? {};
-  const patch = (next: Partial<LetterRoleTypography>) => onChange({ ...current, ...next });
+  const patch = (next: Partial<LetterRoleTypography>) =>
+    onChange({ ...current, ...next });
   const size = Math.max(
     LETTER_ROLE_FONT_SIZE_MIN,
     Math.min(LETTER_ROLE_FONT_SIZE_MAX, current.fontSizePt ?? fallbackSize),
   );
 
   return (
-    <div data-letter-role-typography={label} className="grid gap-2 rounded-md border bg-muted/20 p-2.5">
+    <div
+      data-letter-role-typography={label}
+      className="grid gap-2 rounded-md border bg-muted/20 p-2.5"
+    >
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="text-xs font-semibold">{label}</div>
@@ -178,7 +182,11 @@ function TypographyRoleControl({
           </div>
         </div>
         {value ? (
-          <button type="button" className={smallButtonClass} onClick={() => onChange(undefined)}>
+          <button
+            type="button"
+            className={smallButtonClass}
+            onClick={() => onChange(undefined)}
+          >
             Vorlage
           </button>
         ) : null}
@@ -191,7 +199,8 @@ function TypographyRoleControl({
           value={current.font ?? "template"}
           onChange={(event) =>
             patch({
-              font: event.target.value === "template" ? undefined : (event.target.value as FontKey),
+              font:
+                event.target.value === "template" ? undefined : (event.target.value as FontKey),
             })
           }
           aria-label={`${label} Schriftart`}
@@ -241,7 +250,11 @@ function TypographyRoleControl({
           aria-label={`${label} Schriftfarbe`}
         />
         {current.color ? (
-          <button type="button" className={smallButtonClass} onClick={() => patch({ color: undefined })}>
+          <button
+            type="button"
+            className={smallButtonClass}
+            onClick={() => patch({ color: undefined })}
+          >
             Standardfarbe
           </button>
         ) : (
@@ -265,7 +278,9 @@ function TypographyRoleControl({
               aria-pressed={active}
               onClick={() => patch({ [key]: !active })}
               className={`rounded-md border px-2 py-2 text-xs ${textClass} ${
-                active ? "border-foreground bg-muted text-foreground" : "border-input text-muted-foreground"
+                active
+                  ? "border-foreground bg-muted text-foreground"
+                  : "border-input text-muted-foreground"
               }`}
             >
               {text}
@@ -305,7 +320,9 @@ export function LetterLayoutControls({
         className="grid gap-2.5 rounded-lg border bg-background p-3 shadow-sm"
       >
         <div>
-          <div className="text-xs font-semibold">Briefspezifische Positionen &amp; Typografie</div>
+          <div className="text-xs font-semibold">
+            Briefspezifische Positionen &amp; Typografie
+          </div>
           <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
             Diese Einstellungen gelten nur fürs Motivationsschreiben. Header und Footer findest du
             im eigenen Bereich „Header & Footer“.
