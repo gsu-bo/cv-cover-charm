@@ -48,7 +48,7 @@ export type DossierDocxV2CoverNode = {
   uppercase: boolean;
   trackingEm: number;
   lineHeight: number;
-  align: "left" | "center" | "right";
+  align: "left" | "center" | "right" | "justify";
   padX: number;
   padY: number;
   background: string | null;
