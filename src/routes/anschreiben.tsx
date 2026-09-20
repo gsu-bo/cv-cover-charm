@@ -6,7 +6,6 @@ import { ThemeToggle } from "@/components/cover/ThemeToggle";
 import { FileDown, History, RotateCcw, Sparkles } from "lucide-react";
 import { EditorMenuLabel } from "@/components/dossier/EditorMenuLabel";
 import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";
-import { DossierHyphenationControl } from "@/components/dossier/DossierHyphenationControl";
 import { useForeignWrite, usePageVisible } from "@/lib/autosave";
 import {
   HISTORY_KEYS,
@@ -1173,8 +1172,6 @@ function Anschreiben() {
             </Section>
 
             <Section title="Schrift" open={open.typo} onToggle={() => toggle("typo")}>
-              <DossierHyphenationControl />
-
               <label className="block text-xs font-medium">
                 Schriftart
                 <select

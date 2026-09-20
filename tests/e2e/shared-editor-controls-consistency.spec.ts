@@ -116,7 +116,8 @@ test.describe("shared editor controls consistency", () => {
     await expect(left).toHaveValue("31");
 
     const typography = await openSection(page, "Schrift");
-    await expect(typography.locator("[data-cv-doc-title-margin-top-control]")).toHaveCount(1);
+    await expect(typography.locator("[data-cv-doc-title-margin-top-control]")).toHaveCount(0);
+    await expect(typography.getByRole("combobox", { name: "Schriftart" })).toBeVisible();
 
     await page.reload();
     await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();

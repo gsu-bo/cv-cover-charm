@@ -5,6 +5,10 @@ const cv = readFileSync("src/routes/lebenslauf.tsx", "utf8");
 const letter = readFileSync("src/routes/anschreiben.tsx", "utf8");
 const letterLayout = readFileSync("src/components/letter/LetterLayoutControls.tsx", "utf8");
 const cvMargins = readFileSync("src/components/cv/CvPageMarginsControl.tsx", "utf8");
+const typographyControl = readFileSync(
+  "src/components/dossier/DossierHyphenationControl.tsx",
+  "utf8",
+);
 
 const count = (source: string, pattern: RegExp) => source.match(pattern)?.length ?? 0;
 
@@ -38,13 +42,20 @@ describe("shared CV / letter editor control ownership", () => {
     expect(letter).not.toContain("<DossierPageMarginsControl");
   });
 
-  test("places the historical shared typography control in Schrift in both editors", () => {
+  test("keeps CV-only document-title spacing under CV Schrift and out of Letter", () => {
     const cvTypography = section(cv, "Schrift");
     const letterTypography = section(letter, "Schrift");
+
     expect(cvTypography).toContain("<DossierHyphenationControl />");
-    expect(letterTypography).toContain("<DossierHyphenationControl />");
     expect(count(cv, /<DossierHyphenationControl\b/g)).toBe(1);
-    expect(count(letter, /<DossierHyphenationControl\b/g)).toBe(1);
+    expect(typographyControl).toContain("data-cv-doc-title-margin-top-control");
+    expect(typographyControl).toContain("Dokumenttitel – Abstand nach oben");
+
+    expect(letterTypography).not.toContain("DossierHyphenationControl");
+    expect(letterTypography).toContain("letterFontSelection(design)");
+    expect(letterTypography).toContain("Schriftart");
+    expect(count(letter, /<DossierHyphenationControl\b/g)).toBe(0);
+    expect(letter).not.toContain("data-cv-doc-title-margin-top-control");
     expect(letterLayout).not.toContain("DossierHyphenationControl");
   });
 
