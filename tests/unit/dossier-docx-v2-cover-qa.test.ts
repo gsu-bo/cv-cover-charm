@@ -1,13 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { TEMPLATES } from "../../src/components/cover/types";
+import { TEMPLATES, type TemplateId } from "../../src/components/cover/types";
 import { coverPdfDocumentFromSaved } from "../../src/lib/dossier-pdf-document";
+import { DOSSIER_DOCX_LAZY_TEMPLATE_IDS } from "../../src/lib/dossier-docx-template-loader";
 import { buildDossierDocxV2CoverScene } from "../../src/lib/dossier-docx-v2-cover-scene";
 import {
   assertDossierDocxV2CoverAccepted,
   auditDossierDocxV2Cover,
 } from "../../src/lib/dossier-docx-v2-cover-qa";
 
-function defaultCover(template: (typeof TEMPLATES)[number]["id"]) {
+function defaultCover(template: TemplateId) {
   const document = coverPdfDocumentFromSaved({
     version: 3,
     template,
@@ -35,8 +36,11 @@ function defaultCover(template: (typeof TEMPLATES)[number]["id"]) {
 
 describe("DOCX V2 cover acceptance gate", () => {
   test("all active templates have a structurally acceptable canonical scene", () => {
-    expect(TEMPLATES.length).toBe(39);
-    for (const definition of TEMPLATES) {
+    const activeTemplateIds = new Set<TemplateId>(DOSSIER_DOCX_LAZY_TEMPLATE_IDS);
+    const activeTemplates = TEMPLATES.filter((definition) => activeTemplateIds.has(definition.id));
+
+    expect(activeTemplates).toHaveLength(39);
+    for (const definition of activeTemplates) {
       const scene = buildDossierDocxV2CoverScene(defaultCover(definition.id));
       const report = auditDossierDocxV2Cover({
         baseline: scene,
