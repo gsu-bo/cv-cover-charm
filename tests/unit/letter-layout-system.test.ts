@@ -40,6 +40,19 @@ function designFor(
   };
 }
 
+function minimumContentHeightFor(
+  template: LetterTemplateId,
+  headerMode: LetterHeaderMode,
+) {
+  if (template === "freundlich" && headerMode === "compact") {
+    return 220;
+  }
+  if (headerMode === "contact") {
+    return 230;
+  }
+  return 240;
+}
+
 describe("central motivation-letter layout system", () => {
   test("every selectable letter style and every header/footer mode yields one usable content box", () => {
     expect(TEMPLATES.length).toBe(41);
@@ -58,10 +71,7 @@ describe("central motivation-letter layout system", () => {
           expect(geometry.content.top).toBeGreaterThanOrEqual(16);
           expect(geometry.content.bottom).toBeGreaterThanOrEqual(10);
           expect(geometry.content.width).toBeGreaterThan(140);
-          const warmCompact = template === "freundlich" && headerMode === "compact";
-          let minimumContentHeight = 240;
-          if (warmCompact) minimumContentHeight = 220;
-          if (headerMode === "contact") minimumContentHeight = 230;
+          const minimumContentHeight = minimumContentHeightFor(template, headerMode);
           expect(geometry.content.height).toBeGreaterThan(minimumContentHeight);
           expect(geometry.content.left + geometry.content.width + geometry.content.right).toBe(
             LETTER_PAGE_MM.width,
