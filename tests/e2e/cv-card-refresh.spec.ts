@@ -143,6 +143,14 @@ async function setMotifPercent(slider: Locator, percent: number) {
   }
 }
 
+async function setRangeValue(slider: Locator, value: number) {
+  await slider.focus();
+  await slider.press("Home");
+  for (let current = 0; current < value; current += 1) {
+    await slider.press("ArrowRight");
+  }
+}
+
 const hash = (buffer: Buffer) => createHash("sha256").update(buffer).digest("hex");
 
 async function typographySnapshot(root: Locator) {
@@ -332,24 +340,14 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
     const controls = page.locator("[data-citrus-rubric-controls]");
     await expect(controls).toBeVisible();
     await expect(controls.getByText("Rubrik als Pille", { exact: true })).toBeVisible();
-    await expect(controls.getByRole("slider", { name: "Rubrik horizontal" })).toHaveValue("0");
-    await expect(controls.getByRole("slider", { name: "Inhaltseinzug unter Rubrik" })).toHaveValue(
-      "4",
-    );
+    const headingSlider = controls.getByRole("slider", { name: "Rubrik horizontal" });
+    const indentSlider = controls.getByRole("slider", { name: "Inhaltseinzug unter Rubrik" });
+    await expect(headingSlider).toHaveValue("0");
+    await expect(indentSlider).toHaveValue("4");
 
     await controls.getByRole("button", { name: "Nein" }).click();
-    await controls.getByRole("slider", { name: "Rubrik horizontal" }).evaluate((node) => {
-      const input = node as HTMLInputElement;
-      input.value = "5";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-    await controls.getByRole("slider", { name: "Inhaltseinzug unter Rubrik" }).evaluate((node) => {
-      const input = node as HTMLInputElement;
-      input.value = "10";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+    await setRangeValue(headingSlider, 5);
+    await setRangeValue(indentSlider, 10);
 
     await expect.poll(async () =>
       page.evaluate(() => {
