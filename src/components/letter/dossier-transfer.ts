@@ -39,7 +39,10 @@ export type CoverDossierSource = {
   hasPersonal: boolean;
   hasApplication: boolean;
   personalSource:
-    "Lebenslauf" | "Motivationsschreiben" | "Lebenslauf + Motivationsschreiben" | null;
+    | "Lebenslauf"
+    | "Motivationsschreiben"
+    | "Lebenslauf + Motivationsschreiben"
+    | null;
   applicationSource: "Motivationsschreiben" | null;
 };
 
