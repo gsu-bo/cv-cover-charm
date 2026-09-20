@@ -40,10 +40,7 @@ function designFor(
   };
 }
 
-function minimumContentHeightFor(
-  template: LetterTemplateId,
-  headerMode: LetterHeaderMode,
-) {
+function minimumContentHeightFor(template: LetterTemplateId, headerMode: LetterHeaderMode) {
   if (template === "freundlich" && headerMode === "compact") {
     return 220;
   }
