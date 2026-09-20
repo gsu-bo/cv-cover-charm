@@ -142,12 +142,12 @@ html[data-dossier-template="verlauf"]
 
 /* Neon real-PDF QA: the previous 43 mm paper boundary cut through the white
  * name, so its lower pixels disappeared against the white reading plane even
- * though DOM visibility checks passed. Reveal four more millimetres of the
- * existing dark hero (the native gradient already extends beyond this point)
- * so the complete name remains on dark background without moving content. */
+ * though DOM visibility checks passed. Reveal enough of the existing dark hero
+ * (the native gradient already extends beyond this point) to contain the full
+ * title after the compact-header typography settles, without moving content. */
 html[data-dossier-template="neon"]
   [data-dossier-document="cv"]
   [data-cv-page="0"]
   [data-cv-surface] {
-  top: 47mm !important;
+  top: 54mm !important;
 }
