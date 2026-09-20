@@ -1009,9 +1009,11 @@ test.describe("M5.8 dossier regression", () => {
     };
 
     await selectBlock(0);
-    await page.getByRole("button", { name: "Fett" }).click();
-    await page.getByRole("button", { name: "Kursiv" }).click();
-    await page.getByRole("button", { name: "Unterstrichen" }).click();
+    const selectionToolbar = page.locator("[data-letter-selection-toolbar]");
+    await expect(selectionToolbar).toBeVisible();
+    await selectionToolbar.getByRole("button", { name: "Fett", exact: true }).click();
+    await selectionToolbar.getByRole("button", { name: "Kursiv", exact: true }).click();
+    await selectionToolbar.getByRole("button", { name: "Unterstrichen", exact: true }).click();
 
     await page.getByRole("button", { name: "Liste" }).click();
     await expect(page.getByRole("button", { name: "Bullet", exact: true })).toBeVisible();
@@ -1028,7 +1030,7 @@ test.describe("M5.8 dossier regression", () => {
     const twoColumnButton = columnsControl.getByRole("button", { name: "2 Spalten" });
     await expect(columnsControl).toBeVisible();
     const toolbarTop = await toolbar
-      .getByRole("button", { name: "Formatierung entfernen" })
+      .getByRole("button", { name: "Linksbündig" })
       .evaluate((button) => button.getBoundingClientRect().top);
     const columnsTop = await columnsControl.evaluate(
       (control) => control.getBoundingClientRect().top,
