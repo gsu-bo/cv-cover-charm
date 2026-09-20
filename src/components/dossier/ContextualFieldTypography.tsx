@@ -266,7 +266,8 @@ export function ContextualFieldTypography() {
     (next: DossierFieldTypographyStyle | null) => {
       if (!scope || !activeKey) return;
       const control = activeControlRef.current;
-      const meta = control ? fieldMeta(control, scope) : null;
+      if (!control) return;
+      const meta = fieldMeta(control, scope);
       if (!meta) return;
       if (next) {
         const key = setDossierFieldTypography(meta, next, activeKey);
