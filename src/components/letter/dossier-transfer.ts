@@ -12,7 +12,12 @@ import {
   readStoredDossierPart,
 } from "@/lib/dossier-project";
 import { dossierDefaultFontKey } from "@/lib/dossier-theme";
-import { defaultLetterColors, type LetterData, type LetterDesign } from "./types";
+import {
+  defaultLetterColors,
+  normalizeLetterMotifOpacity,
+  type LetterData,
+  type LetterDesign,
+} from "./types";
 
 type RecordLike = Record<string, unknown>;
 
@@ -122,12 +127,17 @@ function cvDesign(raw: RecordLike | undefined): LetterDesign | null {
     ? (incoming.colors as Record<string, string>)
     : defaultLetterColors(template);
   const explicitFont = validFont(incoming.font);
+  const bgOpacity =
+    typeof incoming.bgOpacity === "number" && Number.isFinite(incoming.bgOpacity)
+      ? normalizeLetterMotifOpacity(incoming.bgOpacity)
+      : undefined;
 
   return {
     template,
     colors: { ...defaultLetterColors(template), ...colors },
     font: explicitFont ?? dossierDefaultFontKey(template),
     fontOverride: explicitFont,
+    ...(bgOpacity !== undefined ? { bgOpacity } : {}),
   };
 }
 
@@ -278,7 +288,12 @@ export function readLetterDossierSource(): LetterDossierSource {
   const hasApplication = Object.values(applicationData).some((value) => !!value);
   const fromCover = coverDesign(cover);
   const fromCv = cvDesign(cv);
-  const design = fromCover ?? fromCv;
+  const design = fromCover
+    ? {
+        ...fromCover,
+        ...(typeof fromCv?.bgOpacity === "number" ? { bgOpacity: fromCv.bgOpacity } : {}),
+      }
+    : fromCv;
 
   return {
     personalData,

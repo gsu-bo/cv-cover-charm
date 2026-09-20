@@ -13,6 +13,7 @@ import { letterPageGeometry, visibleLetterAttachments } from "./layout-system";
 import {
   DEFAULT_LETTER_CLOSING_GAP_MM,
   DEFAULT_LETTER_SIGNATURE_GAP_MM,
+  normalizeLetterMotifOpacity,
   normalizeLetterSpacingMm,
   type LetterData,
   type LetterDesign,
@@ -159,6 +160,7 @@ export function LetterCanvas({
   const palette = resolveLetterPalette(design);
   const paperColor = resolveLetterPaperColor(design);
   const paperColorOverride = normalizeLetterPaperColor(design.paperColor);
+  const motifOpacity = normalizeLetterMotifOpacity(design.bgOpacity);
   const resolvedFont =
     design.template === "brief" ? design.font : (design.fontOverride ?? design.font);
   const fontFamily =
@@ -240,11 +242,17 @@ export function LetterCanvas({
       data-letter-font={resolvedFont}
       data-letter-paper-color={paperColor}
       data-letter-text-color={palette.ink}
+      data-letter-motif-opacity={motifOpacity}
       data-letter-font-source={
         design.template === "brief" ? "standalone" : design.fontOverride ? "override" : "dossier"
       }
       className="relative h-[1123px] w-[794px] overflow-hidden bg-white shadow-xl"
-      style={{ color: palette.ink, fontFamily, backgroundColor: paperColor }}
+      style={{
+        color: palette.ink,
+        fontFamily,
+        backgroundColor: paperColor,
+        "--dossier-motif-opacity": String(motifOpacity),
+      } as React.CSSProperties}
       aria-label={ariaLabel}
     >
       <LetterSheetBackground

@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { DossierSheetBackground } from "@/components/dossier/DossierSheetBackground";
 import { cvPalette } from "@/components/cv/palette";
 import "@/components/dossier/edel-stationery.css";
@@ -8,6 +8,19 @@ import { freshLetterSpec, type FreshLetterColorRole } from "./fresh-letter-syste
 import type { LetterHeaderMode, LetterTemplateId } from "./types";
 import { defaultHeaderModeForTemplate } from "@/lib/template-chrome";
 import { WARM_FIRST_PAGE_HEADER_HEIGHT_MM } from "./warm-letter-layout";
+
+const FRESH_STRUCTURAL_MOTIFS = new Set([
+  "edge-band",
+  "mono-band",
+  "top-band",
+  "rail",
+  "rose-band",
+  "olive-band",
+  "cool-gradient-band",
+  "warm-gradient-band",
+  "top-ribbon",
+  "top-cove",
+]);
 
 function pick(colors: Record<string, string>, ...keys: string[]): string {
   for (const key of keys) {
@@ -20,6 +33,21 @@ function freshRoleColor(role: FreshLetterColorRole, colors: Record<string, strin
   if (role === "primary") return pick(colors, "primary", "accent", "secondary", "ink");
   if (role === "secondary") return pick(colors, "secondary", "accent", "primary", "ink");
   return pick(colors, "accent", "secondary", "primary", "ink");
+}
+
+/** User visibility lives on an outer layer so authored primitive opacity stays a baseline multiplier. */
+function LetterMotifLayer({ id, children }: { id: string; children: ReactNode }) {
+  return (
+    <div
+      data-dossier-sheet-motif
+      data-letter-decorative-motif-layer={id}
+      className="absolute inset-0 pointer-events-none"
+      style={{ opacity: "var(--dossier-motif-opacity, 1)" }}
+      aria-hidden="true"
+    >
+      {children}
+    </div>
+  );
 }
 
 /**
@@ -57,6 +85,7 @@ function WarmLetterBackground({
       {headerMode === "compact" ? (
         <div
           data-letter-warm-band
+          data-letter-structural-surface="warm-band"
           className="absolute inset-x-0 top-0"
           style={{
             height: firstPage ? `${WARM_FIRST_PAGE_HEADER_HEIGHT_MM}mm` : "14mm",
@@ -67,31 +96,37 @@ function WarmLetterBackground({
 
       {firstPage && headerMode === "compact" ? (
         <>
-          <div
-            data-letter-warm-ring
-            className="absolute rounded-full"
-            style={{
-              right: "-24mm",
-              top: "-41mm",
-              width: "92mm",
-              height: "92mm",
-              border: `0.8mm solid ${secondary}`,
-              boxSizing: "border-box",
-              opacity: 0.78,
-            }}
-          />
-          <div
-            data-letter-warm-orb
-            className="absolute rounded-full"
-            style={{
-              right: "-13mm",
-              top: "-31mm",
-              width: "72mm",
-              height: "72mm",
-              backgroundColor: secondary,
-              opacity: 0.72,
-            }}
-          />
+          <LetterMotifLayer id="warm-ring">
+            <div
+              data-letter-warm-ring
+              data-letter-decorative-motif="warm-ring"
+              className="absolute rounded-full"
+              style={{
+                right: "-24mm",
+                top: "-41mm",
+                width: "92mm",
+                height: "92mm",
+                border: `0.8mm solid ${secondary}`,
+                boxSizing: "border-box",
+                opacity: 0.78,
+              }}
+            />
+          </LetterMotifLayer>
+          <LetterMotifLayer id="warm-orb">
+            <div
+              data-letter-warm-orb
+              data-letter-decorative-motif="warm-orb"
+              className="absolute rounded-full"
+              style={{
+                right: "-13mm",
+                top: "-31mm",
+                width: "72mm",
+                height: "72mm",
+                backgroundColor: secondary,
+                opacity: 0.72,
+              }}
+            />
+          </LetterMotifLayer>
         </>
       ) : null}
     </div>
@@ -142,14 +177,26 @@ function FreshLetterBackground({
           border: motif.borderMm ? `${motif.borderMm}mm solid ${baseColor}` : undefined,
           boxSizing: "border-box",
         };
-
-        return (
+        const primitive = (
           <div
-            key={motif.id}
             data-letter-motif={motif.id}
             data-letter-motif-role={motif.color}
+            data-letter-structural-surface={
+              FRESH_STRUCTURAL_MOTIFS.has(motif.id) ? motif.id : undefined
+            }
+            data-letter-decorative-motif={
+              FRESH_STRUCTURAL_MOTIFS.has(motif.id) ? undefined : motif.id
+            }
             style={style}
           />
+        );
+
+        return FRESH_STRUCTURAL_MOTIFS.has(motif.id) ? (
+          <div key={motif.id}>{primitive}</div>
+        ) : (
+          <LetterMotifLayer key={motif.id} id={motif.id}>
+            {primitive}
+          </LetterMotifLayer>
         );
       })}
     </div>
@@ -180,14 +227,13 @@ function QuietColumnBackground({
       aria-hidden="true"
     >
       {template === "blockig" ? (
-        <>
-          <div
-            data-letter-safe-rail
-            data-letter-motif="rail"
-            className="absolute inset-y-0 left-0 w-[19mm]"
-            style={{ backgroundColor: primary }}
-          />
-        </>
+        <div
+          data-letter-safe-rail
+          data-letter-motif="rail"
+          data-letter-structural-surface="rail"
+          className="absolute inset-y-0 left-0 w-[19mm]"
+          style={{ backgroundColor: primary }}
+        />
       ) : null}
 
       {template === "terracotta" ? (
@@ -195,14 +241,18 @@ function QuietColumnBackground({
           <div
             data-letter-safe-rail
             data-letter-motif="rail"
+            data-letter-structural-surface="rail"
             className="absolute inset-y-0 left-0 w-[17mm]"
             style={{ backgroundColor: primary }}
           />
-          <div
-            data-letter-motif="rail-rule"
-            className="absolute left-[6mm] top-[20mm] h-[38mm] w-px"
-            style={{ backgroundColor: secondary, opacity: 0.82 }}
-          />
+          <LetterMotifLayer id="rail-rule">
+            <div
+              data-letter-motif="rail-rule"
+              data-letter-decorative-motif="rail-rule"
+              className="absolute left-[6mm] top-[20mm] h-[38mm] w-px"
+              style={{ backgroundColor: secondary, opacity: 0.82 }}
+            />
+          </LetterMotifLayer>
         </>
       ) : null}
 
@@ -211,19 +261,26 @@ function QuietColumnBackground({
           <div
             data-letter-safe-rail
             data-letter-motif="rail"
+            data-letter-structural-surface="rail"
             className="absolute inset-y-0 left-0 w-[20mm]"
             style={{ backgroundColor: primary }}
           />
-          <div
-            data-letter-motif="accent-block"
-            className="absolute left-0 top-[20mm] h-[14mm] w-[20mm]"
-            style={{ backgroundColor: accent }}
-          />
-          <div
-            data-letter-motif="rail-rule"
-            className="absolute left-[6mm] top-[43mm] h-[2mm] w-[8mm]"
-            style={{ backgroundColor: secondary }}
-          />
+          <LetterMotifLayer id="accent-block">
+            <div
+              data-letter-motif="accent-block"
+              data-letter-decorative-motif="accent-block"
+              className="absolute left-0 top-[20mm] h-[14mm] w-[20mm]"
+              style={{ backgroundColor: accent }}
+            />
+          </LetterMotifLayer>
+          <LetterMotifLayer id="rail-rule">
+            <div
+              data-letter-motif="rail-rule"
+              data-letter-decorative-motif="rail-rule"
+              className="absolute left-[6mm] top-[43mm] h-[2mm] w-[8mm]"
+              style={{ backgroundColor: secondary }}
+            />
+          </LetterMotifLayer>
         </>
       ) : null}
     </div>

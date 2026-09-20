@@ -63,6 +63,8 @@ export type LetterData = {
 export type LetterDesign = {
   template: LetterTemplateId;
   colors: Record<string, string>;
+  /** Sichtbarkeit dekorativer Hintergrund-Motive von 0 (aus) bis 1 (Vorlagen-Baseline). */
+  bgOpacity?: number;
   /** Eigene Papierfarbe nur für das Anschreiben; unabhängig von der Vorlage. */
   paperColor?: string | null;
   /** Eigene Haupttextfarbe; leer lässt sie automatisch aus der Papierfarbe ableiten. */
@@ -119,6 +121,14 @@ export const DEFAULT_LETTER_BEILAGEN = ["Lebenslauf", "Zeugnis"] as const;
 export const DEFAULT_LETTER_CLOSING_GAP_MM = 9;
 export const DEFAULT_LETTER_SIGNATURE_GAP_MM = 9;
 export const MAX_LETTER_SIGNATURE_SPACING_MM = 50;
+export const DEFAULT_LETTER_MOTIF_OPACITY = 0.25;
+
+/** Ein gemeinsamer 0..1-Vertrag für Preview, Pagination, Persistenz und Export. */
+export function normalizeLetterMotifOpacity(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.min(1, Math.max(0, value))
+    : DEFAULT_LETTER_MOTIF_OPACITY;
+}
 
 /** Hält frei eingegebene Briefabstände in einem druckbaren Bereich. */
 export function normalizeLetterSpacingMm(
@@ -256,6 +266,7 @@ export function emptyLetterDesign(): LetterDesign {
   return {
     template,
     colors: defaultLetterColors(template),
+    bgOpacity: DEFAULT_LETTER_MOTIF_OPACITY,
     paperColor: null,
     textColor: null,
     font: "freundlich",
@@ -336,6 +347,7 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
   return {
     template,
     colors,
+    bgOpacity: normalizeLetterMotifOpacity(incoming.bgOpacity),
     paperColor: normalizedColor(incoming.paperColor),
     textColor: normalizedColor(incoming.textColor),
     font,

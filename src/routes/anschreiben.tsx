@@ -1079,7 +1079,14 @@ function Anschreiben() {
             </Section>
 
             <Section title="Vorlage" open={open.vorlage} onToggle={() => toggle("vorlage")}>
-              <LetterTemplatePicker value={design.template} onChange={changeTemplate} />
+              <LetterTemplatePicker
+                value={design.template}
+                onChange={changeTemplate}
+                motifOpacity={design.bgOpacity}
+                onMotifOpacityChange={(bgOpacity) =>
+                  setDesign((current) => ({ ...current, bgOpacity }))
+                }
+              />
             </Section>
 
             <Section title="Farben" open={open.farben} onToggle={() => toggle("farben")}>
