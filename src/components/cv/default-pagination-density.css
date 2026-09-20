@@ -94,20 +94,9 @@ html[data-cv-variant="editorial"]
   line-height: 1.13 !important;
 }
 
-/*
- * Citrus keeps its title block below the adjustable shared header.
- * --cv-main-top already includes 9 mm of structural clearance plus the user's
- * chosen header gap. Recover only that structural allowance: the explicit gap
- * must remain visible instead of pulling the title back into the masthead.
- * The max() keeps header-less legacy states at a safe historical floor, while
- * measurement and rendered page continue to use identical pagination geometry.
- */
-html[data-dossier-template="citrus"]
-  [data-dossier-document="cv"][data-cv-template="citrus"][data-cv-layout]
-  :is([data-cv-page="0"], [data-cv-measure-page])
-  [data-cv-main] {
-  top: max(14mm, calc(var(--cv-main-top) - 9mm)) !important;
-}
+/* Package 4: Citrus no longer pulls the entire CV content box 9 mm upward.
+ * The Package 3 page geometry owns the top boundary; Citrus keeps its reviewed
+ * identity through local rubric/content rhythm below. */
 
 /*
  * Citrus' reviewed pill/content-indent treatment intentionally narrows the

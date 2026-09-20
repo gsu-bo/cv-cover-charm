@@ -57,13 +57,9 @@ html[data-cv-variant="minimal"] [data-cv-layout="classic"]
 /* Timeline                                                                   */
 /* -------------------------------------------------------------------------- */
 
-html[data-cv-variant="timeline"] [data-cv-layout="classic"]
-  :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main] {
-  left: max(0mm, calc(var(--cv-classic-main-left) - 11mm)) !important;
-  right: var(--cv-classic-main-right) !important;
-  top: var(--cv-main-top) !important;
-  bottom: var(--cv-main-bottom) !important;
-}
+/* Package 4: the timeline no longer expands the outer page content box by
+ * 11 mm. Package 3 owns that boundary; the timeline identity lives entirely
+ * inside the safe area through the padding, axis and markers below. */
 
 html[data-cv-variant="timeline"] [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main]
@@ -172,17 +168,9 @@ html[data-cv-variant="executive"] [data-cv-layout="modern"]:not([data-cv-archety
   left: 60mm !important;
 }
 
-/*
- * Nur die waagrechte Aufteilung stammt aus dem Aufbau. Oben und unten gehören
- * der Bauform: dort sitzen Kopfband und Fusszeile, deren Höhe je Vorlage und
- * je Seite verschieden ist. Ein festes `top` hier hätte den Text bei Sonne
- * oder Studio unter das Farbband geschoben.
- */
-html[data-cv-variant="executive"] [data-cv-layout="modern"]:not([data-cv-archetype="column"])
-  :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main] {
-  left: 69mm !important;
-  right: 19mm !important;
-}
+/* Package 4: the sidebar remains an internal 60 mm layout surface, but the
+ * outer readable main box now comes exclusively from cvContentBox / Package 3.
+ * This also means the user sidebar percentage and page margins can visibly win. */
 
 html[data-cv-variant="executive"] [data-cv-layout="modern"]
   :is([data-cv-page], [data-cv-measure-page]) [data-cv-main]

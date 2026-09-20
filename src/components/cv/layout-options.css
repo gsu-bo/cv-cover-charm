@@ -175,15 +175,9 @@ html[data-cv-mirrored="true"][data-cv-variant="minimal"]
   right: var(--cv-classic-main-right) !important;
 }
 
-/* Timeline: Achse, Marker und Einrückung wandern vollständig nach rechts. */
-html[data-cv-mirrored="true"][data-cv-variant="timeline"]
-  [data-cv-layout="classic"]
-  :is([data-cv-page], [data-cv-measure-page])
-  > [data-cv-main] {
-  left: var(--cv-classic-main-left) !important;
-  right: max(0mm, calc(var(--cv-classic-main-right) - 11mm)) !important;
-}
-
+/* Timeline: only the internal axis, markers and padding mirror. Package 3 owns
+ * the outer readable page box on both sides, so mirrored mode no longer steals
+ * 11 mm from the right page margin. */
 html[data-cv-mirrored="true"][data-cv-variant="timeline"]
   [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page])
