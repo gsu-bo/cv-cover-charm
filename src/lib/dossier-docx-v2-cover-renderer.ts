@@ -11,7 +11,7 @@ const xmlEscape = (value: string) =>
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&apos;");
 const wordHex = (value: string) => value.replace(/^#/, "").toUpperCase();
 
@@ -34,7 +34,7 @@ function fillXml(node: DossierDocxV2CoverNode) {
 }
 
 function paragraphAlignment(value: DossierDocxV2CoverNode["align"]) {
-  return value === "right" ? "right" : value === "center" ? "center" : "left";
+  return value === "right" ? "right" : value === "center" ? "center" : value === "justify" ? "both" : "left";
 }
 
 function runXml(node: DossierDocxV2CoverNode, text: string, color: string, weight: number) {
@@ -154,7 +154,6 @@ function imageParagraph(
 ) {
   return `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="1" w:lineRule="exact"/></w:pPr>${imageMat(node, paperColor, z - 1)}${imageAnchor(node, media, z)}</w:p>`;
 }
-
 
 function structuralBackground(media: DossierDocxV2MediaRef) {
   return `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="1" w:lineRule="exact"/></w:pPr><w:r><w:pict><v:rect id="docx-v2-cover-structural-background" style="position:absolute;margin-left:0mm;margin-top:0mm;width:210mm;height:297mm;z-index:-251658240;mso-position-horizontal-relative:page;mso-position-vertical-relative:page" stroked="f"><v:imagedata xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="${media.relationshipId}"/></v:rect></w:pict></w:r></w:p>`;
