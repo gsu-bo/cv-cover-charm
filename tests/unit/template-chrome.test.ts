@@ -9,9 +9,9 @@ import {
 } from "../../src/lib/template-chrome";
 
 describe("template-owned dossier chrome", () => {
-  test("Brief owns the neutral no-header/no-footer fallback", () => {
-    expect(defaultHeaderModeForTemplate("brief")).toBe("none");
-    expect(defaultFooterModeForTemplate("brief")).toBe("none");
+  test("Brief uses the shared compact header/footer fallback", () => {
+    expect(defaultHeaderModeForTemplate("brief")).toBe("compact");
+    expect(defaultFooterModeForTemplate("brief")).toBe("compact");
     expect(defaultHeaderGapMmForTemplate("brief")).toBe(12);
   });
 
@@ -43,6 +43,7 @@ describe("template-owned dossier chrome", () => {
       "verlauf3",
       "prism",
       "cove",
+      "citrus",
       "neon",
     ]) {
       expect(defaultHeaderModeForTemplate(template)).toBe("compact");
@@ -51,18 +52,17 @@ describe("template-owned dossier chrome", () => {
     }
   });
 
-  test("Warm and Citrus intentionally recommend stacked contact headers", () => {
-    for (const template of ["freundlich", "citrus"]) {
-      expect(defaultHeaderModeForTemplate(template)).toBe("contact");
-      expect(defaultHeaderGapMmForTemplate(template)).toBe(4);
-      expect(recommendedHeaderPatchForTemplate(template)).toMatchObject({
-        headerMode: "contact",
-        headerTextLayout: "stacked",
-        headerGapMm: 4,
-      });
-    }
-    expect(recommendedHeaderPatchForTemplate("freundlich")?.headerHeightMm).toBe(44);
-    expect(recommendedHeaderPatchForTemplate("citrus")?.headerHeightMm).toBeNull();
+  test("Warm alone intentionally recommends the reviewed stacked contact header", () => {
+    expect(defaultHeaderModeForTemplate("freundlich")).toBe("contact");
+    expect(defaultHeaderGapMmForTemplate("freundlich")).toBe(4);
+    expect(recommendedHeaderPatchForTemplate("freundlich")).toMatchObject({
+      headerMode: "contact",
+      headerTextLayout: "stacked",
+      headerHeightMm: 44,
+      headerGapMm: 4,
+    });
+    expect(defaultHeaderModeForTemplate("citrus")).toBe("compact");
+    expect(recommendedHeaderPatchForTemplate("citrus")).toBeNull();
   });
 
   test("contact gradient families inherit both template colours when contact is explicit", () => {

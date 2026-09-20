@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { EditorMenuLabel } from "@/components/dossier/EditorMenuLabel";
 import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";
+import { DossierChromeDocumentContentControls } from "@/components/dossier/DossierChromeDocumentContentControls";
 import { DossierHyphenationControl } from "@/components/dossier/DossierHyphenationControl";
 import { Section } from "@/components/cover/Section";
 import { TemplatePicker } from "@/components/cover/TemplatePicker";
@@ -1591,8 +1592,22 @@ function Lebenslauf() {
                       className="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                     <span className="text-muted-foreground/80">
-                      Steht über dem Namen. Leer lassen blendet ihn aus.
+                      Steht über dem Namen. Die Sichtbarkeit lässt sich separat schalten.
                     </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={design.showDocumentTitle !== false}
+                      onChange={(event) =>
+                        setDesign((current) => ({
+                          ...current,
+                          showDocumentTitle: event.target.checked,
+                        }))
+                      }
+                    />
+                    Dokumenttitel im Lebenslauf anzeigen
                   </label>
 
                   <div className="grid gap-3 rounded-md border bg-muted/20 p-2.5">
@@ -2079,6 +2094,13 @@ function Lebenslauf() {
 
               <Section title="Header & Footer" open={open.chrome} onToggle={() => toggle("chrome")}>
                 <DossierChromeControls scope="cv" />
+                <DossierChromeDocumentContentControls
+                  value={design.chromeContent}
+                  defaultTitle={data.titel?.trim() || DEFAULT_CV_TITLE}
+                  onChange={(chromeContent) =>
+                    setDesign((current) => ({ ...current, chromeContent }))
+                  }
+                />
               </Section>
 
               <Section title="Layout" open={open.layout} onToggle={() => toggle("layout")}>

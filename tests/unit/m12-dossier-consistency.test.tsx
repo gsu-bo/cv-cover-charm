@@ -134,18 +134,17 @@ describe("M12 Fresh dossier consistency", () => {
     }
   });
 
-  test("contact continuation is one shared compact identity header and CV never falls back to Seite N", () => {
+  test("default contact repeats the full shared header and CV never falls back to Seite N", () => {
     for (const id of FRESH_TEMPLATE_IDS) {
       for (const scope of ["cv", "letter"] as const) {
         const html = chromeMarkup(scope, id, options("contact", "compact"), 1);
-        expect(html, `${id}/${scope}/continuation`).toContain(
-          "data-dossier-continuation-contact-header",
-        );
+        expect(html, `${id}/${scope}/continuation`).toContain("data-dossier-integrated-contact");
+        expect(html).not.toContain("data-dossier-continuation-contact-header");
         expect(html).toContain(contact.name);
         expect(html).toContain(contact.email);
         expect(html).toContain(contact.phone);
-        expect(html).not.toContain(contact.address);
-        expect(html).not.toContain(contact.place);
+        expect(html).toContain(contact.address);
+        expect(html).toContain(contact.place);
       }
 
       const cv = chromeMarkup("cv", id, options("contact", "details"), 1);

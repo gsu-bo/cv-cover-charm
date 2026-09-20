@@ -2,21 +2,14 @@ import type { DossierChromeOptions, DossierHeaderMode } from "@/lib/dossier-chro
 import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
 
 /**
- * Normal visual templates default to the quiet compact header. Warm and Citrus
- * are the two reviewed exceptions whose composition depends on a stacked
- * contact masthead.
+ * Normal visual templates default to the quiet compact header.
  *
  * IMPORTANT — USER-APPROVED WARM CONTRACT, DO NOT NORMALIZE OR REMOVE:
- * `freundlich` (Warm 1) defaults to the stacked contact header. Its renderer
- * owns the integrated teal / mustard decoration. Future AI changes must keep
- * this template-specific recommendation instead of replacing it with generic
- * compact chrome.
- *
- * Citrus intentionally shares that recommendation so the contact block stays
- * clear of its right-hand citrus slice. Explicit user choices remain
- * authoritative when switching between all other templates.
+ * `freundlich` (Warm 1) is the one reviewed geometry exception. It defaults to
+ * the stacked contact masthead at 44 mm. Every other template, including Citrus,
+ * uses the common compact default until the user chooses something else.
  */
-const STACKED_CONTACT_RECOMMENDED_TEMPLATES = new Set(["freundlich", "citrus"]);
+const STACKED_CONTACT_RECOMMENDED_TEMPLATES = new Set(["freundlich"]);
 
 const AUTO_GRADIENT_CONTACT_TEMPLATES = new Set([
   "horizon",
@@ -34,9 +27,9 @@ export function recommendsStackedContactHeader(template: string): boolean {
 /**
  * Header mode used for a brand-new/template-default state.
  *
- * `brief` remains the canonical neutral fallback. Every selectable visual
- * template defaults to compact except Warm and Citrus, which intentionally
- * recommend the stacked contact masthead.
+ * `brief` and every normal visual template default to compact. Warm is the
+ * single reviewed exception and intentionally recommends a stacked contact
+ * masthead.
  */
 export function defaultHeaderModeForTemplate(template: string): DossierHeaderMode {
   if (template === CANONICAL_DOSSIER_PRESENTATION.template) {
@@ -54,8 +47,8 @@ export function defaultFooterModeForTemplate(template: string): "none" | "compac
 
 /**
  * Header height used only for a template recommendation/default.
- * Warm keeps the reviewed 44 mm masthead. Citrus uses the normal automatic
- * stacked-contact height. Afterwards the value remains ordinary user state.
+ * Warm keeps the reviewed 44 mm masthead. Afterwards the value remains ordinary
+ * user state.
  */
 export function defaultHeaderHeightMmForTemplate(template: string): number | null {
   return template === "freundlich" ? 44 : null;

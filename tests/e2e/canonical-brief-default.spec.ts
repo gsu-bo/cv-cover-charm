@@ -18,26 +18,26 @@ test.describe("Canonical Brief dossier fallback", () => {
     await expect(cover).toHaveAttribute("data-cover-template", "brief");
   });
 
-  test("fresh motivation letter is plain Brief with sender in normal content", async ({ page }) => {
+  test("fresh motivation letter is Brief with compact shared chrome", async ({ page }) => {
     await openFresh(page, "/anschreiben");
 
     const letter = page.getByLabel("Vorschau Motivationsschreiben");
     await expect(letter).toHaveAttribute("data-letter-template", "brief");
-    await expect(letter).toHaveAttribute("data-letter-requested-header-mode", "none");
-    await expect(letter).toHaveAttribute("data-letter-requested-footer-mode", "none");
-    await expect(letter).toHaveAttribute("data-letter-header-mode", "none");
-    await expect(letter).toHaveAttribute("data-letter-footer-mode", "none");
+    await expect(letter).toHaveAttribute("data-letter-requested-header-mode", "compact");
+    await expect(letter).toHaveAttribute("data-letter-requested-footer-mode", "compact");
+    await expect(letter).toHaveAttribute("data-letter-header-mode", "compact");
+    await expect(letter).toHaveAttribute("data-letter-footer-mode", "compact");
 
     const chrome = letter.locator('[data-dossier-chrome="letter"]');
-    await expect(chrome).toHaveAttribute("data-dossier-header-mode", "none");
-    await expect(chrome).toHaveAttribute("data-dossier-footer-mode", "none");
+    await expect(chrome).toHaveAttribute("data-dossier-header-mode", "compact");
+    await expect(chrome).toHaveAttribute("data-dossier-footer-mode", "compact");
     await expect(letter.locator('[data-letter-section="sender"]')).toHaveCount(1);
     await expect(letter.locator("[data-letter-integrated-contact]")).toHaveCount(0);
-    await expect(letter.locator("[data-dossier-compact-header]")).toHaveCount(0);
-    await expect(letter.locator("[data-letter-footer]")).toHaveCount(0);
+    await expect(letter.locator("[data-dossier-compact-header]")).toHaveCount(1);
+    await expect(letter.locator("[data-letter-footer]")).toHaveCount(1);
   });
 
-  test("fresh CV is Brief + Standard/full-width with no shared chrome or sidebar", async ({ page }) => {
+  test("fresh CV is Brief + Standard/full-width with compact shared chrome", async ({ page }) => {
     await openFresh(page, "/lebenslauf");
 
     const cv = page.locator("main [data-dossier-document='cv']").first();
@@ -48,14 +48,14 @@ test.describe("Canonical Brief dossier fallback", () => {
     await expect(firstPage).toBeVisible();
     await expect(firstPage.locator('[data-dossier-chrome="cv"]')).toHaveAttribute(
       "data-dossier-header-mode",
-      "none",
+      "compact",
     );
     await expect(firstPage.locator('[data-dossier-chrome="cv"]')).toHaveAttribute(
       "data-dossier-footer-mode",
-      "none",
+      "compact",
     );
     await expect(firstPage.locator("[data-cv-sidebar]")).toHaveCount(0);
-    await expect(firstPage.locator("[data-dossier-compact-header]")).toHaveCount(0);
-    await expect(firstPage.locator("[data-dossier-footer]")).toHaveCount(0);
+    await expect(firstPage.locator("[data-dossier-compact-header]")).toHaveCount(1);
+    await expect(firstPage.locator("[data-dossier-footer]")).toHaveCount(1);
   });
 });

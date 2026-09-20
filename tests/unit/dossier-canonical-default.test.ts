@@ -30,15 +30,15 @@ describe("canonical neutral dossier fallback", () => {
     expect(CANONICAL_DOSSIER_PRESENTATION.template).toBe("brief");
     expect(typedDefault).toBe("brief");
     expect(CANONICAL_DOSSIER_PRESENTATION.cv.layout).toBe("classic");
-    expect(DEFAULT_DOSSIER_CHROME_STATE.shared.headerMode).toBe("none");
-    expect(DEFAULT_DOSSIER_CHROME_STATE.shared.footerMode).toBe("none");
-    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerMode).toBe("contact");
+    expect(DEFAULT_DOSSIER_CHROME_STATE.shared.headerMode).toBe("compact");
+    expect(DEFAULT_DOSSIER_CHROME_STATE.shared.footerMode).toBe("compact");
+    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerMode).toBe("compact");
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerMode).toBe("compact");
-    expect(CANONICAL_DOSSIER_PRESENTATION.letter.continuationHeaderMode).toBe("none");
-    expect(CANONICAL_DOSSIER_PRESENTATION.letter.continuationFooterMode).toBe("none");
+    expect(CANONICAL_DOSSIER_PRESENTATION.letter.continuationHeaderMode).toBe("compact");
+    expect(CANONICAL_DOSSIER_PRESENTATION.letter.continuationFooterMode).toBe("compact");
   });
 
-  test("fresh and raw Brief designs keep page 1 and continuation pages plain", () => {
+  test("fresh and raw Brief designs keep the same compact chrome on every page", () => {
     const design = emptyLetterDesign();
     const first = letterPageGeometry(EMPTY_LETTER, design, { pageIndex: 0, finalPage: false });
     const continuation = letterPageGeometry(EMPTY_LETTER, design, {
@@ -47,12 +47,12 @@ describe("canonical neutral dossier fallback", () => {
     });
 
     expect(design.template).toBe("brief");
-    expect(design.headerMode).toBe("none");
-    expect(design.footerMode).toBe("none");
-    expect(first.effectiveHeaderMode).toBe("none");
-    expect(first.effectiveFooterMode).toBe("none");
-    expect(continuation.effectiveHeaderMode).toBe("none");
-    expect(continuation.effectiveFooterMode).toBe("none");
+    expect(design.headerMode).toBe("compact");
+    expect(design.footerMode).toBe("compact");
+    expect(first.effectiveHeaderMode).toBe("compact");
+    expect(first.effectiveFooterMode).toBe("compact");
+    expect(continuation.effectiveHeaderMode).toBe("compact");
+    expect(continuation.effectiveFooterMode).toBe("compact");
 
     const rawDesign = { ...design, headerMode: undefined, footerMode: undefined };
     const rawFirst = letterPageGeometry(EMPTY_LETTER, rawDesign, {
@@ -63,18 +63,18 @@ describe("canonical neutral dossier fallback", () => {
       pageIndex: 1,
       finalPage: true,
     });
-    expect(rawFirst.effectiveHeaderMode).toBe("none");
-    expect(rawFirst.effectiveFooterMode).toBe("none");
-    expect(rawContinuation.effectiveHeaderMode).toBe("none");
-    expect(rawContinuation.effectiveFooterMode).toBe("none");
+    expect(rawFirst.effectiveHeaderMode).toBe("compact");
+    expect(rawFirst.effectiveFooterMode).toBe("compact");
+    expect(rawContinuation.effectiveHeaderMode).toBe("compact");
+    expect(rawContinuation.effectiveFooterMode).toBe("compact");
   });
 
   test("partial chrome state recovers to the fresh Brief contract, not legacy chrome", () => {
     const recovered = normalizeDossierChromeState({});
-    expect(recovered.shared.headerMode).toBe("none");
-    expect(recovered.shared.footerMode).toBe("none");
-    expect(recovered.cv.headerMode).toBe("none");
-    expect(recovered.letter.headerMode).toBe("none");
+    expect(recovered.shared.headerMode).toBe("compact");
+    expect(recovered.shared.footerMode).toBe("compact");
+    expect(recovered.cv.headerMode).toBe("compact");
+    expect(recovered.letter.headerMode).toBe("compact");
   });
 
   test("fresh CV resolves to Brief + Standard without a sidebar frame", () => {
@@ -91,8 +91,8 @@ describe("canonical neutral dossier fallback", () => {
 
     expect(String(cover?.template)).toBe("brief");
     expect(letter?.design.template).toBe("brief");
-    expect(letter?.design.headerMode).toBe("none");
-    expect(letter?.design.footerMode).toBe("none");
+    expect(letter?.design.headerMode).toBe("compact");
+    expect(letter?.design.footerMode).toBe("compact");
     expect(String(cv?.design.template)).toBe("brief");
     expect(resolveDossierDocxProfile(cover, letter, cv)?.templateId).toBe("brief");
   });

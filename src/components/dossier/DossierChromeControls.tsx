@@ -207,7 +207,12 @@ export function DossierChromeControls({
     onOptionsChange?.(patch);
   }, [onOptionsChange, options.headerInlineSeparator, scope]);
 
-  const headerDefaultHeight = options.headerMode === "contact" ? 22 : 3;
+  const headerDefaultHeight =
+    options.headerMode === "contact"
+      ? options.headerTextLayout === "inline"
+        ? 26
+        : 32
+      : 4;
   const headerMin =
     options.headerMode === "contact" ? (options.headerTextLayout === "stacked" ? 18 : 10) : 1;
   const headerMax = 80;
@@ -220,7 +225,7 @@ export function DossierChromeControls({
   );
   const headerGap = options.headerGapMm ?? 12;
   const headerContentOffsetY = options.headerContentOffsetYMm ?? 0;
-  const footerDefaultHeight = options.footerMode === "details" ? 10 : 2.4;
+  const footerDefaultHeight = options.footerMode === "details" ? 10 : 4;
   const footerHeight = options.footerHeightMm ?? footerDefaultHeight;
   const footerContentOffsetY = options.footerContentOffsetYMm ?? 0;
   const footerMin = options.footerMode === "details" ? 4 : 1;

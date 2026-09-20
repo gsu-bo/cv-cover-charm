@@ -148,6 +148,26 @@ describe("central motivation-letter layout system", () => {
     expect(letterArchetypeFor("modern")).toBe("quiet");
   });
 
+  test("legacy/SSR geometry reuses the shared semantic chrome heights", () => {
+    const compact = letterPageGeometry(
+      DEMO_LETTER,
+      designFor("modern", "compact", "compact"),
+    );
+    const stackedContact = letterPageGeometry(
+      DEMO_LETTER,
+      designFor("modern", "contact", "compact"),
+    );
+    const inlineContact = letterPageGeometry(DEMO_LETTER, {
+      ...designFor("modern", "contact", "compact"),
+      headerTextLayout: "inline",
+    });
+
+    expect(compact.footer.height).toBe(4);
+    expect(compact.content.top).toBe(22);
+    expect(stackedContact.content.top).toBe(41);
+    expect(inlineContact.content.top).toBe(35);
+  });
+
   test("no-footer and attachment-footer reserve only their functional bottom space", () => {
     const compact = letterPageGeometry(DEMO_LETTER, designFor("modern", "compact", "compact"));
     const attachments = letterPageGeometry(
@@ -163,7 +183,7 @@ describe("central motivation-letter layout system", () => {
     expect(attachments.content.bottom).toBe(attachments.footer.height + 7);
   });
 
-  test("multi-page context keeps contact semantics on continuation pages", () => {
+  test("multi-page context repeats the selected contact header by default", () => {
     const design = designFor("modern", "contact", "attachments");
     const firstOfTwo = letterPageGeometry(DEMO_LETTER, design, {
       pageIndex: 0,
@@ -183,6 +203,6 @@ describe("central motivation-letter layout system", () => {
     expect(finalContinuation.effectiveHeaderMode).toBe("contact");
     expect(finalContinuation.effectiveFooterMode).toBe("attachments");
     expect(finalContinuation.footer.showAttachments).toBe(true);
-    expect(finalContinuation.content.top).toBeLessThan(firstOfTwo.content.top);
+    expect(finalContinuation.content.top).toBe(firstOfTwo.content.top);
   });
 });

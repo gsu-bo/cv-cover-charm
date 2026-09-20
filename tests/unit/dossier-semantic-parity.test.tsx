@@ -30,10 +30,10 @@ const contact = {
 };
 
 describe("header/footer semantic precedence", () => {
-  test("partial options inherit neutral footer, including an empty shared object", () => {
+  test("partial options inherit the canonical compact footer, including an empty shared object", () => {
     for (const shared of [{}, { headerMode: "contact" }]) {
       const state = normalizeDossierChromeState({ shared });
-      expect(state.shared.footerMode).toBe("none");
+      expect(state.shared.footerMode).toBe("compact");
     }
   });
 

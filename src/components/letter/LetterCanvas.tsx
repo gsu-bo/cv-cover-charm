@@ -3,6 +3,10 @@ import { FONT_STACKS } from "@/components/cover/types";
 import { onColorRoles } from "@/components/cv/palette";
 import { DossierHeaderFooterChrome } from "@/components/dossier/DossierHeaderFooterChrome";
 import type { DossierChromeContact, DossierChromeOptions } from "@/lib/dossier-chrome";
+import {
+  resolveDossierChromeDocumentContent,
+  withDossierChromeDocumentContent,
+} from "@/lib/dossier-chrome-content";
 import { effectiveDossierFont } from "@/lib/dossier-theme";
 import {
   defaultHeaderModeForTemplate,
@@ -136,7 +140,14 @@ export function LetterCanvas({
   onImageRemove?: (id: string) => void;
   ariaLabel?: string;
 }) {
-  const chrome = resolveLetterChrome(design, chromeOptions);
+  const chromeDocumentContent = useMemo(
+    () => resolveDossierChromeDocumentContent(design.chromeContent, "Motivationsschreiben"),
+    [design.chromeContent],
+  );
+  const chrome = withDossierChromeDocumentContent(
+    resolveLetterChrome(design, chromeOptions),
+    chromeDocumentContent,
+  );
   const effectiveDesign = useMemo<LetterDesign>(
     () => ({
       ...design,
@@ -400,6 +411,7 @@ export function LetterCanvas({
         }
         pageIndex={geometry.pageIndex}
         options={chrome}
+        documentContent={chromeDocumentContent}
         footerHeightMm={geometry.footer.height}
         footerLabel="Beilagen"
         footerDetails={geometry.footer.showAttachments ? beilagen : []}

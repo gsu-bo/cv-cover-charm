@@ -36,6 +36,7 @@ import {
 } from "./archetype";
 import { dossierThemeFor } from "@/lib/dossier-theme";
 import type { DossierChromeContact, DossierChromeOptions } from "@/lib/dossier-chrome";
+import type { DossierChromeDocumentContent } from "@/lib/dossier-chrome-content";
 import { cvBodyData } from "@/lib/dossier-body-contact";
 import { dossierPhotoCropStyle, dossierPhotoRadius, dossierPhotoRatio } from "@/lib/dossier-photo";
 import { getCvPhotoStyle, subscribeCvPhotoStyle } from "./photo";
@@ -138,6 +139,7 @@ type Props = {
   elements: CustomField[];
   chromeOptions: DossierChromeOptions;
   chromeContact: DossierChromeContact;
+  chromeDocumentContent?: DossierChromeDocumentContent;
   exportMode?: boolean;
   /** Abweichungen vom Vorgabestil je Element – Position, Farbe, Grösse. */
   elementStyles?: StyleOverrides;
@@ -166,6 +168,7 @@ export function CvCanvas({
   elements,
   chromeOptions,
   chromeContact,
+  chromeDocumentContent,
   exportMode = false,
   elementStyles = {},
   selected = null,
@@ -527,6 +530,7 @@ export function CvCanvas({
    * Titelblatt.
    */
   const docTitle = (color: string) => {
+    if (design.showDocumentTitle === false) return null;
     const text = data.titel?.trim();
     if (!text) return null;
     const fontSizePx = Math.max(
@@ -2891,6 +2895,7 @@ export function CvCanvas({
               colors={design.colors}
               options={chromeOptions}
               contact={chromeContact}
+              documentContent={chromeDocumentContent}
               pageIndex={i}
               footerLeft={chromeContact.name || "Lebenslauf"}
               footerRight={`Seite ${i + 1}`}

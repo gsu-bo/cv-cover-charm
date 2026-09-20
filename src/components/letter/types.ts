@@ -4,6 +4,10 @@ import { FRESH_TEMPLATE_REGISTRY } from "@/components/cover/fresh-template-regis
 import { normalizeActiveTemplateId } from "@/components/cover/fresh-templates";
 import { LETTER_STORAGE_KEY } from "@/lib/dossier-project";
 import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
+import {
+  normalizeDossierChromeDocumentContentSettings,
+  type DossierChromeDocumentContentSettings,
+} from "@/lib/dossier-chrome-content";
 import type {
   DossierChromeInlineSeparator,
   DossierChromeState,
@@ -125,6 +129,8 @@ export type LetterDesign = {
   chromeBorderColor?: string | null;
   chromeBorderWidthMm?: number;
   chromeTextFont?: FontKey | null;
+  /** Dokumenteigene Header-/Footer-Texte; bewusst nicht Teil des Sync-States. */
+  chromeContent?: DossierChromeDocumentContentSettings;
 };
 
 export type SavedLetter = {
@@ -323,7 +329,7 @@ export function emptyLetterDesign(): LetterDesign {
     headerShowAddress: true,
     headerShowPhone: true,
     headerShowEmail: true,
-    headerDifferentFirstPage: true,
+    headerDifferentFirstPage: false,
     headerHeightMm: null,
     headerTextLayout: "stacked",
     headerInlineSeparator: "icons",
@@ -398,7 +404,10 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
     headerShowAddress: incoming.headerShowAddress !== false,
     headerShowPhone: incoming.headerShowPhone !== false,
     headerShowEmail: incoming.headerShowEmail !== false,
-    headerDifferentFirstPage: incoming.headerDifferentFirstPage !== false,
+    headerDifferentFirstPage:
+      typeof incoming.headerDifferentFirstPage === "boolean"
+        ? incoming.headerDifferentFirstPage
+        : (fallback.headerDifferentFirstPage ?? false),
     headerHeightMm: normalizedMm(incoming.headerHeightMm),
     headerTextLayout: incoming.headerTextLayout === "inline" ? "inline" : "stacked",
     headerInlineSeparator: normalizedHeaderInlineSeparator(incoming.headerInlineSeparator),
@@ -416,5 +425,6 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
     chromeBorderColor: normalizedColor(incoming.chromeBorderColor),
     chromeBorderWidthMm: normalizedBorderWidth(incoming.chromeBorderWidthMm),
     chromeTextFont,
+    chromeContent: normalizeDossierChromeDocumentContentSettings(incoming.chromeContent),
   };
 }

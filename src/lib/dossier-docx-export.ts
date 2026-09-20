@@ -8,6 +8,7 @@ import { applyDossierChromeToDocx } from "@/lib/dossier-docx-chrome";
 import { applyCvSectionOrderToDocx } from "@/lib/dossier-docx-cv-section-order";
 import { applyCvSectionTitleStyleToDocx } from "@/lib/dossier-docx-cv-section-titles";
 import { applyDossierDocumentColorsToDocx } from "@/lib/dossier-docx-document-colors";
+import { applyDossierFieldTypographyToDocx } from "@/lib/dossier-docx-field-typography";
 import { applyLetterImagesToDocx } from "@/lib/dossier-docx-letter-images";
 import type {
   CoverPdfDocument,
@@ -209,7 +210,11 @@ export async function createDossierDocxBlob(
     throw new Error("DOCX benötigt dieselbe aktive Vorlage in allen drei Dossierteilen.");
   }
   const resolved = resolveDossierChromeSnapshot({ cover, letter, cv }, getDossierChromeState());
-  const bodyCv = { ...cv, data: cvBodyData(cv.data, resolved.cv.options) };
+  const cvData = cvBodyData(cv.data, resolved.cv.options);
+  const bodyCv = {
+    ...cv,
+    data: cv.design.showDocumentTitle === false ? { ...cvData, titel: "" } : cvData,
+  };
   const layout = getCvLayoutChoiceForTemplate(cv.design.template);
   const placements = { ...getCvPlacements() };
   const blob = await profile.createBlob({
@@ -235,7 +240,12 @@ export async function createDossierDocxBlob(
   const chromed = await applyDossierChromeToDocx(margined, { cover, letter, cv }, resolved);
   const titled = await applyCvSectionTitleStyleToDocx(chromed, bodyCv);
   const withLetterImages = await applyLetterImagesToDocx(titled, letter);
-  return applyDossierDocumentColorsToDocx(withLetterImages, { cover, letter, cv: bodyCv });
+  const colored = await applyDossierDocumentColorsToDocx(withLetterImages, {
+    cover,
+    letter,
+    cv: bodyCv,
+  });
+  return applyDossierFieldTypographyToDocx(colored);
 }
 
 export async function downloadDossierDocx(

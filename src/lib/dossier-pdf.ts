@@ -193,7 +193,7 @@ function addRichLetterText(
         pdf.setFont(font, pdfFontStyle(style));
         pdf.setFontSize(fontSizePt);
         pdf.setTextColor(red, green, blue);
-        pdf.text(fragment.text, x, baseline);
+        pdf.text(fragment.text, x, baseline, { renderingMode: "invisible" });
       }
     }
     node = walker.nextNode();
@@ -230,7 +230,7 @@ function addLetterListMarkers(
     pdf.setFont(font, "normal");
     pdf.setFontSize(fontSizePt);
     pdf.setTextColor(red, green, blue);
-    pdf.text(marker, x, baseline);
+    pdf.text(marker, x, baseline, { renderingMode: "invisible" });
   }
 }
 
@@ -279,7 +279,7 @@ function addLetterRules(pdf: JsPdf, page: HTMLElement, mmX: number, mmY: number)
   }
 }
 
-/** Browserlayout vermessen und als sichtbare, durchsuchbare PDF-Textebene zeichnen. */
+/** Browserlayout vermessen und eine unsichtbare, durchsuchbare PDF-Textebene ergänzen. */
 function addLetterTextLayer(pdf: JsPdf, page: HTMLElement) {
   const pageRect = page.getBoundingClientRect();
   if (pageRect.width <= 0 || pageRect.height <= 0) {
@@ -321,6 +321,7 @@ function addLetterTextLayer(pdf: JsPdf, page: HTMLElement) {
     pdf.text(wrapLetterText(pdf, text, width), x, baseline, {
       align,
       lineHeightFactor,
+      renderingMode: "invisible",
     });
   }
 
@@ -351,16 +352,9 @@ async function addRasterPage(
     scrollY: 0,
     onclone: rebuildLetterVectors
       ? (clonedDocument) => {
-          // Letter glyphs are rebuilt below as native PDF text. Hide them only
-          // inside html2canvas' clone so preview/export DOM and QA screenshots
-          // keep their normal browser typography and geometry.
-          for (const text of clonedDocument.querySelectorAll<HTMLElement>(
-            "[data-letter-pdf-text], [data-letter-pdf-richtext]",
-          )) {
-            text.style.setProperty("visibility", "hidden", "important");
-          }
-
-          // Rules and table borders are rebuilt below as crisp vector geometry.
+          // Browser/html2canvas owns visible letter typography. Keep glyphs in
+          // the raster; only geometry that is intentionally rebuilt as crisp
+          // vectors is removed from the clone.
           for (const rule of clonedDocument.querySelectorAll<HTMLElement>(
             "[data-letter-pdf-rule], [data-letter-pdf-richtext] hr",
           )) {
@@ -423,7 +417,7 @@ function assertLetterPagesFit(pages: HTMLElement[]) {
   );
 }
 
-/** Titelblatt bleibt Raster; alle Anschreiben-Seiten und CV-Seiten erhalten echte Textlagen. */
+/** Titelblatt bleibt Raster; Anschreiben und CV erhalten unsichtbare Such-/Kopiertextlagen. */
 export async function downloadCombinedDossierPdf(
   root: HTMLElement,
   fileName: string,

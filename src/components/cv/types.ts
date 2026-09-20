@@ -1,4 +1,5 @@
 import type { FontKey, TemplateId } from "@/components/cover/types";
+import type { DossierChromeDocumentContentSettings } from "@/lib/dossier-chrome-content";
 
 /**
  * Ein Eintrag mit Zeitraum – Schule, Praktikum, Kurs. Alle Felder dürfen leer
@@ -314,6 +315,10 @@ export type CvDesign = {
   headingScale?: number;
   /** Grösse des Fliesstexts, 1 = Vorgabe. */
   bodyScale?: number;
+  /** Der normale Dokumenttitel im CV-Körper bleibt unabhängig vom Header schaltbar. */
+  showDocumentTitle?: boolean;
+  /** Dokumenteigene Texte. Deren Geometrie bleibt vom gemeinsamen Chrome-State getrennt. */
+  chromeContent?: DossierChromeDocumentContentSettings;
   /** Eigene Gestaltung für den kleinen Dokumenttitel über dem Namen. */
   docTitleFontSizePx?: number;
   docTitleColor?: string;

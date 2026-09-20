@@ -17,6 +17,10 @@ import {
   subscribeDossierPageMargins,
 } from "@/lib/dossier-page-margins";
 import { resolveTemplateChromeOptions } from "@/lib/template-chrome";
+import {
+  resolveDossierChromeDocumentContent,
+  withDossierChromeDocumentContent,
+} from "@/lib/dossier-chrome-content";
 import { CvTextAlignmentPortal } from "./CvTextAlignmentPortal";
 import { getCvTextAlignment, subscribeCvTextAlignment } from "./text-alignment";
 import { cvContentBox, cvFrameFor } from "./archetype";
@@ -43,7 +47,7 @@ import "./document-title-user-override.css";
 export type { CvLayoutWarning } from "./CvCanvasBase";
 
 type BaseProps = ComponentProps<typeof BaseCvCanvas>;
-type Props = Omit<BaseProps, "chromeOptions" | "chromeContact"> & {
+type Props = Omit<BaseProps, "chromeOptions" | "chromeContact" | "chromeDocumentContent"> & {
   chromeOptions?: DossierChromeOptions;
   chromeContact?: DossierChromeContact;
 };
@@ -115,9 +119,21 @@ export function CvCanvas({
   );
   const design = useMemo(() => cvDesignWithFullSectionRules(props.design), [props.design]);
   const rubric = useMemo(() => resolveCvRubricOptions(design), [design]);
+  const chromeDocumentContent = useMemo(
+    () =>
+      resolveDossierChromeDocumentContent(
+        design.chromeContent,
+        props.data.titel?.trim() || "Lebenslauf",
+      ),
+    [design.chromeContent, props.data.titel],
+  );
   const resolvedChromeOptions = useMemo(
-    () => resolveTemplateChromeOptions(design.template, design.colors, chromeOptions),
-    [chromeOptions, design.colors, design.template],
+    () =>
+      withDossierChromeDocumentContent(
+        resolveTemplateChromeOptions(design.template, design.colors, chromeOptions),
+        chromeDocumentContent,
+      ),
+    [chromeDocumentContent, chromeOptions, design.colors, design.template],
   );
   const canvasChromeOptions = useMemo<DossierChromeOptions>(() => {
     if (design.template !== "terracotta" || resolvedChromeOptions.headerMode !== "contact") {
@@ -229,6 +245,7 @@ export function CvCanvas({
         design={design}
         chromeOptions={canvasChromeOptions}
         chromeContact={resolvedContact}
+        chromeDocumentContent={chromeDocumentContent}
       />
       {!props.exportMode ? (
         <CvTextAlignmentPortal
