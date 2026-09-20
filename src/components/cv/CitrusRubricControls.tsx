@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import {
   CV_CONTENT_INDENT_MAX_MM,
   CV_CONTENT_INDENT_MIN_MM,
@@ -7,6 +8,14 @@ import {
   resolveCvRubricOptions,
   type CvRubricPatch,
 } from "./citrus-rubric";
+import {
+  CV_SECTION_GAP_CUSTOM_DEFAULT_MM,
+  CV_SECTION_GAP_MAX_MM,
+  CV_SECTION_GAP_MIN_MM,
+  getCvSectionGapMm,
+  setCvSectionGapMm,
+  subscribeCvSectionGap,
+} from "./layout";
 import type { CvDesign } from "./types";
 
 type Props = {
@@ -22,6 +31,8 @@ type Props = {
 export function CitrusRubricControls({ design, onChange }: Props) {
   const options = resolveCvRubricOptions(design);
   const horizontalLabel = `${options.horizontalMm > 0 ? "+" : ""}${options.horizontalMm} mm`;
+  const sectionGapMm = useSyncExternalStore(subscribeCvSectionGap, getCvSectionGapMm, () => null);
+  const customSectionGap = sectionGapMm !== null;
 
   return (
     <div
@@ -33,7 +44,7 @@ export function CitrusRubricControls({ design, onChange }: Props) {
         <span className="text-xs font-semibold">Rubriktitel</span>
         <button
           type="button"
-          onClick={() =>
+          onClick={() => {
             onChange({
               sectionTitlePill: undefined,
               sectionTitleOffsetMm: undefined,
@@ -41,8 +52,9 @@ export function CitrusRubricControls({ design, onChange }: Props) {
               citrusRubricPill: undefined,
               citrusRubricOffsetMm: undefined,
               citrusContentIndentMm: undefined,
-            })
-          }
+            });
+            setCvSectionGapMm(null);
+          }}
           className="text-xs text-muted-foreground underline hover:text-foreground"
         >
           Standard
@@ -109,9 +121,50 @@ export function CitrusRubricControls({ design, onChange }: Props) {
         />
       </label>
 
+      <div data-cv-section-gap-control className="grid gap-2 rounded-md border border-input/70 p-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-medium">Abstand zwischen Rubriken</div>
+            <div className="text-[11px] text-muted-foreground">
+              Zusätzliche Luft vor der nächsten Rubrik; halbe Rubriken bleiben nebeneinander.
+            </div>
+          </div>
+          <label className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={customSectionGap}
+              onChange={(event) =>
+                setCvSectionGapMm(
+                  event.target.checked ? CV_SECTION_GAP_CUSTOM_DEFAULT_MM : null,
+                )
+              }
+            />
+            selber
+          </label>
+        </div>
+        {customSectionGap ? (
+          <label className="flex flex-col gap-1 text-xs">
+            <span className="text-muted-foreground">
+              Abstand {sectionGapMm?.toFixed(1).replace(".0", "")} mm
+            </span>
+            <input
+              type="range"
+              min={CV_SECTION_GAP_MIN_MM}
+              max={CV_SECTION_GAP_MAX_MM}
+              step={0.5}
+              value={sectionGapMm ?? CV_SECTION_GAP_CUSTOM_DEFAULT_MM}
+              onChange={(event) => setCvSectionGapMm(Number(event.target.value))}
+              className="w-full accent-primary"
+              aria-label="Abstand zwischen Rubriken"
+            />
+          </label>
+        ) : null}
+      </div>
+
       <span className="text-[11px] leading-relaxed text-muted-foreground/80">
         Standard für alle CV-Vorlagen: keine Pille, {CV_RUBRIC_DEFAULTS.horizontalMm} mm
-        Rubrikversatz und {CV_RUBRIC_DEFAULTS.contentIndentMm} mm Inhaltseinzug.
+        Rubrikversatz und {CV_RUBRIC_DEFAULTS.contentIndentMm} mm Inhaltseinzug. Der bestehende
+        Abstand unter dem Rubriktitel steuert Titel → Inhalt; dieser Regler steuert Rubrik → Rubrik.
       </span>
     </div>
   );
