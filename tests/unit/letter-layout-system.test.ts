@@ -159,10 +159,7 @@ describe("central motivation-letter layout system", () => {
   });
 
   test("legacy/SSR geometry reuses the shared semantic chrome heights", () => {
-    const compact = letterPageGeometry(
-      DEMO_LETTER,
-      designFor("modern", "compact", "compact"),
-    );
+    const compact = letterPageGeometry(DEMO_LETTER, designFor("modern", "compact", "compact"));
     const stackedContact = letterPageGeometry(
       DEMO_LETTER,
       designFor("modern", "contact", "compact"),
