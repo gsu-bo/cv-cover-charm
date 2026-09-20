@@ -71,7 +71,7 @@ describe("compact letter presentation", () => {
       expect(contact).toContain('data-letter-header-mode="contact"');
       expect(contact).toContain("data-letter-integrated-contact");
       expect(contact).not.toContain('data-letter-section="sender"');
-      expect(contact).toContain("top:43mm");
+      expect(contact).toContain("top:53mm");
       expect(none).toContain('data-letter-header-mode="none"');
       expect(none).not.toContain("data-letter-integrated-contact");
       expect(none).toContain('data-letter-section="sender"');
@@ -136,7 +136,7 @@ describe("compact letter presentation", () => {
     expect(markup).toContain("Lea Sophie Alexandra Müller-Winterberger-Schneider");
     expect(markup).toContain("overflow-wrap:anywhere");
     expect(markup).not.toContain("text-overflow:ellipsis");
-    expect(markup).toContain("top:43mm");
+    expect(markup).toContain("top:53mm");
   });
 
   test("meaningful contact and attachment chrome stays in the accessibility tree", () => {
