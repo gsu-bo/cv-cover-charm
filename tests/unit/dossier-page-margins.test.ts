@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import {
   cvContentBox,
@@ -42,6 +42,8 @@ const project = read("src/lib/dossier-project.ts");
 const docxExport = read("src/lib/dossier-docx-export.ts");
 const docxMargins = read("src/lib/dossier-docx-page-margins.ts");
 const pageMarginsStore = read("src/lib/dossier-page-margins.ts");
+
+afterEach(() => clearDossierPageMargins());
 
 describe("configurable CV and motivation-letter page margins", () => {
   test("normalizes four safe millimetre values without inventing a default override", () => {
@@ -138,9 +140,9 @@ describe("configurable CV and motivation-letter page margins", () => {
 
     setDossierPageMargins("cv", { top: 5, right: 5, bottom: 5, left: 5 });
     expect(cvContentBox(frame, 0, "classic", undefined, DEFAULT_DOSSIER_CHROME_OPTIONS)).toEqual({
-      top: 49,
+      top: 21,
       right: 5,
-      bottom: 7.4,
+      bottom: 9,
       left: 80,
     });
     clearDossierPageMargins();
@@ -155,7 +157,7 @@ describe("configurable CV and motivation-letter page margins", () => {
         undefined,
         DEFAULT_DOSSIER_CHROME_OPTIONS,
       ),
-    ).toEqual({ top: 5, right: 19, bottom: 17, left: 19 });
+    ).toEqual({ top: 5, right: 19, bottom: 15, left: 19 });
     expect(
       cvSafePageMarginMinimums(
         cvFrameFor("klassisch"),
@@ -164,7 +166,7 @@ describe("configurable CV and motivation-letter page margins", () => {
         undefined,
         DEFAULT_DOSSIER_CHROME_OPTIONS,
       ),
-    ).toEqual({ top: 5, right: 15, bottom: 13, left: 15 });
+    ).toEqual({ top: 5, right: 15, bottom: 11, left: 15 });
   });
 
   test("Neon first-page headroom stays shared by default and custom-margin geometry", () => {
@@ -213,7 +215,7 @@ describe("configurable CV and motivation-letter page margins", () => {
       right: content.right,
       bottom: content.bottom,
       left: content.left,
-    }).toEqual({ top: 27, right: 5, bottom: 7.4, left: 5 });
+    }).toEqual({ top: 37, right: 5, bottom: 9, left: 5 });
     clearDossierPageMargins();
   });
 
@@ -296,12 +298,12 @@ describe("configurable CV and motivation-letter page margins", () => {
     setDossierPageMargins("letter", { top: 30, right: 23, bottom: 17, left: 24 });
     const custom = letterPageGeometry(DEMO_LETTER, design, { headerGapMm: 12 });
     expect(custom.content).toEqual({
-      top: 45,
+      top: 46,
       right: 23,
-      bottom: 17,
+      bottom: 21,
       left: 24,
       width: 163,
-      height: 235,
+      height: 230,
     });
     clearDossierPageMargins();
   });
@@ -320,7 +322,7 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(cvContentBox(frame, 0, "classic", 0.3, chrome)).toEqual({
       top: 134,
       right: 23,
-      bottom: 19.4,
+      bottom: 21,
       left: 24,
     });
     clearDossierPageMargins();

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { TEMPLATES, type TemplateId } from "@/components/cover/types";
-import { cvContentBox, cvFrameFor } from "@/components/cv/archetype";
+import { cvDefaultContentBox, cvFrameFor } from "@/components/cv/archetype";
 import { cvPalette, onColorRoles } from "@/components/cv/palette";
 import type { LetterTemplateId } from "@/components/letter/types";
 
@@ -217,7 +217,7 @@ function dossierSheetLayoutFor(template: LetterTemplateId, pageIndex = 0): Lette
   const baseId = baseTemplateId(template);
   if (baseId) {
     const frame = cvFrameFor(baseId);
-    const box = cvContentBox(frame, pageIndex, "classic");
+    const box = cvDefaultContentBox(frame, pageIndex, "classic");
     const headMm = pageIndex === 0 ? frame.headFirstMm : frame.headRestMm;
     return {
       kind: frame.id,

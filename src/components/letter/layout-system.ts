@@ -1,8 +1,8 @@
 import {
   DEFAULT_DOSSIER_CHROME_OPTIONS,
+  dossierFooterVisualHeightMmForOptions,
   dossierHeaderVisualHeightMmForOptions,
   effectiveDossierHeaderModeForOptions,
-  hasReducedContinuationHeader,
   type DossierChromeOptions,
 } from "@/lib/dossier-chrome";
 import type { TemplateId } from "@/components/cover/types";
@@ -143,12 +143,16 @@ export function letterFooterHeightMm(
   heightOverrideMm: number | null = null,
 ): number {
   if (mode === "none") return 0;
-  if (heightOverrideMm !== null && Number.isFinite(heightOverrideMm)) {
-    return mode === "compact"
-      ? Math.min(18, Math.max(1, heightOverrideMm))
-      : Math.min(40, Math.max(4, heightOverrideMm));
+  if (mode === "compact") {
+    return dossierFooterVisualHeightMmForOptions({
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      footerMode: "compact",
+      footerHeightMm: heightOverrideMm,
+    });
   }
-  if (mode === "compact") return 2.4;
+  if (heightOverrideMm !== null && Number.isFinite(heightOverrideMm)) {
+    return Math.min(40, Math.max(4, heightOverrideMm));
+  }
 
   const attachments = data.showBeilagen !== false ? visibleLetterAttachments(data) : [];
   if (!attachments.length) return 4;
@@ -206,15 +210,16 @@ function legacyLetterHeaderVisualHeightMm(
   pageIndex: number,
   mode: LetterHeaderMode,
 ): number {
-  if (mode === "none") return 0;
-  const custom = design.headerHeightMm;
-  if (hasReducedContinuationHeader({ ...design, headerMode: mode }, pageIndex)) {
-    return custom === null || custom === undefined ? 8 : Math.min(18, Math.max(5, custom));
-  }
-  if (mode === "contact") {
-    return custom === null || custom === undefined ? 22 : Math.min(40, Math.max(10, custom));
-  }
-  return custom === null || custom === undefined ? 3 : Math.min(18, Math.max(1, custom));
+  return dossierHeaderVisualHeightMmForOptions(
+    {
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      headerMode: mode,
+      headerDifferentFirstPage: design.headerDifferentFirstPage,
+      headerHeightMm: design.headerHeightMm ?? null,
+      headerTextLayout: design.headerTextLayout === "inline" ? "inline" : "stacked",
+    },
+    pageIndex,
+  );
 }
 
 function letterHeaderVisualHeightMm(

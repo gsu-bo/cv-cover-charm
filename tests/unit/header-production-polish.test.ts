@@ -27,7 +27,7 @@ describe("header production polish", () => {
     expect(controls).toContain('headerInlineSeparator: "dot"');
   });
 
-  test("normal template switches preserve chrome while Warm and Citrus use shared recommendation", () => {
+  test("normal template switches preserve chrome while Warm alone uses shared recommendation", () => {
     expect(picker).toContain("recommendedHeaderPatchForTemplate(template)");
     expect(picker).toContain("if (!patch) return;");
     expect(letterPicker).toContain("recommendedHeaderPatchForTemplate(template)");
