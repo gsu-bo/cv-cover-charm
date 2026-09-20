@@ -52,3 +52,42 @@ test("a persisted retired Frame CV normalizes to Brief before preview and export
     )
     .toBe("brief");
 });
+
+test("a retired Frame cover import replaces the current template with canonical Brief", async ({
+  page,
+}) => {
+  await page.goto(`${BASE_URL}/titelblatt`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => {
+    localStorage.clear();
+    localStorage.setItem(
+      "titelblatt:v3",
+      JSON.stringify({ version: 8, template: "warm", data: {} }),
+    );
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+
+  const covers = page.locator('[data-dossier-document="cover"]');
+  await expect(covers.first()).toHaveAttribute("data-cover-template", "warm");
+
+  await page.getByRole("button", { name: "Download" }).click();
+  await page.locator('input[type="file"][accept="application/json"]').setInputFiles({
+    name: "legacy-frame-cover.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        template: "frame",
+        data: { vorname: "Lea", nachname: "Müller" },
+      }),
+    ),
+  });
+
+  await expect(covers).toHaveCount(2);
+  await expect(covers.first()).toHaveAttribute("data-cover-template", "brief");
+  await expect(covers.nth(1)).toHaveAttribute("data-cover-template", "brief");
+  await expect(page.locator("html")).toHaveAttribute("data-dossier-template", "brief");
+  await expect
+    .poll(() =>
+      page.evaluate(() => JSON.parse(localStorage.getItem("titelblatt:v3") ?? "null")?.template),
+    )
+    .toBe("brief");
+});
