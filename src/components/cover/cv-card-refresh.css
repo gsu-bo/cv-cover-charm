@@ -275,7 +275,9 @@ html[data-dossier-template="verlauf"] [data-dossier-document="cv"] [data-cv-date
 html[data-dossier-template="citrus"] [data-dossier-document="cv"] [data-cv-page="0"] [data-cv-surface] {
   left: 0 !important;
   right: 0 !important;
-  top: 39mm !important;
+  /* Keep the compact-header name inside the warm hero after the shared
+   * contact header stopped reserving the former 22 mm top area. */
+  top: 46mm !important;
   bottom: 0 !important;
   border-radius: 16mm 0 0 0 !important;
   opacity: 1 !important;
