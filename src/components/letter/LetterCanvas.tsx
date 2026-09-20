@@ -153,9 +153,7 @@ export function LetterCanvas({
     }),
     [chrome, design],
   );
-  const geometry = letterPageGeometry(data, effectiveDesign, {
-    headerGapMm: chrome.headerGapMm ?? 12,
-  });
+  const geometry = letterPageGeometry(data, effectiveDesign, { chromeOptions: chrome });
   const contentWidthMm = geometry.content.width;
   const palette = resolveLetterPalette(design);
   const paperColor = resolveLetterPaperColor(design);

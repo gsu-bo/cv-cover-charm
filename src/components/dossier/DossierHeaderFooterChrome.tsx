@@ -12,6 +12,7 @@ import {
   type DossierChromeOptions,
   type DossierChromeScope,
 } from "@/lib/dossier-chrome";
+import { getDossierPageMargins } from "@/lib/dossier-page-margins";
 import { resolveTemplateChromeOptions } from "@/lib/template-chrome";
 import "./chrome-policy.css";
 
@@ -215,6 +216,9 @@ export function DossierHeaderFooterChrome({
   const compactFooterHeight = dossierFooterVisualHeightMmForOptions(options);
   const detailsHeight = options.footerHeightMm ?? footerHeightMm ?? 10;
   const letter = scope === "letter";
+  const pageMargins = getDossierPageMargins(scope);
+  const chromeContentLeftMm = pageMargins?.left ?? 24;
+  const chromeContentRightMm = pageMargins?.right ?? 23;
   const warmLetterOwnsFirstPageHeader =
     letter && template === "freundlich" && pageIndex === 0 && headerMode === "compact";
   const resolvedFooterLeft = footerLeft;
@@ -293,6 +297,8 @@ export function DossierHeaderFooterChrome({
       data-dossier-border-color={borderColor}
       data-dossier-border-width-mm={visualOptions.borderWidthMm}
       data-dossier-chrome-font={visualOptions.textFont ?? "template"}
+      data-dossier-content-left-mm={chromeContentLeftMm}
+      data-dossier-content-right-mm={chromeContentRightMm}
       data-letter-chrome={letter ? "" : undefined}
       data-letter-header-mode={letter ? options.headerMode : undefined}
       className="pointer-events-none absolute inset-0 z-[3] overflow-hidden"
@@ -332,7 +338,7 @@ export function DossierHeaderFooterChrome({
             className="absolute inset-x-0 top-0 flex items-center"
             style={{
               height: `${headerVisualHeight}mm`,
-              padding: "0 12mm",
+              padding: `0 ${chromeContentRightMm}mm 0 ${chromeContentLeftMm}mm`,
               boxSizing: "border-box",
               background: headerSurface,
               borderBottom: borderStyle,
@@ -412,7 +418,9 @@ export function DossierHeaderFooterChrome({
               className="absolute inset-x-0 top-0 flex"
               style={{
                 height: `${headerVisualHeight}mm`,
-                padding: stackedHeader ? "1mm 23mm 1mm 24mm" : "2mm 18mm",
+                padding: stackedHeader
+                  ? `1mm ${chromeContentRightMm}mm 1mm ${chromeContentLeftMm}mm`
+                  : `2mm ${chromeContentRightMm}mm 2mm ${chromeContentLeftMm}mm`,
                 boxSizing: "border-box",
                 color: headerRoles.ink,
                 fontSize: stackedHeader ? "8pt" : "8.5pt",
@@ -490,7 +498,7 @@ export function DossierHeaderFooterChrome({
           className="absolute inset-x-0 bottom-0 text-[8.5pt] leading-[1.3]"
           style={{
             height: `${detailsHeight}mm`,
-            padding: "2.2mm 23mm 2.2mm 24mm",
+            padding: `2.2mm ${chromeContentRightMm}mm 2.2mm ${chromeContentLeftMm}mm`,
             boxSizing: "border-box",
             background: footerSurface,
             borderTop: borderStyle,

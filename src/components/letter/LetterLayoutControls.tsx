@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { DossierPageMarginsControl } from "@/components/dossier/DossierPageMarginsControl";
 import {
-  letterPageGeometry,
+  letterDefaultPageMargins,
   letterSafePageMarginMinimums,
 } from "@/components/letter/layout-system";
 import type { LetterAlignment, LetterData, LetterDesign } from "@/components/letter/types";
@@ -12,7 +12,6 @@ import {
   subscribeDossierChrome,
   type DossierChromeOptions,
 } from "@/lib/dossier-chrome";
-import type { DossierPageMargins } from "@/lib/dossier-page-margins";
 
 const buttonClass =
   "rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -54,30 +53,6 @@ export function legacyLetterChromePatch(
   if (patch.borderWidthMm !== undefined) next.chromeBorderWidthMm = patch.borderWidthMm;
   if (patch.textFont !== undefined) next.chromeTextFont = patch.textFont;
   return next;
-}
-
-function currentLetterDefaultMargins(data: LetterData, design: LetterDesign): DossierPageMargins {
-  if (typeof document !== "undefined") {
-    const layer = document.querySelector<HTMLElement>(
-      '[data-letter-page]:not([data-export-mode="true"]) [data-letter-text-layer], [data-letter-page] [data-letter-text-layer]',
-    );
-    const raw = layer?.dataset.letterContentBox;
-    if (raw) {
-      const [left, top, right, bottom] = raw.split(",").map(Number);
-      if ([left, top, right, bottom].every(Number.isFinite)) {
-        return { left, top, right, bottom };
-      }
-    }
-  }
-
-  const geometry = letterPageGeometry(data, design);
-  const headerGap = geometry.effectiveHeaderMode === "none" ? 0 : 12;
-  return {
-    left: geometry.content.left,
-    top: geometry.content.top + headerGap,
-    right: geometry.content.right,
-    bottom: geometry.content.bottom,
-  };
 }
 
 function AlignmentRow({
@@ -178,8 +153,9 @@ export function LetterLayoutControls({
     () => DEFAULT_DOSSIER_CHROME_STATE,
   );
   const chromeOptions = chromeState.sync ? chromeState.shared : chromeState.letter;
-  const defaultMargins = currentLetterDefaultMargins(data, design);
-  const minimumMargins = letterSafePageMarginMinimums(data, design);
+  const geometryContext = { chromeOptions };
+  const defaultMargins = letterDefaultPageMargins(data, design, geometryContext);
+  const minimumMargins = letterSafePageMarginMinimums(data, design, geometryContext);
   const accentColor = design.colors.accent ?? design.colors.primary;
   const recipientOffsetY = chromeOptions.letterRecipientOffsetYMm ?? 0;
 

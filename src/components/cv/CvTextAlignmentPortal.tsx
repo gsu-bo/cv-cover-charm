@@ -6,7 +6,7 @@ import { TextAlignmentControl } from "@/components/dossier/TextAlignmentControl"
 import type { DossierChromeOptions } from "@/lib/dossier-chrome";
 import { BODY_TEXT_ALIGNMENTS } from "@/lib/text-alignment";
 import {
-  cvDefaultContentBox,
+  cvDefaultPageMargins,
   cvFrameFor,
   cvSafePageMarginMinimums,
   type CvRenderLayout,
@@ -45,7 +45,7 @@ export function CvTextAlignmentPortal({
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const frame = useMemo(() => cvFrameFor(template), [template]);
   const defaultMargins = useMemo(
-    () => cvDefaultContentBox(frame, 0, layout, sidebarPct, chromeOptions),
+    () => cvDefaultPageMargins(frame, 0, layout, sidebarPct, chromeOptions),
     [chromeOptions, frame, layout, sidebarPct],
   );
   const minimumMargins = useMemo(

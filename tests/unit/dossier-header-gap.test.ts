@@ -99,10 +99,12 @@ describe("dossier header spacing", () => {
   });
 
   test("routes the shared gap through the motivation-letter geometry source of truth", () => {
-    expect(letterCanvas).toContain("headerGapMm: chrome.headerGapMm ?? 12");
+    expect(letterCanvas).toContain(
+      "const geometry = letterPageGeometry(data, effectiveDesign, { chromeOptions: chrome });",
+    );
     expect(letterCanvas).not.toContain("const baseGeometry = letterPageGeometry");
-    expect(letterLayout).toContain("context.headerGapMm ?? 0");
-    expect(letterLayout).toContain("defaultTop + headerGapMm");
+    expect(letterLayout).toContain("context.chromeOptions?.headerGapMm ?? context.headerGapMm ?? 0");
+    expect(letterLayout).toContain("resolveDossierContentMargins(");
   });
 
   test("keeps renderer-resolved CV geometry authoritative over every template", () => {
