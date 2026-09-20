@@ -21,7 +21,7 @@ import { getCvTextAlignment, subscribeCvTextAlignment } from "./text-alignment";
 import { cvContentBox, cvFrameFor } from "./archetype";
 import { CV_LAYOUT_EVENT } from "./layout";
 import { CvCanvas as BaseCvCanvas } from "./CvCanvasBase";
-import { resolveCitrusRubricOptions } from "./citrus-rubric";
+import { resolveCvRubricOptions } from "./citrus-rubric";
 import type { CvData, CvDesign } from "./types";
 import "@/components/dossier/edel-stationery.css";
 import "@/components/dossier/human-polish.css";
@@ -108,7 +108,7 @@ export function CvCanvas({
     [chromeContact, localContact],
   );
   const design = useMemo(() => cvDesignWithFullSectionRules(props.design), [props.design]);
-  const citrusRubric = useMemo(() => resolveCitrusRubricOptions(design), [design]);
+  const rubric = useMemo(() => resolveCvRubricOptions(design), [design]);
   const resolvedChromeOptions = useMemo(
     () => resolveTemplateChromeOptions(design.template, design.colors, chromeOptions),
     [chromeOptions, design.colors, design.template],
@@ -161,8 +161,8 @@ export function CvCanvas({
     "--cv-classic-main-right": `${classicBox.right}mm`,
     "--cv-modern-main-left": `${modernBox.left}mm`,
     "--cv-modern-main-right": `${modernBox.right}mm`,
-    "--cv-citrus-rubric-x": `${citrusRubric.horizontalMm}mm`,
-    "--cv-citrus-content-indent": `${citrusRubric.contentIndentMm}mm`,
+    "--cv-rubric-x": `${rubric.horizontalMm}mm`,
+    "--cv-rubric-content-indent": `${rubric.contentIndentMm}mm`,
     "--cover-primary": primary,
     "--cover-secondary": secondary,
     "--cover-tertiary": tertiary,
@@ -180,12 +180,17 @@ export function CvCanvas({
       data-cv-body-align={bodyAlignment}
       data-cv-heading-rule={design.headingRule}
       data-cv-user-heading-rule={props.design.headingRule === "full" ? "full" : undefined}
+      data-cv-rubric-pill={rubric.pill ? "true" : "false"}
+      data-cv-rubric-offset={rubric.horizontalOverride ? "custom" : undefined}
+      data-cv-rubric-indent={rubric.contentIndentOverride ? "custom" : undefined}
+      data-cv-rubric-x={rubric.horizontalMm}
+      data-cv-rubric-content-indent={rubric.contentIndentMm}
       data-cv-citrus-pill={
-        design.template === "citrus" ? (citrusRubric.pill ? "true" : "false") : undefined
+        design.template === "citrus" ? (rubric.pill ? "true" : "false") : undefined
       }
-      data-cv-citrus-rubric-x={design.template === "citrus" ? citrusRubric.horizontalMm : undefined}
+      data-cv-citrus-rubric-x={design.template === "citrus" ? rubric.horizontalMm : undefined}
       data-cv-citrus-content-indent={
-        design.template === "citrus" ? citrusRubric.contentIndentMm : undefined
+        design.template === "citrus" ? rubric.contentIndentMm : undefined
       }
     >
       <BaseCvCanvas

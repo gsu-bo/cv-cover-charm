@@ -1,57 +1,89 @@
 import { describe, expect, test } from "bun:test";
 import {
-  CITRUS_CONTENT_INDENT_MAX_MM,
-  CITRUS_RUBRIC_DEFAULTS,
-  CITRUS_RUBRIC_OFFSET_MAX_MM,
-  CITRUS_RUBRIC_OFFSET_MIN_MM,
-  resolveCitrusRubricOptions,
+  CV_CONTENT_INDENT_MAX_MM,
+  CV_RUBRIC_DEFAULTS,
+  CV_RUBRIC_OFFSET_MAX_MM,
+  CV_RUBRIC_OFFSET_MIN_MM,
+  resolveCvRubricOptions,
 } from "../../src/components/cv/citrus-rubric";
 import type { CvDesign } from "../../src/components/cv/types";
 
 const baseDesign: CvDesign = {
-  template: "citrus",
+  template: "verlauf",
   colors: {},
   bgOpacity: 0.25,
   useElements: false,
 };
 
-describe("Citrus rubric options", () => {
-  test("legacy design without Citrus fields resolves to safe Citrus defaults", () => {
-    expect(resolveCitrusRubricOptions(baseDesign)).toEqual(CITRUS_RUBRIC_DEFAULTS);
+describe("shared CV rubric options", () => {
+  test("an untouched CV resolves to neutral defaults", () => {
+    expect(resolveCvRubricOptions(baseDesign)).toEqual({
+      ...CV_RUBRIC_DEFAULTS,
+      horizontalOverride: false,
+      contentIndentOverride: false,
+    });
   });
 
-  test("explicit values are preserved and malformed/out-of-range values are clamped", () => {
+  test("generic values are preserved and malformed/out-of-range values are clamped", () => {
     expect(
-      resolveCitrusRubricOptions({
+      resolveCvRubricOptions({
         ...baseDesign,
-        citrusRubricPill: false,
-        citrusRubricOffsetMm: 5,
-        citrusContentIndentMm: 10,
-      } as CvDesign),
-    ).toEqual({ pill: false, horizontalMm: 5, contentIndentMm: 10 });
-
-    expect(
-      resolveCitrusRubricOptions({
-        ...baseDesign,
-        citrusRubricOffsetMm: 999,
-        citrusContentIndentMm: 999,
+        sectionTitlePill: true,
+        sectionTitleOffsetMm: 5,
+        sectionContentIndentMm: 10,
       } as CvDesign),
     ).toEqual({
       pill: true,
-      horizontalMm: CITRUS_RUBRIC_OFFSET_MAX_MM,
-      contentIndentMm: CITRUS_CONTENT_INDENT_MAX_MM,
+      horizontalMm: 5,
+      contentIndentMm: 10,
+      horizontalOverride: true,
+      contentIndentOverride: true,
     });
 
     expect(
-      resolveCitrusRubricOptions({
+      resolveCvRubricOptions({
         ...baseDesign,
-        citrusRubricOffsetMm: -999,
-        citrusContentIndentMm: Number.NaN,
+        sectionTitleOffsetMm: 999,
+        sectionContentIndentMm: 999,
+      } as CvDesign),
+    ).toEqual({
+      pill: false,
+      horizontalMm: CV_RUBRIC_OFFSET_MAX_MM,
+      contentIndentMm: CV_CONTENT_INDENT_MAX_MM,
+      horizontalOverride: true,
+      contentIndentOverride: true,
+    });
+
+    expect(
+      resolveCvRubricOptions({
+        ...baseDesign,
+        sectionTitleOffsetMm: -999,
+        sectionContentIndentMm: Number.NaN,
+      } as CvDesign),
+    ).toEqual({
+      pill: false,
+      horizontalMm: CV_RUBRIC_OFFSET_MIN_MM,
+      contentIndentMm: CV_RUBRIC_DEFAULTS.contentIndentMm,
+      horizontalOverride: true,
+      contentIndentOverride: false,
+    });
+  });
+
+  test("explicit values from older Citrus saves remain readable", () => {
+    expect(
+      resolveCvRubricOptions({
+        ...baseDesign,
+        template: "citrus",
+        citrusRubricPill: true,
+        citrusRubricOffsetMm: -3,
+        citrusContentIndentMm: 7,
       } as CvDesign),
     ).toEqual({
       pill: true,
-      horizontalMm: CITRUS_RUBRIC_OFFSET_MIN_MM,
-      contentIndentMm: CITRUS_RUBRIC_DEFAULTS.contentIndentMm,
+      horizontalMm: -3,
+      contentIndentMm: 7,
+      horizontalOverride: true,
+      contentIndentOverride: true,
     });
   });
 });

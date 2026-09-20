@@ -1,33 +1,43 @@
 import {
-  CITRUS_CONTENT_INDENT_MAX_MM,
-  CITRUS_CONTENT_INDENT_MIN_MM,
-  CITRUS_RUBRIC_DEFAULTS,
-  CITRUS_RUBRIC_OFFSET_MAX_MM,
-  CITRUS_RUBRIC_OFFSET_MIN_MM,
-  resolveCitrusRubricOptions,
-  type CitrusRubricPatch,
+  CV_CONTENT_INDENT_MAX_MM,
+  CV_CONTENT_INDENT_MIN_MM,
+  CV_RUBRIC_DEFAULTS,
+  CV_RUBRIC_OFFSET_MAX_MM,
+  CV_RUBRIC_OFFSET_MIN_MM,
+  resolveCvRubricOptions,
+  type CvRubricPatch,
 } from "./citrus-rubric";
 import type { CvDesign } from "./types";
 
 type Props = {
   design: CvDesign;
-  onChange: (patch: CitrusRubricPatch) => void;
+  onChange: (patch: CvRubricPatch) => void;
 };
 
+/**
+ * Historic filename, shared behaviour: every CV template exposes the same
+ * rubric-title controls. Keeping the filename avoids a noisy production-time
+ * rename while removing the old Citrus-only product behaviour.
+ */
 export function CitrusRubricControls({ design, onChange }: Props) {
-  if (design.template !== "citrus") return null;
-
-  const options = resolveCitrusRubricOptions(design);
+  const options = resolveCvRubricOptions(design);
   const horizontalLabel = `${options.horizontalMm > 0 ? "+" : ""}${options.horizontalMm} mm`;
 
   return (
-    <div data-citrus-rubric-controls className="grid gap-3 rounded-md border bg-background/70 p-2.5">
+    <div
+      data-cv-rubric-controls
+      data-citrus-rubric-controls
+      className="grid gap-3 rounded-md border bg-background/70 p-2.5"
+    >
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-semibold">Citrus-Rubriken</span>
+        <span className="text-xs font-semibold">Rubriktitel</span>
         <button
           type="button"
           onClick={() =>
             onChange({
+              sectionTitlePill: undefined,
+              sectionTitleOffsetMm: undefined,
+              sectionContentIndentMm: undefined,
               citrusRubricPill: undefined,
               citrusRubricOffsetMm: undefined,
               citrusContentIndentMm: undefined,
@@ -52,7 +62,7 @@ export function CitrusRubricControls({ design, onChange }: Props) {
               key={label}
               type="button"
               aria-pressed={options.pill === value}
-              onClick={() => onChange({ citrusRubricPill: value })}
+              onClick={() => onChange({ sectionTitlePill: value })}
               className={`rounded-md border px-2.5 py-1 text-xs transition ${
                 options.pill === value
                   ? "border-foreground bg-accent"
@@ -72,11 +82,11 @@ export function CitrusRubricControls({ design, onChange }: Props) {
         </span>
         <input
           type="range"
-          min={CITRUS_RUBRIC_OFFSET_MIN_MM}
-          max={CITRUS_RUBRIC_OFFSET_MAX_MM}
+          min={CV_RUBRIC_OFFSET_MIN_MM}
+          max={CV_RUBRIC_OFFSET_MAX_MM}
           step={1}
           value={options.horizontalMm}
-          onChange={(event) => onChange({ citrusRubricOffsetMm: Number(event.target.value) })}
+          onChange={(event) => onChange({ sectionTitleOffsetMm: Number(event.target.value) })}
           className="w-full accent-primary"
           aria-label="Rubrik horizontal"
         />
@@ -89,19 +99,19 @@ export function CitrusRubricControls({ design, onChange }: Props) {
         </span>
         <input
           type="range"
-          min={CITRUS_CONTENT_INDENT_MIN_MM}
-          max={CITRUS_CONTENT_INDENT_MAX_MM}
+          min={CV_CONTENT_INDENT_MIN_MM}
+          max={CV_CONTENT_INDENT_MAX_MM}
           step={1}
           value={options.contentIndentMm}
-          onChange={(event) => onChange({ citrusContentIndentMm: Number(event.target.value) })}
+          onChange={(event) => onChange({ sectionContentIndentMm: Number(event.target.value) })}
           className="w-full accent-primary"
           aria-label="Inhaltseinzug unter Rubrik"
         />
       </label>
 
       <span className="text-[11px] leading-relaxed text-muted-foreground/80">
-        Citrus-Standard: Pille, {CITRUS_RUBRIC_DEFAULTS.horizontalMm} mm Rubrikversatz und {" "}
-        {CITRUS_RUBRIC_DEFAULTS.contentIndentMm} mm Inhaltseinzug.
+        Standard für alle CV-Vorlagen: keine Pille, {CV_RUBRIC_DEFAULTS.horizontalMm} mm
+        Rubrikversatz und {CV_RUBRIC_DEFAULTS.contentIndentMm} mm Inhaltseinzug.
       </span>
     </div>
   );

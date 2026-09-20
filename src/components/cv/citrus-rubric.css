@@ -1,18 +1,55 @@
-html[data-dossier-template="citrus"] [data-cv-citrus-pill] [data-dossier-document="cv"] [data-cv-main] [data-cv-section] > div {
-  transform: translateX(var(--cv-citrus-rubric-x, 0mm));
+/*
+ * Shared CV rubric-title user overrides.
+ *
+ * Defaults deliberately do not touch template geometry. Horizontal position and
+ * content indent only become authoritative after the student moves a slider.
+ */
+[data-cv-rubric-offset="custom"]
+  [data-dossier-document="cv"]
+  [data-cv-main]
+  [data-cv-section]
+  > div:first-child {
+  translate: var(--cv-rubric-x, 0mm) 0;
 }
 
-html[data-dossier-template="citrus"] [data-cv-citrus-pill] [data-dossier-document="cv"] [data-cv-main] [data-cv-entry] {
+[data-cv-rubric-indent="custom"]
+  [data-dossier-document="cv"]
+  [data-cv-main]
+  [data-cv-entry] {
   box-sizing: border-box;
-  margin-left: var(--cv-citrus-content-indent, 4mm);
-  width: calc(100% - var(--cv-citrus-content-indent, 4mm));
+  margin-left: var(--cv-rubric-content-indent, 0mm) !important;
+  width: calc(100% - var(--cv-rubric-content-indent, 0mm)) !important;
 }
 
-html[data-dossier-template="citrus"] [data-cv-citrus-pill="false"] [data-dossier-document="cv"] [data-cv-section] > div {
+[data-cv-rubric-pill="true"]
+  [data-dossier-document="cv"]
+  [data-cv-section]
+  > div:first-child {
   gap: 2.2mm !important;
 }
 
-html[data-dossier-template="citrus"] [data-cv-citrus-pill="false"] [data-dossier-document="cv"] [data-cv-section-title] {
+[data-cv-rubric-pill="true"] [data-dossier-document="cv"] [data-cv-section-title] {
+  display: inline-block !important;
+  padding: 0.8mm 2.4mm !important;
+  border-radius: 9999px !important;
+  background: color-mix(in srgb, currentColor 14%, transparent) !important;
+  box-shadow: inset 0 0 0 0.2mm color-mix(in srgb, currentColor 30%, transparent) !important;
+}
+
+/* Citrus historically drew a pill by default. The new shared default is off,
+ * so an untouched Citrus CV must explicitly neutralise that template styling. */
+html[data-dossier-template="citrus"]
+  [data-cv-rubric-pill="false"]
+  [data-dossier-document="cv"]
+  [data-cv-section]
+  > div:first-child {
+  gap: 2.2mm !important;
+}
+
+html[data-dossier-template="citrus"]
+  [data-cv-rubric-pill="false"]
+  [data-dossier-document="cv"]
+  [data-cv-section-title] {
   padding: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;

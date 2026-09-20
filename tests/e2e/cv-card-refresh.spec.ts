@@ -210,7 +210,7 @@ async function typographySnapshot(root: Locator) {
   });
 }
 
-async function citrusGeometrySnapshot(root: Locator) {
+async function rubricGeometrySnapshot(root: Locator) {
   return root.evaluate((node) => {
     const page = node.querySelector<HTMLElement>('[data-cv-page="0"]');
     const main = page?.querySelector<HTMLElement>("[data-cv-main]");
@@ -230,16 +230,13 @@ async function citrusGeometrySnapshot(root: Locator) {
     const cssPxPerMm = 96 / 25.4;
     const toCssMm = (pixels: number) => pixels / cssPxPerMm;
     const toPageMm = (pixels: number) => (pixels / pageRect.width) * 210;
-    const rowTransform =
-      rowStyle.transform === "none"
-        ? new DOMMatrixReadOnly()
-        : new DOMMatrixReadOnly(rowStyle.transform);
+    const translatedX =
+      rowStyle.translate === "none" ? 0 : Number.parseFloat(rowStyle.translate.split(" ")[0]) || 0;
 
     return {
-      // The controls are authored in CSS millimetres. Preview zoom changes DOM
-      // rectangles, so read their computed CSS-space values instead of deriving
-      // control values from the scaled A4 backing rectangle.
-      headingOffsetMm: toCssMm(rowTransform.m41),
+      // User rubric movement uses the individual translate property so template
+      // transforms remain intact. Read that authored offset directly.
+      headingOffsetMm: toCssMm(translatedX),
       contentIndentMm: toCssMm(Number.parseFloat(entryStyle.marginLeft) || 0),
       // Keep page-normalised visual geometry only for boundary/parity checks.
       ruleRightMm: toPageMm(ruleRect.right - pageRect.left),
@@ -329,11 +326,11 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
     expect(screenshots.size).toBe(TEMPLATES.length);
   });
 
-  test("Citrus rubric controls keep safe defaults, persist and match export geometry", async ({
-    page,
-  }) => {
+  test("CV rubric controls are generic, persist and match export geometry", async ({ page }) => {
     await page.setViewportSize({ width: 1137, height: 913 });
-    await seed(page, TEMPLATES[2]);
+    // Use a non-Citrus template first: this is a shared CV feature, not a
+    // renamed Citrus-only control.
+    await seed(page, TEMPLATES[1]);
 
     const preview = page.locator('[data-dossier-document="cv"][data-export-mode="false"]').first();
     const exportRoot = page
@@ -341,19 +338,21 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
       .first();
     await expect(preview).toBeVisible();
 
-    const defaultPreview = await citrusGeometrySnapshot(preview);
-    const defaultExport = await citrusGeometrySnapshot(exportRoot);
+    const defaultPreview = await rubricGeometrySnapshot(preview);
+    const defaultExport = await rubricGeometrySnapshot(exportRoot);
     expect(defaultPreview).not.toBeNull();
     expect(defaultExport).not.toBeNull();
     if (!defaultPreview || !defaultExport) return;
 
-    await expect(page.locator('[data-cv-citrus-pill="true"]').first()).toHaveAttribute(
-      "data-cv-citrus-content-indent",
-      "4",
+    await expect(page.locator('[data-cv-rubric-pill="false"]').first()).toHaveAttribute(
+      "data-cv-rubric-content-indent",
+      "0",
     );
-    expect(defaultPreview.pillBackground).not.toBe("rgba(0, 0, 0, 0)");
+    await expect(page.locator('[data-cv-rubric-pill="false"]').first()).toHaveAttribute(
+      "data-cv-rubric-x",
+      "0",
+    );
     expect(defaultPreview.headingOffsetMm).toBeCloseTo(0, 1);
-    expect(defaultPreview.contentIndentMm).toBeCloseTo(4, 1);
     expect(defaultPreview.pageCount).toBe(1);
     expect(defaultExport.headingOffsetMm).toBeCloseTo(defaultPreview.headingOffsetMm, 1);
     expect(defaultExport.contentIndentMm).toBeCloseTo(defaultPreview.contentIndentMm, 1);
@@ -367,15 +366,19 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
       await typographyToggle.click();
     }
 
-    const controls = page.locator("[data-citrus-rubric-controls]");
+    const controls = page.locator("[data-cv-rubric-controls]");
     await expect(controls).toBeVisible();
     await expect(controls.getByText("Rubrik als Pille", { exact: true })).toBeVisible();
     const headingSlider = controls.getByRole("slider", { name: "Rubrik horizontal" });
     const indentSlider = controls.getByRole("slider", { name: "Inhaltseinzug unter Rubrik" });
+    await expect(controls.getByRole("button", { name: "Nein" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await expect(headingSlider).toHaveValue("0");
-    await expect(indentSlider).toHaveValue("4");
+    await expect(indentSlider).toHaveValue("0");
 
-    await controls.getByRole("button", { name: "Nein" }).click();
+    await controls.getByRole("button", { name: "Ja" }).click();
     await setRangeValue(headingSlider, 5);
     await setRangeValue(indentSlider, 10);
 
@@ -386,22 +389,22 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
             design?: Record<string, unknown>;
           };
           return [
-            saved.design?.citrusRubricPill,
-            saved.design?.citrusRubricOffsetMm,
-            saved.design?.citrusContentIndentMm,
+            saved.design?.sectionTitlePill,
+            saved.design?.sectionTitleOffsetMm,
+            saved.design?.sectionContentIndentMm,
           ];
         }),
       )
-      .toEqual([false, 5, 10]);
+      .toEqual([true, 5, 10]);
 
-    const changedPreview = await citrusGeometrySnapshot(preview);
-    const changedExport = await citrusGeometrySnapshot(exportRoot);
+    const changedPreview = await rubricGeometrySnapshot(preview);
+    const changedExport = await rubricGeometrySnapshot(exportRoot);
     expect(changedPreview).not.toBeNull();
     expect(changedExport).not.toBeNull();
     if (!changedPreview || !changedExport) return;
 
-    expect(changedPreview.pillBackground).toBe("rgba(0, 0, 0, 0)");
-    expect(changedPreview.pillPaddingLeft).toBe("0px");
+    expect(changedPreview.pillBackground).not.toBe("rgba(0, 0, 0, 0)");
+    expect(changedPreview.pillPaddingLeft).not.toBe("0px");
     expect(changedPreview.headingDisplay).not.toBe("none");
     expect(changedPreview.ruleWidthMm).toBeGreaterThan(5);
     expect(changedPreview.headingOffsetMm).toBeCloseTo(5, 1);
@@ -413,17 +416,33 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
     expect(changedExport.ruleRightMm).toBeCloseTo(changedPreview.ruleRightMm, 1);
 
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(page.locator('[data-cv-citrus-pill="false"]').first()).toHaveAttribute(
-      "data-cv-citrus-rubric-x",
+    await expect(page.locator('[data-cv-rubric-pill="true"]').first()).toHaveAttribute(
+      "data-cv-rubric-x",
       "5",
+    );
+    await expect(page.locator('[data-cv-rubric-pill="true"]').first()).toHaveAttribute(
+      "data-cv-rubric-content-indent",
+      "10",
     );
     const persistedPreview = page
       .locator('[data-dossier-document="cv"][data-export-mode="false"]')
       .first();
-    const persisted = await citrusGeometrySnapshot(persistedPreview);
+    const persisted = await rubricGeometrySnapshot(persistedPreview);
     expect(persisted).not.toBeNull();
     expect(persisted?.headingOffsetMm).toBeCloseTo(5, 1);
     expect(persisted?.contentIndentMm).toBeCloseTo(10, 1);
+
+    // Citrus now follows the same neutral shared default instead of silently
+    // enabling its historic pill/indent behaviour.
+    await seed(page, TEMPLATES[2]);
+    await expect(page.locator('[data-cv-rubric-pill="false"]').first()).toHaveAttribute(
+      "data-cv-rubric-x",
+      "0",
+    );
+    await expect(page.locator('[data-cv-rubric-pill="false"]').first()).toHaveAttribute(
+      "data-cv-rubric-content-indent",
+      "0",
+    );
   });
 
   test("background motif slider updates decorative layers at 0/25/50/100 only", async ({
