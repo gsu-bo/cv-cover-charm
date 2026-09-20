@@ -32,8 +32,10 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
   const widthRef = useRef<number | null>(null);
   const [customWidth, setCustomWidth] = useState<number | null>(null);
   const [resizing, setResizing] = useState(false);
+  const [clientReady, setClientReady] = useState(false);
 
   useEffect(() => {
+    setClientReady(true);
     try {
       const stored = Number(window.localStorage.getItem(STORAGE_KEY));
       if (Number.isFinite(stored) && stored >= MIN_WIDTH) {
@@ -90,7 +92,11 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
         {children}
       </aside>
 
-      <ContextualFieldTypography />
+      {/*
+        Scope detection inside the contextual typography helper needs the browser URL.
+        Mount it only after hydration so server and first client markup stay identical.
+      */}
+      {clientReady ? <ContextualFieldTypography /> : null}
 
       {open ? (
         <div
