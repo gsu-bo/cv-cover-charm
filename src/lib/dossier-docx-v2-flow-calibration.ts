@@ -217,7 +217,7 @@ function calibrateClassicCvPagination(
     .filter(Boolean);
   if (boundaries.length !== measured.pageCount - 1) return null;
 
-  let remaining = blocks.filter((block) => block.kind !== "page-break");
+  let remaining: DossierDocxV2FlowBlock[] = blocks.filter((block) => block.kind !== "page-break");
   const output: DossierDocxV2FlowBlock[] = [];
   for (const [index, boundary] of boundaries.entries()) {
     const split = splitClassicBlocksAtBoundary(remaining, boundary);
