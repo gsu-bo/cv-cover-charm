@@ -12,6 +12,8 @@ import type {
   DossierDocxV2LetterFlowScene,
 } from "@/lib/dossier-docx-v2-flow-scene";
 
+const MEASURED_EMPTY_PARAGRAPH_SPACER_MM = 4.5;
+
 function normalized(value: string) {
   return value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -83,6 +85,51 @@ function calibrateBlock(
   };
 }
 
+function compactMeasuredText(value: string) {
+  return value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function normalizeMeasuredCvBlock(block: DossierDocxV2FlowBlock): DossierDocxV2FlowBlock {
+  if (block.kind === "paragraph") {
+    return {
+      ...block,
+      runs: block.runs.map((run) => ({ ...run, text: compactMeasuredText(run.text) })),
+    };
+  }
+  if (block.kind !== "table") return block;
+  return {
+    ...block,
+    rows: block.rows.map((row) => ({
+      ...row,
+      cells: row.cells.map((cell) => ({
+        ...cell,
+        blocks: cell.blocks.map(normalizeMeasuredCvBlock),
+      })),
+    })),
+  };
+}
+
+function normalizeMeasuredLetterBodyBlock(block: DossierDocxV2FlowBlock): DossierDocxV2FlowBlock {
+  if (block.kind === "paragraph" && !paragraphText(block)) {
+    return {
+      kind: "spacer",
+      id: block.id,
+      mm: MEASURED_EMPTY_PARAGRAPH_SPACER_MM,
+    };
+  }
+  if (block.kind !== "table") return block;
+  return {
+    ...block,
+    rows: block.rows.map((row) => ({
+      ...row,
+      cells: row.cells.map((cell) => ({
+        ...cell,
+        blocks: cell.blocks.map(normalizeMeasuredLetterBodyBlock),
+      })),
+    })),
+  };
+}
+
 function isBodyBlock(block: DossierDocxV2FlowBlock) {
   return !!block.id?.startsWith("body-");
 }
@@ -106,7 +153,7 @@ function browserBodyBlocks(measured: DossierDocxV2MeasuredLetter) {
     if (page.pageIndex > 0) {
       output.push({ kind: "page-break", id: `letter-browser-page-${page.pageIndex + 1}` });
     }
-    output.push(...page.bodyBlocks);
+    output.push(...page.bodyBlocks.map(normalizeMeasuredLetterBodyBlock));
   }
   return output;
 }
@@ -244,7 +291,10 @@ export function calibrateDossierDocxV2CvFlowScene(
     if (browserPagination) blocks = browserPagination;
   }
   if (measured.measuredInBrowser && measured.layout === "modern") {
-    overlays = measured.pages.flatMap((page) => page.overlays);
+    overlays = measured.pages.flatMap((page) => page.overlays).map((box) => ({
+      ...box,
+      blocks: box.blocks.map(normalizeMeasuredCvBlock),
+    }));
     const missingMain = measured.pages.filter(
       (page) => !page.overlays.some((overlay) => overlay.role === "main"),
     );
@@ -331,4 +381,6 @@ export const dossierDocxV2FlowCalibrationInternals = {
   blockText,
   splitClassicBlocksAtBoundary,
   calibrateClassicCvPagination,
+  normalizeMeasuredLetterBodyBlock,
+  normalizeMeasuredCvBlock,
 };
