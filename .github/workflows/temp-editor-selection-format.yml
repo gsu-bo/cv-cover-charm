@@ -1,0 +1,271 @@
+name: Temporary selection toolbar patch
+
+on:
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 2
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Patch selection toolbar
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/components/letter/LetterRichTextEditor.tsx')
+          source = path.read_text()
+
+          toolbar_type = '''type ToolbarState = {
+            bold: boolean;
+            italic: boolean;
+            underline: boolean;
+            align: LetterTextAlign | null;
+            columns: LetterBodyColumns | null;
+            list: LetterListStyle | null;
+          };
+          '''
+          if toolbar_type not in source:
+              raise SystemExit('ToolbarState marker not found')
+          source = source.replace(
+              toolbar_type,
+              toolbar_type + '''\ntype SelectionBubble = {
+            left: number;
+            top: number;
+            placement: "above" | "below";
+          };
+          ''',
+              1,
+          )
+
+          state_marker = '''  const [tableHover, setTableHover] = useState<{ rows: number; columns: number } | null>(null);
+          '''
+          if state_marker not in source:
+              raise SystemExit('tableHover marker not found')
+          source = source.replace(
+              state_marker,
+              state_marker + '''  const [selectionBubble, setSelectionBubble] = useState<SelectionBubble | null>(null);
+          ''',
+              1,
+          )
+
+          start = source.index('  const readToolbarState = () => {')
+          end = source.index('\n  useEffect(() => {', start)
+          new_reader = '''  const readToolbarState = () => {
+            const editor = editorRef.current;
+            const selection = window.getSelection();
+            if (
+              !editor ||
+              !selection?.rangeCount ||
+              !selection.anchorNode ||
+              !editor.contains(selection.anchorNode)
+            ) {
+              setSelectionBubble(null);
+              return;
+            }
+
+            const range = rememberRange();
+            if (!range) {
+              setSelectionBubble(null);
+              return;
+            }
+
+            const blocks = existingSelectedBlocks(editor, range);
+            const fallback = topLevelBlock(editor, selection.anchorNode);
+            const selected = blocks.length ? blocks : fallback ? [fallback] : [];
+            const columnValues = selected.length
+              ? selected.map(columnsForBlock)
+              : ([1] as LetterBodyColumns[]);
+            const columns = columnValues.every((value) => value === columnValues[0])
+              ? columnValues[0]
+              : null;
+            const alignmentValues = selected.length
+              ? selected.map(alignmentForBlock)
+              : (["justify"] as LetterTextAlign[]);
+            const align = alignmentValues.every((value) => value === alignmentValues[0])
+              ? alignmentValues[0]
+              : null;
+            const listValues = selected.map(listForBlock);
+            const list =
+              listValues.length && listValues.every((value) => value === listValues[0])
+                ? listValues[0]
+                : null;
+
+            setToolbar({
+              bold: document.queryCommandState("bold"),
+              italic: document.queryCommandState("italic"),
+              underline: document.queryCommandState("underline"),
+              align,
+              columns,
+              list,
+            });
+
+            if (range.collapsed || !selection.toString().trim()) {
+              setSelectionBubble(null);
+              return;
+            }
+
+            const rect = range.getBoundingClientRect();
+            if (!rect.width && !rect.height) {
+              setSelectionBubble(null);
+              return;
+            }
+
+            const placement: SelectionBubble["placement"] = rect.top >= 64 ? "above" : "below";
+            const center = rect.left + rect.width / 2;
+            setSelectionBubble({
+              left: Math.min(Math.max(center, 92), window.innerWidth - 92),
+              top: placement === "above" ? rect.top - 10 : rect.bottom + 10,
+              placement,
+            });
+          };
+          '''
+          source = source[:start] + new_reader + source[end:]
+
+          old_effect = '''  useEffect(() => {
+            const onSelectionChange = () => readToolbarState();
+            document.addEventListener("selectionchange", onSelectionChange);
+            return () => document.removeEventListener("selectionchange", onSelectionChange);
+          });
+          '''
+          new_effect = '''  useEffect(() => {
+            const onSelectionChange = () => readToolbarState();
+            document.addEventListener("selectionchange", onSelectionChange);
+            window.addEventListener("resize", onSelectionChange);
+            window.addEventListener("scroll", onSelectionChange, true);
+            return () => {
+              document.removeEventListener("selectionchange", onSelectionChange);
+              window.removeEventListener("resize", onSelectionChange);
+              window.removeEventListener("scroll", onSelectionChange, true);
+            };
+          });
+          '''
+          if old_effect not in source:
+              raise SystemExit('selectionchange effect marker not found')
+          source = source.replace(old_effect, new_effect, 1)
+
+          permanent_start = source.index('        <button\n          type="button"\n          className={toolClass}\n          aria-label="Formatierung entfernen"')
+          permanent_end = source.index('        <TextAlignmentControl', permanent_start)
+          source = source[:permanent_start] + source[permanent_end:]
+
+          heading = '''      <span className="text-xs font-medium text-foreground">Brieftext</span>
+          '''
+          if heading not in source:
+              raise SystemExit('Brieftext heading marker not found')
+          floating = '''      <span className="text-xs font-medium text-foreground">Brieftext</span>
+              {selectionBubble ? (
+                <div
+                  data-letter-selection-toolbar
+                  role="toolbar"
+                  aria-label="Textauswahl formatieren"
+                  className="fixed z-[80] flex items-center gap-1 rounded-xl border bg-popover p-1 shadow-xl"
+                  style={{
+                    left: selectionBubble.left,
+                    top: selectionBubble.top,
+                    transform:
+                      selectionBubble.placement === "above"
+                        ? "translate(-50%, -100%)"
+                        : "translate(-50%, 0)",
+                  }}
+                >
+                  <button
+                    type="button"
+                    className={`${toolClass} border-0 px-2 py-1`}
+                    aria-label="Formatierung entfernen"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => command("removeFormat")}
+                  >
+                    Text
+                  </button>
+                  <span aria-hidden="true" className="mx-0.5 h-6 w-px bg-border" />
+                  <button
+                    type="button"
+                    className={`${toolClass} border-0 px-2 py-1 font-bold ${toolbar.bold ? activeToolClass : ""}`}
+                    aria-label="Fett"
+                    aria-pressed={toolbar.bold}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => command("bold")}
+                  >
+                    B
+                  </button>
+                  <button
+                    type="button"
+                    className={`${toolClass} border-0 px-2 py-1 italic ${toolbar.italic ? activeToolClass : ""}`}
+                    aria-label="Kursiv"
+                    aria-pressed={toolbar.italic}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => command("italic")}
+                  >
+                    I
+                  </button>
+                  <button
+                    type="button"
+                    className={`${toolClass} border-0 px-2 py-1 underline ${toolbar.underline ? activeToolClass : ""}`}
+                    aria-label="Unterstrichen"
+                    aria-pressed={toolbar.underline}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => command("underline")}
+                  >
+                    U
+                  </button>
+                </div>
+              ) : null}
+          '''
+          source = source.replace(heading, floating, 1)
+
+          old_help = '''      <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Wie in Word: Fett, Kursiv, Unterstrichen, Ausrichtung, Spalten und Listen gelten für die
+                aktuelle Auswahl oder den aktuellen Absatz. Neue Briefabsätze sind standardmässig im
+                Blocksatz. Tabellen werden beim aktuellen Absatz eingefügt.
+              </p>
+          '''
+          new_help = '''      <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Text markieren: Fett, Kursiv, Unterstrichen und Formatierung entfernen erscheinen direkt
+                an der Auswahl. Ausrichtung, Spalten und Listen gelten für den aktuellen Absatz. Neue
+                Briefabsätze sind standardmässig im Blocksatz. Tabellen werden beim aktuellen Absatz
+                eingefügt.
+              </p>
+          '''
+          if old_help not in source:
+              raise SystemExit('help copy marker not found')
+          source = source.replace(old_help, new_help, 1)
+
+          path.write_text(source)
+          PY
+
+          bunx prettier --write \
+            src/components/letter/LetterRichTextEditor.tsx \
+            src/components/letter/LetterCanvas.tsx \
+            src/components/letter/LetterLayoutControls.tsx
+
+      - name: Commit patched source
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/components/letter/LetterRichTextEditor.tsx \
+            src/components/letter/LetterCanvas.tsx \
+            src/components/letter/LetterLayoutControls.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "Add selection formatting bubble"
+          git push origin HEAD:dev
