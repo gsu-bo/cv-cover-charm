@@ -11,6 +11,7 @@ import {
 } from "@/components/cover/types";
 import { emptyCv, entryFilled, type CvData, type CvDesign } from "@/components/cv/types";
 import { normalizeCvPaperColor } from "@/components/cv/cv-paper";
+import { normalizeActiveTemplateId } from "@/components/cover/fresh-templates";
 import {
   EMPTY_LETTER,
   normalizeLetterDesign,
@@ -148,10 +149,7 @@ export function cvPdfHasContent(data: CvData): boolean {
 /** Baut die druckbare Titelblattansicht aus dem gespeicherten Projektteil. */
 export function coverPdfDocumentFromSaved(raw: unknown): CoverPdfDocument | null {
   if (!isRecord(raw) || !isRecord(raw.data)) return null;
-  const template =
-    typeof raw.template === "string" && TEMPLATES.some((item) => item.id === raw.template)
-      ? (raw.template as TemplateId)
-      : DEFAULTS.TEMPLATE;
+  const template = normalizeActiveTemplateId(raw.template);
   const definition = templateDefinition(template);
   const data = {
     ...EMPTY_COVER_DATA,
@@ -205,10 +203,7 @@ export function cvPdfDocumentFromSaved(raw: unknown): CvPdfDocument | null {
     person: { ...emptyCv.person, ...(incomingData.person ?? {}) },
   };
   const incomingDesign = isRecord(raw.design) ? (raw.design as Partial<CvDesign>) : {};
-  const template =
-    incomingDesign.template && TEMPLATES.some((item) => item.id === incomingDesign.template)
-      ? incomingDesign.template
-      : draft.template;
+  const template = normalizeActiveTemplateId(incomingDesign.template ?? draft.template);
   const design: CvDesign = {
     template,
     colors: isRecord(incomingDesign.colors)
@@ -229,6 +224,24 @@ export function cvPdfDocumentFromSaved(raw: unknown): CvPdfDocument | null {
       : {}),
     ...(typeof incomingDesign.bodyScale === "number"
       ? { bodyScale: incomingDesign.bodyScale }
+      : {}),
+    ...(typeof incomingDesign.sectionTitlePill === "boolean"
+      ? { sectionTitlePill: incomingDesign.sectionTitlePill }
+      : {}),
+    ...(typeof incomingDesign.sectionTitleOffsetMm === "number"
+      ? { sectionTitleOffsetMm: incomingDesign.sectionTitleOffsetMm }
+      : {}),
+    ...(typeof incomingDesign.sectionContentIndentMm === "number"
+      ? { sectionContentIndentMm: incomingDesign.sectionContentIndentMm }
+      : {}),
+    ...(typeof incomingDesign.citrusRubricPill === "boolean"
+      ? { citrusRubricPill: incomingDesign.citrusRubricPill }
+      : {}),
+    ...(typeof incomingDesign.citrusRubricOffsetMm === "number"
+      ? { citrusRubricOffsetMm: incomingDesign.citrusRubricOffsetMm }
+      : {}),
+    ...(typeof incomingDesign.citrusContentIndentMm === "number"
+      ? { citrusContentIndentMm: incomingDesign.citrusContentIndentMm }
       : {}),
     ...(typeof incomingDesign.sidebarPct === "number"
       ? { sidebarPct: incomingDesign.sidebarPct }

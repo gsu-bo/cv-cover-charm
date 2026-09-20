@@ -126,6 +126,7 @@ jobs:
           - group: fresh-dossier-templates
             files: >-
               tests/e2e/canonical-brief-default.spec.ts
+              tests/e2e/retired-frame-compatibility.spec.ts
               tests/e2e/fresh-dossier-templates.spec.ts
               tests/e2e/fresh-modern-sidebar-geometry.spec.ts
               tests/e2e/dossier-docx-fresh-gallery.spec.ts

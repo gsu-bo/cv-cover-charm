@@ -1,6 +1,7 @@
 import { defaultHeaderModeForTemplate, defaultFooterModeForTemplate } from "@/lib/template-chrome";
 import { FONT_LABELS, TEMPLATES, type FontKey, type TemplateId } from "@/components/cover/types";
 import { FRESH_TEMPLATE_REGISTRY } from "@/components/cover/fresh-template-registry";
+import { normalizeActiveTemplateId } from "@/components/cover/fresh-templates";
 import { LETTER_STORAGE_KEY } from "@/lib/dossier-project";
 import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
 import type {
@@ -304,16 +305,7 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
   const fallback = emptyLetterDesign();
   if (!value || typeof value !== "object") return fallback;
   const incoming = value as Partial<LetterDesign>;
-  const incomingTemplate =
-    typeof incoming.template === "string" ? String(incoming.template) : undefined;
-  const template: LetterTemplateId =
-    incomingTemplate === "brief"
-      ? "brief"
-      : incomingTemplate &&
-          (TEMPLATES.some((candidate) => String(candidate.id) === incomingTemplate) ||
-            FRESH_TEMPLATE_REGISTRY.some((candidate) => String(candidate.id) === incomingTemplate))
-        ? (incomingTemplate as TemplateId)
-        : fallback.template;
+  const template: LetterTemplateId = normalizeActiveTemplateId(incoming.template);
   const font =
     typeof incoming.font === "string" && incoming.font in FONT_LABELS
       ? (incoming.font as FontKey)

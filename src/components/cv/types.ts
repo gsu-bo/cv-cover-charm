@@ -316,6 +316,14 @@ export type CvDesign = {
   sectionTitleItalic?: boolean;
   sectionTitleUnderline?: boolean;
   sectionTitleMarginBottomPx?: number;
+  /** Shared rubric-title presentation. Missing values preserve template geometry. */
+  sectionTitlePill?: boolean;
+  sectionTitleOffsetMm?: number;
+  sectionContentIndentMm?: number;
+  /** Legacy Citrus-only aliases retained for explicit older user settings. */
+  citrusRubricPill?: boolean;
+  citrusRubricOffsetMm?: number;
+  citrusContentIndentMm?: number;
   /** Breite der Seitenspalte als Anteil der Blattbreite. */
   sidebarPct?: number;
 };

@@ -6,6 +6,7 @@ import {
   type FreshTemplateId,
 } from "./fresh-template-registry";
 import { TEMPLATES, type TemplateDefinition, type TemplateId } from "./types";
+import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
 import "./gradient-templates.css";
 import "./studio-warm-variants.css";
 import "./warm-4-5.css";
@@ -162,6 +163,21 @@ if (!TEMPLATES.some((template) => (template.id as string) === "diagonal")) {
 }
 if (!TEMPLATES.some((template) => (template.id as string) === "edelDark")) {
   TEMPLATES.push(edelDarkDefinition);
+}
+
+/**
+ * Canonical persisted-template compatibility boundary.
+ *
+ * Retired and unknown ids resolve to the neutral Brief template. In particular,
+ * old `frame` saves must never leave a stale id in one dossier document while
+ * the other documents and export adapters already use Brief.
+ */
+export function normalizeActiveTemplateId(value: unknown): TemplateId {
+  if (typeof value !== "string") return CANONICAL_DOSSIER_PRESENTATION.template;
+  return (
+    TEMPLATES.find((template) => String(template.id) === value)?.id ??
+    CANONICAL_DOSSIER_PRESENTATION.template
+  );
 }
 
 /**

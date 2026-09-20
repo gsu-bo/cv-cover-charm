@@ -7,6 +7,7 @@ import {
   resolveCvRubricOptions,
 } from "../../src/components/cv/citrus-rubric";
 import type { CvDesign } from "../../src/components/cv/types";
+import { cvPdfDocumentFromSaved } from "../../src/lib/dossier-pdf-document";
 
 const baseDesign: CvDesign = {
   template: "verlauf",
@@ -84,6 +85,39 @@ describe("shared CV rubric options", () => {
       contentIndentMm: 7,
       horizontalOverride: true,
       contentIndentOverride: true,
+    });
+  });
+
+  test("stored generic and legacy rubric settings survive the dossier export adapter", () => {
+    const generic = cvPdfDocumentFromSaved({
+      data: {},
+      design: {
+        ...baseDesign,
+        sectionTitlePill: true,
+        sectionTitleOffsetMm: 5,
+        sectionContentIndentMm: 10,
+      },
+    });
+    expect(resolveCvRubricOptions(generic!.design)).toMatchObject({
+      pill: true,
+      horizontalMm: 5,
+      contentIndentMm: 10,
+    });
+
+    const legacy = cvPdfDocumentFromSaved({
+      data: {},
+      design: {
+        ...baseDesign,
+        template: "citrus",
+        citrusRubricPill: true,
+        citrusRubricOffsetMm: -3,
+        citrusContentIndentMm: 7,
+      },
+    });
+    expect(resolveCvRubricOptions(legacy!.design)).toMatchObject({
+      pill: true,
+      horizontalMm: -3,
+      contentIndentMm: 7,
     });
   });
 });
