@@ -132,7 +132,10 @@ async function pseudo(locator: Locator, target: "::before" | "::after") {
 }
 
 async function storedOpacity(page: Page) {
-  return page.evaluate(() => JSON.parse(localStorage.getItem(CV_KEY) ?? "null")?.design?.bgOpacity);
+  return page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key) ?? "null")?.design?.bgOpacity,
+    CV_KEY,
+  );
 }
 
 test.describe("Prism + Neon header identity", () => {
