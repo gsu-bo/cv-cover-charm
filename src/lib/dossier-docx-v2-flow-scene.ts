@@ -689,7 +689,7 @@ function cvEntryTable(
           widthPct: 77,
           paddingMm: 0.7,
           blocks: [
-            ...(entry.titel ? [paragraph(entry.title, title, { keepNext: true, afterMm: 0.5 })] : []),
+            ...(entry.titel ? [paragraph(entry.titel, title, { keepNext: true, afterMm: 0.5 })] : []),
             ...(entry.ort ? [paragraph(entry.ort, meta, { afterMm: 0.5 })] : []),
             ...(entry.beschreibung ? [paragraph(entry.beschreibung, body, { afterMm: 2.2, lineHeight: 1.3 })] : []),
           ],
