@@ -26,8 +26,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply narrow Package 2 ownership correction
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           def replace_once(path: str, old: str, new: str) -> None:
@@ -52,24 +53,24 @@ jobs:
           unit_path = Path("tests/unit/shared-editor-controls-consistency.test.ts")
           unit = unit_path.read_text(encoding="utf-8")
           old_unit = '''  test("places the historical shared typography control in Schrift in both editors", () => {
-    const cvTypography = section(cv, "Schrift");
-    const letterTypography = section(letter, "Schrift");
-    expect(cvTypography).toContain("<DossierHyphenationControl />");
-    expect(letterTypography).toContain("<DossierHyphenationControl />");
-    expect(count(cv, /<DossierHyphenationControl\\b/g)).toBe(1);
-    expect(count(letter, /<DossierHyphenationControl\\b/g)).toBe(1);
-    expect(letterLayout).not.toContain("DossierHyphenationControl");
-  });'''
+            const cvTypography = section(cv, "Schrift");
+            const letterTypography = section(letter, "Schrift");
+            expect(cvTypography).toContain("<DossierHyphenationControl />");
+            expect(letterTypography).toContain("<DossierHyphenationControl />");
+            expect(count(cv, /<DossierHyphenationControl\\b/g)).toBe(1);
+            expect(count(letter, /<DossierHyphenationControl\\b/g)).toBe(1);
+            expect(letterLayout).not.toContain("DossierHyphenationControl");
+          });'''
           new_unit = '''  test("keeps typography ownership consistent without leaking CV-only title spacing into Letter", () => {
-    const cvTypography = section(cv, "Schrift");
-    const letterTypography = section(letter, "Schrift");
-    expect(cvTypography).toContain("<DossierHyphenationControl />");
-    expect(cvTypography).toContain("Schriftart gesamtes Dossier");
-    expect(letterTypography).toContain("Schriftart");
-    expect(count(cv, /<DossierHyphenationControl\\b/g)).toBe(1);
-    expect(letter).not.toContain("DossierHyphenationControl");
-    expect(letterLayout).not.toContain("DossierHyphenationControl");
-  });'''
+            const cvTypography = section(cv, "Schrift");
+            const letterTypography = section(letter, "Schrift");
+            expect(cvTypography).toContain("<DossierHyphenationControl />");
+            expect(cvTypography).toContain("Schriftart gesamtes Dossier");
+            expect(letterTypography).toContain("Schriftart");
+            expect(count(cv, /<DossierHyphenationControl\\b/g)).toBe(1);
+            expect(letter).not.toContain("DossierHyphenationControl");
+            expect(letterLayout).not.toContain("DossierHyphenationControl");
+          });'''
           if unit.count(old_unit) != 1:
               raise SystemExit("unit typography ownership block did not match exactly once")
           unit_path.write_text(unit.replace(old_unit, new_unit, 1), encoding="utf-8")
@@ -77,19 +78,19 @@ jobs:
           e2e_path = Path("tests/e2e/shared-editor-controls-consistency.spec.ts")
           e2e = e2e_path.read_text(encoding="utf-8")
           old_e2e = '''    const typography = await openSection(page, "Schrift");
-    await expect(typography.locator("[data-cv-doc-title-margin-top-control]")).toHaveCount(1);
+            await expect(typography.locator("[data-cv-doc-title-margin-top-control]")).toHaveCount(1);
 
-    await page.reload();'''
+            await page.reload();'''
           new_e2e = '''    const typography = await openSection(page, "Schrift");
-    await expect(typography.locator("[data-cv-doc-title-margin-top-control]")).toHaveCount(0);
-    await expect(typography.getByRole("combobox", { name: "Schriftart" })).toBeVisible();
+            await expect(typography.locator("[data-cv-doc-title-margin-top-control]")).toHaveCount(0);
+            await expect(typography.getByRole("combobox", { name: "Schriftart" })).toBeVisible();
 
-    await page.reload();'''
-          # The same two-line shape exists in the CV test first. Replace the last occurrence: Letter only.
+            await page.reload();'''
           if e2e.count(old_e2e) != 2:
               raise SystemExit(f"expected CV + Letter typography blocks, got {e2e.count(old_e2e)}")
-          before, sep, after = e2e.rpartition(old_e2e)
+          before, _sep, after = e2e.rpartition(old_e2e)
           e2e_path.write_text(before + new_e2e + after, encoding="utf-8")
+          PY
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
