@@ -677,7 +677,7 @@ export function FormCvPerson({
   );
 }
 
-/** Schule und Praktika teilen sich denselben Aufbau. */
+/** Schule und Praktika teilen sich denselben Aufbau; Familie nutzt bewusst keinen Zeitraum. */
 export function FormCvEntries({
   entries,
   onChange,
@@ -700,6 +700,7 @@ export function FormCvEntries({
         ? "schule"
         : "erfahrung"
       : placement;
+  const isFamily = placement === null && titelLabel === "Bezug" && ortLabel === "Name / Beruf";
   const isExperience = block === "erfahrung";
   const [autoSort, setAutoSort] = useState(readAutoSortExperience);
   const sortedOnce = useRef(false);
@@ -757,20 +758,23 @@ export function FormCvEntries({
           {isExperience && !autoSort && <DragHandle scope="erfahrung" index={i} />}
           <div className={isExperience && !autoSort ? "min-w-0 flex-1" : undefined}>
             <Item onRemove={() => onChange(entries.filter((x) => x.id !== e.id))}>
-              <Field label="Zeitraum">
-                <input
-                  className={inputCls}
-                  placeholder="2023 – heute"
-                  value={e.zeit}
-                  onChange={(ev) => patch(e.id, { zeit: ev.target.value })}
-                  onBlur={() => {
-                    if (isExperience && autoSort) sortNow();
-                  }}
-                />
-              </Field>
+              {!isFamily && (
+                <Field label="Zeitraum">
+                  <input
+                    className={inputCls}
+                    placeholder="2023 – heute"
+                    value={e.zeit}
+                    onChange={(ev) => patch(e.id, { zeit: ev.target.value })}
+                    onBlur={() => {
+                      if (isExperience && autoSort) sortNow();
+                    }}
+                  />
+                </Field>
+              )}
               <Field label={titelLabel}>
                 <input
                   className={inputCls}
+                  placeholder={isFamily ? "z. B. Mutter, Vater, Schwester" : undefined}
                   value={e.titel}
                   onChange={(ev) => patch(e.id, { titel: ev.target.value })}
                 />
@@ -778,6 +782,7 @@ export function FormCvEntries({
               <Field label={ortLabel}>
                 <input
                   className={inputCls}
+                  placeholder={isFamily ? "z. B. Evelyn Flückiger, Kauffrau" : undefined}
                   value={e.ort}
                   onChange={(ev) => patch(e.id, { ort: ev.target.value })}
                 />
@@ -794,7 +799,7 @@ export function FormCvEntries({
         </div>
       ))}
       <button type="button" className={addBtn} onClick={() => onChange([...entries, emptyEntry()])}>
-        + Eintrag
+        {isFamily ? "+ Familienmitglied" : "+ Eintrag"}
       </button>
     </div>
   );
