@@ -1,13 +1,49 @@
 const JPEG_DATA_URL = /^data:image\/jpe?g(?:;|,)/i;
+const JPEG_HEADER_SCAN_BYTES = 64 * 1024;
+const ICC_MARKER = "ICC_PROFILE";
+const normalizedJpegCache = new Map<string, string>();
+
+/**
+ * Canvas-generated JPEGs are already browser-normalized and do not carry the
+ * embedded ICC chunk that triggered the black-photo rasterization seen in
+ * legacy/imported dossiers. Scan only the small JPEG header area so an old
+ * multi-megabyte JSON photo does not have to be fully decoded just to decide
+ * whether the compatibility guard is needed.
+ */
+export function jpegDataUrlHasIccProfile(src: string) {
+  if (!JPEG_DATA_URL.test(src)) return false;
+  const comma = src.indexOf(",");
+  if (comma < 0) return false;
+
+  const meta = src.slice(0, comma);
+  const body = src.slice(comma + 1);
+  try {
+    if (/;base64/i.test(meta)) {
+      const compact = body.replace(/\s/g, "");
+      const maxChars = Math.ceil(JPEG_HEADER_SCAN_BYTES / 3) * 4;
+      let chunk = compact.slice(0, maxChars);
+      chunk = chunk.slice(0, chunk.length - (chunk.length % 4));
+      if (!chunk) return false;
+      return atob(chunk).includes(ICC_MARKER);
+    }
+
+    // URI-encoded JPEG data URLs are unusual here, but keep the detector safe
+    // for imported hand-written JSON instead of assuming base64 unconditionally.
+    return decodeURIComponent(body.slice(0, JPEG_HEADER_SCAN_BYTES * 3)).includes(ICC_MARKER);
+  } catch {
+    return false;
+  }
+}
 
 /**
  * html2canvas-pro arbeitet beim PDF-Export mit einem geklonten Dokument.
- * Kleine ältere Bewerbungsfotos konnten dort als unveränderte JPEG-Data-URLs
- * inklusive Farbprofil/Encoder-Metadaten landen und in seltenen Fällen schwarz
- * gerastert werden. Wenn das JPEG im Clone bereits dekodiert ist, codieren wir
- * genau diese sichtbare RGB-Darstellung noch einmal über Canvas. Neue Uploads
- * werden zusätzlich schon in readPhoto() normalisiert; dieser Guard schützt
- * damit auch ältere/importierte JSON-Stände.
+ * Einige ältere/importierte JPEG-Data-URLs enthalten ein eingebettetes
+ * ICC-Farbprofil. Genau diese Bilder werden im Wegwerf-Clone einmal über den
+ * Browser-Canvas in die bereits sichtbare RGB-Darstellung normalisiert.
+ *
+ * Neue Uploads laufen bereits durch readPhoto() und haben dieses Profil nicht
+ * mehr. Sie werden hier bewusst NICHT nochmals als JPEG komprimiert. Für ein
+ * mehrfach verwendetes Legacy-Foto wird das normalisierte Ergebnis gecacht.
  */
 export function normalizeDataUrlJpegsForHtml2Canvas(root: HTMLElement) {
   const images: HTMLImageElement[] = [];
@@ -17,6 +53,16 @@ export function normalizeDataUrlJpegsForHtml2Canvas(root: HTMLElement) {
   for (const image of images) {
     const src = image.getAttribute("src") ?? image.src;
     if (!JPEG_DATA_URL.test(src)) continue;
+
+    const cached = normalizedJpegCache.get(src);
+    if (cached) {
+      image.src = cached;
+      continue;
+    }
+
+    // Avoid a second lossy JPEG pass for normal uploads. The compatibility
+    // re-encode is only needed for legacy ICC-bearing JPEG data URLs.
+    if (!jpegDataUrlHasIccProfile(src)) continue;
     if (!image.complete || image.naturalWidth <= 0 || image.naturalHeight <= 0) continue;
 
     try {
@@ -30,7 +76,10 @@ export function normalizeDataUrlJpegsForHtml2Canvas(root: HTMLElement) {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
       const normalized = canvas.toDataURL("image/jpeg", 0.94);
-      if (normalized && normalized !== "data:,") image.src = normalized;
+      if (!normalized || normalized === "data:,") continue;
+
+      normalizedJpegCache.set(src, normalized);
+      image.src = normalized;
     } catch {
       // PDF-Export nie wegen eines optionalen Kompatibilitäts-Guards stoppen.
       // html2canvas erhält im Fehlerfall einfach das ursprüngliche Bild.
