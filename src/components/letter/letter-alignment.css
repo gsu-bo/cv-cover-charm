@@ -8,6 +8,7 @@
 [data-letter-rich-editor] > :is(div, p),
 [data-letter-pdf-richtext] > :is(div, p) {
   text-align: justify;
+  text-justify: inter-word;
 }
 
 [data-letter-rich-editor] > :is(div, p)[data-align="left"],
@@ -18,6 +19,7 @@
 [data-letter-rich-editor] > :is(div, p)[data-align="justify"],
 [data-letter-pdf-richtext] > :is(div, p)[data-align="justify"] {
   text-align: justify;
+  text-justify: inter-word;
 }
 
 /*

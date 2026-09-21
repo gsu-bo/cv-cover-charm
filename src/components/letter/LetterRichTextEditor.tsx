@@ -123,6 +123,18 @@ function alignmentForBlock(block: HTMLElement | null): LetterTextAlign {
   return compatibleLetterTextAlign(block?.dataset.align, block?.dataset.columns);
 }
 
+function documentAlignment(editor: HTMLElement): LetterTextAlign | null {
+  const values = editableBlocks(editor).map(alignmentForBlock);
+  if (!values.length) return "justify";
+  return values.every((value) => value === values[0]) ? values[0] : null;
+}
+
+function normalizeEditableBlockAlignment(editor: HTMLElement) {
+  for (const block of editableBlocks(editor)) {
+    block.dataset.align = alignmentForBlock(block);
+  }
+}
+
 function listForBlock(block: HTMLElement | null): LetterListStyle | null {
   const value = block?.dataset.list;
   return value === "bullet" || value === "dash" || value === "plus" || value === "dot"
@@ -179,6 +191,8 @@ export function LetterRichTextEditor({
     const next = letterRichHtml(richTextHtml, text);
     if (next === lastEmitted.current) return;
     if (editor.innerHTML !== next) editor.innerHTML = next;
+    normalizeEditableBlockAlignment(editor);
+    setToolbar((current) => ({ ...current, align: documentAlignment(editor) }));
     setEmpty(!richHtmlToPlainText(next));
   }, [richTextHtml, text]);
 
@@ -247,12 +261,6 @@ export function LetterRichTextEditor({
     const columns = columnValues.every((value) => value === columnValues[0])
       ? columnValues[0]
       : null;
-    const alignmentValues = selected.length
-      ? selected.map(alignmentForBlock)
-      : (["justify"] as LetterTextAlign[]);
-    const align = alignmentValues.every((value) => value === alignmentValues[0])
-      ? alignmentValues[0]
-      : null;
     const listValues = selected.map(listForBlock);
     const list =
       listValues.length && listValues.every((value) => value === listValues[0])
@@ -263,7 +271,7 @@ export function LetterRichTextEditor({
       bold: document.queryCommandState("bold"),
       italic: document.queryCommandState("italic"),
       underline: document.queryCommandState("underline"),
-      align,
+      align: documentAlignment(editor),
       columns,
       list,
     });
@@ -318,6 +326,7 @@ export function LetterRichTextEditor({
   const emit = () => {
     const editor = editorRef.current;
     if (!editor) return;
+    normalizeEditableBlockAlignment(editor);
     const sanitized = sanitizeLetterRichHtml(editor.innerHTML);
     const plain = richHtmlToPlainText(sanitized);
     lastEmitted.current = sanitized;
@@ -339,24 +348,10 @@ export function LetterRichTextEditor({
     const editor = editorRef.current;
     if (!editor) return;
 
-    // A toolbar click before the user has placed a caret has no current
-    // paragraph. In that common case, treat alignment as a whole-letter
-    // action instead of silently doing nothing.
-    if (!savedRangeRef.current) {
-      for (const block of editableBlocks(editor)) applyAlignment(block, align);
-      emit();
-      setToolbar((current) => ({
-        ...current,
-        align,
-        columns: align === "justify" ? 1 : current.columns,
-      }));
-      return;
-    }
-
-    const range = restoreRange();
-    if (!range) return;
-    const blocks = ensureSelectedBlocks(editor, range);
-    for (const block of blocks) applyAlignment(block, align);
+    // Text alignment is deliberately document-wide. Depending on a stale
+    // contentEditable selection made the same click affect either one block
+    // or the whole letter, while the toolbar still looked active.
+    for (const block of editableBlocks(editor)) applyAlignment(block, align);
     emit();
     setToolbar((current) => ({
       ...current,
@@ -675,9 +670,9 @@ export function LetterRichTextEditor({
       </div>
       <p className="text-[11px] leading-relaxed text-muted-foreground">
         Text markieren: Fett, Kursiv, Unterstrichen und Formatierung entfernen erscheinen direkt an
-        der Auswahl. Ausrichtung, Spalten und Listen gelten für den aktuellen Absatz. Neue
-        Briefabsätze sind standardmässig im Blocksatz. Tabellen werden beim aktuellen Absatz
-        eingefügt.
+        der Auswahl. Die Ausrichtung gilt immer für den gesamten Brieftext; Blocksatz ist
+        standardmässig aktiv. Spalten und Listen gelten für den aktuellen Absatz. Tabellen werden
+        beim aktuellen Absatz eingefügt.
       </p>
     </div>
   );

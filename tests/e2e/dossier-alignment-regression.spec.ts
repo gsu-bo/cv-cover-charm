@@ -197,6 +197,58 @@ test.describe("body alignment Web/PDF parity", () => {
       .toBe("justify");
   });
 
+  test("motivation letter alignment remains document-wide after placing the caret", async ({
+    page,
+  }) => {
+    const payload = letterPayload("left");
+    const secondMarker = "LETTER-SECOND-PARAGRAPH";
+    payload.saved.data.text = `${payload.saved.data.text}\n${secondMarker}`;
+    payload.saved.data.richTextHtml =
+      `<div data-align="left">${payload.marker}</div>` +
+      `<div data-align="left">${secondMarker} mit genügend Text für eine sichtbare Ausrichtung.</div>`;
+
+    await page.goto(`${BASE_URL}/anschreiben`, { waitUntil: "domcontentloaded" });
+    await page.evaluate((saved) => {
+      localStorage.clear();
+      localStorage.setItem("anschreiben:v1", JSON.stringify(saved));
+    }, payload.saved);
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle");
+
+    const editor = page.getByRole("textbox", { name: "Brieftext" });
+    await editor.evaluate((element) => {
+      const text = element.children.item(0)?.firstChild;
+      if (!text) throw new Error("Erster Brieftext-Absatz fehlt");
+      const caret = document.createRange();
+      caret.setStart(text, 1);
+      caret.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(caret);
+      element.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true }));
+    });
+
+    await page.getByRole("button", { name: "Blocksatz" }).click();
+
+    const editorBlocks = editor.locator(":scope > :is(div, p)");
+    await expect(editorBlocks).toHaveCount(2);
+    await expect(editorBlocks.nth(0)).toHaveAttribute("data-align", "justify");
+    await expect(editorBlocks.nth(1)).toHaveAttribute("data-align", "justify");
+
+    const previewBlocks = page
+      .getByLabel("Vorschau Motivationsschreiben")
+      .locator('[data-letter-pdf-richtext="body"] > :is(div, p)');
+    await expect(previewBlocks).toHaveCount(2);
+    await expect(previewBlocks.nth(0)).toHaveCSS("text-align", "justify");
+    await expect(previewBlocks.nth(1)).toHaveCSS("text-align", "justify");
+
+    const exportBlocks = page
+      .locator("[data-letter-standalone-export] [data-letter-document-root]")
+      .locator('[data-letter-pdf-richtext="body"] > :is(div, p)');
+    await expect(exportBlocks.nth(0)).toHaveCSS("text-align", "justify");
+    await expect(exportBlocks.nth(1)).toHaveCSS("text-align", "justify");
+  });
+
   for (const align of BODY_ALIGNMENTS) {
     test(`motivation letter ${align}: preview and generated PDF use the same body state`, async ({
       page,

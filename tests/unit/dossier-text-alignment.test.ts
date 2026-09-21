@@ -73,6 +73,18 @@ describe("shared dossier text alignment", () => {
     expect(letterCss).toContain('[data-columns="2"], [data-columns="3"]');
   });
 
+  test("letter alignment is document-wide and normalized before persistence", () => {
+    expect(letterEditor).toContain("function documentAlignment(editor: HTMLElement)");
+    expect(letterEditor).toContain("normalizeEditableBlockAlignment(editor)");
+    expect(letterEditor).toContain(
+      "for (const block of editableBlocks(editor)) applyAlignment(block, align)",
+    );
+    expect(letterEditor).not.toContain(
+      "const blocks = ensureSelectedBlocks(editor, range);\n    for (const block of blocks) applyAlignment",
+    );
+    expect(letterCss).toContain("text-justify: inter-word");
+  });
+
   test("CV alignment lives in the Layout form and reaches preview/PDF body roles", () => {
     expect(section).toContain("data-editor-section-title={title}");
     expect(section).toContain("data-editor-section-body");
