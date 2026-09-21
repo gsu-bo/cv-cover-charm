@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
+  DEFAULT_LETTER_CLOSING_GAP_MM,
+  DEFAULT_LETTER_SIGNATURE_GAP_MM,
   EMPTY_LETTER,
   normalizeLetterDesign,
   normalizeLetterSpacingMm,
@@ -56,8 +58,15 @@ describe("M7 legacy motivation-letter compatibility", () => {
     expect(restored.images).toEqual([]);
     expect(restored.showBeilagen).toBe(true);
     expect(restored.beilagen).toEqual(["Lebenslauf", "Zeugnis"]);
-    expect(normalizeLetterSpacingMm(restored.grussAbstandMm)).toBe(9);
-    expect(normalizeLetterSpacingMm(restored.unterschriftAbstandMm)).toBe(9);
+    expect(
+      normalizeLetterSpacingMm(restored.grussAbstandMm, DEFAULT_LETTER_CLOSING_GAP_MM),
+    ).toBe(DEFAULT_LETTER_CLOSING_GAP_MM);
+    expect(
+      normalizeLetterSpacingMm(
+        restored.unterschriftAbstandMm,
+        DEFAULT_LETTER_SIGNATURE_GAP_MM,
+      ),
+    ).toBe(DEFAULT_LETTER_SIGNATURE_GAP_MM);
   });
 
   test("explicit modern header/footer choices remain unchanged", () => {
