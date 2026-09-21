@@ -2,6 +2,7 @@ import { cvFrameFor, sidebarWidthMm } from "@/components/cv/archetype";
 import { CV_SECTION_LABELS, type CvPlacements } from "@/components/cv/types";
 import type { CvPdfDocument } from "@/lib/dossier-pdf-document";
 import { transformStoredDocxDocumentXml } from "@/lib/dossier-docx-package";
+import { cvPersonalInfoLines } from "@/lib/cv-personal-info";
 
 const twips = (mm: number) => Math.round((mm * 1440) / 25.4);
 const escape = (value: string) =>
@@ -90,14 +91,7 @@ export function applyDocxSidebarXml(
     [
       [person.adresse, person.plzOrt].filter(Boolean).join(", "),
       [person.telefon, person.email].filter(Boolean).join(" · "),
-      [
-        person.geburtsdatum ? `Geburtsdatum ${person.geburtsdatum}` : "",
-        person.geburtsort ? `Geburtsort ${person.geburtsort}` : "",
-        person.heimatort ? `Heimatort ${person.heimatort}` : "",
-        person.nationalitaet ? `Nationalität ${person.nationalitaet}` : "",
-      ]
-        .filter(Boolean)
-        .join(" · "),
+      cvPersonalInfoLines(person, document.design).join(" · "),
     ]
       .filter(Boolean)
       .map(escape),

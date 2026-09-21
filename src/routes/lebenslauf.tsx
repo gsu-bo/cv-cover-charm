@@ -1749,6 +1749,14 @@ function Lebenslauf() {
                     onChange={patchPerson}
                     contactLabel={data.labels.kontakt ?? ""}
                     onContactLabel={(v) => setLabel("kontakt", v)}
+                    personalInfoColons={design.personalInfoColons !== false}
+                    onPersonalInfoColons={(personalInfoColons) =>
+                      setDesign((current) => ({ ...current, personalInfoColons }))
+                    }
+                    personalInfoAligned={design.personalInfoAligned !== false}
+                    onPersonalInfoAligned={(personalInfoAligned) =>
+                      setDesign((current) => ({ ...current, personalInfoAligned }))
+                    }
                   />
                 </div>
               </Section>

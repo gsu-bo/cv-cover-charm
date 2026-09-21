@@ -9,6 +9,7 @@ import {
 } from "@/lib/dossier-docx-legacy-recipe-renderer";
 import { transformStoredDocxDocumentXml } from "@/lib/dossier-docx-package";
 import { ALL_DOSSIER_DOCX_TEMPLATE_RECIPES } from "@/lib/dossier-docx-template-recipes";
+import { cvPersonalInfoLines } from "@/lib/cv-personal-info";
 
 export { legacyRecipeDossierDocxSupported };
 
@@ -300,14 +301,7 @@ function restoreCvIdentityContrast(source: string, cv: CvPdfDocument) {
   const templateId = String(cv.design.template);
   if (!DARK_CV_IDENTITY_TEMPLATES.has(templateId)) return source;
   const person = cv.data.person;
-  const identityLine = [
-    person.geburtsdatum ? `Geburtsdatum ${person.geburtsdatum}` : "",
-    person.geburtsort ? `Geburtsort ${person.geburtsort}` : "",
-    person.heimatort ? `Heimatort ${person.heimatort}` : "",
-    person.nationalitaet ? `Nationalität ${person.nationalitaet}` : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const identityLine = cvPersonalInfoLines(person, cv.design).join(" · ");
 
   return patchSection(source, 2, (cvXml) => {
     let next = cv.data.titel

@@ -319,6 +319,10 @@ export type CvDesign = {
   headingScale?: number;
   /** Grösse des Fliesstexts, 1 = Vorgabe. */
   bodyScale?: number;
+  /** Doppelpunkte zwischen Bezeichnung und Wert der vier persönlichen Angaben. */
+  personalInfoColons?: boolean;
+  /** Richtet die vier persönlichen Werte an einer gemeinsamen zweiten Spalte aus. */
+  personalInfoAligned?: boolean;
   /** Der normale Dokumenttitel im CV-Körper bleibt unabhängig vom Header schaltbar. */
   showDocumentTitle?: boolean;
   /** Dokumenteigene Texte. Deren Geometrie bleibt vom gemeinsamen Chrome-State getrennt. */
@@ -360,6 +364,8 @@ export const CV_TYPE_DEFAULTS = {
   titleScale: 1,
   headingScale: 1,
   bodyScale: 1,
+  personalInfoColons: true,
+  personalInfoAligned: true,
   /** 30/70 – die Aufteilung, die sich beim Ausprobieren als brauchbar zeigte. */
   sidebarPct: 0.3,
 } as const;
