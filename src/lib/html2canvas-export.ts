@@ -3,6 +3,23 @@ const JPEG_HEADER_SCAN_BYTES = 64 * 1024;
 const ICC_MARKER = "ICC_PROFILE";
 const normalizedJpegCache = new Map<string, string>();
 
+export const PDF_RASTER_CANVAS_EVENT = "cv-cover-charm:pdf-raster-canvas";
+
+/**
+ * Opt-in diagnostic at the exact html2canvas -> jsPDF boundary. Browser tests
+ * and local investigations can inspect or save the raw raster without changing
+ * normal exports or trying to patch a canvas prototype in html2canvas' iframe.
+ */
+export function emitPdfRasterCanvasDiagnostic(canvas: HTMLCanvasElement, page: HTMLElement) {
+  if (typeof window === "undefined") return;
+  if (document.documentElement.dataset.pdfRasterDiagnostics !== "true") return;
+  window.dispatchEvent(
+    new CustomEvent(PDF_RASTER_CANVAS_EVENT, {
+      detail: { canvas, page },
+    }),
+  );
+}
+
 /**
  * Canvas-generated JPEGs are already browser-normalized and do not carry the
  * embedded ICC chunk that triggered the black-photo rasterization seen in
