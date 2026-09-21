@@ -17,6 +17,7 @@ type DecorSpec = {
   gradFrom?: string | null;
   gradTo?: string;
   gradAngle?: number;
+  path?: string;
 };
 
 const baseStyle: BlockStyle = {
@@ -111,12 +112,58 @@ const line = (
   opacity,
 });
 
+const pathShape = (
+  id: string,
+  label: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  color: string,
+  path: string,
+): DecorSpec => ({
+  id,
+  label,
+  shape: "path",
+  x,
+  y,
+  w,
+  h,
+  color,
+  fill: color,
+  strokeWidth: 0,
+  path,
+});
+
 /**
  * Simple visual primitives that belong to a template but should behave like
  * normal editor elements. Full-page backgrounds, frames, clipped hero masks
  * and other complex structural artwork deliberately stay in CoverBackground.
  */
 const DECORATIONS: Partial<Record<string, DecorSpec[]>> = {
+  diagonal: [
+    pathShape(
+      "decor-diagonal-top",
+      "Oberes Dreieck",
+      0,
+      0,
+      210,
+      191,
+      "primary",
+      "M0 0 H100 L0 100 Z",
+    ),
+    pathShape(
+      "decor-diagonal-bottom",
+      "Unteres Dreieck",
+      62,
+      159,
+      148,
+      138,
+      "primary",
+      "M100 0 V100 H0 Z",
+    ),
+  ],
+
   modern: [
     // Modern bleibt bewusst ruhig: nur die weiche Kreisfläche, keine
     // dekorativen Striche oder Farbbänder im Bewerbungsdossier. Der Halo bleibt
@@ -244,6 +291,7 @@ function blockFromSpec(spec: DecorSpec, overrides: StyleOverrides): Block {
     label: spec.label,
     kind: "shape",
     shape: spec.shape,
+    path: spec.path,
     lines: [],
     style: {
       ...baseStyle,

@@ -18,6 +18,20 @@ async function openChrome(page: Page) {
   return page.locator("[data-dossier-document-content-controls]");
 }
 
+async function waitForSavedHeaderText(page: Page, storageKey: string, expected: string) {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (key) => {
+          const saved = JSON.parse(localStorage.getItem(key) ?? "{}");
+          return saved.design?.chromeContent?.headerText;
+        },
+        storageKey,
+      ),
+    )
+    .toBe(expected);
+}
+
 test.describe("document-specific header/footer content", () => {
   test("CV header title is independent from the CV body title and survives export canvas", async ({
     page,
@@ -51,12 +65,14 @@ test.describe("document-specific header/footer content", () => {
     let controls = await openChrome(page);
     await controls.getByLabel("Eigener Text").first().check();
     await controls.locator("textarea").first().fill("CV ONLY");
+    await waitForSavedHeaderText(page, "lebenslauf:v1", "CV ONLY");
 
     await page.goto(`${BASE_URL}/anschreiben`, { waitUntil: "domcontentloaded" });
     await page.locator('button[data-editor-ready="true"]').waitFor({ state: "visible" });
     controls = await openChrome(page);
     await controls.getByLabel("Eigener Text").first().check();
     await controls.locator("textarea").first().fill("LETTER ONLY");
+    await waitForSavedHeaderText(page, "anschreiben:v1", "LETTER ONLY");
 
     const letter = page.getByLabel("Vorschau Motivationsschreiben");
     await expect(letter.locator("[data-dossier-header-custom-text]").first()).toHaveText(

@@ -5,6 +5,7 @@ import type { StyleOverrides } from "../../src/components/cover/layouts-base";
 import type { Block, TemplateId } from "../../src/components/cover/types";
 
 const forest = "forestFlow" as TemplateId;
+const edge = "edge" as TemplateId;
 
 function block(id: string): Block {
   return {
@@ -47,6 +48,28 @@ describe("Forest Flow cover editability", () => {
 
     const photo = applyForestFlowCoverDefaults(forest, block("foto"), {});
     expect([photo.style.x, photo.style.y]).toEqual([143, 27]);
+
+    for (const id of ["eyebrow", "ortDatum", "kontaktTitel", "kontakt"]) {
+      expect(applyForestFlowCoverDefaults(forest, block(id), {}).style.align).toBe("center");
+    }
+  });
+
+  test("Edge uses its editorial grid as editable defaults", () => {
+    const expected = {
+      eyebrow: [16, 10, 62],
+      ortDatum: [124, 10, 70],
+      foto: [151, 43, 38],
+      name: [20, 124, 112],
+      beruf: [20, 146, 112],
+      lehrbeginn: [20, 174, 112],
+      kontakt: [20, 277, 74],
+      empfaenger: [116, 277, 74],
+    } as const;
+
+    for (const [id, [x, y, w]] of Object.entries(expected)) {
+      const resolved = applyForestFlowCoverDefaults(edge, block(id), {});
+      expect([resolved.style.x, resolved.style.y, resolved.style.w]).toEqual([x, y, w]);
+    }
   });
 
   test("explicit user drag and resize geometry already merged into the block always wins", () => {
@@ -80,5 +103,13 @@ describe("Forest Flow cover editability", () => {
     expect(forestCover).not.toContain("top: 111mm !important");
     expect(forestCover).not.toContain("top: 203mm !important");
     expect(forestCover).toContain("forest-flow-cover-defaults.ts");
+  });
+
+  test("explicit Forest Flow alignment overrides remain authoritative", () => {
+    const overrides: StyleOverrides = { kontakt: { align: "right" } };
+    const edited = block("kontakt");
+    edited.style = { ...edited.style, ...overrides.kontakt };
+
+    expect(applyForestFlowCoverDefaults(forest, edited, overrides).style.align).toBe("right");
   });
 });

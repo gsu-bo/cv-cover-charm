@@ -544,15 +544,20 @@ export function ElementBar({
                 </Ctl>
 
                 <Ctl label="Proportion">
-                  <label className="flex cursor-pointer items-center gap-1.5 text-xs">
+                  <label
+                    data-element-ratio-lock={lockRatio ? "locked" : "free"}
+                    className="flex cursor-pointer items-center gap-1.5 text-xs"
+                  >
                     <input
                       type="checkbox"
+                      aria-label="Proportionen beibehalten"
+                      className="h-4 w-4 shrink-0 accent-blue-600"
                       checked={lockRatio}
                       onChange={(e) =>
                         onChange({ lockRatio: e.target.checked } as Partial<LayeredStyle>)
                       }
                     />
-                    behalten
+                    {lockRatio ? "beibehalten" : "frei ändern"}
                   </label>
                 </Ctl>
               </>

@@ -160,8 +160,9 @@ const STORAGE_KEY = COVER_STORAGE_KEY;
  *     Farbverläufe an Formen, Trennlinien als Blöcke.
  * 7 = gemeinsame Dossier-Schrift für Titelblatt und Lebenslauf.
  * 8 = Sichtbarkeit Firma / Lehrbetrieb und native Beilagenrubrik.
+ * 9 = Word-nahe, verschiebbare Diagonal-Dreiecke und neue Standardfarbe.
  */
-const SAVE_VERSION = 8;
+const SAVE_VERSION = 9;
 
 const validFont = (value: unknown): FontKey | null =>
   typeof value === "string" && value in FONT_LABELS ? (value as FontKey) : null;
@@ -181,6 +182,26 @@ const prefill = (d: CoverData): CoverData => ({
 function defaultColors(templateId: TemplateId): Record<string, string> {
   const t = TEMPLATES.find((x) => x.id === templateId)!;
   return Object.fromEntries(t.slots.map((s) => [s.key, s.default]));
+}
+
+function migrateStoredColors(
+  raw: unknown,
+  version: number,
+): Record<string, Record<string, string>> | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const colors = {
+    ...(raw as Record<string, Record<string, string>>),
+  };
+  const diagonal = colors.diagonal;
+  if (version < 9 && diagonal) {
+    colors.diagonal = {
+      ...diagonal,
+      ...(diagonal.primary?.toLowerCase() === "#1d4ed8" ? { primary: "#156082" } : {}),
+      ...(diagonal.secondary?.toLowerCase() === "#0f766e" ? { secondary: "#0f4c5c" } : {}),
+      ...(diagonal.accent?.toLowerCase() === "#0891b2" ? { accent: "#2b7a9b" } : {}),
+    };
+  }
+  return colors;
 }
 
 const allDefaultColors = () =>
@@ -604,7 +625,8 @@ function Titelblatt() {
       const p = JSON.parse(saved);
       if (p.data) setData(prefill({ ...emptyData, ...p.data }));
       if (p.template) setTemplate(normalizeActiveTemplateId(p.template));
-      if (p.colors) setColorsByTemplate((c) => ({ ...c, ...p.colors }));
+      const storedColors = migrateStoredColors(p.colors, Number(p.version) || 0);
+      if (storedColors) setColorsByTemplate((c) => ({ ...c, ...storedColors }));
       if (p.layout) setLayoutByTemplate((l) => ({ ...l, ...p.layout }));
       setCustoms(sanitizeCustoms(p.customs));
       if (typeof p.fontScale === "number") setFontScale(p.fontScale);

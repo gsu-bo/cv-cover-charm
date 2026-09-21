@@ -14,6 +14,10 @@ const freshCss = readFileSync(
   new URL("../../src/components/cover/fresh-templates.css", import.meta.url),
   "utf8",
 );
+const coverDefaults = readFileSync(
+  new URL("../../src/components/cover/forest-flow-cover-defaults.ts", import.meta.url),
+  "utf8",
+);
 const legacyCss = readFileSync(
   new URL("../../src/components/dossier/legacy-template-refinements.css", import.meta.url),
   "utf8",
@@ -53,6 +57,21 @@ describe("Fresh dossier rebuild", () => {
     expect(freshCss).toContain('data-dossier-sheet-background="edge"');
     expect(freshCss).toContain("height: 10mm !important;");
     expect(freshCss).toContain("background: transparent !important;");
+  });
+
+  test("Edge cover uses a full corner signature and editor-owned content geometry", () => {
+    const edgeCss = freshCss.slice(freshCss.indexOf("/* 19 EDGE"), freshCss.indexOf("/* 20 GLOW"));
+    expect(edgeCss).toContain("width: 92mm !important;");
+    expect(edgeCss).toContain("height: 72mm !important;");
+    expect(edgeCss).toContain("clip-path: polygon(");
+    expect(edgeCss).not.toContain("width: 52mm !important;");
+    expect(edgeCss).not.toContain("translate(-34mm");
+
+    expect(coverDefaults).toContain("const EDGE_COVER_DEFAULTS");
+    expect(coverDefaults).toContain("name: {");
+    expect(coverDefaults).toContain("x: 20,");
+    expect(coverDefaults).toContain("y: 124,");
+    expect(coverDefaults).toContain('templateId === "edge"');
   });
 
   test("Glow is restrained and does not use page-filling blobs or card shadows", () => {

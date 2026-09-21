@@ -379,7 +379,7 @@ test.describe("template cleanup", () => {
     expect(contactDecoration.width).toBeGreaterThan(0);
   });
 
-  test("Edel Light compact gets a full-width top gold treatment and keeps its diamond", async ({
+  test("Edel Light compact keeps the standard double gold hairline and diamond", async ({
     page,
   }) => {
     const root = await seedCv(page, "edel");
@@ -391,12 +391,9 @@ test.describe("template cleanup", () => {
       const topGold = getComputedStyle(node, "::before");
       const diamond = getComputedStyle(node, "::after");
       return {
-        headerWidth: Number.parseFloat(header.width) || 0,
-        goldWidth: Number.parseFloat(topGold.width) || 0,
-        goldHeight: Number.parseFloat(topGold.height) || 0,
+        borderBottomWidth: Number.parseFloat(header.borderBottomWidth) || 0,
+        boxShadow: header.boxShadow,
         goldContent: topGold.content,
-        goldLeft: topGold.left,
-        goldRight: topGold.right,
         diamondContent: diamond.content,
         diamondWidth: Number.parseFloat(diamond.width) || 0,
         diamondHeight: Number.parseFloat(diamond.height) || 0,
@@ -404,12 +401,9 @@ test.describe("template cleanup", () => {
       };
     });
 
-    expect(geometry.goldContent).not.toBe("none");
-    expect(geometry.goldHeight).toBeGreaterThan(0);
-    expect(geometry.headerWidth).toBeGreaterThan(0);
-    expect(geometry.goldLeft).toBe("0px");
-    expect(geometry.goldRight).toBe("0px");
-    expect(geometry.goldWidth / geometry.headerWidth).toBeCloseTo(1, 2);
+    expect(geometry.goldContent).toBe("none");
+    expect(geometry.borderBottomWidth).toBeGreaterThan(0);
+    expect(geometry.boxShadow).not.toBe("none");
     expect(geometry.diamondContent).not.toBe("none");
     expect(geometry.diamondWidth).toBeGreaterThan(0);
     expect(geometry.diamondHeight).toBeGreaterThan(0);

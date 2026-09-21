@@ -526,8 +526,10 @@ export function BlockLayer({
               left: `${st.x}mm`,
               top: `${y}mm`,
               width: bleedRight ? `calc(${st.w}mm + ${EDGE_BLEED_PX}px)` : `${st.w}mm`,
-              ["--dossier-font" as string]: role && dossierFont ? dossierFont : FONT_STACKS[st.font],
+              ["--dossier-font" as string]:
+                role && dossierFont ? dossierFont : FONT_STACKS[st.font],
               zIndex,
+              pointerEvents: isShape && b.shape === "path" ? "none" : undefined,
               cursor: editable && !drawing ? "move" : "default",
               touchAction: "none",
               outline: active ? "1px dashed rgba(59,130,246,0.9)" : "none",
@@ -676,6 +678,7 @@ export function BlockLayer({
                       boxShadow: "0 1px 3px rgba(15,23,42,0.28)",
                       cursor: handle.cursor,
                       touchAction: "none",
+                      pointerEvents: "auto",
                       zIndex: 20,
                     }}
                   />

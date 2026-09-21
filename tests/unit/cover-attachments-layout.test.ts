@@ -45,12 +45,14 @@ describe("optional cover attachments", () => {
       expect(body, template.name).toBeDefined();
       expect(title!.style.above, template.name).toBe("beilagen");
       expect(title!.style.align, template.name).toBe("right");
-      expect(title!.style.x, template.name).toBe(110);
-      expect(title!.style.w, template.name).toBe(80);
+      const expectedX = template.id === "diagonal" ? 142 : 110;
+      const expectedWidth = template.id === "diagonal" ? 48 : 80;
+      expect(title!.style.x, template.name).toBe(expectedX);
+      expect(title!.style.w, template.name).toBe(expectedWidth);
 
       expect(body!.style.align, template.name).toBe("right");
-      expect(body!.style.x, template.name).toBe(110);
-      expect(body!.style.w, template.name).toBe(80);
+      expect(body!.style.x, template.name).toBe(expectedX);
+      expect(body!.style.w, template.name).toBe(expectedWidth);
       expect(body!.style.anchorBottom, template.name).toBe(true);
       expect(body!.style.follows, template.name).toBeNull();
       expect(body!.style.above, template.name).toBeNull();
@@ -71,8 +73,14 @@ describe("optional cover attachments", () => {
         template.slots,
       );
 
-      expect(blocks.some((block) => block.id === "beilagenTitel"), template.name).toBe(false);
-      expect(blocks.some((block) => block.id === "beilagen"), template.name).toBe(false);
+      expect(
+        blocks.some((block) => block.id === "beilagenTitel"),
+        template.name,
+      ).toBe(false);
+      expect(
+        blocks.some((block) => block.id === "beilagen"),
+        template.name,
+      ).toBe(false);
     }
   });
 });
