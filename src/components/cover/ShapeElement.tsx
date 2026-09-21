@@ -82,6 +82,7 @@ export function ShapeElement({ shape, path, style: st, colors }: Props) {
         )}
         <path
           d={path ?? ""}
+          style={{ pointerEvents: "visiblePainted", cursor: "inherit" }}
           fill={grad ? `url(#${gradId})` : st.fill ? fill : "none"}
           stroke={stroke}
           // Strichstärke in mm auf das 0–100-Koordinatensystem umrechnen

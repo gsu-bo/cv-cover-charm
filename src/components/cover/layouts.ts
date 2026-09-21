@@ -21,6 +21,8 @@ const MODERN_TOP_CLUSTER_OFFSET_MM = 6;
 const COVER_BEILAGEN_RIGHT_X_MM = 110;
 const COVER_BEILAGEN_WIDTH_MM = 80;
 const COVER_BEILAGEN_MAX_BOTTOM_MM = 276;
+const DIAGONAL_BEILAGEN_X_MM = 132;
+const DIAGONAL_BEILAGEN_WIDTH_MM = 58;
 
 const EDITORIAL_HEADING_IDS = new Set(["eyebrow", "kicker", "kontaktTitel", "anTitel"]);
 
@@ -496,11 +498,7 @@ export function buildBlocks(
   // evolves, while keeping their palettes and interior-page contracts separate.
   const layoutTemplate = (template as string) === "edelDark" ? ("edel" as TemplateId) : template;
   const blocks = buildBaseBlocks(layoutTemplate, data, customs, overrides, slots).map((block) =>
-    freshContentAdjustment(
-      template,
-      data,
-      templateDefaultAdjustment(template, block, overrides),
-    ),
+    freshContentAdjustment(template, data, templateDefaultAdjustment(template, block, overrides)),
   );
   const decorations = templateDecorations(layoutTemplate, overrides).map((block) =>
     templateDefaultAdjustment(template, block, overrides),
@@ -525,6 +523,9 @@ export function buildBlocks(
     const recipientBody = blocks.find((block) => block.id === "empfaenger");
 
     if (recipientTitle && recipientBody) {
+      const isDiagonal = (template as string) === "diagonal";
+      const attachmentsX = isDiagonal ? DIAGONAL_BEILAGEN_X_MM : COVER_BEILAGEN_RIGHT_X_MM;
+      const attachmentsWidth = isDiagonal ? DIAGONAL_BEILAGEN_WIDTH_MM : COVER_BEILAGEN_WIDTH_MM;
       const titleBase = companyVisible
         ? {
             ...recipientTitle.style,
@@ -537,8 +538,8 @@ export function buildBlocks(
           }
         : {
             ...recipientTitle.style,
-            x: COVER_BEILAGEN_RIGHT_X_MM,
-            w: COVER_BEILAGEN_WIDTH_MM,
+            x: attachmentsX,
+            w: attachmentsWidth,
             align: "right" as const,
             above: "beilagen",
             follows: null,
@@ -567,8 +568,8 @@ export function buildBlocks(
             // optional cover attachments in their own stable bottom-right slot,
             // aligned with the contact block where possible but capped at the
             // established print-safe lower edge.
-            x: COVER_BEILAGEN_RIGHT_X_MM,
-            w: COVER_BEILAGEN_WIDTH_MM,
+            x: attachmentsX,
+            w: attachmentsWidth,
             y: Math.min(
               contactBody?.style.anchorBottom === true
                 ? contactBody.style.y

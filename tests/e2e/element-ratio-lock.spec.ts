@@ -75,12 +75,12 @@ function coverPayload() {
   };
 }
 
-async function seed(page: Page) {
+async function seed(page: Page, payload: unknown = coverPayload()) {
   await page.goto(`${BASE_URL}/titelblatt`, { waitUntil: "domcontentloaded" });
   await page.evaluate((payload) => {
     localStorage.clear();
     localStorage.setItem("titelblatt:v3", JSON.stringify(payload));
-  }, coverPayload());
+  }, payload);
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator('[data-dossier-document="cover"]').first().waitFor({ state: "visible" });
 }
@@ -249,5 +249,64 @@ test.describe("element proportion lock behavior", () => {
     await page.reload({ waitUntil: "domcontentloaded" });
     await selectBlock(page, "custom-shape-ratio");
     await expect(proportionCheckbox(page)).toBeChecked();
+  });
+});
+
+test.describe("diagonal cover artwork", () => {
+  test("both triangles drag with the mouse and attachments stay inside the lower field", async ({
+    page,
+  }) => {
+    const base = coverPayload();
+    const payload = {
+      ...base,
+      version: 9,
+      template: "diagonal",
+      colors: {
+        diagonal: {
+          bg: "#f8fafc",
+          primary: "#156082",
+          secondary: "#0f4c5c",
+          accent: "#2b7a9b",
+          ink: "#172033",
+        },
+      },
+      layout: { diagonal: {} },
+      data: {
+        ...base.data,
+        showBeilagenOnCover: true,
+        beilagen: ["Motivationsschreiben", "Lebenslauf", "Zeugnis"],
+      },
+    };
+    await seed(page, payload);
+
+    for (const [id, gesture] of [
+      ["decor-diagonal-top", { x: 0.1, y: 0.1, dx: 18, dy: 12 }],
+      ["decor-diagonal-bottom", { x: 0.85, y: 0.85, dx: -18, dy: -12 }],
+    ] as const) {
+      const target = block(page, id);
+      const before = await target.boundingBox();
+      if (!before) throw new Error(`${id} geometry unavailable`);
+      const startX = before.x + before.width * gesture.x;
+      const startY = before.y + before.height * gesture.y;
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX + gesture.dx, startY + gesture.dy, { steps: 5 });
+      await page.mouse.up();
+      await expect(target).toHaveAttribute("data-element-selected", "true");
+      const after = await target.boundingBox();
+      expect(Math.abs((after?.x ?? before.x) - before.x)).toBeGreaterThan(5);
+      expect(Math.abs((after?.y ?? before.y) - before.y)).toBeGreaterThan(3);
+      await resetSelected(page);
+    }
+
+    const triangle = await block(page, "decor-diagonal-bottom").boundingBox();
+    if (!triangle) throw new Error("Lower triangle geometry unavailable");
+    for (const id of ["beilagenTitel", "beilagen"]) {
+      const attachment = await block(page, id).boundingBox();
+      if (!attachment) throw new Error(`${id} geometry unavailable`);
+      const left = (attachment.x - triangle.x) / triangle.width;
+      const top = (attachment.y - triangle.y) / triangle.height;
+      expect(left + top, `${id} top-left must be inside the blue triangle`).toBeGreaterThan(1);
+    }
   });
 });

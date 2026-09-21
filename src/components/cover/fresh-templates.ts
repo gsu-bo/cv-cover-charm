@@ -128,9 +128,9 @@ const diagonalDefinition: TemplateDefinition = {
   description: "Klare blaue Diagonalen, modern und editorial",
   slots: [
     { key: "bg", label: "Papier", default: "#f8fafc" },
-    { key: "primary", label: "Fläche", default: "#1d4ed8" },
-    { key: "secondary", label: "Akzent", default: "#0f766e" },
-    { key: "accent", label: "Akzent 2", default: "#0891b2" },
+    { key: "primary", label: "Fläche", default: "#156082" },
+    { key: "secondary", label: "Akzent", default: "#0f4c5c" },
+    { key: "accent", label: "Akzent 2", default: "#2b7a9b" },
     { key: "ink", label: "Text", default: "#172033" },
   ],
 };
