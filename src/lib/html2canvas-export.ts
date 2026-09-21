@@ -88,6 +88,20 @@ export function normalizeDataUrlJpegsForHtml2Canvas(root: HTMLElement) {
 }
 
 /**
+ * Combined dossier exports can contain different templates at the same time.
+ * Legacy template CSS still reads html[data-dossier-template], so scope that
+ * global selector only inside html2canvas' throw-away clone. The live document
+ * keeps the editor route's own template and can no longer be hijacked by a
+ * hidden cover/CV renderer immediately before capture.
+ */
+export function scopeDossierTemplateForHtml2Canvas(root: HTMLElement) {
+  const scope = root.closest<HTMLElement>("[data-dossier-template]");
+  const template = scope?.dataset.dossierTemplate?.trim();
+  if (!template) return;
+  root.ownerDocument.documentElement.dataset.dossierTemplate = template;
+}
+
+/**
  * html2canvas-pro measures text ranges after CSS `zoom` has already affected
  * their coordinates and then applies the same zoom again while painting the
  * stacking context. Words therefore drift into the following spaces.
@@ -102,9 +116,10 @@ export function cssZoomAsTransform(zoom: number, transform: string) {
 }
 
 export function normalizeCssZoomForHtml2Canvas(root: HTMLElement) {
-  // Alle bestehenden PDF-Pfade rufen diese Funktion bereits im onclone-Hook
-  // auf. Der JPEG-Guard gilt dadurch für CV, Anschreiben und Gesamtdossier,
-  // ohne drei getrennte Exportimplementierungen auseinanderlaufen zu lassen.
+  // Every PDF path already runs this hook on html2canvas' cloned document.
+  // Resolve the document-local template there before any computed-style reads,
+  // then apply the existing image and CSS zoom compatibility normalization.
+  scopeDossierTemplateForHtml2Canvas(root);
   normalizeDataUrlJpegsForHtml2Canvas(root);
 
   const view = root.ownerDocument.defaultView;
