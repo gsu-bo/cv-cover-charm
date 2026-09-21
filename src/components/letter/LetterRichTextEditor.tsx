@@ -6,6 +6,7 @@ import {
   compatibleLetterTextAlign,
   letterRichHtml,
   letterTextAlign,
+  normalizeLetterInlineColor,
   richHtmlToPlainText,
   sanitizeLetterRichHtml,
   type LetterTextAlign,
@@ -15,6 +16,10 @@ import type { LetterBodyColumns } from "@/components/letter/types";
 const toolClass =
   "rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const activeToolClass = "bg-primary text-primary-foreground hover:bg-primary/90";
+const toolbarGroupClass =
+  "m-0 flex min-w-0 items-center gap-1 rounded-md border border-input bg-background px-1.5 pb-1 pt-0.5";
+const toolbarLegendClass =
+  "px-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 
 type LetterListStyle = "bullet" | "dash" | "plus" | "dot";
 
@@ -22,6 +27,7 @@ type ToolbarState = {
   bold: boolean;
   italic: boolean;
   underline: boolean;
+  color: string;
   align: LetterTextAlign | null;
   columns: LetterBodyColumns | null;
   list: LetterListStyle | null;
@@ -123,11 +129,30 @@ function alignmentForBlock(block: HTMLElement | null): LetterTextAlign {
   return compatibleLetterTextAlign(block?.dataset.align, block?.dataset.columns);
 }
 
+function documentAlignment(editor: HTMLElement): LetterTextAlign | null {
+  const values = editableBlocks(editor).map(alignmentForBlock);
+  if (!values.length) return "justify";
+  return values.every((value) => value === values[0]) ? values[0] : null;
+}
+
+function normalizeEditableBlockAlignment(editor: HTMLElement) {
+  for (const block of editableBlocks(editor)) {
+    block.dataset.align = alignmentForBlock(block);
+  }
+}
+
 function listForBlock(block: HTMLElement | null): LetterListStyle | null {
   const value = block?.dataset.list;
   return value === "bullet" || value === "dash" || value === "plus" || value === "dot"
     ? value
     : null;
+}
+
+function selectionColor(node: Node | null): string {
+  const element = node instanceof HTMLElement ? node : node?.parentElement;
+  return (
+    normalizeLetterInlineColor(element ? window.getComputedStyle(element).color : null) ?? "#111111"
+  );
 }
 
 function makeTable(rows: number, columns: number): HTMLTableElement {
@@ -159,6 +184,7 @@ export function LetterRichTextEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef("");
   const savedRangeRef = useRef<Range | null>(null);
+  const colorPickerActiveRef = useRef(false);
   const [empty, setEmpty] = useState(!text.trim() && !richTextHtml?.trim());
   const [listOpen, setListOpen] = useState(false);
   const [tableOpen, setTableOpen] = useState(false);
@@ -168,6 +194,7 @@ export function LetterRichTextEditor({
     bold: false,
     italic: false,
     underline: false,
+    color: "#111111",
     align: "justify",
     columns: 1,
     list: null,
@@ -179,6 +206,8 @@ export function LetterRichTextEditor({
     const next = letterRichHtml(richTextHtml, text);
     if (next === lastEmitted.current) return;
     if (editor.innerHTML !== next) editor.innerHTML = next;
+    normalizeEditableBlockAlignment(editor);
+    setToolbar((current) => ({ ...current, align: documentAlignment(editor) }));
     setEmpty(!richHtmlToPlainText(next));
   }, [richTextHtml, text]);
 
@@ -228,6 +257,7 @@ export function LetterRichTextEditor({
       !selection.anchorNode ||
       !editor.contains(selection.anchorNode)
     ) {
+      if (colorPickerActiveRef.current) return;
       setSelectionBubble(null);
       return;
     }
@@ -247,12 +277,6 @@ export function LetterRichTextEditor({
     const columns = columnValues.every((value) => value === columnValues[0])
       ? columnValues[0]
       : null;
-    const alignmentValues = selected.length
-      ? selected.map(alignmentForBlock)
-      : (["justify"] as LetterTextAlign[]);
-    const align = alignmentValues.every((value) => value === alignmentValues[0])
-      ? alignmentValues[0]
-      : null;
     const listValues = selected.map(listForBlock);
     const list =
       listValues.length && listValues.every((value) => value === listValues[0])
@@ -263,7 +287,8 @@ export function LetterRichTextEditor({
       bold: document.queryCommandState("bold"),
       italic: document.queryCommandState("italic"),
       underline: document.queryCommandState("underline"),
-      align,
+      color: selectionColor(selection.anchorNode),
+      align: documentAlignment(editor),
       columns,
       list,
     });
@@ -318,6 +343,7 @@ export function LetterRichTextEditor({
   const emit = () => {
     const editor = editorRef.current;
     if (!editor) return;
+    normalizeEditableBlockAlignment(editor);
     const sanitized = sanitizeLetterRichHtml(editor.innerHTML);
     const plain = richHtmlToPlainText(sanitized);
     lastEmitted.current = sanitized;
@@ -335,28 +361,24 @@ export function LetterRichTextEditor({
     readToolbarState();
   };
 
+  const setTextColor = (value: string) => {
+    const color = normalizeLetterInlineColor(value);
+    if (!color || !restoreRange()) return;
+    document.execCommand("styleWithCSS", false, "true");
+    document.execCommand("foreColor", false, color);
+    document.execCommand("styleWithCSS", false, "false");
+    emit();
+    setToolbar((current) => ({ ...current, color }));
+  };
+
   const setAlignment = (align: LetterTextAlign) => {
     const editor = editorRef.current;
     if (!editor) return;
 
-    // A toolbar click before the user has placed a caret has no current
-    // paragraph. In that common case, treat alignment as a whole-letter
-    // action instead of silently doing nothing.
-    if (!savedRangeRef.current) {
-      for (const block of editableBlocks(editor)) applyAlignment(block, align);
-      emit();
-      setToolbar((current) => ({
-        ...current,
-        align,
-        columns: align === "justify" ? 1 : current.columns,
-      }));
-      return;
-    }
-
-    const range = restoreRange();
-    if (!range) return;
-    const blocks = ensureSelectedBlocks(editor, range);
-    for (const block of blocks) applyAlignment(block, align);
+    // Text alignment is deliberately document-wide. Depending on a stale
+    // contentEditable selection made the same click affect either one block
+    // or the whole letter, while the toolbar still looked active.
+    for (const block of editableBlocks(editor)) applyAlignment(block, align);
     emit();
     setToolbar((current) => ({
       ...current,
@@ -508,27 +530,49 @@ export function LetterRichTextEditor({
           >
             U
           </button>
+          <span aria-hidden="true" className="mx-0.5 h-6 w-px bg-border" />
+          <label
+            className="relative flex h-8 w-9 cursor-pointer items-center justify-center rounded-md border-0 hover:bg-muted focus-within:ring-2 focus-within:ring-ring"
+            title="Schriftfarbe"
+          >
+            <span
+              aria-hidden="true"
+              className="h-4 w-4 rounded-full border border-foreground/25 shadow-sm"
+              style={{ backgroundColor: toolbar.color }}
+            />
+            <input
+              type="color"
+              aria-label="Schriftfarbe"
+              value={toolbar.color}
+              onPointerDown={() => {
+                rememberRange();
+                colorPickerActiveRef.current = true;
+              }}
+              onChange={(event) => setTextColor(event.currentTarget.value)}
+              onBlur={() => {
+                colorPickerActiveRef.current = false;
+              }}
+              className="absolute inset-0 cursor-pointer opacity-0"
+            />
+          </label>
         </div>
       ) : null}
       <div
         data-letter-rich-toolbar
-        className="relative flex flex-wrap gap-1.5 rounded-t-md border border-b-0 bg-muted/30 p-2"
+        className="relative flex flex-wrap items-start gap-2 rounded-t-md border border-b-0 bg-muted/30 p-2"
       >
-        <TextAlignmentControl
-          value={toolbar.align}
-          onChange={setAlignment}
-          ariaLabel="Textausrichtung"
-          alignments={BODY_TEXT_ALIGNMENTS}
-        />
+        <fieldset data-letter-alignment-control className={toolbarGroupClass}>
+          <legend className={toolbarLegendClass}>Textausrichtung</legend>
+          <TextAlignmentControl
+            value={toolbar.align}
+            onChange={setAlignment}
+            ariaLabel="Textausrichtung"
+            alignments={BODY_TEXT_ALIGNMENTS}
+          />
+        </fieldset>
 
-        <span aria-hidden="true" className="h-0 basis-full" />
-        <fieldset
-          data-letter-column-control
-          className="m-0 flex min-w-0 items-center gap-1 rounded-md border border-input bg-background px-1.5 pb-1 pt-0.5"
-        >
-          <legend className="px-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            Spalten
-          </legend>
+        <fieldset data-letter-column-control className={toolbarGroupClass}>
+          <legend className={toolbarLegendClass}>Spalten</legend>
           {([1, 2, 3] as const).map((count) => (
             <button
               key={count}
@@ -544,106 +588,109 @@ export function LetterRichTextEditor({
           ))}
         </fieldset>
 
-        <div className="relative">
-          <button
-            type="button"
-            className={`${toolClass} flex items-center justify-center px-2 ${toolbar.list ? activeToolClass : ""}`}
-            aria-label="Liste"
-            aria-expanded={listOpen}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => {
-              setListOpen((current) => !current);
-              setTableOpen(false);
-            }}
-          >
-            <List className="h-4 w-4" />
-          </button>
-          {listOpen ? (
-            <div className="absolute left-0 top-full z-30 mt-1 min-w-44 rounded-md border bg-popover p-1 shadow-lg">
-              {LIST_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className="flex w-full items-center gap-3 rounded px-2 py-1.5 text-left text-xs hover:bg-muted"
-                  aria-label={option.label}
-                  aria-pressed={
-                    option.value === "none" ? toolbar.list === null : toolbar.list === option.value
-                  }
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => setListStyle(option.value)}
+        <fieldset data-letter-insert-control className={toolbarGroupClass}>
+          <legend className={toolbarLegendClass}>Einfügen</legend>
+          <div className="relative">
+            <button
+              type="button"
+              className={`${toolClass} flex items-center justify-center px-2 ${toolbar.list ? activeToolClass : ""}`}
+              aria-label="Liste"
+              aria-expanded={listOpen}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                setListOpen((current) => !current);
+                setTableOpen(false);
+              }}
+            >
+              <List className="h-4 w-4" />
+            </button>
+            {listOpen ? (
+              <div className="absolute left-0 top-full z-30 mt-1 min-w-44 rounded-md border bg-popover p-1 shadow-lg">
+                {LIST_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded px-2 py-1.5 text-left text-xs hover:bg-muted"
+                    aria-label={option.label}
+                    aria-pressed={
+                      option.value === "none" ? toolbar.list === null : toolbar.list === option.value
+                    }
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => setListStyle(option.value)}
+                  >
+                    <span className="w-4 text-center text-sm">{option.marker}</span>
+                    <span>{option.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="relative">
+            <button
+              type="button"
+              className={`${toolClass} flex items-center justify-center px-2`}
+              aria-label="Tabelle"
+              aria-expanded={tableOpen}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                setTableOpen((current) => !current);
+                setListOpen(false);
+              }}
+            >
+              <Table2 className="h-4 w-4" />
+            </button>
+            {tableOpen ? (
+              <div className="absolute left-0 top-full z-30 mt-1 rounded-md border bg-popover p-2 shadow-lg">
+                <div className="mb-2 whitespace-nowrap text-center text-[11px] font-medium text-foreground">
+                  {tableHover
+                    ? `${tableHover.rows} × ${tableHover.columns} Tabelle`
+                    : "Tabellengrösse"}
+                </div>
+                <div
+                  role="grid"
+                  aria-label="Tabellengrösse auswählen"
+                  className="grid grid-cols-8 gap-1"
+                  onMouseLeave={() => setTableHover(null)}
                 >
-                  <span className="w-4 text-center text-sm">{option.marker}</span>
-                  <span>{option.label}</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
+                  {Array.from({ length: TABLE_GRID_SIZE * TABLE_GRID_SIZE }, (_, index) => {
+                    const row = Math.floor(index / TABLE_GRID_SIZE) + 1;
+                    const column = (index % TABLE_GRID_SIZE) + 1;
+                    const highlighted =
+                      !!tableHover && row <= tableHover.rows && column <= tableHover.columns;
+                    return (
+                      <button
+                        key={`${row}-${column}`}
+                        type="button"
+                        role="gridcell"
+                        aria-label={`Tabelle ${row} × ${column} einfügen`}
+                        className={`h-4 w-4 rounded-[2px] border ${
+                          highlighted
+                            ? "border-primary bg-primary/25"
+                            : "bg-background hover:bg-muted"
+                        }`}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onMouseEnter={() => setTableHover({ rows: row, columns: column })}
+                        onFocus={() => setTableHover({ rows: row, columns: column })}
+                        onClick={() => insertTable(row, column)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+          </div>
 
-        <div className="relative">
           <button
             type="button"
-            className={`${toolClass} flex items-center justify-center px-2`}
-            aria-label="Tabelle"
-            aria-expanded={tableOpen}
+            className={toolClass}
+            aria-label="Trennlinie einfügen"
             onMouseDown={(event) => event.preventDefault()}
-            onClick={() => {
-              setTableOpen((current) => !current);
-              setListOpen(false);
-            }}
+            onClick={insertRule}
           >
-            <Table2 className="h-4 w-4" />
+            ─
           </button>
-          {tableOpen ? (
-            <div className="absolute left-0 top-full z-30 mt-1 rounded-md border bg-popover p-2 shadow-lg">
-              <div className="mb-2 whitespace-nowrap text-center text-[11px] font-medium text-foreground">
-                {tableHover
-                  ? `${tableHover.rows} × ${tableHover.columns} Tabelle`
-                  : "Tabellengrösse"}
-              </div>
-              <div
-                role="grid"
-                aria-label="Tabellengrösse auswählen"
-                className="grid grid-cols-8 gap-1"
-                onMouseLeave={() => setTableHover(null)}
-              >
-                {Array.from({ length: TABLE_GRID_SIZE * TABLE_GRID_SIZE }, (_, index) => {
-                  const row = Math.floor(index / TABLE_GRID_SIZE) + 1;
-                  const column = (index % TABLE_GRID_SIZE) + 1;
-                  const highlighted =
-                    !!tableHover && row <= tableHover.rows && column <= tableHover.columns;
-                  return (
-                    <button
-                      key={`${row}-${column}`}
-                      type="button"
-                      role="gridcell"
-                      aria-label={`Tabelle ${row} × ${column} einfügen`}
-                      className={`h-4 w-4 rounded-[2px] border ${
-                        highlighted
-                          ? "border-primary bg-primary/25"
-                          : "bg-background hover:bg-muted"
-                      }`}
-                      onMouseDown={(event) => event.preventDefault()}
-                      onMouseEnter={() => setTableHover({ rows: row, columns: column })}
-                      onFocus={() => setTableHover({ rows: row, columns: column })}
-                      onClick={() => insertTable(row, column)}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        <button
-          type="button"
-          className={toolClass}
-          aria-label="Trennlinie einfügen"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={insertRule}
-        >
-          ─
-        </button>
+        </fieldset>
       </div>
       <div className="relative">
         {empty ? (
@@ -674,10 +721,10 @@ export function LetterRichTextEditor({
         />
       </div>
       <p className="text-[11px] leading-relaxed text-muted-foreground">
-        Text markieren: Fett, Kursiv, Unterstrichen und Formatierung entfernen erscheinen direkt an
-        der Auswahl. Ausrichtung, Spalten und Listen gelten für den aktuellen Absatz. Neue
-        Briefabsätze sind standardmässig im Blocksatz. Tabellen werden beim aktuellen Absatz
-        eingefügt.
+        Text markieren: Fett, Kursiv, Unterstrichen, Schriftfarbe und Formatierung entfernen
+        erscheinen direkt an der Auswahl. Die Ausrichtung gilt immer für den gesamten Brieftext;
+        Blocksatz ist standardmässig aktiv. Spalten und Listen gelten für den aktuellen Absatz.
+        Tabellen werden beim aktuellen Absatz eingefügt.
       </p>
     </div>
   );

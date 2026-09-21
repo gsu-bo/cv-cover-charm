@@ -6,6 +6,29 @@ const ALLOWED_LISTS = new Set(["bullet", "dash", "plus", "dot"]);
 
 export type LetterTextAlign = BodyTextAlignment;
 
+export function normalizeLetterInlineColor(value: string | null | undefined): string | undefined {
+  const color = value?.trim().toLowerCase();
+  if (!color) return undefined;
+
+  const hex = color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)?.[1];
+  if (hex) {
+    return hex.length === 3
+      ? `#${hex
+          .split("")
+          .map((digit) => `${digit}${digit}`)
+          .join("")}`
+      : `#${hex}`;
+  }
+
+  const rgb = color.match(
+    /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*([\d.]+))?\s*\)$/,
+  );
+  if (!rgb || (rgb[4] !== undefined && Number(rgb[4]) !== 1)) return undefined;
+  const channels = rgb.slice(1, 4).map(Number);
+  if (channels.some((channel) => channel < 0 || channel > 255)) return undefined;
+  return `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
 export function letterTextAlign(value: string | undefined): LetterTextAlign {
   return isBodyTextAlignment(value) ? value : "justify";
 }
@@ -70,6 +93,14 @@ function serializeNode(node: Node): string {
   if (tag === "hr") return "<hr>";
 
   const children = Array.from(element.childNodes).map(serializeNode).join("");
+  if (tag === "span" || tag === "font") {
+    const color = normalizeLetterInlineColor(
+      element.dataset.letterTextColor ?? element.style.color ?? element.getAttribute("color"),
+    );
+    return color
+      ? `<span data-letter-text-color="${color}" style="color: ${color}">${children}</span>`
+      : children;
+  }
   if (ALLOWED_INLINE.has(tag)) {
     const canonical = tag === "b" ? "strong" : tag === "i" ? "em" : tag;
     return `<${canonical}>${children}</${canonical}>`;
