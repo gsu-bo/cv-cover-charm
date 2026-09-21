@@ -341,6 +341,8 @@ export function CvCanvas({
   const kontaktZeilen = [adresse, kontakt].filter(Boolean);
   const angaben = [
     p.geburtsdatum && `Geburtsdatum ${p.geburtsdatum}`,
+    p.geburtsort && `Geburtsort ${p.geburtsort}`,
+    p.heimatort && `Heimatort ${p.heimatort}`,
     p.nationalitaet && `Nationalität ${p.nationalitaet}`,
   ].filter(Boolean) as string[];
   const nameSize = smartNameSize(name, layout) * TYPE_BASE * titleScale;
@@ -1641,7 +1643,16 @@ export function CvCanvas({
       !personLayoutCustomized &&
       pageIndex === 0 &&
       placements.kontakt === "side" &&
-      !!(p.adresse || p.plzOrt || p.telefon || p.email || p.geburtsdatum || p.nationalitaet);
+      !!(
+        p.adresse ||
+        p.plzOrt ||
+        p.telefon ||
+        p.email ||
+        p.geburtsdatum ||
+        p.geburtsort ||
+        p.heimatort ||
+        p.nationalitaet
+      );
     const hasSchool = onPage("schule") && data.schule.some(entryFilled);
     const hasExperience = onPage("erfahrung") && data.erfahrung.some(entryFilled);
     const hasLanguages =
@@ -2480,7 +2491,17 @@ export function CvCanvas({
                         data-cv-muted
                         style={{ marginTop: sidePlan.compact ? "1.2mm" : "2mm", color: side.muted }}
                       >
-                        Geb. {p.geburtsdatum}
+                        Geburtsdatum {p.geburtsdatum}
+                      </div>
+                    )}
+                    {p.geburtsort && (
+                      <div data-cv-muted style={{ color: side.muted }}>
+                        Geburtsort {p.geburtsort}
+                      </div>
+                    )}
+                    {p.heimatort && (
+                      <div data-cv-muted style={{ color: side.muted }}>
+                        Heimatort {p.heimatort}
                       </div>
                     )}
                     {p.nationalitaet && (

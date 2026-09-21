@@ -92,6 +92,8 @@ export function applyDocxSidebarXml(
       [person.telefon, person.email].filter(Boolean).join(" · "),
       [
         person.geburtsdatum ? `Geburtsdatum ${person.geburtsdatum}` : "",
+        person.geburtsort ? `Geburtsort ${person.geburtsort}` : "",
+        person.heimatort ? `Heimatort ${person.heimatort}` : "",
         person.nationalitaet ? `Nationalität ${person.nationalitaet}` : "",
       ]
         .filter(Boolean)

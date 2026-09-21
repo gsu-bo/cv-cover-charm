@@ -40,6 +40,8 @@ function cvBodyCandidates(data: CvData): string[] {
     person.telefon,
     person.email,
     person.geburtsdatum,
+    person.geburtsort ?? "",
+    person.heimatort ?? "",
     person.nationalitaet,
     [person.adresse, person.plzOrt].filter(Boolean).join(", "),
     [person.telefon, person.email].filter(Boolean).join(" · "),
