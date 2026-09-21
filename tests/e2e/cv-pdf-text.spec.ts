@@ -373,45 +373,39 @@ test.describe("CV PDF real text layer", () => {
     await expect(exportPhoto.locator("img")).toHaveCount(1);
     await expect(exportPhoto.locator("canvas")).toHaveCount(0);
     await expect(exportPhoto).toHaveCSS("background-image", "none");
-    await expect
-      .poll(() =>
-        exportPhoto.locator("img").evaluate((image) => image.complete && image.naturalWidth > 0),
-      )
-      .toBe(true);
 
     await page.evaluate(() => {
-      const originalToDataUrl = HTMLCanvasElement.prototype.toDataURL;
-      HTMLCanvasElement.prototype.toDataURL = function (type?: string, quality?: number) {
-        if (this.width > 1_000 && this.height > 1_000) {
-          const photo = document.querySelector<HTMLElement>(
-            '[data-dossier-document="cv"][data-export-mode="true"] [data-cv-photo]',
-          );
-          const page = photo?.closest<HTMLElement>("[data-cv-page]");
-          const context = this.getContext("2d", { willReadFrequently: true });
-          if (photo && page && context) {
-            const photoBox = photo.getBoundingClientRect();
-            const pageBox = page.getBoundingClientRect();
-            const scaleX = this.width / pageBox.width;
-            const scaleY = this.height / pageBox.height;
-            const sample = (relativeX: number, relativeY: number) =>
-              Array.from(
-                context.getImageData(
-                  Math.round((photoBox.left - pageBox.left + photoBox.width * relativeX) * scaleX),
-                  Math.round((photoBox.top - pageBox.top + photoBox.height * relativeY) * scaleY),
-                  1,
-                  1,
-                ).data,
-              );
-            Object.assign(window, {
-              __cvRawCanvasProbe: {
-                center: sample(0.5, 0.5),
-                frame: sample(0.02, 0.5),
-              },
-            });
-          }
-        }
-        return originalToDataUrl.call(this, type, quality);
-      };
+      document.documentElement.dataset.pdfRasterDiagnostics = "true";
+      window.addEventListener(
+        "cv-cover-charm:pdf-raster-canvas",
+        ((event: CustomEvent<{ canvas: HTMLCanvasElement; page: HTMLElement }>) => {
+          const { canvas, page } = event.detail;
+          const photo = page.querySelector<HTMLElement>("[data-cv-photo]");
+          const context = canvas.getContext("2d", { willReadFrequently: true });
+          if (!photo || !context) return;
+
+          const photoBox = photo.getBoundingClientRect();
+          const pageBox = page.getBoundingClientRect();
+          const scaleX = canvas.width / pageBox.width;
+          const scaleY = canvas.height / pageBox.height;
+          const sample = (relativeX: number, relativeY: number) =>
+            Array.from(
+              context.getImageData(
+                Math.round((photoBox.left - pageBox.left + photoBox.width * relativeX) * scaleX),
+                Math.round((photoBox.top - pageBox.top + photoBox.height * relativeY) * scaleY),
+                1,
+                1,
+              ).data,
+            );
+          Object.assign(window, {
+            __cvRawCanvasProbe: {
+              center: sample(0.5, 0.5),
+              frame: sample(0.02, 0.5),
+            },
+          });
+        }) as EventListener,
+        { once: true },
+      );
     });
 
     const download = await downloadStandaloneCv(page);
