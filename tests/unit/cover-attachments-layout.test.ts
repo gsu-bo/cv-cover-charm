@@ -45,8 +45,8 @@ describe("optional cover attachments", () => {
       expect(body, template.name).toBeDefined();
       expect(title!.style.above, template.name).toBe("beilagen");
       expect(title!.style.align, template.name).toBe("right");
-      const expectedX = template.id === "diagonal" ? 132 : 110;
-      const expectedWidth = template.id === "diagonal" ? 58 : 80;
+      const expectedX = template.id === "diagonal" ? 142 : 110;
+      const expectedWidth = template.id === "diagonal" ? 48 : 80;
       expect(title!.style.x, template.name).toBe(expectedX);
       expect(title!.style.w, template.name).toBe(expectedWidth);
 
