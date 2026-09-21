@@ -27,60 +27,76 @@ test("legacy JPEG ICC profiles are detected without flagging browser-normalized 
   expect(jpegDataUrlHasIccProfile("data:image/png;base64,AAAA")).toBe(false);
 });
 
-test("PDF clone re-encodes only ICC-bearing legacy JPEGs and caches the result", () => {
-  const legacy = jpegDataUrl("\xff\xd8\xff\xe2\x00\x20ICC_PROFILE\x00\x01\x01legacy-photo");
+test("PDF clone uses the loaded live ICC photo when the cloned image is not decoded yet", () => {
+  const legacy = jpegDataUrl("\xff\xd8\xff\xe2\x00\x20ICC_PROFILE\x00\x01\x01late-clone-photo");
   const safe = jpegDataUrl("\xff\xd8\xff\xe0\x00\x10JFIF\x00safe-photo");
   const output = jpegDataUrl("\xff\xd8\xff\xe0\x00\x10JFIF\x00normalized-output");
   let canvasCreates = 0;
   let drawCalls = 0;
+  let drawnImage: HTMLImageElement | null = null;
 
-  const makeImage = (src: string) => {
-    const ownerDocument = {
-      createElement: () => {
-        canvasCreates += 1;
-        return {
-          width: 0,
-          height: 0,
-          getContext: () => ({
-            fillStyle: "",
-            fillRect: () => undefined,
-            drawImage: () => {
-              drawCalls += 1;
-            },
-          }),
-          toDataURL: () => output,
-        };
-      },
-    };
+  const liveImages: HTMLImageElement[] = [];
+  const liveDocument = {
+    querySelectorAll: () => liveImages,
+  } as unknown as Document;
+  const cloneDocument = {
+    defaultView: { frameElement: { ownerDocument: liveDocument } },
+    createElement: () => {
+      canvasCreates += 1;
+      return {
+        width: 0,
+        height: 0,
+        getContext: () => ({
+          fillStyle: "",
+          fillRect: () => undefined,
+          drawImage: (image: HTMLImageElement) => {
+            drawCalls += 1;
+            drawnImage = image;
+          },
+        }),
+        toDataURL: () => output,
+      };
+    },
+  } as unknown as Document;
 
-    return {
+  const makeImage = (
+    src: string,
+    ownerDocument: Document,
+    complete = true,
+    naturalWidth = 1200,
+    naturalHeight = 994,
+  ) =>
+    ({
       tagName: "IMG",
       src,
-      complete: true,
-      naturalWidth: 1200,
-      naturalHeight: 994,
+      complete,
+      naturalWidth,
+      naturalHeight,
       ownerDocument,
       getAttribute: (name: string) => (name === "src" ? src : null),
-    } as unknown as HTMLImageElement;
-  };
+    }) as unknown as HTMLImageElement;
 
-  const safeImage = makeImage(safe);
-  const legacyImage = makeImage(legacy);
+  const liveLegacyImage = makeImage(legacy, liveDocument);
+  liveImages.push(liveLegacyImage);
+
+  const safeImage = makeImage(safe, cloneDocument);
+  const legacyClone = makeImage(legacy, cloneDocument, false, 0, 0);
   const root = {
     tagName: "DIV",
-    querySelectorAll: () => [safeImage, legacyImage],
+    querySelectorAll: () => [safeImage, legacyClone],
   } as unknown as HTMLElement;
 
   normalizeDataUrlJpegsForHtml2Canvas(root);
 
   expect(safeImage.src).toBe(safe);
-  expect(legacyImage.src).toBe(output);
+  expect(legacyClone.src).toBe(output);
   expect(canvasCreates).toBe(1);
   expect(drawCalls).toBe(1);
+  expect(drawnImage).toBe(liveLegacyImage);
 
   // A second clone with the same legacy source uses the cached normalized JPEG
-  // instead of paying another lossy encode and canvas allocation.
-  const repeatedLegacy = makeImage(legacy);
+  // even when that clone has not decoded the original source either.
+  const repeatedLegacy = makeImage(legacy, cloneDocument, false, 0, 0);
   normalizeDataUrlJpegsForHtml2Canvas({
     tagName: "DIV",
     querySelectorAll: () => [repeatedLegacy],

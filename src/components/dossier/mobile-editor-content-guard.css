@@ -1,14 +1,25 @@
 /*
- * Mobile CV content guard.
+ * Mobile editor content safety.
  *
- * The legacy phone cleanup in styles.css hides the first editor child. On the
- * CV route that first child can be the complete data-cv-content-editor, which
- * accidentally removes Persönliche Angaben, Schule, Erfahrung, etc. Keep the
- * actual CV content editor visible; only optional instructional chrome may be
- * reduced on phones.
+ * `styles.css` still contains an old mobile cleanup that hides the first div
+ * for letter/CV editors. That assumption is unsafe because the first child is
+ * not guaranteed to be disposable helper chrome: on the CV route it can be
+ * the complete content editor, and on either route it can be a warning.
+ *
+ * This stylesheet is loaded after the legacy rule and deliberately neutralizes
+ * that positional hiding. Mobile may show one extra helper row; it must never
+ * hide real form content because of sibling order.
  */
 @media (max-width: 639px) {
+  body:has([data-letter-page]) [data-editor-panel] > aside > div > div:first-child,
+  body:has([data-cv-page]) [data-editor-panel] > aside > div > div:first-child {
+    display: block !important;
+  }
+
+  /* Restore the CV wrapper's actual layout when it happens to be first. */
   [data-editor-panel] [data-cv-content-editor] {
     display: flex !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
   }
 }

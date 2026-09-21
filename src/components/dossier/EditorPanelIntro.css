@@ -28,20 +28,14 @@
   }
 }
 
-/* Every editor starts with the same quiet, compact helper row. Route-specific
- * warnings remain separate cards below it.
+/*
+ * Do not infer helper/intro chrome from DOM position.
+ *
+ * The three routes do not have the same first child: on the CV route the first
+ * div can be the complete content editor (or a layout warning). Styling
+ * `div:first-child` as disposable helper chrome therefore mutates real form
+ * content. Route-specific helper rows keep their own local classes instead.
  */
-[data-editor-panel] > aside > div:last-child > div:first-child {
-  min-height: 1.75rem;
-  margin: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  padding: 0.125rem 0.25rem !important;
-  color: var(--muted-foreground);
-  font-size: 0.75rem;
-  line-height: 1.25rem;
-}
 
 /* The old routes had hand-written horizontal separators before design
  * controls. Group markers in Section now carry that hierarchy without using
