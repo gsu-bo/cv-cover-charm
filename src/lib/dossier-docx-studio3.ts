@@ -6,6 +6,7 @@ import type {
 } from "@/lib/dossier-pdf-document";
 import { createWarmDossierDocxBlob } from "@/lib/dossier-docx-warm";
 import { downloadBlob } from "@/lib/download";
+import { cvPersonalInfoLines } from "@/lib/cv-personal-info";
 
 const MM_TO_TWIPS = 1440 / 25.4;
 const WORD_FONT = "Cabin";
@@ -317,14 +318,7 @@ function replaceCvIntro(source: string, cv: CvPdfDocument, paper: string) {
   const fullName = [person.vorname, person.nachname].filter(Boolean).join(" ");
   const address = [person.adresse, person.plzOrt].filter(Boolean).join(", ");
   const direct = [person.telefon, person.email].filter(Boolean).join(" · ");
-  const personal = [
-    person.geburtsdatum ? `Geburtsdatum ${person.geburtsdatum}` : "",
-    person.geburtsort ? `Geburtsort ${person.geburtsort}` : "",
-    person.heimatort ? `Heimatort ${person.heimatort}` : "",
-    person.nationalitaet ? `Nationalität ${person.nationalitaet}` : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const personal = cvPersonalInfoLines(person, cv.design).join(" · ");
 
   const header = [
     paragraph(fullName, 9.5, paper, { bold: true, after: 0.2 }),

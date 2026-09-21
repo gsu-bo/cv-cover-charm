@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { PAGE } from "@/default-config";
 import { DossierHeaderFooterChrome } from "@/components/dossier/DossierHeaderFooterChrome";
 import { DossierSheetBackground } from "@/components/dossier/DossierSheetBackground";
@@ -38,6 +38,7 @@ import { dossierThemeFor } from "@/lib/dossier-theme";
 import type { DossierChromeContact, DossierChromeOptions } from "@/lib/dossier-chrome";
 import type { DossierChromeDocumentContent } from "@/lib/dossier-chrome-content";
 import { cvBodyData } from "@/lib/dossier-body-contact";
+import { cvPersonalInfoRows } from "@/lib/cv-personal-info";
 import { dossierPhotoCropStyle, dossierPhotoRadius, dossierPhotoRatio } from "@/lib/dossier-photo";
 import { getCvPhotoStyle, subscribeCvPhotoStyle } from "./photo";
 import {
@@ -339,12 +340,25 @@ export function CvCanvas({
   const adresse = [p.adresse, p.plzOrt].filter(Boolean).join(" · ");
   const kontakt = [p.telefon, p.email].filter(Boolean).join(" · ");
   const kontaktZeilen = [adresse, kontakt].filter(Boolean);
-  const angaben = [
-    p.geburtsdatum && `Geburtsdatum ${p.geburtsdatum}`,
-    p.geburtsort && `Geburtsort ${p.geburtsort}`,
-    p.heimatort && `Heimatort ${p.heimatort}`,
-    p.nationalitaet && `Nationalität ${p.nationalitaet}`,
-  ].filter(Boolean) as string[];
+  const angaben = cvPersonalInfoRows(p);
+  const personalInfoColons = design.personalInfoColons !== false;
+  const personalInfoAligned = design.personalInfoAligned !== false;
+  const personalInfoGridStyle = personalInfoAligned
+    ? { display: "grid", gridTemplateColumns: "max-content minmax(0, 1fr)", columnGap: "2.5mm" }
+    : undefined;
+  const personalInfoRows = () =>
+    angaben.map((row) =>
+      personalInfoAligned ? (
+        <Fragment key={row.key}>
+          <span>{row.label}{personalInfoColons ? ":" : ""}</span>
+          <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{row.value}</span>
+        </Fragment>
+      ) : (
+        <div key={row.key}>
+          {row.label}{personalInfoColons ? ":" : ""} {row.value}
+        </div>
+      ),
+    );
   const nameSize = smartNameSize(name, layout) * TYPE_BASE * titleScale;
   const infoMirrored = infoPosition === "mirrored";
   const physicalContentBox = <T extends { left: number; right: number }>(logicalBox: T): T =>
@@ -808,10 +822,11 @@ export function CvCanvas({
               </div>
             ))}
             {angaben.length > 0 && (
-              <div data-cv-muted style={{ marginTop: "1mm", color: pal.muted }}>
-                {angaben.map((line) => (
-                  <div key={line}>{line}</div>
-                ))}
+              <div
+                data-cv-muted
+                style={{ marginTop: "1mm", color: pal.muted, ...personalInfoGridStyle }}
+              >
+                {personalInfoRows()}
               </div>
             )}
           </div>
@@ -935,11 +950,10 @@ export function CvCanvas({
                   color: pal.muted,
                   lineHeight: 1.35,
                   textAlign: "left",
+                  ...personalInfoGridStyle,
                 }}
               >
-                {angaben.map((line) => (
-                  <div key={line}>{line}</div>
-                ))}
+                {personalInfoRows()}
               </div>
             )}
           </div>
@@ -1116,11 +1130,10 @@ export function CvCanvas({
                   color: pal.muted,
                   lineHeight: 1.35,
                   textAlign: "left",
+                  ...personalInfoGridStyle,
                 }}
               >
-                {angaben.map((line) => (
-                  <div key={line}>{line}</div>
-                ))}
+                {personalInfoRows()}
               </div>
             )}
           </div>
@@ -2485,28 +2498,18 @@ export function CvCanvas({
                       </div>
                     )}
                     {p.email && <div>{p.email}</div>}
-                    {p.geburtsdatum && (
+                    {angaben.length > 0 && (
                       <div
                         data-cv-date
                         data-cv-muted
-                        style={{ marginTop: sidePlan.compact ? "1.2mm" : "2mm", color: side.muted }}
+                        data-cv-personal-info
+                        style={{
+                          marginTop: sidePlan.compact ? "1.2mm" : "2mm",
+                          color: side.muted,
+                          ...personalInfoGridStyle,
+                        }}
                       >
-                        Geburtsdatum {p.geburtsdatum}
-                      </div>
-                    )}
-                    {p.geburtsort && (
-                      <div data-cv-muted style={{ color: side.muted }}>
-                        Geburtsort {p.geburtsort}
-                      </div>
-                    )}
-                    {p.heimatort && (
-                      <div data-cv-muted style={{ color: side.muted }}>
-                        Heimatort {p.heimatort}
-                      </div>
-                    )}
-                    {p.nationalitaet && (
-                      <div data-cv-muted style={{ color: side.muted }}>
-                        Nationalität {p.nationalitaet}
+                        {personalInfoRows()}
                       </div>
                     )}
                   </div>

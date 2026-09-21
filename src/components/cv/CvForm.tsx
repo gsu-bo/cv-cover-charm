@@ -432,12 +432,20 @@ export function FormCvPerson({
   onChange,
   contactLabel,
   onContactLabel,
+  personalInfoColons,
+  onPersonalInfoColons,
+  personalInfoAligned,
+  onPersonalInfoAligned,
 }: {
   person: CvPerson;
   onChange: (p: Partial<CvPerson>) => void;
   /** Eigene Überschrift über den Kontaktangaben; leer heisst „Kontakt". */
   contactLabel: string;
   onContactLabel: (value: string) => void;
+  personalInfoColons: boolean;
+  onPersonalInfoColons: (value: boolean) => void;
+  personalInfoAligned: boolean;
+  onPersonalInfoAligned: (value: boolean) => void;
 }) {
   const photoStyle = useSyncExternalStore(
     subscribeCvPhotoStyle,
@@ -634,6 +642,24 @@ export function FormCvPerson({
             onChange={(e) => onChange({ nationalitaet: e.target.value })}
           />
         </Field>
+      </div>
+      <div className="grid gap-2 rounded-md border bg-muted/20 p-2.5 sm:grid-cols-2">
+        <label className="flex items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            checked={personalInfoColons}
+            onChange={(event) => onPersonalInfoColons(event.target.checked)}
+          />
+          <span>Doppelpunkte anzeigen</span>
+        </label>
+        <label className="flex items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            checked={personalInfoAligned}
+            onChange={(event) => onPersonalInfoAligned(event.target.checked)}
+          />
+          <span>Gemeinsamer Abstand</span>
+        </label>
       </div>
     </div>
   );

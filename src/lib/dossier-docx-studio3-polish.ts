@@ -9,6 +9,7 @@ import {
 } from "@/lib/dossier-docx-studio3";
 import { transformStoredDocxDocumentXml } from "@/lib/dossier-docx-package";
 import { downloadBlob } from "@/lib/download";
+import { cvPersonalInfoLines } from "@/lib/cv-personal-info";
 
 export { studio3DossierDocxSupported };
 
@@ -141,14 +142,7 @@ function polishDocumentXml(
   // dossier page. Keep the same editable masthead content, but let it flow
   // compactly inside the band and retain a 20 mm hand-off to the first section.
   const cvTitle = (cv.data.titel || "Lebenslauf").toUpperCase();
-  const cvPersonal = [
-    cv.data.person.geburtsdatum ? `Geburtsdatum ${cv.data.person.geburtsdatum}` : "",
-    cv.data.person.geburtsort ? `Geburtsort ${cv.data.person.geburtsort}` : "",
-    cv.data.person.heimatort ? `Heimatort ${cv.data.person.heimatort}` : "",
-    cv.data.person.nationalitaet ? `Nationalität ${cv.data.person.nationalitaet}` : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const cvPersonal = cvPersonalInfoLines(cv.data.person, cv.design).join(" · ");
   xml = replaceParagraphBefore(xml, cvTitle, 0);
   if (cvPersonal) xml = replaceParagraphBefore(xml, cvPersonal, 0);
   xml = replaceSpacerAfter(xml, 'id="studio3-cv-primary"', 29, 20);
