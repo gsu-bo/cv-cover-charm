@@ -106,6 +106,7 @@ export function resolveLayout(
     contactTitle &&
     attachmentsTitle &&
     attachmentsBody &&
+    contactTitleBlock.lines.length > 0 &&
     attachmentsTitleBlock.style.above === "beilagen" &&
     !attachmentsTitleBlock.style.follows &&
     attachmentsBodyBlock.style.anchorBottom === true

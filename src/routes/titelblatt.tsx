@@ -11,6 +11,8 @@ import {
 } from "@/components/cover/CoverForm";
 import { CoverCanvas, type Point } from "@/components/cover/CoverCanvas";
 import { TemplatePicker } from "@/components/cover/TemplatePicker";
+import { normalizeActiveTemplateId } from "@/components/cover/fresh-templates";
+import { useTemplateQaTemplateSwitch } from "@/lib/template-qa-switch";
 import { ColorChooser } from "@/components/cover/ColorChooser";
 import { ScaledPreview } from "@/components/cover/ScaledPreview";
 import { ThemeToggle } from "@/components/cover/ThemeToggle";
@@ -51,6 +53,7 @@ import { Section } from "@/components/cover/Section";
 import { buildBlocks, type StyleOverrides } from "@/components/cover/layouts";
 import { downloadBlob, safeFileName } from "@/lib/download";
 import { downloadCombinedDossierPdf } from "@/lib/dossier-pdf";
+import { normalizeCssZoomForHtml2Canvas } from "@/lib/html2canvas-export";
 import {
   COVER_STORAGE_KEY,
   CV_STORAGE_KEY,
@@ -258,6 +261,7 @@ function Titelblatt() {
   );
   const [data, setData] = useState<CoverData>(emptyData);
   const [template, setTemplate] = useState<TemplateId>(DEFAULTS.TEMPLATE);
+  useTemplateQaTemplateSwitch(template, setTemplate, "both");
   const [colorsByTemplate, setColorsByTemplate] =
     useState<Record<TemplateId, Record<string, string>>>(allDefaultColors);
   const [layoutByTemplate, setLayoutByTemplate] =
@@ -599,7 +603,7 @@ function Titelblatt() {
     try {
       const p = JSON.parse(saved);
       if (p.data) setData(prefill({ ...emptyData, ...p.data }));
-      if (p.template && TEMPLATES.some((t) => t.id === p.template)) setTemplate(p.template);
+      if (p.template) setTemplate(normalizeActiveTemplateId(p.template));
       if (p.colors) setColorsByTemplate((c) => ({ ...c, ...p.colors }));
       if (p.layout) setLayoutByTemplate((l) => ({ ...l, ...p.layout }));
       setCustoms(sanitizeCustoms(p.customs));
@@ -760,7 +764,7 @@ function Titelblatt() {
       font?: FontKey | null;
     };
     if (p.data) setData(prefill({ ...emptyData, ...p.data, foto: data.foto }));
-    if (p.template && TEMPLATES.some((t) => t.id === p.template)) setTemplate(p.template);
+    if (p.template) setTemplate(normalizeActiveTemplateId(p.template));
     if (p.colors) setColorsByTemplate((c) => ({ ...c, ...p.colors }));
     setLayoutByTemplate({ ...allEmptyLayouts(), ...(p.layout ?? {}) });
     setCustoms(sanitizeCustoms(p.customs));
@@ -823,6 +827,9 @@ function Titelblatt() {
         windowHeight: PAGE.HEIGHT,
         scrollX: 0,
         scrollY: 0,
+        onclone: (_clonedDocument, clonedPage) => {
+          normalizeCssZoomForHtml2Canvas(clonedPage as HTMLElement);
+        },
       });
       const img = canvas.toDataURL("image/jpeg", PDF.QUALITY);
       const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
@@ -913,11 +920,8 @@ function Titelblatt() {
         }
         keepSnapshot("Vor dem Laden", true);
         setData(prefill({ ...emptyData, ...(legacy.data as Partial<CoverData>) }));
-        if (
-          typeof legacy.template === "string" &&
-          TEMPLATES.some((t) => t.id === legacy.template)
-        ) {
-          setTemplate(legacy.template as TemplateId);
+        if (typeof legacy.template === "string") {
+          setTemplate(normalizeActiveTemplateId(legacy.template));
         }
         if (legacy.colors)
           setColorsByTemplate((c) => ({

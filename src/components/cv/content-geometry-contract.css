@@ -1,0 +1,19 @@
+/*
+ * CV text-area geometry has exactly one owner: CvCanvasBase.
+ *
+ * The renderer resolves template defaults, shared header/footer chrome and the
+ * user's explicit page margins, then publishes the final per-page values as
+ * --cv-main-top / --cv-main-bottom. Template styles may still shape surfaces,
+ * motifs and horizontal columns, but they must never move the document text
+ * vertically. Keeping this rule on both the hidden measurement page and the
+ * rendered page also guarantees that pagination matches preview/PDF output.
+ *
+ * The deliberately complete root selector makes this contract stronger than
+ * legacy template selectors regardless of stylesheet chunk order.
+ */
+[data-dossier-document="cv"][data-cv-template][data-cv-layout][data-cv-archetype][data-cv-photo-position][data-cv-info-position]
+  :is([data-cv-page], [data-cv-measure-page])
+  > [data-cv-main] {
+  top: var(--cv-main-top) !important;
+  bottom: var(--cv-main-bottom) !important;
+}

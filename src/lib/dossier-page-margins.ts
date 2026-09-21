@@ -140,7 +140,9 @@ function writeState(state: DossierPageMarginsState) {
     // The in-memory copy still keeps the current editor session responsive.
   }
   applyDossierPageMarginsToDocument(normalized);
-  window.dispatchEvent(new CustomEvent(DOSSIER_PAGE_MARGINS_EVENT));
+  if (typeof window.dispatchEvent === "function" && typeof CustomEvent !== "undefined") {
+    window.dispatchEvent(new CustomEvent(DOSSIER_PAGE_MARGINS_EVENT));
+  }
 }
 
 export function setDossierPageMargins(

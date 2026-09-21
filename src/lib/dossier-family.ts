@@ -76,10 +76,9 @@ const TEMPLATE_FAMILY: Record<string, DossierFamilyId> = {
   verlauf: "modern",
   citrus: "modern",
 
-  // Fresh 21-42
+  // Fresh templates
   edge: "modern",
   glow: "modern",
-  frame: "executive",
   monoLuxe: "editorial",
   horizon: "modern",
   sunrise: "modern",
@@ -99,6 +98,8 @@ const TEMPLATE_FAMILY: Record<string, DossierFamilyId> = {
   orbit: "modern",
   ribbon: "modern",
   cove: "modern",
+
+  diagonal: "modern",
 
   // Dark Edel variant: same premium typography family as Edel, with a true dark sheet.
   edelDark: "executive",

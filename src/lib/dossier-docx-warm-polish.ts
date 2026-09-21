@@ -34,6 +34,25 @@ function replaceFirstAfter(source: string, anchor: string, search: string, repla
   return source.slice(0, index) + replacement + source.slice(index + search.length);
 }
 
+function reclaimWarmCvPaginationSlack(source: string) {
+  const sections = [...source.matchAll(/<w:sectPr\b[\s\S]*?<\/w:sectPr>/g)];
+  const cvSection = sections.at(-1);
+  if (!cvSection || cvSection.index === undefined) return source;
+
+  const sectionStart = cvSection.index;
+  const section = cvSection[0];
+  const topMargin = section.match(/w:top="(\d+)"/);
+  if (!topMargin) return source;
+
+  // The intentional 32 mm contact masthead leaves Warm exactly on a
+  // LibreOffice pagination boundary. Keep the masthead unchanged and reclaim
+  // only 0.35 mm of the body safety gap in the final (CV) section so the last
+  // reference phone number remains on page three.
+  const compactTop = Math.max(0, Number(topMargin[1]) - twips(0.35));
+  const compactSection = section.replace(topMargin[0], `w:top="${compactTop}"`);
+  return source.slice(0, sectionStart) + compactSection + source.slice(sectionStart + section.length);
+}
+
 function polishDocumentXml(source: string, cover: CoverPdfDocument) {
   const primary = wordColor(cover.colors.primary, "0F766E");
   const secondary = wordColor(cover.colors.secondary, "F59E0B");
@@ -71,7 +90,7 @@ function polishDocumentXml(source: string, cover: CoverPdfDocument) {
     xml = replaceFirstAfter(xml, "Lehrbeginn", oldBottomSpacer, newBottomSpacer);
   }
 
-  return xml;
+  return reclaimWarmCvPaginationSlack(xml);
 }
 
 export async function createPolishedWarmDossierDocxBlob(

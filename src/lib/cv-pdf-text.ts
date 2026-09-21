@@ -22,17 +22,10 @@ function installRasterTextMask() {
 
   const style = document.createElement("style");
   style.id = MASK_STYLE_ID;
-  style.textContent = `
-html[data-dossier-template][data-dossier-template][data-dossier-template]
-  [data-dossier-document="cv"][data-export-mode="true"] [data-cv-page],
-html[data-dossier-template][data-dossier-template][data-dossier-template]
-  [data-dossier-document="cv"][data-export-mode="true"] [data-cv-page] * {
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
-  text-decoration-color: transparent !important;
-  text-shadow: none !important;
-}
-`;
+  // Stable compatibility/diagnostic hook only. Visible CV typography belongs
+// to Chromium/html2canvas; hiding it here would force jsPDF to become a
+// second visible typography engine and reintroduce condensed/duplicate text.
+style.textContent = "";
   document.head.appendChild(style);
 }
 
@@ -157,9 +150,8 @@ function fittedHorizontalScale(pdf: JsPdf, text: string, targetWidthMm: number):
   const renderedWidthMm = pdf.getTextWidth(text);
   if (!Number.isFinite(renderedWidthMm) || renderedWidthMm <= 0 || targetWidthMm <= 0) return 1;
 
-  // Browser and jsPDF can use different physical fonts for the same logical
-  // family. Keep the browser-measured token width so neighbouring words retain
-  // the whitespace seen in preview. The clamp is only a corruption guard.
+  // The native layer is invisible, but matching the browser token width keeps
+  // selection/search geometry aligned with the visible raster typography.
   return Math.max(0.5, Math.min(1.5, targetWidthMm / renderedWidthMm));
 }
 
@@ -241,18 +233,13 @@ function drawCvTextLayer(pdf: JsPdf, page: HTMLElement) {
           rects.length === 1
             ? fittedHorizontalScale(pdf, fragment.text, fragment.rect.width * mmX)
             : 1;
-        pdf.text(fragment.text, x, baseline, { horizontalScale });
-
-        if (style.textDecorationLine.includes("underline")) {
-          pdf.setDrawColor(red, green, blue);
-          pdf.setLineWidth(0.18);
-          pdf.line(
-            x,
-            baseline + 0.55,
-            x + fragment.rect.width * mmX,
-            baseline + 0.55,
-          );
-        }
+        // Browser/html2canvas owns every visible glyph and decoration. Keep
+        // native text only for search/copy/selection; jsPDF metrics must never
+        // affect the visible CV typography.
+        pdf.text(fragment.text, x, baseline, {
+          horizontalScale,
+          renderingMode: "invisible",
+        });
       }
     }
 
@@ -261,9 +248,9 @@ function drawCvTextLayer(pdf: JsPdf, page: HTMLElement) {
 }
 
 /**
- * Zeichnet den sichtbaren CV-Text deterministisch auf die aktuell aktive PDF-Seite.
- * Die Raster-Maske wird dafür kurz deaktiviert, damit echte Textfarben und Geometrie
- * aus dem Browserlayout gelesen werden können.
+ * Ergänzt die aktuell sichtbare CV-Seite um eine unsichtbare, durchsuchbare
+ * PDF-Textebene. Die sichtbare Typografie selbst bleibt Browser-Raster und ist
+ * damit identisch zur Vorschau und zum Motivationsschreiben.
  */
 export function addCvTextLayer(pdf: JsPdf, page: HTMLElement) {
   withRasterTextVisible(() => drawCvTextLayer(pdf, page));
@@ -319,11 +306,6 @@ function applyStandaloneTextLayer(pdf: JsPdf): boolean {
   return true;
 }
 
-function shouldExposeNativeText(pdf: JsPdf): boolean {
-  const subject = subjects.get(pdf) ?? "";
-  return /(?:Bewerbungsdossier|Motivationsschreiben|Lebenslauf)/i.test(subject);
-}
-
 /**
  * Der separate CV-Download benutzt noch den bestehenden jsPDF-Ausgabepunkt.
  * Das Gesamtdossier ruft addCvTextLayer dagegen direkt im Exportpfad auf und
@@ -339,31 +321,11 @@ function installJsPdfPlugin() {
     function initializedCvPdfTextPlugin(this: JsPdf) {
       const originalSetProperties = this.setProperties as unknown as UnknownFn;
       const originalOutput = this.output as unknown as UnknownFn;
-      const originalText = this.text as unknown as UnknownFn;
 
       (this as unknown as { setProperties: UnknownFn }).setProperties = (...args: unknown[]) => {
         const properties = (args[0] ?? {}) as PdfProperties;
         if (typeof properties.subject === "string") subjects.set(this, properties.subject);
         return Reflect.apply(originalSetProperties, this, args);
-      };
-
-      // Letter text layers historically used renderingMode="invisible" because
-      // html2canvas owned their visible glyphs. For dossier PDFs we now expose
-      // that same native text layer, matching the CV's native Cabin exactly.
-      (this as unknown as { text: UnknownFn }).text = (...args: unknown[]) => {
-        const options = args[3];
-        if (
-          shouldExposeNativeText(this) &&
-          options &&
-          typeof options === "object" &&
-          !Array.isArray(options) &&
-          (options as { renderingMode?: string }).renderingMode === "invisible"
-        ) {
-          const nextArgs = [...args];
-          nextArgs[3] = { ...(options as Record<string, unknown>), renderingMode: "fill" };
-          return Reflect.apply(originalText, this, nextArgs);
-        }
-        return Reflect.apply(originalText, this, args);
       };
 
       (this as unknown as { output: UnknownFn }).output = (...args: unknown[]) => {

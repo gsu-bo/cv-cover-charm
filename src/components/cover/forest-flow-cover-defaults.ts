@@ -1,0 +1,362 @@
+import type { StyleOverrides } from "./layouts-base";
+import type { Block, BlockStyle, TemplateId } from "./types";
+
+/**
+ * Forest Flow used to pin editable cover blocks through late CSS `!important`
+ * geometry. That made the template look correct at rest, but it also meant the
+ * editor could save a drag/resize override without ever being able to display
+ * it. Keep reviewed compositions as normal block defaults instead: reset returns
+ * here, while explicit user overrides always remain authoritative.
+ *
+ * Ribbon and Diagonal follow the same ownership rule. Their visual structures
+ * are CSS-owned, but all editable cover content remains editor-owned. The legacy
+ * function name is kept for import stability while these reviewed compositions
+ * share this small default adapter.
+ */
+const FOREST_FLOW_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
+  eyebrow: { x: 7, y: 17, w: 38, follows: null, above: null, anchorBottom: false },
+  ortDatum: { x: 7, y: 268, w: 38, follows: null, above: null, anchorBottom: false },
+  foto: { x: 143, y: 27, follows: null, above: null, anchorBottom: false },
+  name: { x: 72, y: 111, w: 112, follows: null, above: null, anchorBottom: false },
+  beruf: { x: 72, y: 137, w: 112, follows: null, above: null, anchorBottom: false },
+  lehrbeginn: { x: 72, y: 159, w: 112, follows: null, above: null, anchorBottom: false },
+  kontaktTitel: { x: 7, y: 192, w: 38, follows: null, above: null, anchorBottom: false },
+  kontakt: { x: 7, y: 203, w: 38, follows: null, above: null, anchorBottom: false },
+  anTitel: { x: 72, y: 239, w: 112, follows: null, above: null, anchorBottom: false },
+  empfaenger: { x: 72, y: 250, w: 112, follows: null, above: null, anchorBottom: false },
+};
+
+const RIBBON_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
+  eyebrow: {
+    x: 7,
+    y: 17,
+    w: 34,
+    size: 8.5,
+    color: "bg",
+    weight: 700,
+    uppercase: true,
+    tracking: 0.18,
+    bg: null,
+    padX: 0,
+    padY: 0,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  foto: {
+    x: 25,
+    y: 33,
+    w: 46,
+    ratio: 1,
+    radius: 999,
+    fill: "bg",
+    color: "secondary",
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  name: {
+    x: 76,
+    y: 101,
+    w: 110,
+    size: 20,
+    color: "ink",
+    weight: 800,
+    tracking: -0.01,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  kicker: {
+    x: 76,
+    y: 120,
+    w: 110,
+    size: 8.5,
+    color: "primary",
+    weight: 600,
+    uppercase: false,
+    tracking: 0.02,
+    lineHeight: 1.15,
+    maxLines: 2,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  beruf: {
+    x: 76,
+    y: 133,
+    w: 110,
+    size: 22,
+    color: "ink",
+    weight: 700,
+    uppercase: false,
+    tracking: -0.01,
+    lineHeight: 1.05,
+    maxLines: 2,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  lehrbeginn: {
+    x: 76,
+    y: 160,
+    w: 110,
+    size: 9.5,
+    color: "primary",
+    weight: 700,
+    bg: null,
+    padX: 0,
+    padY: 0,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  kontaktTitel: {
+    x: 7,
+    y: 210,
+    w: 34,
+    size: 8,
+    color: "bg",
+    weight: 700,
+    uppercase: true,
+    tracking: 0.12,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  kontakt: {
+    x: 7,
+    y: 221,
+    w: 34,
+    size: 8.5,
+    color: "bg",
+    opacity: 0.95,
+    lineHeight: 1.4,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  anTitel: {
+    x: 116,
+    y: 221,
+    w: 72,
+    size: 8,
+    color: "primary",
+    align: "right",
+    weight: 700,
+    uppercase: true,
+    tracking: 0.12,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  empfaenger: {
+    x: 116,
+    y: 232,
+    w: 72,
+    size: 9,
+    color: "ink",
+    align: "right",
+    opacity: 0.9,
+    lineHeight: 1.4,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  ortDatum: {
+    x: 7,
+    y: 274,
+    w: 34,
+    size: 8,
+    color: "bg",
+    align: "left",
+    opacity: 0.78,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  trenner: { hidden: true },
+};
+
+/**
+ * Diagonal keeps all editable cover content in ordinary editor defaults so
+ * drag/resize/reset and user typography choices remain authoritative.
+ */
+const DIAGONAL_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
+  eyebrow: {
+    x: 14,
+    y: 14,
+    w: 48,
+    size: 8.5,
+    color: "bg",
+    weight: 700,
+    uppercase: true,
+    tracking: 0.16,
+    bg: null,
+    padX: 0,
+    padY: 0,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  ortDatum: {
+    x: 126,
+    y: 18,
+    w: 64,
+    size: 8.5,
+    color: "ink",
+    align: "right",
+    opacity: 0.68,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  foto: {
+    x: 151,
+    y: 32,
+    w: 34,
+    ratio: 1,
+    radius: 999,
+    fill: "bg",
+    color: "secondary",
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  kicker: {
+    x: 42,
+    y: 91,
+    w: 126,
+    size: 9,
+    color: "primary",
+    weight: 700,
+    uppercase: true,
+    tracking: 0.14,
+    lineHeight: 1.15,
+    maxLines: 2,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  beruf: {
+    x: 42,
+    y: 104,
+    w: 126,
+    size: 27,
+    color: "ink",
+    weight: 750,
+    uppercase: false,
+    tracking: -0.02,
+    lineHeight: 1.04,
+    maxLines: 2,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  name: {
+    x: 42,
+    y: 145,
+    w: 126,
+    size: 18,
+    color: "primary",
+    weight: 800,
+    tracking: -0.01,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  lehrbeginn: {
+    x: 42,
+    y: 161,
+    w: 126,
+    size: 9.5,
+    color: "secondary",
+    weight: 700,
+    bg: null,
+    padX: 0,
+    padY: 0,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  anTitel: {
+    x: 108,
+    y: 181,
+    w: 72,
+    size: 8,
+    color: "bg",
+    align: "right",
+    weight: 700,
+    uppercase: true,
+    tracking: 0.12,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  empfaenger: {
+    x: 108,
+    y: 192,
+    w: 72,
+    size: 9,
+    color: "bg",
+    align: "right",
+    opacity: 0.96,
+    lineHeight: 1.35,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  kontaktTitel: {
+    x: 20,
+    y: 226,
+    w: 72,
+    size: 8,
+    color: "primary",
+    weight: 700,
+    uppercase: true,
+    tracking: 0.12,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  kontakt: {
+    x: 20,
+    y: 237,
+    w: 72,
+    size: 8.5,
+    color: "ink",
+    opacity: 0.88,
+    lineHeight: 1.4,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  trenner: { hidden: true },
+};
+
+export function applyForestFlowCoverDefaults(
+  template: TemplateId,
+  block: Block,
+  overrides: StyleOverrides,
+): Block {
+  const templateId = template as string;
+  const defaults =
+    templateId === "forestFlow"
+      ? FOREST_FLOW_COVER_DEFAULTS[block.id]
+      : templateId === "ribbon"
+        ? RIBBON_COVER_DEFAULTS[block.id]
+        : templateId === "diagonal"
+          ? DIAGONAL_COVER_DEFAULTS[block.id]
+          : undefined;
+  if (!defaults) return block;
+
+  const custom = overrides[block.id] ?? {};
+  const patch: Partial<BlockStyle> = {};
+  for (const [key, value] of Object.entries(defaults) as Array<
+    [keyof BlockStyle, BlockStyle[keyof BlockStyle]]
+  >) {
+    if (custom[key] === undefined) (patch as Record<string, unknown>)[key] = value;
+  }
+
+  return { ...block, style: { ...block.style, ...patch } };
+}

@@ -5,9 +5,15 @@ import { DossierHeaderFooterChrome } from "../../src/components/dossier/DossierH
 import {
   DEFAULT_DOSSIER_CHROME_OPTIONS,
   dossierFooterContentBottomMmForOptions,
+  dossierFooterVisualHeightMmForOptions,
   dossierHeaderContentTopMmForOptions,
+  dossierHeaderVisualHeightMmForOptions,
   normalizeDossierChromeState,
 } from "../../src/lib/dossier-chrome";
+import {
+  resolveDossierChromeDocumentContent,
+  withDossierChromeDocumentContent,
+} from "../../src/lib/dossier-chrome-content";
 import { DEMO_LETTER, emptyLetterDesign } from "../../src/components/letter/types";
 import { letterPageGeometry } from "../../src/components/letter/layout-system";
 
@@ -21,8 +27,9 @@ const contact = {
 
 describe("dossier chrome customization", () => {
   test("new defaults use stacked header text, inline footer text and no automatic border", () => {
+    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerMode).toBe("compact");
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerTextLayout).toBe("stacked");
-    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerDifferentFirstPage).toBe(true);
+    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerDifferentFirstPage).toBe(false);
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerInlineSeparator).toBe("icons");
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerTextLayout).toBe("inline");
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerHeightMm).toBeNull();
@@ -35,6 +42,64 @@ describe("dossier chrome customization", () => {
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.borderColor).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.borderWidthMm).toBe(0.6);
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.textFont).toBeNull();
+    expect(dossierHeaderVisualHeightMmForOptions(DEFAULT_DOSSIER_CHROME_OPTIONS)).toBe(4);
+    expect(dossierFooterVisualHeightMmForOptions(DEFAULT_DOSSIER_CHROME_OPTIONS)).toBe(4);
+    expect(
+      dossierHeaderVisualHeightMmForOptions({
+        ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+        headerMode: "contact",
+        headerTextLayout: "inline",
+      }),
+    ).toBe(26);
+    expect(
+      dossierHeaderVisualHeightMmForOptions({
+        ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+        headerMode: "contact",
+        headerTextLayout: "stacked",
+      }),
+    ).toBe(32);
+  });
+
+  test("automatic header height grows for document content while explicit height wins", () => {
+    const content = resolveDossierChromeDocumentContent(
+      {
+        headerTitleEnabled: true,
+        headerTextEnabled: true,
+        headerText: "Bewerbung Informatik",
+      },
+      "Lebenslauf",
+    );
+    const inline = withDossierChromeDocumentContent(
+      {
+        ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+        headerMode: "contact",
+        headerTextLayout: "inline",
+        headerHeightMm: null,
+      },
+      content,
+    );
+    const stacked = withDossierChromeDocumentContent(
+      { ...inline, headerTextLayout: "stacked", headerHeightMm: null },
+      content,
+    );
+    expect(inline.headerHeightMm).toBe(35);
+    expect(stacked.headerHeightMm).toBe(41);
+    expect(
+      withDossierChromeDocumentContent({ ...stacked, headerHeightMm: 37 }, content).headerHeightMm,
+    ).toBe(37);
+  });
+
+  test("legacy persisted branches keep first-page behavior while fresh partial state is identical", () => {
+    const fresh = normalizeDossierChromeState({});
+    expect(fresh.shared.headerDifferentFirstPage).toBe(false);
+
+    const legacy = normalizeDossierChromeState({
+      shared: {
+        headerMode: "contact",
+        footerMode: "compact",
+      },
+    });
+    expect(legacy.shared.headerDifferentFirstPage).toBe(true);
   });
 
   test("legacy inline headers keep their historical midpoint separator", () => {
@@ -82,7 +147,7 @@ describe("dossier chrome customization", () => {
     });
 
     expect(state.shared.headerHeightMm).toBe(28);
-    expect(state.shared.headerDifferentFirstPage).toBe(true);
+    expect(state.shared.headerDifferentFirstPage).toBe(false);
     expect(state.shared.footerHeightMm).toBe(16);
     expect(state.shared.headerTextLayout).toBe("inline");
     expect(state.shared.footerTextLayout).toBe("stacked");

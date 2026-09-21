@@ -15,7 +15,6 @@ import {
   type LetterTemplateId,
 } from "../../src/components/letter/types";
 
-// Brief now lives in the shared dossier catalogue; never prepend it a second time here.
 const LETTER_TEMPLATE_IDS: LetterTemplateId[] = TEMPLATES.map(
   (template) => template.id as LetterTemplateId,
 );
@@ -69,12 +68,10 @@ describe("compact letter presentation", () => {
 
       expect(compact).toContain('data-letter-header-mode="compact"');
       expect(compact).toContain('data-letter-section="sender"');
-
       expect(contact).toContain('data-letter-header-mode="contact"');
       expect(contact).toContain("data-letter-integrated-contact");
       expect(contact).not.toContain('data-letter-section="sender"');
-      expect(contact).toContain("top:43mm");
-
+      expect(contact).toContain("top:53mm");
       expect(none).toContain('data-letter-header-mode="none"');
       expect(none).not.toContain("data-letter-integrated-contact");
       expect(none).toContain('data-letter-section="sender"');
@@ -91,12 +88,10 @@ describe("compact letter presentation", () => {
       expect(compact).toContain('data-letter-footer-mode="compact"');
       expect(compact).toContain('data-letter-footer="compact"');
       expect(compact).toContain('data-letter-pdf-text="attachments-heading"');
-
       expect(attachments).toContain('data-letter-footer-mode="attachments"');
       expect(attachments).toContain('data-letter-footer="attachments"');
       expect(attachments).toContain("data-letter-footer-attachments");
       expect(attachments.match(/data-letter-pdf-text="attachments-heading"/g)?.length).toBe(1);
-
       expect(none).toContain('data-letter-footer-mode="none"');
       expect(none).not.toContain("data-letter-footer=");
       expect(none).toContain("bottom:10mm");
@@ -110,7 +105,6 @@ describe("compact letter presentation", () => {
       ...DEMO_LETTER,
       beilagen: ["Lebenslauf", "Zeugnis", "Schnupperbericht", "Kursbestätigung"],
     });
-
     expect(footerHeight(shortMarkup)).toBeGreaterThan(0);
     expect(footerHeight(longMarkup)).toBeGreaterThan(footerHeight(shortMarkup));
     expect(longMarkup).toContain("Schnupperbericht");
@@ -129,7 +123,6 @@ describe("compact letter presentation", () => {
         "Bestätigung über die absolvierte mehrwöchige Schnupperlehre und den erfolgreichen Abschluss des Einführungskurses",
       ],
     });
-
     expect(footerHeight(wrappedMarkup)).toBeGreaterThan(footerHeight(shortMarkup));
   });
 
@@ -140,17 +133,15 @@ describe("compact letter presentation", () => {
       absenderAdresse: "Sehrlangebeispielstrasse 123a Hinterhaus",
       absenderEmail: "lea.sophie.alexandra.mueller-winterberger-schneider@example-company.ch",
     });
-
     expect(markup).toContain("Lea Sophie Alexandra Müller-Winterberger-Schneider");
     expect(markup).toContain("overflow-wrap:anywhere");
     expect(markup).not.toContain("text-overflow:ellipsis");
-    expect(markup).toContain("top:43mm");
+    expect(markup).toContain("top:53mm");
   });
 
   test("meaningful contact and attachment chrome stays in the accessibility tree", () => {
     const markup = markupFor("modern", "contact", "attachments");
     const chromeTag = markup.match(/<div[^>]*data-letter-chrome[^>]*>/)?.[0];
-
     expect(chromeTag).toBeDefined();
     expect(chromeTag).not.toContain('aria-hidden="true"');
     expect(markup).toContain("data-letter-integrated-contact");

@@ -1,0 +1,127 @@
+/*
+ * The generic CV background-motif slider owns the final opacity of decorative
+ * motif wrappers. Older reviewed template CSS uses high-specificity
+ * nth-child(...){ opacity: ... !important } rules on those same wrappers.
+ * Keep those template rules for geometry/baseline styling, but do not let them
+ * pin the user's 0–100% visibility control.
+ *
+ * The impossible IDs inside :not(...) deliberately add ID specificity while
+ * still matching every motif wrapper. This beats the legacy author-important
+ * selectors without changing DOM structure, template geometry, content or text.
+ */
+[data-dossier-sheet-motif]:not(#dossier-motif-user-opacity-a):not(#dossier-motif-user-opacity-b) {
+  opacity: var(--dossier-motif-opacity, 1) !important;
+}
+
+/*
+ * The opacity wrapper was added after many template refinements had already
+ * targeted direct child positions. Those historic selectors can otherwise
+ * resize, move or even hide the wrapper itself instead of a motif primitive.
+ * Keep the wrapper a stable full-sheet layer; template rules remain free to
+ * style the primitives inside it.
+ */
+[data-dossier-document="cv"][data-dossier-document="cv"]
+  [data-cv-background="motif"]
+  > [data-dossier-sheet-background]
+  > [data-dossier-sheet-motif]:not(#dossier-motif-wrapper-a):not(#dossier-motif-wrapper-b) {
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  filter: none !important;
+  transform: none !important;
+  pointer-events: none !important;
+  opacity: var(--dossier-motif-opacity, 1) !important;
+}
+
+/* Quiet/band/column signatures must sit above the opaque reading plane but
+ * below every content layer. Card templates keep their full-page gradients
+ * behind the reading plane and expose them through their dedicated hero area. */
+[data-dossier-document="cv"]
+  [data-cv-background="motif"]
+  > [data-dossier-sheet-background]:not([data-dossier-sheet-background="neon"]):not(
+    [data-dossier-sheet-background="verlauf"]
+  ):not([data-dossier-sheet-background="citrus"])
+  > [data-dossier-sheet-motif] {
+  z-index: 1 !important;
+}
+
+[data-cv-page]
+  > :is([data-cv-main], [data-cv-sidebar], [data-cv-band-header], [data-cv-footer]) {
+  z-index: 2;
+}
+
+/* -------------------------------------------------------------------------- */
+/* COMPACT HEADER CLEANUP — CV ONLY                                            */
+/* -------------------------------------------------------------------------- */
+/*
+ * The stored motif slider remains authoritative. Compact suppression below is
+ * presentation-only and deliberately scoped to the page's effective chrome
+ * mode. Switching to contact/none therefore restores the user's configured
+ * --dossier-motif-opacity immediately without rewriting CV state.
+ */
+
+/* FULL COMPACT MOTIF SUPPRESSION: Orbit / Prism / Frame / Ribbon / Mono Luxe. */
+[data-dossier-document="cv"]:is(
+    [data-cv-template="orbit"],
+    [data-cv-template="prism"],
+    [data-cv-template="frame"],
+    [data-cv-template="ribbon"],
+    [data-cv-template="monoLuxe"]
+  )
+  [data-cv-page]:has(
+    [data-dossier-chrome="cv"][data-dossier-effective-header-mode="compact"]
+  )
+  [data-dossier-sheet-motif]:not(#compact-motif-suppression-a):not(
+    #compact-motif-suppression-b
+  ):not(#compact-motif-suppression-c) {
+  opacity: 0 !important;
+}
+
+/* SELECTIVE COMPACT CLEANUP — keep each template's core identity intact. */
+
+/* Glow: keep both large soft circles; only remove the isolated short trace. */
+[data-dossier-document="cv"][data-cv-template="glow"]
+  [data-cv-page]:has(
+    [data-dossier-chrome="cv"][data-dossier-effective-header-mode="compact"]
+  )
+  [data-dossier-sheet-background="glow"]
+  > [data-dossier-sheet-motif]:first-child
+  > div:nth-child(3) {
+  display: none !important;
+}
+
+/* Cove: compact keeps the primary band, but loses only its secondary bay blob. */
+[data-dossier-document="cv"][data-cv-template="cove"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="cove"][data-dossier-effective-header-mode="compact"]
+  [data-dossier-compact-header]::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Aurora: preserve the gradient masthead; remove only the protruding right lobe. */
+[data-dossier-document="cv"][data-cv-template="aurora"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="aurora"][data-dossier-effective-header-mode="compact"]
+  [data-dossier-compact-header]::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Edel Light: one continuous top gold treatment, with no added layout height.
+ * The existing ::after diamond and lower gold hairlines remain untouched. */
+[data-dossier-document="cv"][data-cv-template="edel"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="edel"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header]::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 0.55mm;
+  background: var(--chrome-accent);
+  opacity: 0.92;
+  pointer-events: none;
+}

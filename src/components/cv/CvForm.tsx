@@ -9,13 +9,13 @@ import {
   type DossierPhotoStyle,
 } from "@/lib/dossier-photo";
 import { PhotoStyleControls } from "@/components/photo/PhotoStyleControls";
+import { CvNameTypographyControls } from "./CvNameTypographyControls";
 import {
   CV_SECTION_GAP_CUSTOM_DEFAULT_MM,
   CV_SECTION_GAP_MAX_MM,
   CV_SECTION_GAP_MIN_MM,
   getCvInfoPosition,
   getCvLayout,
-  getCvLayoutMirror,
   getCvSectionGapMm,
   setCvInfoPosition,
   setCvSectionGapMm,
@@ -306,7 +306,11 @@ function CvPhotoPlaceControls({ borderWidth }: { borderWidth: number }) {
     getCvPhotoPlacement,
     () => DEFAULT_CV_PHOTO_PLACEMENT,
   );
-  const layout = useSyncExternalStore<"classic" | "modern">(subscribeCvLayout, getCvLayout, () => "classic");
+  const layout = useSyncExternalStore<"classic" | "modern">(
+    subscribeCvLayout,
+    getCvLayout,
+    () => "classic",
+  );
   const infoPosition = useSyncExternalStore(
     subscribeCvInfoPosition,
     getCvInfoPosition,
@@ -317,7 +321,7 @@ function CvPhotoPlaceControls({ borderWidth }: { borderWidth: number }) {
   const photoPosition = resolveCvPhotoPosition(place, {
     template,
     layout,
-    legacyMirrored: getCvLayoutMirror(),
+    legacyMirrored: infoPosition === "mirrored",
   });
   const free = photoPosition === "free";
 
@@ -327,11 +331,13 @@ function CvPhotoPlaceControls({ borderWidth }: { borderWidth: number }) {
         Foto-Position
       </span>
       <div className="flex gap-1" role="group" aria-label="Foto-Position">
-        {([
-          ["left", "Links"],
-          ["right", "Rechts"],
-          ["free", "Frei positionierbar"],
-        ] as const).map(([value, label]) => (
+        {(
+          [
+            ["left", "Links"],
+            ["right", "Rechts"],
+            ["free", "Frei positionierbar"],
+          ] as const
+        ).map(([value, label]) => (
           <button
             key={value}
             type="button"
@@ -345,9 +351,9 @@ function CvPhotoPlaceControls({ borderWidth }: { borderWidth: number }) {
       </div>
 
       <span className="mt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        Angaben &amp; Datumsseite
+        Seitenaufbau
       </span>
-      <div className="flex gap-1" role="group" aria-label="Angaben und Datumsseite">
+      <div className="flex gap-1" role="group" aria-label="Seitenaufbau spiegeln">
         <button
           type="button"
           className={infoPosition === "standard" ? placeBtnOn : placeBtn}
@@ -362,7 +368,7 @@ function CvPhotoPlaceControls({ borderWidth }: { borderWidth: number }) {
           aria-pressed={infoPosition === "mirrored"}
           onClick={() => setCvInfoPosition("mirrored")}
         >
-          Spiegelverkehrt
+          Gespiegelt
         </button>
       </div>
 
@@ -544,7 +550,7 @@ export function FormCvPerson({
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <Field label="Vorname">
           <input
             className={inputCls}
@@ -560,6 +566,7 @@ export function FormCvPerson({
           />
         </Field>
       </div>
+      <CvNameTypographyControls person={person} onChange={onChange} />
       <Field label="Zeile unter dem Namen">
         <input
           className={inputCls}
@@ -582,7 +589,7 @@ export function FormCvPerson({
           onChange={(e) => onChange({ plzOrt: e.target.value })}
         />
       </Field>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <Field label="Telefon">
           <input
             className={inputCls}
@@ -598,15 +605,15 @@ export function FormCvPerson({
           />
         </Field>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="Geburtsdatum">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <Field label="Geburtsdatum (freiwillig)">
           <input
             className={inputCls}
             value={person.geburtsdatum}
             onChange={(e) => onChange({ geburtsdatum: e.target.value })}
           />
         </Field>
-        <Field label="Nationalität">
+        <Field label="Nationalität (optional)">
           <input
             className={inputCls}
             value={person.nationalitaet}
@@ -941,11 +948,7 @@ export function SectionLayoutControls({
   layout: CvSectionLayout;
   onLayout: (patch: Partial<CvSectionLayout>) => void;
 }) {
-  const sectionGapMm = useSyncExternalStore(
-    subscribeCvSectionGap,
-    getCvSectionGapMm,
-    () => null,
-  );
+  const sectionGapMm = useSyncExternalStore(subscribeCvSectionGap, getCvSectionGapMm, () => null);
   const customSectionGap = sectionGapMm !== null;
 
   return (
@@ -1032,9 +1035,7 @@ export function SectionLayoutControls({
                 type="checkbox"
                 checked={customSectionGap}
                 onChange={(event) =>
-                  setCvSectionGapMm(
-                    event.target.checked ? CV_SECTION_GAP_CUSTOM_DEFAULT_MM : null,
-                  )
+                  setCvSectionGapMm(event.target.checked ? CV_SECTION_GAP_CUSTOM_DEFAULT_MM : null)
                 }
               />
               selber

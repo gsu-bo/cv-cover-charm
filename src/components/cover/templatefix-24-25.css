@@ -66,7 +66,9 @@ html[data-dossier-template="horizon"] [data-dossier-document="cv"] [data-dossier
 /* ========================================================================== */
 
 /* Cover: a deep vertical grove anchors the page; one large sage canopy opens
- * into the paper. No circles, floating pills or local micro-rule suppression. */
+ * into the paper. Structural artwork stays CSS-owned. Editable block geometry
+ * is deliberately NOT set here: forest-flow-cover-defaults.ts owns those
+ * defaults so drag, resize and reset all use the same editor state. */
 html[data-dossier-template="forestFlow"]
   [data-dossier-document="cover"]
   [data-fresh-cover-field="primary"] {
@@ -85,11 +87,11 @@ html[data-dossier-template="forestFlow"]
 html[data-dossier-template="forestFlow"]
   [data-dossier-document="cover"]
   [data-fresh-cover-field="secondary"] {
-  left: 52mm !important;
+  left: 52.6mm !important;
   right: 0 !important;
   top: 0 !important;
   bottom: auto !important;
-  width: 158mm !important;
+  width: 157.4mm !important;
   height: 82mm !important;
   border-radius: 0 0 0 38mm !important;
   opacity: 0.3 !important;
@@ -97,63 +99,22 @@ html[data-dossier-template="forestFlow"]
   transform: none !important;
 }
 
+/* Keep the dark rail exactly 52 mm wide at every y-position. The old accent
+ * started at 51 mm and covered the rail for the first 82 mm, making the edge
+ * appear to jump when the accent ended. The seam now lives entirely to the
+ * right of the rail; the canopy starts 0.2 mm behind it to avoid a subpixel gap. */
 html[data-dossier-template="forestFlow"]
   [data-dossier-document="cover"]
   [data-fresh-cover-field="accent"] {
-  left: 51mm !important;
+  left: 52mm !important;
   right: auto !important;
   top: 0 !important;
   bottom: auto !important;
-  width: 1.4mm !important;
+  width: 0.8mm !important;
   height: 82mm !important;
   border-radius: 0 !important;
   opacity: 0.9 !important;
   filter: none !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="eyebrow"] {
-  left: 7mm !important;
-  top: 17mm !important;
-  width: 38mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="ortDatum"] {
-  left: 7mm !important;
-  top: 268mm !important;
-  width: 38mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="foto"] {
-  left: 143mm !important;
-  top: 27mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="name"] {
-  left: 72mm !important;
-  top: 111mm !important;
-  width: 112mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"]
-  [data-dossier-document="cover"]
-  [data-block-id="beruf"] {
-  left: 72mm !important;
-  top: 137mm !important;
-  width: 112mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"]
-  [data-dossier-document="cover"]
-  [data-block-id="lehrbeginn"] {
-  left: 72mm !important;
-  top: 159mm !important;
-  width: 112mm !important;
   transform: none !important;
 }
 
@@ -162,36 +123,6 @@ html[data-dossier-template="forestFlow"]
   :is([data-block-id="name"], [data-block-id="beruf"], [data-block-id="lehrbeginn"])
   > div {
   text-align: left !important;
-}
-
-html[data-dossier-template="forestFlow"]
-  [data-dossier-document="cover"]
-  [data-block-id="kontaktTitel"] {
-  left: 7mm !important;
-  top: 192mm !important;
-  width: 38mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="kontakt"] {
-  left: 7mm !important;
-  top: 203mm !important;
-  width: 38mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="anTitel"] {
-  left: 72mm !important;
-  top: 239mm !important;
-  width: 112mm !important;
-  transform: none !important;
-}
-
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="empfaenger"] {
-  left: 72mm !important;
-  top: 250mm !important;
-  width: 112mm !important;
-  transform: none !important;
 }
 
 html[data-dossier-template="forestFlow"]

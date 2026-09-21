@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  CV_LAYOUT_PICKER_OPTIONS,
   CV_SECTION_GAP_MAX_MM,
   CV_SECTION_GAP_MIN_MM,
   normalizeCvSectionGapMm,
@@ -87,6 +88,19 @@ describe("CV rubric layout", () => {
     expect(normalizeCvSectionGapMm("4.5")).toBe(4.5);
     expect(normalizeCvSectionGapMm(-3)).toBe(CV_SECTION_GAP_MIN_MM);
     expect(normalizeCvSectionGapMm(99)).toBe(CV_SECTION_GAP_MAX_MM);
+  });
+
+  test("exposes Sidebar links and Sidebar rechts as explicit picker choices", () => {
+    const sidebarOptions = CV_LAYOUT_PICKER_OPTIONS.filter((option) => option.layout === "modern");
+    expect(
+      sidebarOptions.map(({ key, name, infoPosition }) => ({ key, name, infoPosition })),
+    ).toEqual([
+      { key: "sidebar-left", name: "Sidebar links", infoPosition: "standard" },
+      { key: "sidebar-right", name: "Sidebar rechts", infoPosition: "mirrored" },
+    ]);
+    expect(new Set(CV_LAYOUT_PICKER_OPTIONS.map((option) => option.key)).size).toBe(
+      CV_LAYOUT_PICKER_OPTIONS.length,
+    );
   });
 
   test("Kolumne defaults to Sidebar and preserves explicit saved layouts", () => {

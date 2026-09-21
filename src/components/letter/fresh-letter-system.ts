@@ -66,17 +66,6 @@ export const FRESH_LETTER_SPECS: Record<FreshTemplateId, FreshLetterSpec> = {
       rect("glow-rule", 25, 16, 34, 1, "accent", { radiusMm: 0.5, gradientTo: "primary" }),
     ],
   },
-  frame: {
-    archetype: "frame",
-    left: 27,
-    right: 27,
-    motifs: [
-      rect("frame-top", 10, 5, 30, 1.2, "primary"),
-      rect("frame-left", 10, 5, 1.2, 12, "accent"),
-      rect("frame-bottom", 170, 290, 30, 1.2, "primary"),
-      rect("frame-right", 198.8, 280, 1.2, 11.2, "secondary"),
-    ],
-  },
   monoLuxe: {
     archetype: "band",
     left: 27,
@@ -296,8 +285,6 @@ export function motifIntersectsReadingBox(
   motif: FreshLetterMotif,
   spec: FreshLetterSpec,
 ): boolean {
-  // `none` header/footer is the largest possible reading area and therefore the
-  // strongest collision check for every shared chrome configuration.
   const reading = {
     left: spec.left,
     right: LETTER_SHEET_MM.width - spec.right,

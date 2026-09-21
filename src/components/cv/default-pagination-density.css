@@ -93,3 +93,71 @@ html[data-cv-variant="editorial"]
   [data-cv-entry-title] {
   line-height: 1.13 !important;
 }
+
+/* Package 4: Citrus no longer pulls the entire CV content box 9 mm upward.
+ * The Package 3 page geometry owns the top boundary; Citrus keeps its reviewed
+ * identity through local rubric/content rhythm below. */
+
+/*
+ * Citrus' reviewed pill/content-indent treatment intentionally narrows the
+ * body column a little. Keep that identity and the visible contact-header gap,
+ * but reclaim the few millimetres the normal demo needs from repeated content
+ * rhythm. Explicit user section spacing still wins via the user-margin marker.
+ */
+html[data-dossier-template="citrus"]
+  [data-dossier-document="cv"][data-cv-template="citrus"][data-cv-layout="classic"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-section]:not([data-cv-user-section-margin="true"]) {
+  margin-top: 0.8mm !important;
+  margin-bottom: 0.3mm !important;
+}
+
+html[data-dossier-template="citrus"]
+  [data-dossier-document="cv"][data-cv-template="citrus"][data-cv-layout="classic"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-entry] {
+  margin-bottom: 0.35mm !important;
+}
+
+html[data-dossier-template="citrus"]
+  [data-dossier-document="cv"][data-cv-template="citrus"][data-cv-layout="classic"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-body] {
+  line-height: 1.19 !important;
+}
+
+/*
+ * Studio 3's architectural masthead stays 60 mm tall, but its historical CV
+ * rules also re-expanded every section and body row after the shared compact
+ * defaults had run. Preserve the masthead and typography sizes while keeping
+ * the ordinary demo on one page. Measurement and visible/PDF pages share the
+ * exact same selectors so pagination remains deterministic.
+ */
+html[data-dossier-template="studio3"]
+  [data-dossier-document="cv"][data-cv-template="studio3"][data-cv-layout="classic"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-header] {
+  margin-bottom: 4mm !important;
+}
+
+html[data-dossier-template="studio3"]
+  [data-dossier-document="cv"][data-cv-template="studio3"][data-cv-layout="classic"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-section]:not([data-cv-user-section-margin="true"]) {
+  margin-top: 1.3mm !important;
+  margin-bottom: 0.6mm !important;
+}
+
+html[data-dossier-template="studio3"]
+  [data-dossier-document="cv"][data-cv-template="studio3"][data-cv-layout="classic"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-entry] {
+  margin-bottom: 0.55mm !important;
+}
+
+html[data-dossier-template="studio3"]
+  [data-dossier-document="cv"][data-cv-template="studio3"][data-cv-layout="classic"]
+  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-body] {
+  line-height: 1.25 !important;
+}

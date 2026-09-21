@@ -54,7 +54,7 @@ html[data-dossier-template="citrus"]
   [data-cv-main] {
   left: 20mm !important;
   right: 20mm !important;
-  top: 14mm !important;
+  top: var(--cv-main-top) !important;
   bottom: 15mm !important;
 }
 
@@ -74,7 +74,7 @@ html[data-dossier-template="citrus"]
   [data-dossier-document="cv"][data-cv-layout="modern"]
   [data-cv-measure-page]
   [data-cv-main] {
-  top: 14mm !important;
+  top: var(--cv-main-top) !important;
   bottom: 15mm !important;
 }
 
@@ -261,18 +261,44 @@ html[data-dossier-template="verlauf"] [data-dossier-document="cv"] [data-cv-date
 /* -------------------------------------------------------------------------- */
 /* CITRUS — warm open hero + airy body + soft friendly section capsules        */
 /* -------------------------------------------------------------------------- */
+/* The shared card background still contains the title-page's inset paper card.
+ * The refreshed CV already owns one full reading plane below the hero; keeping
+ * both creates the visible sheet-inside-a-sheet seam. Hide only that legacy
+ * card in the CV. Cover and motivation-letter geometry remain unchanged. */
+[data-dossier-document="cv"][data-cv-template="citrus"]
+  [data-cv-background="motif"]
+  [data-dossier-sheet-background="citrus"]
+  > [data-dossier-sheet-card] {
+  display: none !important;
+}
+
 html[data-dossier-template="citrus"] [data-dossier-document="cv"] [data-cv-page="0"] [data-cv-surface] {
   left: 0 !important;
   right: 0 !important;
-  top: 39mm !important;
+  /* Keep the compact-header name inside the warm hero after the shared
+   * contact header stopped reserving the former 22 mm top area. */
+  top: 46mm !important;
   bottom: 0 !important;
   border-radius: 16mm 0 0 0 !important;
   opacity: 1 !important;
   box-shadow: none !important;
+  overflow: hidden;
+  background: #fffdf9 !important;
+}
+
+html[data-dossier-template="citrus"]
+  [data-dossier-document="cv"]
+  [data-cv-page="0"]
+  [data-cv-surface]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
   background:
-    radial-gradient(circle at 94% 8%, rgb(251 113 133 / 0.10), transparent 31mm),
-    radial-gradient(circle at 9% 98%, rgb(251 191 36 / 0.08), transparent 38mm),
-    #fffdf9 !important;
+    radial-gradient(circle at 94% 8%, rgb(251 113 133 / 0.16), transparent 31mm),
+    radial-gradient(circle at 9% 98%, rgb(251 191 36 / 0.13), transparent 38mm);
+  opacity: var(--dossier-motif-opacity, 1);
 }
 
 html[data-dossier-template="citrus"]
@@ -281,7 +307,7 @@ html[data-dossier-template="citrus"]
   [data-cv-main] {
   left: 20mm !important;
   right: 20mm !important;
-  top: 14mm !important;
+  top: var(--cv-main-top) !important;
   bottom: 15mm !important;
 }
 
@@ -289,17 +315,8 @@ html[data-dossier-template="citrus"]
   [data-dossier-document="cv"][data-cv-layout="modern"]
   [data-cv-page="0"]
   [data-cv-main] {
-  top: 14mm !important;
+  top: var(--cv-main-top) !important;
   bottom: 15mm !important;
-}
-
-/* Hide the title-page card inside the CV motif; the CV now has its own open plane. */
-html[data-dossier-template="citrus"]
-  [data-dossier-document="cv"]
-  [data-cv-background="motif"]
-  > div
-  > div:first-child {
-  display: none !important;
 }
 
 html[data-dossier-template="citrus"] [data-dossier-document="cv"] [data-cv-page="0"] [data-cv-header] {

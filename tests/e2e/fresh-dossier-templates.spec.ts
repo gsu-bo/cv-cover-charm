@@ -27,17 +27,6 @@ const FRESH = [
     },
   },
   {
-    id: "frame",
-    name: "Frame",
-    colors: {
-      bg: "#f6f3ed",
-      primary: "#26352f",
-      secondary: "#d8894a",
-      accent: "#b96b32",
-      ink: "#1e2722",
-    },
-  },
-  {
     id: "monoLuxe",
     name: "Mono Luxe",
     colors: {
@@ -326,9 +315,10 @@ test.describe("Fresh dossier templates", () => {
     }
     await expect(page.getByRole("button", { name: "Warm 4", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Warm 5", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Frame", exact: true })).toHaveCount(0);
   });
 
-  test("all sixteen title pages render as distinct full dossiers", async ({ page }) => {
+  test("all retained Fresh title pages render as distinct full dossiers", async ({ page }) => {
     await page.setViewportSize({ width: 1137, height: 913 });
     const hashes = new Set<string>();
 
@@ -351,7 +341,7 @@ test.describe("Fresh dossier templates", () => {
     expect(hashes.size).toBe(FRESH.length);
   });
 
-  test("all sixteen CVs render and stay visually paired with their template", async ({ page }) => {
+  test("all retained Fresh CVs render and stay visually paired with their template", async ({ page }) => {
     await page.setViewportSize({ width: 1137, height: 913 });
     const hashes = new Set<string>();
 

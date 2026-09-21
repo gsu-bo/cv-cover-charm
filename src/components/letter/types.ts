@@ -1,8 +1,13 @@
 import { defaultHeaderModeForTemplate, defaultFooterModeForTemplate } from "@/lib/template-chrome";
 import { FONT_LABELS, TEMPLATES, type FontKey, type TemplateId } from "@/components/cover/types";
 import { FRESH_TEMPLATE_REGISTRY } from "@/components/cover/fresh-template-registry";
+import { normalizeActiveTemplateId } from "@/components/cover/fresh-templates";
 import { LETTER_STORAGE_KEY } from "@/lib/dossier-project";
 import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
+import {
+  normalizeDossierChromeDocumentContentSettings,
+  type DossierChromeDocumentContentSettings,
+} from "@/lib/dossier-chrome-content";
 import type {
   DossierChromeInlineSeparator,
   DossierChromeState,
@@ -15,6 +20,19 @@ export type LetterFontSelection = FontKey | "template";
 export type LetterBodyColumns = 1 | 2 | 3;
 export type LetterHeaderMode = "compact" | "contact" | "none";
 export type LetterFooterMode = "compact" | "attachments" | "none";
+
+/** Optional role-specific typography. Missing values preserve the template. */
+export type LetterRoleTypography = {
+  font?: FontKey;
+  fontSizePt?: number;
+  color?: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+};
+
+export const LETTER_ROLE_FONT_SIZE_MIN = 7;
+export const LETTER_ROLE_FONT_SIZE_MAX = 30;
 
 /** Frei platzierbares Bild im Anschreiben mit proportionaler Skalierung und automatischem Textfluss. */
 export type LetterFlowImage = {
@@ -63,6 +81,8 @@ export type LetterData = {
 export type LetterDesign = {
   template: LetterTemplateId;
   colors: Record<string, string>;
+  /** Sichtbarkeit dekorativer Hintergrund-Motive von 0 (aus) bis 1 (Vorlagen-Baseline). */
+  bgOpacity?: number;
   /** Eigene Papierfarbe nur für das Anschreiben; unabhängig von der Vorlage. */
   paperColor?: string | null;
   /** Eigene Haupttextfarbe; leer lässt sie automatisch aus der Papierfarbe ableiten. */
@@ -81,6 +101,12 @@ export type LetterDesign = {
   ruleAfterSender?: boolean;
   ruleAfterRecipient?: boolean;
   ruleAfterSubject?: boolean;
+  /** Eigene Typografie für die Absenderanschrift; fehlt = wie Vorlage. */
+  senderTypography?: LetterRoleTypography;
+  /** Eigene Typografie für die Empfängeranschrift; fehlt = wie Vorlage. */
+  recipientTypography?: LetterRoleTypography;
+  /** Eigene Typografie für den Betreff; fehlt = wie Vorlage. */
+  subjectTypography?: LetterRoleTypography;
   /** @deprecated Legacy-/SSR-Kompatibilität. Live ist DossierChromeState kanonisch. */
   headerMode?: LetterHeaderMode;
   headerShowName?: boolean;
@@ -103,6 +129,8 @@ export type LetterDesign = {
   chromeBorderColor?: string | null;
   chromeBorderWidthMm?: number;
   chromeTextFont?: FontKey | null;
+  /** Dokumenteigene Header-/Footer-Texte; bewusst nicht Teil des Sync-States. */
+  chromeContent?: DossierChromeDocumentContentSettings;
 };
 
 export type SavedLetter = {
@@ -119,6 +147,14 @@ export const DEFAULT_LETTER_BEILAGEN = ["Lebenslauf", "Zeugnis"] as const;
 export const DEFAULT_LETTER_CLOSING_GAP_MM = 9;
 export const DEFAULT_LETTER_SIGNATURE_GAP_MM = 9;
 export const MAX_LETTER_SIGNATURE_SPACING_MM = 50;
+export const DEFAULT_LETTER_MOTIF_OPACITY = 0.25;
+
+/** Ein gemeinsamer 0..1-Vertrag für Preview, Pagination, Persistenz und Export. */
+export function normalizeLetterMotifOpacity(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.min(1, Math.max(0, value))
+    : DEFAULT_LETTER_MOTIF_OPACITY;
+}
 
 /** Hält frei eingegebene Briefabstände in einem druckbaren Bereich. */
 export function normalizeLetterSpacingMm(
@@ -241,6 +277,27 @@ function normalizedColor(value: unknown): string | null {
     : null;
 }
 
+export function normalizeLetterRoleTypography(value: unknown): LetterRoleTypography | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const incoming = value as Partial<LetterRoleTypography>;
+  const next: LetterRoleTypography = {};
+  if (typeof incoming.font === "string" && incoming.font in FONT_LABELS) {
+    next.font = incoming.font as FontKey;
+  }
+  if (typeof incoming.fontSizePt === "number" && Number.isFinite(incoming.fontSizePt)) {
+    next.fontSizePt = Math.min(
+      LETTER_ROLE_FONT_SIZE_MAX,
+      Math.max(LETTER_ROLE_FONT_SIZE_MIN, Math.round(incoming.fontSizePt * 10) / 10),
+    );
+  }
+  const color = normalizedColor(incoming.color);
+  if (color) next.color = color;
+  if (typeof incoming.bold === "boolean") next.bold = incoming.bold;
+  if (typeof incoming.italic === "boolean") next.italic = incoming.italic;
+  if (typeof incoming.underline === "boolean") next.underline = incoming.underline;
+  return Object.keys(next).length ? next : undefined;
+}
+
 function normalizedHeaderInlineSeparator(value: unknown): DossierChromeInlineSeparator {
   return value === "dot" ||
     value === "icons" ||
@@ -256,6 +313,7 @@ export function emptyLetterDesign(): LetterDesign {
   return {
     template,
     colors: defaultLetterColors(template),
+    bgOpacity: DEFAULT_LETTER_MOTIF_OPACITY,
     paperColor: null,
     textColor: null,
     font: "freundlich",
@@ -271,7 +329,7 @@ export function emptyLetterDesign(): LetterDesign {
     headerShowAddress: true,
     headerShowPhone: true,
     headerShowEmail: true,
-    headerDifferentFirstPage: true,
+    headerDifferentFirstPage: false,
     headerHeightMm: null,
     headerTextLayout: "stacked",
     headerInlineSeparator: "icons",
@@ -293,16 +351,7 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
   const fallback = emptyLetterDesign();
   if (!value || typeof value !== "object") return fallback;
   const incoming = value as Partial<LetterDesign>;
-  const incomingTemplate =
-    typeof incoming.template === "string" ? String(incoming.template) : undefined;
-  const template: LetterTemplateId =
-    incomingTemplate === "brief"
-      ? "brief"
-      : incomingTemplate &&
-          (TEMPLATES.some((candidate) => String(candidate.id) === incomingTemplate) ||
-            FRESH_TEMPLATE_REGISTRY.some((candidate) => String(candidate.id) === incomingTemplate))
-        ? (incomingTemplate as TemplateId)
-        : fallback.template;
+  const template: LetterTemplateId = normalizeActiveTemplateId(incoming.template);
   const font =
     typeof incoming.font === "string" && incoming.font in FONT_LABELS
       ? (incoming.font as FontKey)
@@ -336,6 +385,7 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
   return {
     template,
     colors,
+    bgOpacity: normalizeLetterMotifOpacity(incoming.bgOpacity),
     paperColor: normalizedColor(incoming.paperColor),
     textColor: normalizedColor(incoming.textColor),
     font,
@@ -346,12 +396,18 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
     ruleAfterSender: incoming.ruleAfterSender === true,
     ruleAfterRecipient: incoming.ruleAfterRecipient === true,
     ruleAfterSubject: incoming.ruleAfterSubject === true,
+    senderTypography: normalizeLetterRoleTypography(incoming.senderTypography),
+    recipientTypography: normalizeLetterRoleTypography(incoming.recipientTypography),
+    subjectTypography: normalizeLetterRoleTypography(incoming.subjectTypography),
     headerMode,
     headerShowName: incoming.headerShowName !== false,
     headerShowAddress: incoming.headerShowAddress !== false,
     headerShowPhone: incoming.headerShowPhone !== false,
     headerShowEmail: incoming.headerShowEmail !== false,
-    headerDifferentFirstPage: incoming.headerDifferentFirstPage !== false,
+    headerDifferentFirstPage:
+      typeof incoming.headerDifferentFirstPage === "boolean"
+        ? incoming.headerDifferentFirstPage
+        : (fallback.headerDifferentFirstPage ?? false),
     headerHeightMm: normalizedMm(incoming.headerHeightMm),
     headerTextLayout: incoming.headerTextLayout === "inline" ? "inline" : "stacked",
     headerInlineSeparator: normalizedHeaderInlineSeparator(incoming.headerInlineSeparator),
@@ -369,5 +425,6 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
     chromeBorderColor: normalizedColor(incoming.chromeBorderColor),
     chromeBorderWidthMm: normalizedBorderWidth(incoming.chromeBorderWidthMm),
     chromeTextFont,
+    chromeContent: normalizeDossierChromeDocumentContentSettings(incoming.chromeContent),
   };
 }

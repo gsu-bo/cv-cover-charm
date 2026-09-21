@@ -1,0 +1,342 @@
+/* PACKAGE 2 — targeted production polish only. Keep template geometry intact. */
+
+/* Citrus: the coral/amber masthead needs a confident light contact treatment. */
+html
+  [data-dossier-template-chrome="citrus"][data-dossier-header-custom-surface="false"]
+  :is([data-dossier-integrated-contact], [data-dossier-continuation-contact-header]) {
+  color: #ffffff !important;
+}
+
+/* Edel: replace the detached double hairline with a restrained gold lower band.
+ * The small paper diamond sits inside that band so it reads as one intentional seal. */
+html
+  [data-dossier-template-chrome="edel"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  border-bottom: 0 !important;
+  box-shadow: inset 0 -1.35mm 0 var(--chrome-accent) !important;
+}
+
+html
+  [data-dossier-template-chrome="edel"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::after {
+  bottom: 0.2mm;
+  width: 1.65mm;
+  height: 1.65mm;
+  border: 0.22mm solid var(--chrome-accent);
+  background: var(--chrome-paper);
+  transform: translate(-50%, 0) rotate(45deg);
+}
+
+/* Sonne: the cover is a confident yellow/dark sun composition. The CV used to
+ * reduce that identity to a plain yellow hairline. Keep the compact geometry,
+ * but let a small concentric sun break below the strip into the existing top
+ * whitespace. User-selected header colours remain authoritative. */
+html
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="sonne"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  background: var(--chrome-primary) !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+html
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="sonne"][data-dossier-header-custom-surface="false"]
+  :is([data-dossier-compact-header], [data-dossier-contact-header-background])::before {
+  content: "";
+  position: absolute;
+  right: 15mm;
+  top: -3.6mm;
+  width: 13mm;
+  height: 13mm;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    var(--chrome-ink) 0 57%,
+    var(--chrome-primary) 58% 61%,
+    var(--chrome-ink) 62% 100%
+  );
+  /* 0% must still hide the decorative signal, while the normal 25% setting
+   * needs enough presence to read as Sonne instead of a washed-out grey dot. */
+  opacity: clamp(0, calc(var(--dossier-motif-opacity, 1) * 3), 1);
+  box-sizing: border-box;
+}
+
+html
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="sonne"]
+  :is([data-dossier-integrated-contact], [data-dossier-continuation-contact-header]) {
+  padding-right: 38mm !important;
+  color: var(--chrome-ink) !important;
+}
+
+/* Aurora: carry the cyan-to-violet hero gradient into the CV instead of using
+ * a single cyan line. Compact mode gets one cropped rounded aurora lobe on the
+ * right, echoing the cover's curved lower corner without consuming more layout
+ * height. Contact/continuation modes keep the same coherent gradient surface. */
+html
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="aurora"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  background: linear-gradient(
+    100deg,
+    var(--chrome-primary) 0%,
+    var(--chrome-secondary) 56%,
+    var(--chrome-accent) 100%
+  ) !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+html
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="aurora"][data-dossier-header-custom-surface="false"]
+  [data-dossier-compact-header]::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 52mm;
+  height: 10mm;
+  border-radius: 0 0 0 11mm;
+  background: linear-gradient(
+    115deg,
+    color-mix(in srgb, var(--chrome-primary) 68%, var(--chrome-secondary)) 0%,
+    var(--chrome-accent) 100%
+  );
+  opacity: clamp(0, calc(var(--dossier-motif-opacity, 1) * 3), 1);
+}
+
+/* Ledger: the shared quiet writing surface starts at the exact x-position of
+ * the template's original spine, so that surface paints over the spine below.
+ * Reintroduce the same two-part book edge on the surface itself. This is purely
+ * decorative, remains behind CV content, follows palette colours and still
+ * disappears at motif strength 0%. */
+[data-cv-template="ledger"] [data-cv-surface]::before,
+[data-cv-template="ledger"] [data-cv-surface]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+[data-cv-template="ledger"] [data-cv-surface]::before {
+  left: 0;
+  width: 9mm;
+  background: var(--cover-secondary);
+  opacity: clamp(0, calc(var(--dossier-motif-opacity, 1) * 1.8), 0.52);
+}
+
+[data-cv-template="ledger"] [data-cv-surface]::after {
+  left: 10mm;
+  width: 0.35mm;
+  background: var(--cover-primary);
+  opacity: clamp(0, calc(var(--dossier-motif-opacity, 1) * 2.4), 0.68);
+}
+
+/* Kolumne owns contact in the sidebar only while the renderer really uses the
+ * modern/sidebar layout. The CV root is the source of truth for that rendered
+ * layout. When Kolumne is selected while Classic remains active, keep the
+ * shared contact header visible so address/phone/email never disappear. */
+[data-dossier-document="cv"][data-cv-template="terracotta"][data-cv-layout="classic"]
+  [data-dossier-chrome="cv"]
+  [data-dossier-contact-header-background] {
+  display: block !important;
+}
+
+[data-dossier-document="cv"][data-cv-template="terracotta"][data-cv-layout="classic"]
+  [data-dossier-chrome="cv"]
+  :is([data-dossier-integrated-contact], [data-dossier-continuation-contact-header]) {
+  display: flex !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* COMPACT HEADER QUICK WINS — EDGE / FOREST FLOW / LEDGER                    */
+/* -------------------------------------------------------------------------- */
+/*
+ * These are presentation-only rebuilds on top of the existing shared chrome.
+ * They deliberately keep header heights, page boxes and stored chrome options
+ * untouched. Prism, Neon, Sonne and Citrus are separate packages.
+ */
+
+/* EDGE — let the full-height left rail turn into the compact masthead instead
+ * of ending beside a transparent generic strip. The two pseudo-elements live
+ * inside the existing compact height, so pagination geometry stays identical. */
+[data-dossier-document="cv"][data-cv-template="edge"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="edge"][data-dossier-effective-header-mode="compact"]
+  [data-dossier-compact-header] {
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+[data-dossier-document="cv"][data-cv-template="edge"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="edge"][data-dossier-effective-header-mode="compact"]
+  [data-dossier-compact-header]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 8.2mm;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--chrome-primary) 0 85%,
+    var(--chrome-accent) 85% 100%
+  );
+}
+
+[data-dossier-document="cv"][data-cv-template="edge"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="edge"][data-dossier-effective-header-mode="compact"]
+  [data-dossier-compact-header]::after {
+  content: "";
+  position: absolute;
+  left: 8.2mm;
+  bottom: 0;
+  width: 38mm;
+  height: 1.2mm;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(
+    90deg,
+    var(--chrome-accent) 0 3mm,
+    var(--chrome-secondary) 3mm 100%
+  );
+}
+
+/* FOREST FLOW — compact and contact are the same family: pale paper masthead,
+ * one canopy growing out of the rail and one flow line leaving the canopy. */
+[data-dossier-document="cv"][data-cv-template="forestFlow"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="forestFlow"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--chrome-primary) 11%, var(--chrome-paper)) 0%,
+    color-mix(in srgb, var(--chrome-secondary) 7%, var(--chrome-paper)) 34%,
+    var(--chrome-paper) 72%
+  ) !important;
+  border-bottom: 0 !important;
+  box-shadow: inset 0 -0.35mm 0 color-mix(in srgb, var(--chrome-accent) 60%, transparent) !important;
+  overflow: hidden !important;
+}
+
+[data-dossier-document="cv"][data-cv-template="forestFlow"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="forestFlow"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: -7mm;
+  top: -9mm;
+  width: 42mm;
+  height: 32mm;
+  border-radius: 50%;
+  background: var(--chrome-secondary);
+  opacity: 0.24;
+}
+
+[data-dossier-document="cv"][data-cv-template="forestFlow"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="forestFlow"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 18mm;
+  bottom: 2mm;
+  width: 34mm;
+  height: 1.2mm;
+  border-radius: 0 999px 999px 0;
+  background: var(--chrome-accent);
+  opacity: 0.9;
+}
+
+[data-dossier-document="cv"][data-cv-template="forestFlow"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="forestFlow"][data-dossier-header-custom-surface="false"]
+  [data-dossier-integrated-contact] {
+  left: 0 !important;
+  padding-left: 38mm !important;
+  color: var(--chrome-ink) !important;
+}
+
+[data-dossier-document="cv"][data-cv-template="forestFlow"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="forestFlow"][data-dossier-header-custom-surface="false"]
+  [data-dossier-continuation-contact-header] {
+  left: 0 !important;
+  padding-left: 38mm !important;
+  color: var(--chrome-ink) !important;
+}
+
+[data-dossier-document="cv"][data-cv-template="forestFlow"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="forestFlow"]
+  [data-dossier-continuation-contact] {
+  position: relative;
+  z-index: 1;
+}
+
+/* LEDGER — continue the book spine through the compact header and add two
+ * restrained writing rules. No extra height, no contact redesign in this pass. */
+[data-dossier-document="cv"][data-cv-template="ledger"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="ledger"][data-dossier-header-custom-surface="false"][data-dossier-effective-header-mode="compact"]
+  [data-dossier-compact-header] {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--chrome-secondary) 40%, var(--chrome-paper)) 0 9mm,
+    var(--chrome-paper) 9mm 100%
+  ) !important;
+  border-bottom: 0 !important;
+  box-shadow: inset 0 -0.35mm 0 color-mix(in srgb, var(--chrome-primary) 62%, var(--chrome-paper)) !important;
+  overflow: hidden !important;
+}
+
+[data-dossier-document="cv"][data-cv-template="ledger"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="ledger"][data-dossier-header-custom-surface="false"][data-dossier-effective-header-mode="compact"]
+  [data-dossier-compact-header]::before {
+  content: "";
+  position: absolute;
+  left: 10mm;
+  top: 0;
+  bottom: 0;
+  width: 0.4mm;
+  background: var(--chrome-primary);
+  opacity: 0.72;
+}
+
+[data-dossier-document="cv"][data-cv-template="ledger"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="ledger"][data-dossier-header-custom-surface="false"][data-dossier-effective-header-mode="compact"]
+  [data-dossier-compact-header]::after {
+  content: "";
+  position: absolute;
+  left: 20mm;
+  right: 24mm;
+  top: 2mm;
+  height: 0.3mm;
+  background: var(--chrome-primary);
+  box-shadow: 0 2.2mm 0 color-mix(in srgb, var(--chrome-primary) 58%, transparent);
+  opacity: 0.5;
+}

@@ -1,4 +1,5 @@
 import { Mail, Smartphone } from "lucide-react";
+import type { CSSProperties } from "react";
 import { FONT_STACKS } from "@/components/cover/types";
 import { cvPalette, onColorRoles } from "@/components/cv/palette";
 import {
@@ -11,6 +12,8 @@ import {
   type DossierChromeOptions,
   type DossierChromeScope,
 } from "@/lib/dossier-chrome";
+import { getDossierPageMargins } from "@/lib/dossier-page-margins";
+import type { DossierChromeDocumentContent } from "@/lib/dossier-chrome-content";
 import { resolveTemplateChromeOptions } from "@/lib/template-chrome";
 import "./chrome-policy.css";
 
@@ -135,6 +138,7 @@ export function DossierHeaderFooterChrome({
   footerDetails = [],
   footerLeft,
   footerRight,
+  documentContent,
 }: {
   scope: DossierChromeScope;
   template: string;
@@ -147,6 +151,7 @@ export function DossierHeaderFooterChrome({
   footerDetails?: string[];
   footerLeft?: string;
   footerRight?: string;
+  documentContent?: DossierChromeDocumentContent;
 }) {
   const resolvedContact = contact;
   const headerMode = effectiveDossierHeaderModeForOptions(options, pageIndex);
@@ -164,6 +169,18 @@ export function DossierHeaderFooterChrome({
       : headerMode === "contact"
         ? resolveTemplateChromeOptions(template, colors, { ...options, headerMode })
         : visualOptions;
+  const templateHeaderVisualOptions = resolveTemplateChromeOptions(template, colors, {
+    ...options,
+    headerBackgroundColor: null,
+    headerGradientColor: null,
+  });
+  const hasHeaderSurface = Boolean(options.headerBackgroundColor || options.headerGradientColor);
+  const headerHasCustomSurface =
+    hasHeaderSurface &&
+    (normalizedHex(options.headerBackgroundColor) !==
+      normalizedHex(templateHeaderVisualOptions.headerBackgroundColor) ||
+      normalizedHex(options.headerGradientColor) !==
+        normalizedHex(templateHeaderVisualOptions.headerGradientColor));
   const continuationContact = hasReducedContinuationHeader(options, pageIndex);
   const sourcePalette = cvPalette(colors);
   const primary =
@@ -179,7 +196,10 @@ export function DossierHeaderFooterChrome({
     headerVisualOptions.headerGradientColor ?? secondary,
   );
   const footerRoles = onColorRoles(footerBackground, visualOptions.footerGradientColor ?? primary);
-  const headerSurface = surfaceBackground(headerBackground, headerVisualOptions.headerGradientColor);
+  const headerSurface = surfaceBackground(
+    headerBackground,
+    headerVisualOptions.headerGradientColor,
+  );
   const footerSurface = surfaceBackground(footerBackground, visualOptions.footerGradientColor);
   const borderColor =
     visualOptions.borderColor ??
@@ -199,12 +219,23 @@ export function DossierHeaderFooterChrome({
   const compactFooterHeight = dossierFooterVisualHeightMmForOptions(options);
   const detailsHeight = options.footerHeightMm ?? footerHeightMm ?? 10;
   const letter = scope === "letter";
+  const pageMargins = getDossierPageMargins(scope);
+  const chromeContentLeftMm = pageMargins?.left ?? 24;
+  const chromeContentRightMm = pageMargins?.right ?? 23;
   const warmLetterOwnsFirstPageHeader =
     letter && template === "freundlich" && pageIndex === 0 && headerMode === "compact";
   const resolvedFooterLeft = footerLeft;
   const cvPageNumberFooter =
     scope === "cv" && footerRight ? /^seite\s+\d+$/i.test(footerRight.trim()) : false;
   const resolvedFooterRight = cvPageNumberFooter ? undefined : footerRight;
+  const headerTitle = documentContent?.headerTitle?.trim() ?? "";
+  const headerText = documentContent?.headerText?.trim() ?? "";
+  const footerTitle = documentContent?.footerTitle?.trim() ?? "";
+  const footerText = documentContent?.footerText?.trim() ?? "";
+  const headerDocumentContentMm = (headerTitle ? 5 : 0) + (headerText ? 4 : 0);
+  const footerCustomValues = [footerTitle, footerText].filter(
+    (value): value is string => !!value,
+  );
   const contactRows = [
     options.headerShowName && resolvedContact.name
       ? { key: "name", value: resolvedContact.name, strong: true }
@@ -222,6 +253,14 @@ export function DossierHeaderFooterChrome({
       ? { key: "email", value: resolvedContact.email, strong: false }
       : null,
   ].filter((row): row is ContactRow => row !== null);
+  const stackedName = contactRows.find((row) => row.key === "name");
+  const stackedAddressRows = contactRows.filter(
+    (row) => row.key === "address" || row.key === "place",
+  );
+  const stackedPhoneRows = contactRows.filter(
+    (row) => row.key === "phone" || row.key === "email",
+  );
+  const stackedGroups = [stackedAddressRows, stackedPhoneRows].filter((rows) => rows.length > 0);
   const continuationRows = [
     options.headerShowName && resolvedContact.name
       ? { key: "name", value: resolvedContact.name, strong: true }
@@ -237,6 +276,14 @@ export function DossierHeaderFooterChrome({
     (value): value is string => !!value?.trim(),
   );
   const stackedHeader = options.headerTextLayout === "stacked";
+  /**
+   * IMPORTANT — USER-APPROVED WARM CONTRACT, DO NOT NORMALIZE OR REMOVE:
+   * Warm's first-page contact header owns these gold shapes. They must live in
+   * the shared header layer (not behind it), otherwise generic opaque chrome
+   * hides the decoration again in CV preview and PDF export.
+   */
+  const warmContactDecoration =
+    template === "freundlich" && pageIndex === 0 && headerMode === "contact";
   const inlineSeparator = options.headerInlineSeparator ?? "icons";
   const headerContentOffsetY = options.headerContentOffsetYMm ?? 0;
   const footerContentOffsetY = options.footerContentOffsetYMm ?? 0;
@@ -248,6 +295,11 @@ export function DossierHeaderFooterChrome({
   return (
     <div
       data-dossier-chrome={scope}
+      data-dossier-template-chrome={template}
+      data-dossier-header-custom-surface={headerHasCustomSurface ? "true" : "false"}
+      data-dossier-footer-custom-surface={
+        options.footerBackgroundColor || options.footerGradientColor ? "true" : "false"
+      }
       data-dossier-header-mode={options.headerMode}
       data-dossier-effective-header-mode={headerMode}
       data-dossier-continuation-mode={
@@ -264,10 +316,21 @@ export function DossierHeaderFooterChrome({
       data-dossier-border-color={borderColor}
       data-dossier-border-width-mm={visualOptions.borderWidthMm}
       data-dossier-chrome-font={visualOptions.textFont ?? "template"}
+      data-dossier-content-left-mm={chromeContentLeftMm}
+      data-dossier-content-right-mm={chromeContentRightMm}
       data-letter-chrome={letter ? "" : undefined}
       data-letter-header-mode={letter ? options.headerMode : undefined}
       className="pointer-events-none absolute inset-0 z-[3] overflow-hidden"
-      style={{ fontFamily: textFontFamily }}
+      style={
+        {
+          fontFamily: textFontFamily,
+          "--chrome-primary": primary,
+          "--chrome-secondary": colors.secondary ?? secondary,
+          "--chrome-accent": colors.accent ?? secondary,
+          "--chrome-paper": colors.bg ?? sourcePalette.paper,
+          "--chrome-ink": colors.ink ?? sourcePalette.ink,
+        } as CSSProperties
+      }
     >
       {headerMode === "compact" && !warmLetterOwnsFirstPageHeader ? (
         <div
@@ -294,7 +357,7 @@ export function DossierHeaderFooterChrome({
             className="absolute inset-x-0 top-0 flex items-center"
             style={{
               height: `${headerVisualHeight}mm`,
-              padding: "0 12mm",
+              padding: `0 ${chromeContentRightMm}mm 0 ${chromeContentLeftMm}mm`,
               boxSizing: "border-box",
               background: headerSurface,
               borderBottom: borderStyle,
@@ -334,16 +397,49 @@ export function DossierHeaderFooterChrome({
                 boxSizing: "border-box",
                 background: headerSurface,
                 borderBottom: borderStyle,
+                overflow: warmContactDecoration ? "hidden" : undefined,
               }}
               aria-hidden="true"
-            />
+            >
+              {warmContactDecoration ? (
+                <>
+                  <div
+                    data-warm-contact-gold-ring
+                    className="absolute rounded-full"
+                    style={{
+                      width: "92mm",
+                      height: "92mm",
+                      right: "-24mm",
+                      top: "-41mm",
+                      border: `0.8mm solid ${secondary}`,
+                      boxSizing: "border-box",
+                      opacity: 0.78,
+                    }}
+                  />
+                  <div
+                    data-warm-contact-gold-orb
+                    className="absolute rounded-full"
+                    style={{
+                      width: "72mm",
+                      height: "72mm",
+                      right: "-13mm",
+                      top: "-31mm",
+                      backgroundColor: secondary,
+                      opacity: 0.72,
+                    }}
+                  />
+                </>
+              ) : null}
+            </div>
             <div
               data-dossier-integrated-contact
               data-letter-integrated-contact={letter ? "" : undefined}
               className="absolute inset-x-0 top-0 flex"
               style={{
                 height: `${headerVisualHeight}mm`,
-                padding: stackedHeader ? "1mm 23mm 1mm 24mm" : "2mm 18mm",
+                padding: stackedHeader
+                  ? `${1 + headerDocumentContentMm}mm ${chromeContentRightMm}mm 1mm ${chromeContentLeftMm}mm`
+                  : `${2 + headerDocumentContentMm}mm ${chromeContentRightMm}mm 2mm ${chromeContentLeftMm}mm`,
                 boxSizing: "border-box",
                 color: headerRoles.ink,
                 fontSize: stackedHeader ? "8pt" : "8.5pt",
@@ -353,16 +449,33 @@ export function DossierHeaderFooterChrome({
             >
               {stackedHeader ? (
                 <div
+                  data-dossier-stacked-contact
                   className="my-auto min-w-0"
                   style={{ overflowWrap: "anywhere", transform: headerContentTransform }}
                 >
-                  {contactRows.map((row) => (
+                  {stackedName ? (
+                    <div className="font-semibold" style={{ fontSize: "9.5pt", marginBottom: "0.2mm" }}>
+                      {stackedName.value}
+                    </div>
+                  ) : null}
+                  {stackedGroups.map((rows) => (
                     <div
-                      key={row.key}
-                      className={row.strong ? "font-semibold" : "opacity-95"}
-                      style={row.strong ? { fontSize: "9.5pt", marginBottom: "0.2mm" } : undefined}
+                      key={rows.map((row) => row.key).join("-")}
+                      className="flex min-w-0 flex-wrap items-center opacity-95"
                     >
-                      {row.value}
+                      {rows.map((row, index) => (
+                        <span key={row.key} className="inline-flex min-w-0 items-center">
+                          <InlineContactSeparator
+                            style={inlineSeparator}
+                            rowKey={row.key}
+                            index={index}
+                            compact
+                          />
+                          <span className="min-w-0" style={{ overflowWrap: "anywhere" }}>
+                            {row.value}
+                          </span>
+                        </span>
+                      ))}
                     </div>
                   ))}
                 </div>
@@ -394,6 +507,38 @@ export function DossierHeaderFooterChrome({
         )
       ) : null}
 
+      {headerMode !== "none" &&
+      !continuationContact &&
+      (headerTitle || headerText) ? (
+        <div
+          data-dossier-header-document-content
+          className="absolute inset-x-0 top-0 flex min-w-0 flex-col justify-start"
+          style={{
+            height: `${headerVisualHeight}mm`,
+            padding: `1.1mm ${chromeContentRightMm}mm 0 ${chromeContentLeftMm}mm`,
+            boxSizing: "border-box",
+            color: headerRoles.ink,
+            lineHeight: 1.05,
+            overflow: "hidden",
+            transform: headerContentTransform,
+          }}
+        >
+          {headerTitle ? (
+            <div data-dossier-header-title className="truncate text-[7.6pt] font-semibold">
+              {headerTitle}
+            </div>
+          ) : null}
+          {headerText ? (
+            <div
+              data-dossier-header-custom-text
+              className="truncate text-[6.6pt] opacity-95"
+            >
+              {headerText}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {options.footerMode === "compact" ? (
         <div
           data-dossier-footer="compact"
@@ -412,6 +557,25 @@ export function DossierHeaderFooterChrome({
         />
       ) : null}
 
+      {options.footerMode === "compact" && footerCustomValues.length ? (
+        <div
+          data-dossier-footer-custom-content
+          className="absolute inset-x-0 bottom-0 flex min-w-0 items-center text-[6.6pt]"
+          style={{
+            height: `${compactFooterHeight}mm`,
+            padding: `0 ${chromeContentRightMm}mm 0 ${chromeContentLeftMm}mm`,
+            boxSizing: "border-box",
+            color: footerRoles.ink,
+            overflow: "hidden",
+            transform: footerContentTransform,
+          }}
+        >
+          {footerTitle ? <span className="shrink-0 font-semibold">{footerTitle}</span> : null}
+          {footerTitle && footerText ? <span className="mx-[1.2mm] opacity-60">·</span> : null}
+          {footerText ? <span className="min-w-0 truncate opacity-95">{footerText}</span> : null}
+        </div>
+      ) : null}
+
       {options.footerMode === "details" ? (
         <div
           data-dossier-footer="details"
@@ -421,7 +585,7 @@ export function DossierHeaderFooterChrome({
           className="absolute inset-x-0 bottom-0 text-[8.5pt] leading-[1.3]"
           style={{
             height: `${detailsHeight}mm`,
-            padding: "2.2mm 23mm 2.2mm 24mm",
+            padding: `2.2mm ${chromeContentRightMm}mm 2.2mm ${chromeContentLeftMm}mm`,
             boxSizing: "border-box",
             background: footerSurface,
             borderTop: borderStyle,
@@ -429,7 +593,28 @@ export function DossierHeaderFooterChrome({
             overflow: "hidden",
           }}
         >
-          {footerLabel && footerDetails.length ? (
+          {footerCustomValues.length ? (
+            options.footerTextLayout === "stacked" ? (
+              <div
+                data-dossier-footer-custom-content
+                className="flex h-full min-w-0 flex-col justify-center"
+                style={{ transform: footerContentTransform }}
+              >
+                {footerTitle ? <div className="font-semibold">{footerTitle}</div> : null}
+                {footerText ? <div className="min-w-0 break-words opacity-95">{footerText}</div> : null}
+              </div>
+            ) : (
+              <div
+                data-dossier-footer-custom-content
+                className="flex h-full min-w-0 items-center"
+                style={{ transform: footerContentTransform }}
+              >
+                {footerTitle ? <span className="shrink-0 font-semibold">{footerTitle}</span> : null}
+                {footerTitle && footerText ? <span className="mx-[2mm] opacity-60">·</span> : null}
+                {footerText ? <span className="min-w-0 break-words opacity-95">{footerText}</span> : null}
+              </div>
+            )
+          ) : footerLabel && footerDetails.length ? (
             options.footerTextLayout === "inline" ? (
               <div
                 data-letter-footer-attachments={letter ? "" : undefined}

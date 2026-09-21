@@ -23,20 +23,6 @@ html[data-dossier-template="colorful"] [data-dossier-document="cv"] [data-cv-hea
   );
 }
 
-html[data-dossier-template="colorful"] [data-dossier-document="cv"] [data-cv-header]::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 0;
-  width: 32mm;
-  height: 2.4mm;
-  background: linear-gradient(
-    90deg,
-    var(--cover-secondary) 0 62%,
-    var(--cover-tertiary) 62% 100%
-  );
-}
-
 html[data-dossier-template="colorful"] [data-dossier-document="cv"] [data-cv-doc-title],
 html[data-dossier-template="colorful"] [data-dossier-document="cv"] [data-cv-name],
 html[data-dossier-template="colorful"] [data-dossier-document="cv"] [data-cv-subtitle] {
@@ -53,6 +39,15 @@ html[data-dossier-template="colorful"] [data-dossier-document="cv"] [data-cv-nam
   color: var(--cover-ink) !important;
   font-weight: 820 !important;
   letter-spacing: -0.03em !important;
+}
+
+/* Colorful's saturated contact masthead intentionally keeps light typography.
+ * Automatic contrast can choose near-black on the bright red surface, which is
+ * mathematically valid but visually breaks the template's cover identity. */
+html[data-dossier-template="colorful"]
+  [data-dossier-chrome="cv"]
+  :is([data-dossier-integrated-contact], [data-dossier-continuation-contact-header]) {
+  color: #fff !important;
 }
 
 /* 11 Kolumne — Sidebar owns the content structure. Keep the heading hierarchy

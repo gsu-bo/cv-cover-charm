@@ -3,7 +3,7 @@ import { FRESH_TEMPLATE_REGISTRY } from "../../src/components/cover/fresh-templa
 import { TEMPLATES } from "../../src/components/cover/types";
 
 const BASE_URL = "http://127.0.0.1:4173";
-const RETIRED_TEMPLATE_IDS = new Set(["edelBlockig", "sonnig", "warm4", "warm5"]);
+const RETIRED_TEMPLATE_IDS = new Set(["edelBlockig", "sonnig", "warm4", "warm5", "frame"]);
 const LIVE_COVER_TEMPLATE_IDS = [
   ...TEMPLATES.filter((template) => !RETIRED_TEMPLATE_IDS.has(template.id as string)).map(
     (template) => template.id as string,
@@ -11,6 +11,7 @@ const LIVE_COVER_TEMPLATE_IDS = [
   ...FRESH_TEMPLATE_REGISTRY.filter((template) => !RETIRED_TEMPLATE_IDS.has(template.id)).map(
     (template) => template.id,
   ),
+  "diagonal",
   "edelDark",
 ].filter((id, index, all) => all.indexOf(id) === index);
 
@@ -19,7 +20,6 @@ const FAMILY_CASES = [
   { family: "executive", template: "pastell", expected: "Palatino" },
   { family: "modern", template: "modern", expected: "Helvetica" },
   { family: "classic", template: "serioes", expected: "Helvetica" },
-  { family: "executive Fresh", template: "frame", expected: "Palatino" },
   { family: "executive Fresh", template: "forestFlow", expected: "Palatino" },
   { family: "editorial Fresh", template: "monoLuxe", expected: "Georgia" },
 ] as const;
@@ -228,6 +228,8 @@ test.describe("dossier typography regression", () => {
     test.setTimeout(300_000);
     expect(LIVE_COVER_TEMPLATE_IDS).toHaveLength(39);
     expect(LIVE_COVER_TEMPLATE_IDS).toContain("forestFlow");
+    expect(LIVE_COVER_TEMPLATE_IDS).toContain("diagonal");
+    expect(LIVE_COVER_TEMPLATE_IDS).not.toContain("frame");
 
     for (const template of LIVE_COVER_TEMPLATE_IDS) {
       await seedCover(page, template);
@@ -295,12 +297,12 @@ test.describe("dossier typography regression", () => {
   test("Fresh Executive applicant initials use the resolved Palatino dossier font", async ({
     page,
   }) => {
-    await seedCover(page, "frame");
+    await seedCover(page, "forestFlow");
     await page.goto(`${BASE_URL}/titelblatt`, { waitUntil: "domcontentloaded" });
-    await settledCoverRoot(page, "frame");
+    await settledCoverRoot(page, "forestFlow");
     const initials = page
       .locator(
-        '[data-dossier-document="cover"][data-cover-template="frame"] [data-dossier-photo="applicant"] > div',
+        '[data-dossier-document="cover"][data-cover-template="forestFlow"] [data-dossier-photo="applicant"] > div',
       )
       .first();
     await expect(initials).toBeVisible();

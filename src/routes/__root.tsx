@@ -8,13 +8,16 @@ import {
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import editorActionMenuCss from "../components/dossier/editor-action-menu.css?url";
 import humanPolishCss from "../components/dossier/human-polish.css?url";
 import letterAlignmentCss from "../components/letter/letter-alignment.css?url";
+import headerProductionPolishCss from "../components/dossier/header-production-polish.css?url";
+import motifVisibilityCss from "../components/dossier/motif-visibility.css?url";
 import { DossierHyphenationBridge } from "../components/dossier/DossierHyphenationControl";
+import { TemplateQaKeyboardSwitch } from "../components/dossier/TemplateQaKeyboardSwitch";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -132,6 +135,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: letterAlignmentCss,
       },
+      {
+        rel: "stylesheet",
+        href: headerProductionPolishCss,
+      },
+      {
+        rel: "stylesheet",
+        href: motifVisibilityCss,
+      },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
@@ -155,12 +166,29 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Keep the powerful layout QA helper out of the normal production UI.
+ * Local Vite development enables it automatically; built render/main deployments
+ * require an explicit ?qa=1 opt-in and still keep the existing code prompt.
+ */
+function TemplateQaGate() {
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    const explicitlyEnabled = new URLSearchParams(window.location.search).get("qa") === "1";
+    setEnabled(import.meta.env.DEV || explicitlyEnabled);
+  }, []);
+
+  return enabled ? <TemplateQaKeyboardSwitch /> : null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
       <DossierHyphenationBridge />
+      <TemplateQaGate />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>

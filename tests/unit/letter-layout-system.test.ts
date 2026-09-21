@@ -40,6 +40,16 @@ function designFor(
   };
 }
 
+function minimumContentHeightFor(template: LetterTemplateId, headerMode: LetterHeaderMode) {
+  if (template === "freundlich" && headerMode === "compact") {
+    return 220;
+  }
+  if (headerMode === "contact") {
+    return 230;
+  }
+  return 240;
+}
+
 describe("central motivation-letter layout system", () => {
   test("every selectable letter style and every header/footer mode yields one usable content box", () => {
     expect(TEMPLATES.length).toBe(41);
@@ -58,8 +68,8 @@ describe("central motivation-letter layout system", () => {
           expect(geometry.content.top).toBeGreaterThanOrEqual(16);
           expect(geometry.content.bottom).toBeGreaterThanOrEqual(10);
           expect(geometry.content.width).toBeGreaterThan(140);
-          const warmCompact = template === "freundlich" && headerMode === "compact";
-          expect(geometry.content.height).toBeGreaterThan(warmCompact ? 220 : 240);
+          const minimumContentHeight = minimumContentHeightFor(template, headerMode);
+          expect(geometry.content.height).toBeGreaterThan(minimumContentHeight);
           expect(geometry.content.left + geometry.content.width + geometry.content.right).toBe(
             LETTER_PAGE_MM.width,
           );
@@ -117,7 +127,6 @@ describe("central motivation-letter layout system", () => {
       signatures.add(`${geometry.content.left}/${geometry.content.right}`);
     }
 
-    // Fresh letters are not flattened into one `klassisch` margin pair.
     expect(signatures.size).toBeGreaterThan(5);
   });
 
@@ -141,13 +150,29 @@ describe("central motivation-letter layout system", () => {
     expect(letterArchetypeFor("glow" as LetterTemplateId)).toBe("fresh");
     expect(letterArchetypeFor("edge" as LetterTemplateId)).toBe("band");
     expect(letterArchetypeFor("horizon" as LetterTemplateId)).toBe("band");
-    expect(letterArchetypeFor("frame" as LetterTemplateId)).toBe("frame");
     expect(letterArchetypeFor("verlauf2" as LetterTemplateId)).toBe("fresh");
     expect(letterArchetypeFor("verlauf3" as LetterTemplateId)).toBe("fresh");
   });
 
   test("a zero-height CV band remains a quiet letter reference", () => {
     expect(letterArchetypeFor("modern")).toBe("quiet");
+  });
+
+  test("legacy/SSR geometry reuses the shared semantic chrome heights", () => {
+    const compact = letterPageGeometry(DEMO_LETTER, designFor("modern", "compact", "compact"));
+    const stackedContact = letterPageGeometry(
+      DEMO_LETTER,
+      designFor("modern", "contact", "compact"),
+    );
+    const inlineContact = letterPageGeometry(DEMO_LETTER, {
+      ...designFor("modern", "contact", "compact"),
+      headerTextLayout: "inline",
+    });
+
+    expect(compact.footer.height).toBe(4);
+    expect(compact.content.top).toBe(22);
+    expect(stackedContact.content.top).toBe(41);
+    expect(inlineContact.content.top).toBe(35);
   });
 
   test("no-footer and attachment-footer reserve only their functional bottom space", () => {
@@ -165,7 +190,7 @@ describe("central motivation-letter layout system", () => {
     expect(attachments.content.bottom).toBe(attachments.footer.height + 7);
   });
 
-  test("multi-page context keeps contact semantics on continuation pages", () => {
+  test("multi-page context repeats the selected contact header by default", () => {
     const design = designFor("modern", "contact", "attachments");
     const firstOfTwo = letterPageGeometry(DEMO_LETTER, design, {
       pageIndex: 0,
@@ -185,6 +210,6 @@ describe("central motivation-letter layout system", () => {
     expect(finalContinuation.effectiveHeaderMode).toBe("contact");
     expect(finalContinuation.effectiveFooterMode).toBe("attachments");
     expect(finalContinuation.footer.showAttachments).toBe(true);
-    expect(finalContinuation.content.top).toBeLessThan(firstOfTwo.content.top);
+    expect(finalContinuation.content.top).toBe(firstOfTwo.content.top);
   });
 });

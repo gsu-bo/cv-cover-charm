@@ -6,6 +6,7 @@ import { buildBlocks as buildBaseBlocks } from "./layouts-base";
 import type { StyleOverrides } from "./layouts-base";
 import { isFreshTemplate } from "./fresh-templates";
 import { templateDecorations } from "./template-decorations";
+import { applyForestFlowCoverDefaults } from "./forest-flow-cover-defaults";
 import "./editable-decorations.css";
 import "./fresh-cover-visual-cleanup.css";
 import "./template-typography-fixes.css";
@@ -95,6 +96,7 @@ function templateDefaultAdjustment(
   if (Object.keys(typographyPatch).length > 0) {
     adjusted = { ...adjusted, style: { ...adjusted.style, ...typographyPatch } };
   }
+  adjusted = applyForestFlowCoverDefaults(template, adjusted, overrides);
 
   // Brief intentionally reuses Modern's base geometry. Keep the document label
   // on the same corrected 20mm left margin as Modern unless the user moved it.

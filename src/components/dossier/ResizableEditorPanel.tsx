@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { ContextualFieldTypography } from "./ContextualFieldTypography";
 import "./EditorPanelIntro.css";
 
 const STORAGE_KEY = "bewerbungsdossier:editor-panel-width";
@@ -31,8 +32,10 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
   const widthRef = useRef<number | null>(null);
   const [customWidth, setCustomWidth] = useState<number | null>(null);
   const [resizing, setResizing] = useState(false);
+  const [clientReady, setClientReady] = useState(false);
 
   useEffect(() => {
+    setClientReady(true);
     try {
       const stored = Number(window.localStorage.getItem(STORAGE_KEY));
       if (Number.isFinite(stored) && stored >= MIN_WIDTH) {
@@ -75,7 +78,9 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
       data-editor-panel
       style={style}
       className={`absolute inset-y-0 left-0 z-20 w-full shrink-0 border-r bg-background transition-transform duration-300 ease-out sm:static sm:h-auto sm:bg-muted sm:transition-[width,transform] ${
-        open ? `translate-x-0 ${openWidthClass}` : "-translate-x-full sm:w-0 sm:border-r-0"
+        // An identity transform still creates a containing block for fixed descendants.
+        // Keep the open panel transform-free so floating editor toolbars remain viewport-fixed.
+        open ? `transform-none ${openWidthClass}` : "-translate-x-full sm:w-0 sm:border-r-0"
       }`}
     >
       <aside
@@ -86,6 +91,12 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
       >
         {children}
       </aside>
+
+      {/*
+        Scope detection inside the contextual typography helper needs the browser URL.
+        Mount it only after hydration so server and first client markup stay identical.
+      */}
+      {clientReady ? <ContextualFieldTypography /> : null}
 
       {open ? (
         <div

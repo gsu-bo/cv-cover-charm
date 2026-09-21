@@ -10,6 +10,10 @@ import {
   resolveDossierContact,
 } from "@/lib/dossier-contact";
 import { resolveTemplateChromeOptions } from "@/lib/template-chrome";
+import {
+  resolveDossierChromeDocumentContent,
+  withDossierChromeDocumentContent,
+} from "@/lib/dossier-chrome-content";
 
 /** Capture semantic chrome before asynchronous export work starts. */
 export function resolveDossierChromeSnapshot(
@@ -27,18 +31,34 @@ export function resolveDossierChromeSnapshot(
         cv: documents.cv?.data,
       })
     : null;
-  const resolve = (scope: "letter" | "cv") => ({
-    options: resolveTemplateChromeOptions(
-      documents[scope]?.design.template ?? "brief",
-      documents[scope]?.design.colors ?? {},
-      { ...(state.sync ? state.shared : state[scope]) },
-    ),
-    contact:
-      shared ??
-      (scope === "letter"
-        ? dossierContactFromLetter(documents.letter?.data)
-        : dossierContactFromCv(documents.cv?.data)),
-  });
+  const resolve = (scope: "letter" | "cv") => {
+    const document = documents[scope];
+    const defaultTitle =
+      scope === "cv"
+        ? documents.cv?.data.titel?.trim() || "Lebenslauf"
+        : "Motivationsschreiben";
+    const content = resolveDossierChromeDocumentContent(
+      document?.design.chromeContent,
+      defaultTitle,
+    );
+    const options = withDossierChromeDocumentContent(
+      resolveTemplateChromeOptions(
+        document?.design.template ?? "brief",
+        document?.design.colors ?? {},
+        { ...(state.sync ? state.shared : state[scope]) },
+      ),
+      content,
+    );
+    return {
+      options,
+      content,
+      contact:
+        shared ??
+        (scope === "letter"
+          ? dossierContactFromLetter(documents.letter?.data)
+          : dossierContactFromCv(documents.cv?.data)),
+    };
+  };
   return { letter: resolve("letter"), cv: resolve("cv") };
 }
 export type ResolvedDossierChrome = ReturnType<typeof resolveDossierChromeSnapshot>;

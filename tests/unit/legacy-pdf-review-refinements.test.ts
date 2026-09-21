@@ -59,11 +59,13 @@ describe("legacy PDF review refinements", () => {
     expect(humanPolish).toContain("display: none !important;");
   });
 
-  test("Colorful owns a geometric CV header instead of the generic legacy header", () => {
+  test("Colorful keeps its geometric CV card without reviving the detached blue/yellow bar", () => {
     expect(refinements).toContain('data-dossier-template="colorful"');
     expect(refinements).toContain("border-left: 2.2mm solid var(--cover-secondary);");
     expect(refinements).toContain("var(--cover-tertiary)");
-    expect(refinements).toContain('[data-cv-header]::after');
+    expect(refinements).not.toContain('[data-cv-header]::after');
+    expect(refinements).toContain("[data-dossier-integrated-contact]");
+    expect(refinements).toContain("color: #fff !important;");
   });
 
   test("Kolumne starts as Sidebar and uses one modern heading family", () => {

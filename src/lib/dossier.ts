@@ -9,6 +9,7 @@ import {
   type FontKey,
   type TemplateId,
 } from "@/components/cover/types";
+import { normalizeActiveTemplateId } from "@/components/cover/fresh-templates";
 import type { CvPerson } from "@/components/cv/types";
 import {
   DEFAULT_DOSSIER_PHOTO_STYLE,
@@ -230,9 +231,8 @@ export function readCoverDraft(): CoverDraft | null {
   if (!p) return null;
 
   try {
-    const templateDef =
-      TEMPLATES.find((t) => t.id === p.template) ?? templateDefinition(DEFAULTS.TEMPLATE);
-    const template = templateDef.id;
+    const template = normalizeActiveTemplateId(p.template);
+    const templateDef = templateDefinition(template);
     const d = p.data ?? {};
     const coverData = coverDataFromRaw(d);
     const font = typeof p.font === "string" && p.font in FONT_LABELS ? (p.font as FontKey) : null;

@@ -49,6 +49,29 @@ describe("global cover footer consistency", () => {
     }
   });
 
+  test("empty contact keeps the default attachments inside the print-safe lower edge", () => {
+    const emptyContact: CoverData = {
+      ...DATA,
+      adresse: "",
+      plzOrt: "",
+      telefon: "",
+      email: "",
+      geburtsdatum: "",
+    };
+
+    for (const template of TEMPLATES) {
+      const blocks = buildBlocks(template.id, emptyContact, [], {}, template.slots);
+      const contactTitle = blocks.find((block) => block.id === "kontaktTitel");
+      const layout = resolveLayout(blocks, 1);
+
+      expect(contactTitle?.lines, template.name).toHaveLength(0);
+      expect(layout.beilagenTitel.y, template.name).toBeLessThan(layout.beilagen.y);
+      expect(layout.beilagen.y + layout.beilagen.height, template.name).toBeLessThanOrEqual(
+        276.001,
+      );
+    }
+  });
+
   test("Kontakt and Beilagen share one uppercase, non-spaced label convention", () => {
     const css = readFileSync(
       new URL("../../src/components/cover/template-typography-fixes.css", import.meta.url),

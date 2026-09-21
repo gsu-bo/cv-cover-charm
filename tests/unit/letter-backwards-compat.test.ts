@@ -27,12 +27,13 @@ describe("M7 legacy motivation-letter compatibility", () => {
       ruleAfterSender: false,
       ruleAfterRecipient: false,
       ruleAfterSubject: false,
-      headerMode: "none",
+      headerMode: "compact",
       headerShowName: true,
       headerShowAddress: true,
       headerShowPhone: true,
       headerShowEmail: true,
-      footerMode: "none",
+      headerDifferentFirstPage: false,
+      footerMode: "compact",
       chromeBorderEnabled: false,
     });
   });

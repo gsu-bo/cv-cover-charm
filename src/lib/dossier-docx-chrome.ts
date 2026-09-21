@@ -1,4 +1,5 @@
 import type { DossierChromeContact, DossierChromeOptions } from "@/lib/dossier-chrome";
+import type { DossierChromeDocumentContent } from "@/lib/dossier-chrome-content";
 import {
   dossierHeaderContentTopMmForOptions,
   dossierHeaderVisualHeightMmForOptions,
@@ -71,6 +72,7 @@ function header(
   contact: DossierChromeContact,
   colors: Record<string, string>,
   page: number,
+  content?: DossierChromeDocumentContent,
 ) {
   const mode = effectiveDossierHeaderModeForOptions(options, page);
   if (mode === "none") return part("header", "");
@@ -84,8 +86,16 @@ function header(
     0,
     dossierHeaderVisualHeightMmForOptions(options, page),
   );
+  const reduced = hasReducedContinuationHeader(options, page);
+  if (!reduced) {
+    if (content?.headerTitle?.trim()) {
+      body += paragraph(content.headerTitle.trim(), ink(background), true);
+    }
+    if (content?.headerText?.trim()) {
+      body += paragraph(content.headerText.trim(), ink(background));
+    }
+  }
   if (mode === "contact") {
-    const reduced = hasReducedContinuationHeader(options, page);
     const rows = (
       reduced
         ? [
@@ -134,17 +144,26 @@ function header(
   return part("header", body);
 }
 
-function footer(options: DossierChromeOptions, colors: Record<string, string>, text: string) {
+function footer(
+  options: DossierChromeOptions,
+  colors: Record<string, string>,
+  text: string,
+  content?: DossierChromeDocumentContent,
+) {
   if (options.footerMode === "none") return part("footer", "");
   const background = color(
     options.footerBackgroundColor ?? colors.accent ?? colors.secondary,
     "4B5563",
   );
   const height = dossierFooterVisualHeightMmForOptions(options);
+  const customText = [content?.footerTitle?.trim(), content?.footerText?.trim()]
+    .filter((value): value is string => !!value)
+    .join(" · ");
+  const resolvedText = customText || (options.footerMode === "details" ? text : "");
   return part(
     "footer",
     band("semantic-footer", background, 297 - height, height) +
-      (options.footerMode === "details" ? paragraph(text, ink(background)) : ""),
+      (resolvedText ? paragraph(resolvedText, ink(background)) : ""),
   );
 }
 function finalPageDetailsFooter(
@@ -247,7 +266,7 @@ export async function applyDossierChromeToDocx(
     [2, "cv"],
     [1, "letter"],
   ] as const) {
-    const { options, contact } = resolved[scope];
+    const { options, contact, content: chromeContent } = resolved[scope];
     const document = documents[scope],
       section = sections[index];
     const start = sections[index - 1].index! + sections[index - 1][0].length;
@@ -257,6 +276,7 @@ export async function applyDossierChromeToDocx(
       .replace(/<w:(?:headerReference|footerReference|titlePg)\b[^>]*\/>/g, "");
     const references: string[] = [];
     const warmRecipe = String(document.design.template) === "freundlich";
+    const citrusRecipe = String(document.design.template) === "citrus";
     if (warmRecipe) {
       const surfaces = WARM_RECIPE_SURFACES[scope];
       if (options.footerMode !== "compact") {
@@ -294,6 +314,7 @@ export async function applyDossierChromeToDocx(
                 contact,
                 document.design.colors,
                 options.headerDifferentFirstPage === false ? 0 : page,
+                chromeContent,
               )
           : footer(
               scope === "letter" && options.footerMode === "details"
@@ -301,6 +322,7 @@ export async function applyDossierChromeToDocx(
                 : options,
               document.design.colors,
               scope === "letter" ? "" : text,
+              chromeContent,
             ),
       );
       rels = rels.replace(
@@ -342,10 +364,13 @@ export async function applyDossierChromeToDocx(
       for (const value of documents.letter.data.beilagen ?? [])
         content = removeText(content, value);
       const attachments = (documents.letter.data.beilagen ?? []).filter((value) => value.trim());
+      const customFooterText = [chromeContent.footerTitle, chromeContent.footerText]
+        .filter((value): value is string => !!value?.trim())
+        .join(" · ");
       const finalFooter = finalPageDetailsFooter(
         options,
         document.design.colors,
-        attachments.length ? `Beilagen   ${attachments.join(" · ")}` : "",
+        customFooterText || (attachments.length ? `Beilagen   ${attachments.join(" · ")}` : ""),
       );
       // The section properties live inside the paragraph that follows the
       // letter content. A page-anchored frame inserted immediately before that
@@ -363,12 +388,16 @@ export async function applyDossierChromeToDocx(
       // Word page margins are section-wide. Reserve enough top space for the
       // larger of page 1 and the continuation pages so an explicit full
       // contact header on page 2 can never overlap editable document content.
-      const minTop = twips(
-        Math.max(
-          dossierHeaderContentTopMmForOptions(options, 0),
-          dossierHeaderContentTopMmForOptions(options, 1),
-        ),
+      const chromeTopMm = Math.max(
+        dossierHeaderContentTopMmForOptions(options, 0),
+        dossierHeaderContentTopMmForOptions(options, 1),
       );
+      // Template-specific DOCX recipes can already provide part of the visual
+      // separation below the 32 mm header. Keep the visible header unchanged
+      // and only reclaim redundant body safety space in the CV section.
+      const cvTopAllowanceMm =
+        scope === "cv" ? (warmRecipe ? 0.35 : citrusRecipe ? 8 : 0) : 0;
+      const minTop = twips(chromeTopMm - cvTopAllowanceMm);
       properties = properties.replace(
         /w:top="(\d+)"/,
         (_m, value) => `w:top="${Math.max(Number(value), minTop)}"`,

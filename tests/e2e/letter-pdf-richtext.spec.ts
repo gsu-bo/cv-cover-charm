@@ -283,6 +283,35 @@ async function expectWrappedWordsInPdf(path: string, pageNumber: number) {
   for (const target of TARGET_WORDS) expectWordUsesMultiplePdfBaselines(items, target);
 }
 
+async function expectInvisibleNativeTextLayer(path: string, pageNumber: number) {
+  const { getDocument, OPS } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const data = new Uint8Array(await readFile(path));
+  const document = await getDocument({ data, disableFontFace: true }).promise;
+  const pdfPage = await document.getPage(pageNumber);
+  const operatorList = await pdfPage.getOperatorList();
+  const textOperators = new Set([
+    OPS.showText,
+    OPS.showSpacedText,
+    OPS.nextLineShowText,
+    OPS.nextLineSetSpacingShowText,
+  ]);
+  let renderingMode = 0;
+  let nativeTextRuns = 0;
+
+  for (let index = 0; index < operatorList.fnArray.length; index += 1) {
+    const operator = operatorList.fnArray[index];
+    if (operator === OPS.setTextRenderingMode) {
+      renderingMode = Number(operatorList.argsArray[index]?.[0] ?? 0);
+      continue;
+    }
+    if (!textOperators.has(operator)) continue;
+    nativeTextRuns += 1;
+    expect(renderingMode, `page ${pageNumber}: native letter text must stay invisible`).toBe(3);
+  }
+
+  expect(nativeTextRuns, `page ${pageNumber}: searchable native letter text must exist`).toBeGreaterThan(0);
+}
+
 test.describe("Motivation-letter PDF rich-text wrap regression", () => {
   test.setTimeout(180_000);
 
@@ -300,6 +329,7 @@ test.describe("Motivation-letter PDF rich-text wrap regression", () => {
     const path = await file.path();
     expect(path).not.toBeNull();
     await expectWrappedWordsInPdf(path ?? "", 1);
+    await expectInvisibleNativeTextLayer(path ?? "", 1);
   });
 
   test("combined dossier uses the same fragment-safe letter text layer", async ({ page }) => {
@@ -328,5 +358,6 @@ test.describe("Motivation-letter PDF rich-text wrap regression", () => {
     const path = await file.path();
     expect(path).not.toBeNull();
     await expectWrappedWordsInPdf(path ?? "", 2);
+    await expectInvisibleNativeTextLayer(path ?? "", 2);
   });
 });

@@ -1,4 +1,5 @@
 import type { FontKey, TemplateId } from "@/components/cover/types";
+import type { DossierChromeDocumentContentSettings } from "@/lib/dossier-chrome-content";
 
 /**
  * Ein Eintrag mit Zeitraum – Schule, Praktikum, Kurs. Alle Felder dürfen leer
@@ -30,6 +31,16 @@ export type CvReferenz = {
   zusatz?: string;
 };
 
+/** Bewusste Überschreibung der Namens-Typografie. Fehlende Werte bleiben vorlagengesteuert. */
+export type CvNameStyle = {
+  font?: FontKey;
+  fontSizePt?: number;
+  color?: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+};
+
 /**
  * Angaben zur Person. Dieselben Felder wie im Titelblatt, damit der Lebenslauf
  * sie übernehmen kann.
@@ -46,11 +57,18 @@ export type CvPerson = {
   /** Zeile unter dem Namen, z. B. "Schülerin, 3. Sek B". */
   untertitel: string;
   foto: string | null;
+  /** Optional, damit ältere gespeicherte CVs ihre Vorlagen-Typografie unverändert behalten. */
+  nameStyle?: CvNameStyle;
 };
 
 /** Welche Abschnitte gibt es und wie heissen sie in der Vorgabe? */
 export type CvSectionKey =
-  "schule" | "erfahrung" | "sprachen" | "hobbys" | "staerken" | "referenzen";
+  | "schule"
+  | "erfahrung"
+  | "sprachen"
+  | "hobbys"
+  | "staerken"
+  | "referenzen";
 
 export const CV_SECTION_LABELS: Record<CvSectionKey, string> = {
   schule: "Schulbildung",
@@ -297,6 +315,10 @@ export type CvDesign = {
   headingScale?: number;
   /** Grösse des Fliesstexts, 1 = Vorgabe. */
   bodyScale?: number;
+  /** Der normale Dokumenttitel im CV-Körper bleibt unabhängig vom Header schaltbar. */
+  showDocumentTitle?: boolean;
+  /** Dokumenteigene Texte. Deren Geometrie bleibt vom gemeinsamen Chrome-State getrennt. */
+  chromeContent?: DossierChromeDocumentContentSettings;
   /** Eigene Gestaltung für den kleinen Dokumenttitel über dem Namen. */
   docTitleFontSizePx?: number;
   docTitleColor?: string;
@@ -311,6 +333,14 @@ export type CvDesign = {
   sectionTitleItalic?: boolean;
   sectionTitleUnderline?: boolean;
   sectionTitleMarginBottomPx?: number;
+  /** Shared rubric-title presentation. Missing values preserve template geometry. */
+  sectionTitlePill?: boolean;
+  sectionTitleOffsetMm?: number;
+  sectionContentIndentMm?: number;
+  /** Legacy Citrus-only aliases retained for explicit older user settings. */
+  citrusRubricPill?: boolean;
+  citrusRubricOffsetMm?: number;
+  citrusContentIndentMm?: number;
   /** Breite der Seitenspalte als Anteil der Blattbreite. */
   sidebarPct?: number;
 };
@@ -340,6 +370,15 @@ export const CV_DOC_TITLE_DEFAULTS = {
 export const CV_DOC_TITLE_FONT_SIZE_MIN = 10;
 export const CV_DOC_TITLE_FONT_SIZE_MAX = 48;
 export const CV_DOC_TITLE_MARGIN_BOTTOM_MAX = 100;
+
+export const CV_NAME_STYLE_DEFAULTS = {
+  fontSizePt: 24,
+  bold: true,
+  italic: false,
+  underline: false,
+} as const;
+export const CV_NAME_FONT_SIZE_MIN = 10;
+export const CV_NAME_FONT_SIZE_MAX = 48;
 
 export const CV_SECTION_TITLE_DEFAULTS = {
   fontSizePx: 16,
@@ -447,8 +486,11 @@ export function ensureFixedFamilySection(data: CvData): CvData {
               ? { ...section, preset: "familie" as const }
               : section,
           );
-    const nextOrder = usesLegacyDefaultOrder ? defaultCvSectionOrder(customKeys) : cvSectionOrder(data);
-    if (normalizedSections === sections && sameSectionOrder(nextOrder, currentSavedOrder)) return data;
+    const nextOrder = usesLegacyDefaultOrder
+      ? defaultCvSectionOrder(customKeys)
+      : cvSectionOrder(data);
+    if (normalizedSections === sections && sameSectionOrder(nextOrder, currentSavedOrder))
+      return data;
     return {
       ...data,
       customSections: normalizedSections,
@@ -534,7 +576,7 @@ export const DEMO_CV: CvData = {
     telefon: "079 123 45 67",
     email: "lea.mueller@example.ch",
     geburtsdatum: "14.03.2010",
-    nationalitaet: "Schweiz",
+    nationalitaet: "",
     untertitel: "",
     foto: null,
   },

@@ -1,0 +1,62 @@
+/*
+ * Ribbon cover — one visual system: rail + ribbon + portrait.
+ *
+ * Structural surfaces stay CSS-owned. Editable content geometry stays in the
+ * editor defaults adapter so drag/resize/reset remain authoritative.
+ */
+
+html[data-dossier-template="ribbon"]
+  [data-dossier-document="cover"]
+  > div:first-child
+  > div:first-child {
+  left: 0 !important;
+  top: 0 !important;
+  width: 48mm !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+}
+
+html[data-dossier-template="ribbon"]
+  [data-dossier-document="cover"]
+  > div:first-child
+  > div:first-child
+  > div:first-child {
+  left: 48mm !important;
+  top: 24mm !important;
+  width: 146mm !important;
+  height: 64mm !important;
+  border-radius: 32mm !important;
+  opacity: 1 !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+html[data-dossier-template="ribbon"]
+  [data-dossier-document="cover"]
+  > div:first-child
+  > div:first-child
+  > div:nth-child(2) {
+  display: none !important;
+}
+
+/* "BEWERBUNG" belongs directly to the green rail: no extra badge/bar. */
+html[data-dossier-template="ribbon"]
+  [data-dossier-document="cover"]
+  [data-block-id="eyebrow"]
+  > div {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+/* The portrait is editor-owned, but its untouched default reads as one clean
+ * circular anchor between rail and ribbon. Explicit user radius/fill edits
+ * still win because geometry is not pinned here. */
+html[data-dossier-template="ribbon"]
+  [data-dossier-document="cover"]
+  [data-block-id="foto"]
+  > div {
+  overflow: hidden;
+}

@@ -157,6 +157,26 @@ html[data-dossier-template][data-dossier-template][data-dossier-template]
   background-image: none !important;
 }
 
+/*
+ * "Keine" is an explicit document setting, not a template suggestion. Keep a
+ * state marker on the document so template-specific display/border rules can
+ * never reintroduce a separator in preview, measurement or PDF export.
+ */
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-dossier-document="cv"][data-cv-heading-rule="none"]
+  [data-cv-accent="section"] {
+  display: none !important;
+}
+
+html[data-dossier-template][data-dossier-template][data-dossier-template]
+  [data-dossier-document="cv"][data-cv-heading-rule="none"]
+  [data-cv-section]
+  > div:first-child {
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
 html[data-dossier-template][data-dossier-template][data-dossier-template]
   [data-dossier-document="cv"][data-dossier-document="cv"]
   :is([data-cv-page], [data-cv-measure-page])
@@ -246,7 +266,8 @@ html[data-dossier-template][data-dossier-template][data-dossier-template]
     [data-cv-muted],
     [data-dossier-integrated-contact],
     [data-dossier-continuation-contact]
-  ) * {
+  )
+  * {
   font-family: var(--dossier-font) !important;
 }
 

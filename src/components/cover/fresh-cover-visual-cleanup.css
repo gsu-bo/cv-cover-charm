@@ -1,8 +1,8 @@
 /* M10 visual acceptance fixes for Fresh covers.
  *
  * Keep these as cover-only overrides. The established CV geometry remains
- * untouched; this file exists to resolve defects found in the 21-38 PDF
- * contact-sheet review without weakening each template's visual identity.
+ * untouched; this file exists to resolve defects found in the PDF contact-sheet
+ * review without weakening each template's visual identity.
  *
  * Structural Fresh fields use semantic data attributes here instead of DOM
  * child-position guesses. `:root` deliberately gives the acceptance override
@@ -11,13 +11,13 @@
  */
 
 /* -------------------------------------------------------------------------- */
-/* 19-22 shared cover repair: Edge · Glow · Frame · Mono Luxe                  */
+/* Shared cover repair: Edge · Glow · Mono Luxe                               */
 /* -------------------------------------------------------------------------- */
 /*
- * These four Fresh covers reuse the proven Warm content skeleton. Their first
- * redesign then shifted the shared title stack another 34 mm to the left with
- * template CSS. Because the base stack already begins at x=20 mm, that placed
- * the actual content at x=-14 mm and clipped name, profession and start date.
+ * These covers reuse the proven Warm content skeleton. Their first redesign
+ * shifted the shared title stack another 34 mm to the left with template CSS.
+ * Because the base stack already begins at x=20 mm, that placed actual content
+ * at x=-14 mm and clipped name, profession and start date.
  *
  * Keep the safe base coordinates as the single positioning source. Dragged
  * editor coordinates continue to work because we remove only the template
@@ -27,9 +27,6 @@ html:root[data-dossier-template="edge"]
   [data-dossier-document="cover"]
   :is([data-block-id="name"], [data-block-id="beruf"], [data-block-id="lehrbeginn"]),
 html:root[data-dossier-template="glow"]
-  [data-dossier-document="cover"]
-  :is([data-block-id="name"], [data-block-id="beruf"], [data-block-id="lehrbeginn"]),
-html:root[data-dossier-template="frame"]
   [data-dossier-document="cover"]
   :is([data-block-id="name"], [data-block-id="beruf"], [data-block-id="lehrbeginn"]),
 html:root[data-dossier-template="monoLuxe"]
@@ -128,35 +125,6 @@ html:root[data-dossier-template="glow"]
 
 [data-letter-fresh-template="glow"] [data-letter-motif="glow-orb"] {
   opacity: 0.24 !important;
-}
-
-/* Frame: Warm's top metadata is intentionally light because most Fresh covers
- * place it on colour. Give Frame a restrained dark inner masthead instead of
- * changing text colours per element. It lives inside the architectural frame
- * and uses the same primary colour as the outline. */
-html:root[data-dossier-template="frame"]
-  [data-dossier-document="cover"]
-  [data-fresh-cover-background="frame"]
-  > [data-fresh-cover-field="primary"] {
-  background: linear-gradient(
-    to bottom,
-    var(--cover-primary) 0,
-    var(--cover-primary) 18mm,
-    transparent 18mm,
-    transparent 100%
-  ) !important;
-}
-
-/* FRAME: the architectural crossbar must separate content, never strike
- * through the contact/attachments footer. */
-html:root[data-dossier-template="frame"]
-  [data-dossier-document="cover"]
-  [data-fresh-cover-background="frame"]
-  [data-fresh-cover-field="primary"]
-  > [data-fresh-cover-field="accent"] {
-  top: 240mm !important;
-  height: 2.2mm !important;
-  opacity: 0.88 !important;
 }
 
 /* Forest Flow used to live here as a one-off clipping repair. That later

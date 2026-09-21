@@ -162,7 +162,9 @@ async function seedCv(page: Page, options: SeedOptions = {}) {
     },
   );
   await page.waitForLoadState("domcontentloaded");
-  await previewRoot(page).locator("[data-cv-page]").first().waitFor({ state: "visible" });
+  const visiblePage = previewRoot(page).locator("[data-cv-page]").filter({ visible: true }).first();
+  await visiblePage.waitFor({ state: "visible" });
+  await visiblePage.locator("[data-cv-main] [data-cv-entry]").first().waitFor({ state: "visible" });
   await settlePagination(page);
 }
 
@@ -397,6 +399,111 @@ test.describe("M5.8 dossier regression", () => {
       ).toBeVisible();
       await assertNoMainClipping(page, `mirrored executive/${layout}`);
     }
+  });
+
+  test("Luftig is a spacious Standard flow without a right-floating date rail", async ({
+    page,
+  }) => {
+    const metrics = async () =>
+      previewRoot(page)
+        .locator('[data-cv-page="0"] [data-cv-main]')
+        .evaluate((main) => {
+          const section = main.querySelector<HTMLElement>("[data-cv-section]");
+          const entry = main.querySelector<HTMLElement>("[data-cv-entry]:has(> [data-cv-rail])");
+          const rail = entry?.querySelector<HTMLElement>(":scope > [data-cv-rail]");
+          const body = entry
+            ? Array.from(entry.children).find((child) => child !== rail)
+            : undefined;
+          if (!section || !entry || !rail || !(body instanceof HTMLElement)) {
+            throw new Error("Expected Standard CV section and dated entry");
+          }
+          const entryStyle = getComputedStyle(entry);
+          const railRect = rail.getBoundingClientRect();
+          const bodyRect = body.getBoundingClientRect();
+          return {
+            sectionMarginTop: Number.parseFloat(getComputedStyle(section).marginTop),
+            entryMarginBottom: Number.parseFloat(entryStyle.marginBottom),
+            display: entryStyle.display,
+            textAlign: entryStyle.textAlign,
+            railBeforeBody: railRect.left < bodyRect.left,
+          };
+        });
+
+    await seedCv(page, { family: "classic", layout: "classic" });
+    const standard = await metrics();
+    const standardPages = await previewRoot(page).locator("[data-cv-page]").count();
+
+    await seedCv(page, { family: "classic", layout: "minimal" });
+    const airy = await metrics();
+    const airyPages = await previewRoot(page).locator("[data-cv-page]").count();
+
+    expect(airy.railBeforeBody).toBe(true);
+    expect(airy.display).toBe("flex");
+    expect(airy.textAlign).not.toBe("right");
+    expect(airy.sectionMarginTop).toBeGreaterThan(standard.sectionMarginTop);
+    expect(airy.entryMarginBottom).toBeGreaterThan(standard.entryMarginBottom);
+    expect(standardPages).toBe(1);
+    expect(airyPages).toBe(1);
+    await assertNoMainClipping(page, "Luftig standard-flow fixture");
+  });
+
+  test("mirror swaps real Sidebar geometry, persists, and restores without transforms", async ({
+    page,
+  }) => {
+    await seedCv(page, { family: "classic", layout: "modern", photo: true });
+    const root = previewRoot(page);
+    const geometry = async () =>
+      root.locator('[data-cv-page="0"]').evaluate((sheet) => {
+        const sidebar = sheet.querySelector<HTMLElement>("[data-cv-sidebar]");
+        const main = sheet.querySelector<HTMLElement>("[data-cv-main]");
+        if (!sidebar || !main) throw new Error("Sidebar geometry missing");
+        const sidebarRect = sidebar.getBoundingClientRect();
+        const mainRect = main.getBoundingClientRect();
+        return {
+          sidebarX: sidebarRect.x,
+          mainX: mainRect.x,
+          pageTransform: getComputedStyle(sheet).transform,
+          sidebarTransform: getComputedStyle(sidebar).transform,
+          mainTransform: getComputedStyle(main).transform,
+          side: sidebar.dataset.cvSidebarSide,
+        };
+      });
+
+    const normal = await geometry();
+    expect(normal.sidebarX).toBeLessThan(normal.mainX);
+    expect(normal.side).toBe("left");
+
+    await page.evaluate(() => {
+      localStorage.setItem("lebenslauf:info-position:v1", "mirrored");
+      localStorage.setItem("lebenslauf:layout-mirror:v1", "true");
+      window.dispatchEvent(new CustomEvent("lebenslauf-layout-change"));
+    });
+    await expect(page.locator("html")).toHaveAttribute("data-cv-mirrored", "true");
+
+    const mirrored = await geometry();
+    expect(mirrored.sidebarX).toBeGreaterThan(mirrored.mainX);
+    expect(mirrored.side).toBe("right");
+    expect([mirrored.pageTransform, mirrored.sidebarTransform, mirrored.mainTransform]).toEqual([
+      "none",
+      "none",
+      "none",
+    ]);
+    await assertNoMainClipping(page, "mirrored Sidebar");
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await root.locator('[data-cv-page="0"]').waitFor({ state: "visible" });
+    await expect(page.locator("html")).toHaveAttribute("data-cv-mirrored", "true");
+    expect((await geometry()).sidebarX).toBeGreaterThan((await geometry()).mainX);
+
+    await page.evaluate(() => {
+      localStorage.setItem("lebenslauf:info-position:v1", "standard");
+      localStorage.setItem("lebenslauf:layout-mirror:v1", "false");
+      window.dispatchEvent(new CustomEvent("lebenslauf-layout-change"));
+    });
+    await expect(page.locator("html")).toHaveAttribute("data-cv-mirrored", "false");
+    const restored = await geometry();
+    expect(restored.sidebarX).toBeLessThan(restored.mainX);
+    expect(restored.side).toBe("left");
   });
 
   test("all four photo shapes preserve shared crop and border treatment", async ({ page }) => {
@@ -842,10 +949,11 @@ test.describe("M5.8 dossier regression", () => {
       "data-editor-ready",
       "true",
     );
-    await page.getByRole("button", { name: "Layout", exact: true }).click();
+    await page.getByRole("button", { name: "Header & Footer", exact: true }).click();
     await page
       .locator('[data-dossier-chrome-controls="letter"] [data-dossier-header-mode-control]')
       .selectOption("compact");
+    await page.getByRole("button", { name: "Layout", exact: true }).click();
 
     await page.getByRole("button", { name: "Meine Kontaktdaten Rechts" }).click();
     await page.getByRole("button", { name: "Firma / Lehrbetrieb Rechts" }).click();
@@ -901,9 +1009,11 @@ test.describe("M5.8 dossier regression", () => {
     };
 
     await selectBlock(0);
-    await page.getByRole("button", { name: "Fett" }).click();
-    await page.getByRole("button", { name: "Kursiv" }).click();
-    await page.getByRole("button", { name: "Unterstrichen" }).click();
+    const selectionToolbar = page.locator("[data-letter-selection-toolbar]");
+    await expect(selectionToolbar).toBeVisible();
+    await selectionToolbar.getByRole("button", { name: "Fett", exact: true }).click();
+    await selectionToolbar.getByRole("button", { name: "Kursiv", exact: true }).click();
+    await selectionToolbar.getByRole("button", { name: "Unterstrichen", exact: true }).click();
 
     await page.getByRole("button", { name: "Liste" }).click();
     await expect(page.getByRole("button", { name: "Bullet", exact: true })).toBeVisible();
@@ -920,7 +1030,7 @@ test.describe("M5.8 dossier regression", () => {
     const twoColumnButton = columnsControl.getByRole("button", { name: "2 Spalten" });
     await expect(columnsControl).toBeVisible();
     const toolbarTop = await toolbar
-      .getByRole("button", { name: "Formatierung entfernen" })
+      .getByRole("button", { name: "Linksbündig" })
       .evaluate((button) => button.getBoundingClientRect().top);
     const columnsTop = await columnsControl.evaluate(
       (control) => control.getBoundingClientRect().top,
@@ -1227,6 +1337,19 @@ test.describe("M5.8 dossier regression", () => {
     const coverDownload = page.getByRole("button", { name: "Download", exact: true });
     await expect(coverDownload).toHaveAttribute("data-editor-ready", "true");
 
+    const emptyCover = page.locator('[data-dossier-document="cover"]').first();
+    await expect(emptyCover.locator('[data-block-id="kontaktTitel"]')).toHaveCount(0);
+    const emptyAttachments = emptyCover.locator('[data-block-id="beilagen"]');
+    await expect(emptyAttachments).toBeVisible();
+    const emptyFooterGeometry = await emptyCover.evaluate((cover) => {
+      const attachments = cover.querySelector<HTMLElement>('[data-block-id="beilagen"]');
+      if (!attachments) throw new Error("Default cover attachments are missing");
+      const coverRect = cover.getBoundingClientRect();
+      const attachmentsRect = attachments.getBoundingClientRect();
+      return { coverBottom: coverRect.bottom, attachmentsBottom: attachmentsRect.bottom };
+    });
+    expect(emptyFooterGeometry.attachmentsBottom).toBeLessThan(emptyFooterGeometry.coverBottom - 1);
+
     const companyHeader = page.getByRole("button", { name: /^Firma \/ Lehrbetrieb/ });
     if ((await companyHeader.getAttribute("aria-expanded")) !== "true") await companyHeader.click();
     const companyPanelId = await companyHeader.getAttribute("aria-controls");
@@ -1369,6 +1492,7 @@ test.describe("M5.8 dossier regression", () => {
 
   test("card-template sidebar clears the header and stays inside the card", async ({ page }) => {
     await seedCv(page, { layout: "modern" });
+    await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
     await page.evaluate(() => {
       const saved = JSON.parse(localStorage.getItem("lebenslauf:v1") ?? "{}");
       saved.data = { ...saved.data, titel: "Lebenslauf" };
@@ -1378,9 +1502,8 @@ test.describe("M5.8 dossier regression", () => {
         colors: { bg: "#09071f", primary: "#7c3aed", accent: "#ec4899" },
       };
       localStorage.setItem("lebenslauf:v1", JSON.stringify(saved));
-      window.location.reload();
     });
-    await page.waitForLoadState("domcontentloaded");
+    await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
     await expect(previewRoot(page)).toHaveAttribute("data-cv-template", "neon");
 
     const sheet = previewRoot(page).locator('[data-cv-page="0"]');

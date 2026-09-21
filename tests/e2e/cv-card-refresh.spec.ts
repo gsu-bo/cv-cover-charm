@@ -21,6 +21,11 @@ const TEMPLATES = [
   },
 ] as const;
 
+type SeedTemplate = {
+  id: string;
+  colors: Record<string, string>;
+};
+
 function data() {
   return {
     titel: "Lebenslauf",
@@ -66,7 +71,7 @@ function data() {
   };
 }
 
-async function seed(page: Page, template: (typeof TEMPLATES)[number]) {
+async function seed(page: Page, template: SeedTemplate) {
   await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
   await page.evaluate(
     ({ payload }) => {
@@ -108,6 +113,69 @@ async function seed(page: Page, template: (typeof TEMPLATES)[number]) {
   return sheet;
 }
 
+async function motifSlider(page: Page) {
+  const slider = page
+    .locator("label")
+    .filter({ hasText: "Hintergrund-Motiv" })
+    .locator('input[type="range"]');
+
+  if ((await slider.count()) === 0) {
+    const toggles = page.locator('[data-editor-section-toggle][aria-expanded="false"]');
+    for (let index = 0; index < (await toggles.count()); index += 1) {
+      await toggles.nth(index).click();
+      if ((await slider.count()) > 0) break;
+    }
+  }
+
+  await expect(slider).toBeVisible();
+  return slider;
+}
+
+async function setMotifPercent(slider: Locator, percent: number) {
+  await slider.focus();
+  if (percent === 100) {
+    await slider.press("End");
+    return;
+  }
+  await slider.press("Home");
+  for (let value = 0; value < percent; value += 1) {
+    await slider.press("ArrowRight");
+  }
+}
+
+async function setRangeValue(slider: Locator, value: number) {
+  const range = await slider.evaluate((node) => {
+    if (!(node instanceof HTMLInputElement) || node.type !== "range") {
+      throw new Error("setRangeValue expects an input[type=range]");
+    }
+    return {
+      min: Number(node.min || "0"),
+      max: Number(node.max || "100"),
+      step: node.step === "any" ? 1 : Number(node.step || "1"),
+    };
+  });
+  if (
+    !Number.isFinite(range.min) ||
+    !Number.isFinite(range.max) ||
+    !Number.isFinite(range.step) ||
+    range.step <= 0 ||
+    value < range.min ||
+    value > range.max
+  ) {
+    throw new Error(`Range target ${value} is outside ${range.min}..${range.max}`);
+  }
+  const steps = Math.round((value - range.min) / range.step);
+  if (Math.abs(range.min + steps * range.step - value) > 1e-9) {
+    throw new Error(`Range target ${value} does not align to step ${range.step}`);
+  }
+
+  await slider.focus();
+  await slider.press("Home");
+  for (let current = 0; current < steps; current += 1) {
+    await slider.press("ArrowRight");
+  }
+}
+
 const hash = (buffer: Buffer) => createHash("sha256").update(buffer).digest("hex");
 
 async function typographySnapshot(root: Locator) {
@@ -138,6 +206,45 @@ async function typographySnapshot(root: Locator) {
         decoration: rubricStyle.textDecorationLine,
       },
       ruleColor: ruleStyle.backgroundColor,
+    };
+  });
+}
+
+async function rubricGeometrySnapshot(root: Locator) {
+  return root.evaluate((node) => {
+    const page = node.querySelector<HTMLElement>('[data-cv-page="0"]');
+    const main = page?.querySelector<HTMLElement>("[data-cv-main]");
+    const section = main?.querySelector<HTMLElement>("[data-cv-section]");
+    const row = section?.firstElementChild as HTMLElement | null;
+    const title = row?.querySelector<HTMLElement>("[data-cv-section-title]");
+    const rule = row?.querySelector<HTMLElement>('[data-cv-accent="section"]');
+    const entry = main?.querySelector<HTMLElement>("[data-cv-entry]");
+    if (!page || !main || !row || !title || !rule || !entry) return null;
+
+    const pageRect = page.getBoundingClientRect();
+    const ruleRect = rule.getBoundingClientRect();
+    const titleStyle = getComputedStyle(title);
+    const rowStyle = getComputedStyle(row);
+    const entryStyle = getComputedStyle(entry);
+    const ruleStyle = getComputedStyle(rule);
+    const cssPxPerMm = 96 / 25.4;
+    const toCssMm = (pixels: number) => pixels / cssPxPerMm;
+    const toPageMm = (pixels: number) => (pixels / pageRect.width) * 210;
+    const translatedX =
+      rowStyle.translate === "none" ? 0 : Number.parseFloat(rowStyle.translate.split(" ")[0]) || 0;
+
+    return {
+      // User rubric movement uses the individual translate property so template
+      // transforms remain intact. Read that authored offset directly.
+      headingOffsetMm: toCssMm(translatedX),
+      contentIndentMm: toCssMm(Number.parseFloat(entryStyle.marginLeft) || 0),
+      // Keep page-normalised visual geometry only for boundary/parity checks.
+      ruleRightMm: toPageMm(ruleRect.right - pageRect.left),
+      ruleWidthMm: toCssMm(Number.parseFloat(ruleStyle.width) || 0),
+      pillBackground: titleStyle.backgroundColor,
+      pillPaddingLeft: titleStyle.paddingLeft,
+      headingDisplay: titleStyle.display,
+      pageCount: node.querySelectorAll("[data-cv-page]").length,
     };
   });
 }
@@ -217,6 +324,210 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
     }
 
     expect(screenshots.size).toBe(TEMPLATES.length);
+  });
+
+  test("CV rubric controls are generic, persist and match export geometry", async ({ page }) => {
+    await page.setViewportSize({ width: 1137, height: 913 });
+    // Use a non-Citrus template first: this is a shared CV feature, not a
+    // renamed Citrus-only control.
+    await seed(page, TEMPLATES[1]);
+
+    const preview = page.locator('[data-dossier-document="cv"][data-export-mode="false"]').first();
+    const exportRoot = page
+      .locator('[data-dossier-document="cv"][data-export-mode="true"]')
+      .first();
+    await expect(preview).toBeVisible();
+
+    const defaultPreview = await rubricGeometrySnapshot(preview);
+    const defaultExport = await rubricGeometrySnapshot(exportRoot);
+    expect(defaultPreview).not.toBeNull();
+    expect(defaultExport).not.toBeNull();
+    if (!defaultPreview || !defaultExport) return;
+
+    await expect(page.locator('[data-cv-rubric-pill="false"]').first()).toHaveAttribute(
+      "data-cv-rubric-content-indent",
+      "0",
+    );
+    await expect(page.locator('[data-cv-rubric-pill="false"]').first()).toHaveAttribute(
+      "data-cv-rubric-x",
+      "0",
+    );
+    expect(defaultPreview.headingOffsetMm).toBeCloseTo(0, 1);
+    expect(defaultPreview.pageCount).toBe(1);
+    expect(defaultExport.headingOffsetMm).toBeCloseTo(defaultPreview.headingOffsetMm, 1);
+    expect(defaultExport.contentIndentMm).toBeCloseTo(defaultPreview.contentIndentMm, 1);
+    expect(defaultExport.ruleRightMm).toBeCloseTo(defaultPreview.ruleRightMm, 1);
+
+    const typographySection = page.locator('[data-editor-section-title="Schrift"]');
+    await expect(typographySection).toHaveCount(1);
+    const typographyToggle = typographySection.locator("[data-editor-section-toggle]");
+    await expect(typographyToggle).toBeVisible();
+    if ((await typographyToggle.getAttribute("aria-expanded")) !== "true") {
+      await typographyToggle.click();
+    }
+
+    const controls = page.locator("[data-cv-rubric-controls]");
+    await expect(controls).toBeVisible();
+    await expect(controls.getByText("Rubrik als Pille", { exact: true })).toBeVisible();
+    const headingSlider = controls.getByRole("slider", { name: "Rubrik horizontal" });
+    const indentSlider = controls.getByRole("slider", { name: "Inhaltseinzug unter Rubrik" });
+    await expect(controls.getByRole("button", { name: "Nein" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(headingSlider).toHaveValue("0");
+    await expect(indentSlider).toHaveValue("0");
+
+    await controls.getByRole("button", { name: "Ja" }).click();
+    await setRangeValue(headingSlider, 5);
+    await setRangeValue(indentSlider, 10);
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const saved = JSON.parse(localStorage.getItem("lebenslauf:v1") || "{}") as {
+            design?: Record<string, unknown>;
+          };
+          return [
+            saved.design?.sectionTitlePill,
+            saved.design?.sectionTitleOffsetMm,
+            saved.design?.sectionContentIndentMm,
+          ];
+        }),
+      )
+      .toEqual([true, 5, 10]);
+
+    const changedPreview = await rubricGeometrySnapshot(preview);
+    const changedExport = await rubricGeometrySnapshot(exportRoot);
+    expect(changedPreview).not.toBeNull();
+    expect(changedExport).not.toBeNull();
+    if (!changedPreview || !changedExport) return;
+
+    expect(changedPreview.pillBackground).not.toBe("rgba(0, 0, 0, 0)");
+    expect(changedPreview.pillPaddingLeft).not.toBe("0px");
+    expect(changedPreview.headingDisplay).not.toBe("none");
+    expect(changedPreview.ruleWidthMm).toBeGreaterThan(5);
+    expect(changedPreview.headingOffsetMm).toBeCloseTo(5, 1);
+    expect(changedPreview.contentIndentMm).toBeCloseTo(10, 1);
+    expect(changedPreview.ruleRightMm).toBeGreaterThan(defaultPreview.ruleRightMm);
+    expect(changedPreview.ruleRightMm).toBeLessThan(210);
+    expect(changedExport.headingOffsetMm).toBeCloseTo(changedPreview.headingOffsetMm, 1);
+    expect(changedExport.contentIndentMm).toBeCloseTo(changedPreview.contentIndentMm, 1);
+    expect(changedExport.ruleRightMm).toBeCloseTo(changedPreview.ruleRightMm, 1);
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.locator('[data-cv-rubric-pill="true"]').first()).toHaveAttribute(
+      "data-cv-rubric-x",
+      "5",
+    );
+    await expect(page.locator('[data-cv-rubric-pill="true"]').first()).toHaveAttribute(
+      "data-cv-rubric-content-indent",
+      "10",
+    );
+    const persistedPreview = page
+      .locator('[data-dossier-document="cv"][data-export-mode="false"]')
+      .first();
+    const persisted = await rubricGeometrySnapshot(persistedPreview);
+    expect(persisted).not.toBeNull();
+    expect(persisted?.headingOffsetMm).toBeCloseTo(5, 1);
+    expect(persisted?.contentIndentMm).toBeCloseTo(10, 1);
+
+    // Citrus now follows the same neutral shared default instead of silently
+    // enabling its historic pill/indent behaviour.
+    await seed(page, TEMPLATES[2]);
+    await expect(page.locator('[data-cv-rubric-pill="false"]').first()).toHaveAttribute(
+      "data-cv-rubric-x",
+      "0",
+    );
+    await expect(page.locator('[data-cv-rubric-pill="false"]').first()).toHaveAttribute(
+      "data-cv-rubric-content-indent",
+      "0",
+    );
+  });
+
+  test("background motif slider updates decorative layers at 0/25/50/100 only", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1137, height: 913 });
+    const motifTemplates: SeedTemplate[] = [
+      {
+        id: "glow",
+        colors: {
+          primary: "#2563eb",
+          secondary: "#a855f7",
+          accent: "#06b6d4",
+          ink: "#111827",
+          bg: "#ffffff",
+        },
+      },
+      TEMPLATES[0],
+      TEMPLATES[2],
+    ];
+
+    for (const template of motifTemplates) {
+      const sheet = await seed(page, template);
+      const slider = await motifSlider(page);
+      const motifLayers = sheet.locator("[data-dossier-sheet-motif]");
+      expect(
+        await motifLayers.count(),
+        `${template.id} should expose decorative motif layers`,
+      ).toBeGreaterThan(0);
+      const name = sheet.locator("[data-cv-name]").first();
+      let zeroShot: Buffer | null = null;
+
+      for (const percent of [0, 25, 50, 100]) {
+        await setMotifPercent(slider, percent);
+        await expect
+          .poll(async () =>
+            Number.parseFloat(
+              await motifLayers.first().evaluate((node) => getComputedStyle(node).opacity),
+            ),
+          )
+          .toBeCloseTo(percent / 100, 2);
+        await expect(slider).toHaveValue(String(percent));
+        expect(await name.evaluate((node) => getComputedStyle(node).opacity)).toBe("1");
+        if (percent === 0) zeroShot = await sheet.screenshot({ animations: "disabled" });
+        if (percent === 100) {
+          const fullShot = await sheet.screenshot({ animations: "disabled" });
+          expect(zeroShot, `${template.id} should capture its zero-motif state`).not.toBeNull();
+          expect(
+            hash(fullShot),
+            `${template.id} should change visibly between 0% and 100% motif strength`,
+          ).not.toBe(hash(zeroShot!));
+        }
+      }
+    }
+
+    const stableSheet = await seed(page, {
+      id: "blockig",
+      colors: {
+        primary: "#334155",
+        secondary: "#94a3b8",
+        accent: "#0f766e",
+        ink: "#111827",
+        bg: "#ffffff",
+      },
+    });
+    const stableSlider = await motifSlider(page);
+    await setMotifPercent(stableSlider, 0);
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    const zeroShot = await stableSheet.screenshot({ animations: "disabled" });
+    await setMotifPercent(stableSlider, 100);
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    const fullShot = await stableSheet.screenshot({ animations: "disabled" });
+    expect(hash(fullShot), "template without a decorative motif should stay visually stable").toBe(
+      hash(zeroShot),
+    );
   });
 
   test("persisted recovered typography reaches preview and PDF export canvas identically", async ({

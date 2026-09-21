@@ -10,25 +10,26 @@ const legacyFresh = readFileSync(
   "utf8",
 );
 
-describe("Fresh 19-22 cover acceptance repair", () => {
-  test("the late acceptance layer neutralizes the shared negative title transforms", () => {
-    for (const template of ["edge", "glow", "frame", "monoLuxe"]) {
+describe("Fresh cover acceptance repair", () => {
+  test("the late acceptance layer neutralizes shared negative title transforms", () => {
+    for (const template of ["edge", "glow", "monoLuxe"]) {
       expect(cleanup).toContain(`data-dossier-template="${template}"`);
     }
+    expect(cleanup).not.toContain('data-dossier-template="frame"');
     expect(cleanup).toContain(
       ':is([data-block-id="name"], [data-block-id="beruf"], [data-block-id="lehrbeginn"])',
     );
     expect(cleanup).toContain("transform: none !important;");
 
     // Keep this regression meaningful: the acceptance layer exists specifically
-    // because the older family stylesheet still contains the historic offsets.
+    // because the older family stylesheet still contains historic offsets.
     expect(legacyFresh).toContain("translate(-34mm");
   });
 
   test("Glow gets a saturated bounded masthead and stronger stationery echoes", () => {
     const glow = cleanup.slice(
       cleanup.indexOf("/* Glow: the previous"),
-      cleanup.indexOf("/* Frame: Warm's top metadata"),
+      cleanup.indexOf("/* Forest Flow used to live here"),
     );
     expect(glow).toContain(
       "background: linear-gradient(100deg, var(--cover-primary), var(--cover-secondary)) !important;",
@@ -36,15 +37,5 @@ describe("Fresh 19-22 cover acceptance repair", () => {
     expect(glow).toContain("height: 30mm !important;");
     expect(glow).toContain('data-letter-motif="glow-capsule"');
     expect(glow).toContain("opacity: 0.22 !important;");
-  });
-
-  test("Frame supplies a dark inner masthead without replacing its architectural outline", () => {
-    const frame = cleanup.slice(
-      cleanup.indexOf("/* Frame: Warm's top metadata"),
-      cleanup.indexOf("/* FRAME: the architectural crossbar"),
-    );
-    expect(frame).toContain("var(--cover-primary) 18mm");
-    expect(frame).toContain("transparent 18mm");
-    expect(legacyFresh).toContain("border: 0.55mm solid var(--cover-primary) !important;");
   });
 });

@@ -19,7 +19,7 @@ const legacyCss = readFileSync(
   "utf8",
 );
 
-describe("Fresh 19-22 dossier rebuild", () => {
+describe("Fresh dossier rebuild", () => {
   test("unsaved CVs default to Standard with a Sidebar default for Kolumne", () => {
     expect(layout).toContain(
       "const DEFAULT_LAYOUT: CvLayoutId = CANONICAL_DOSSIER_PRESENTATION.cv.layout;",
@@ -56,35 +56,18 @@ describe("Fresh 19-22 dossier rebuild", () => {
   });
 
   test("Glow is restrained and does not use page-filling blobs or card shadows", () => {
-    const glow = letter.slice(letter.indexOf("  glow: {"), letter.indexOf("  frame: {"));
+    const glow = letter.slice(letter.indexOf("  glow: {"), letter.indexOf("  monoLuxe: {"));
     expect(glow).toContain("glow-capsule");
     expect(glow).toContain("glow-orb");
     expect(glow).toContain("glow-rule");
     expect(glow).not.toContain("bottom-orb");
 
-    const css = freshCss.slice(freshCss.indexOf("/* 20 GLOW"), freshCss.indexOf("/* 21 FRAME"));
+    const css = freshCss.slice(freshCss.indexOf("/* 20 GLOW"), freshCss.indexOf("/* 22 MONO LUXE"));
     expect(css).toContain("width: 72mm !important;");
     expect(css).toContain("height: 24mm !important;");
     expect(css).toContain("box-shadow: none !important;");
     expect(css).not.toContain("176mm");
     expect(css).not.toContain("146mm");
-  });
-
-  test("Frame is an inset architectural frame rather than a heavy color slab", () => {
-    const frame = letter.slice(letter.indexOf("  frame: {"), letter.indexOf("  monoLuxe: {"));
-    expect(frame).toContain("frame-top");
-    expect(frame).toContain("frame-left");
-    expect(frame).toContain("frame-bottom");
-    expect(frame).toContain("frame-right");
-
-    const css = freshCss.slice(
-      freshCss.indexOf("/* 21 FRAME"),
-      freshCss.indexOf("/* 22 MONO LUXE"),
-    );
-    expect(css).toContain("border: 0.55mm solid var(--cover-primary) !important;");
-    expect(css).toContain("background: transparent !important;");
-    expect(css).not.toContain("width: 15mm !important;");
-    expect(css).not.toContain("height: 265mm !important;");
   });
 
   test("Mono Luxe stays typographic and removes the old filled CV card treatment", () => {

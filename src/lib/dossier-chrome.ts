@@ -70,12 +70,12 @@ const LETTER_STORAGE_KEY = "anschreiben:v1";
 const EVENT = "bewerbungsdossier-chrome-change";
 
 export const DEFAULT_DOSSIER_CHROME_OPTIONS: DossierChromeOptions = {
-  headerMode: "contact",
+  headerMode: "compact",
   headerShowName: true,
   headerShowAddress: true,
   headerShowPhone: true,
   headerShowEmail: true,
-  headerDifferentFirstPage: true,
+  headerDifferentFirstPage: false,
   headerHeightMm: null,
   headerGapMm: 12,
   headerContentOffsetYMm: 0,
@@ -177,7 +177,7 @@ function normalizeOptions(
     headerDifferentFirstPage:
       typeof value.headerDifferentFirstPage === "boolean"
         ? value.headerDifferentFirstPage
-        : (fallback.headerDifferentFirstPage ?? true),
+        : (fallback.headerDifferentFirstPage ?? false),
     headerContinuationMode: hasOwn(value, "headerContinuationMode")
       ? value.headerContinuationMode === "compact" ||
         value.headerContinuationMode === "contact" ||
@@ -185,7 +185,7 @@ function normalizeOptions(
         ? value.headerContinuationMode
         : undefined
       : fallback.headerContinuationMode,
-    headerHeightMm: normalizedMm(value.headerHeightMm, 1, 40),
+    headerHeightMm: normalizedMm(value.headerHeightMm, 1, 80),
     headerGapMm: normalizedMm(value.headerGapMm, 0, 40) ?? fallback.headerGapMm ?? 12,
     headerContentOffsetYMm: normalizedOffsetMm(
       value.headerContentOffsetYMm,
@@ -249,7 +249,10 @@ function optionsFromSavedLetter(storage: Storage): DossierChromeOptions | null {
       headerShowAddress: design.headerShowAddress,
       headerShowPhone: design.headerShowPhone,
       headerShowEmail: design.headerShowEmail,
-      headerDifferentFirstPage: design.headerDifferentFirstPage,
+      headerDifferentFirstPage:
+        typeof design.headerDifferentFirstPage === "boolean"
+          ? design.headerDifferentFirstPage
+          : true,
       headerContinuationMode: design.headerContinuationMode,
       headerHeightMm: design.headerHeightMm,
       headerGapMm: design.headerGapMm,
@@ -284,13 +287,20 @@ export function normalizeDossierChromeState(value: unknown): DossierChromeState 
       letter: { ...DEFAULT_DOSSIER_CHROME_STATE.letter },
     };
   }
-  const shared = normalizeOptions(value.shared, CANONICAL_DOSSIER_CHROME_OPTIONS);
+  const legacyFallback = (branch: unknown, fallback: DossierChromeOptions) =>
+    isRecord(branch) && !hasOwn(branch, "headerDifferentFirstPage")
+      ? { ...fallback, headerDifferentFirstPage: true }
+      : fallback;
+  const shared = normalizeOptions(
+    value.shared,
+    legacyFallback(value.shared, CANONICAL_DOSSIER_CHROME_OPTIONS),
+  );
   return {
     version: 1,
     sync: value.sync !== false,
     shared,
-    cv: normalizeOptions(value.cv, shared),
-    letter: normalizeOptions(value.letter, shared),
+    cv: normalizeOptions(value.cv, legacyFallback(value.cv, shared)),
+    letter: normalizeOptions(value.letter, legacyFallback(value.letter, shared)),
   };
 }
 
@@ -401,7 +411,7 @@ function mirrorLegacyLetterDesign(next: DossierChromeState) {
       design.headerShowAddress === options.headerShowAddress &&
       design.headerShowPhone === options.headerShowPhone &&
       design.headerShowEmail === options.headerShowEmail &&
-      design.headerDifferentFirstPage === (options.headerDifferentFirstPage ?? true) &&
+      design.headerDifferentFirstPage === (options.headerDifferentFirstPage ?? false) &&
       design.headerContinuationMode === options.headerContinuationMode &&
       design.headerHeightMm === options.headerHeightMm &&
       design.headerGapMm === (options.headerGapMm ?? 12) &&
@@ -635,8 +645,12 @@ export function dossierHeaderVisualHeightMmForOptions(
     return custom === null ? 8 : Math.min(18, Math.max(5, custom));
   }
 
-  if (mode === "contact") return custom === null ? 22 : Math.min(40, Math.max(10, custom));
-  if (mode === "compact") return custom === null ? 3 : Math.min(18, Math.max(1, custom));
+  if (mode === "contact") {
+    const min = options.headerTextLayout === "stacked" ? 18 : 10;
+    const automatic = options.headerTextLayout === "inline" ? 26 : 32;
+    return custom === null ? automatic : Math.min(80, Math.max(min, custom));
+  }
+  if (mode === "compact") return custom === null ? 4 : Math.min(80, Math.max(1, custom));
   return 0;
 }
 
@@ -663,7 +677,7 @@ export function dossierFooterVisualHeightMmForOptions(options: DossierChromeOpti
   if (options.footerMode === "details") {
     return custom === null ? 10 : Math.min(40, Math.max(4, custom));
   }
-  return custom === null ? 2.4 : Math.min(18, Math.max(1, custom));
+  return custom === null ? 4 : Math.min(18, Math.max(1, custom));
 }
 
 export function dossierFooterContentBottomMmForOptions(options: DossierChromeOptions): number {

@@ -99,8 +99,8 @@ test.describe("M1/M2 compact letter header", () => {
   }) => {
     await seedLetter(page);
 
-    const layout = await openSection(page, /^Layout$/);
-    const select = layout.locator("[data-letter-header-mode-control]");
+    const chrome = await openSection(page, /^Header & Footer$/);
+    const select = chrome.locator("[data-letter-header-mode-control]");
     const preview = page.locator("main [data-letter-page]");
     const exportPage = page.locator("[data-letter-standalone-export] [data-letter-page]");
 
@@ -124,7 +124,7 @@ test.describe("M1/M2 compact letter header", () => {
     await expect(preview.locator('[data-letter-section="sender"]')).toHaveCount(0);
     expect(
       await preview.locator("[data-letter-text-layer]").evaluate((node) => node.style.top),
-    ).toBe("43mm");
+    ).toBe("53mm");
 
     const headerBox = await preview.locator("[data-letter-integrated-contact]").boundingBox();
     const recipientBox = await preview.locator('[data-letter-section="recipient"]').boundingBox();
@@ -132,8 +132,8 @@ test.describe("M1/M2 compact letter header", () => {
     expect(recipientBox).not.toBeNull();
     expect(headerBox!.y + headerBox!.height).toBeLessThanOrEqual(recipientBox!.y);
 
-    await layout.getByLabel("Name integrieren").uncheck();
-    await layout.getByLabel("Telefon integrieren").uncheck();
+    await chrome.getByLabel("Name integrieren").uncheck();
+    await chrome.getByLabel("Telefon integrieren").uncheck();
     await expect(preview.locator("[data-letter-integrated-contact]")).not.toContainText(
       "Lea Müller",
     );
@@ -177,8 +177,8 @@ test.describe("M1/M2 compact letter header", () => {
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();
-    const reloadedLayout = await openSection(page, /^Layout$/);
-    await expect(reloadedLayout.locator("[data-letter-header-mode-control]")).toHaveValue("none");
+    const reloadedChrome = await openSection(page, /^Header & Footer$/);
+    await expect(reloadedChrome.locator("[data-letter-header-mode-control]")).toHaveValue("none");
     await expect(page.locator("main [data-letter-page]")).toHaveAttribute(
       "data-letter-header-mode",
       "none",
@@ -222,8 +222,8 @@ test.describe("M3 compact letter footer", () => {
   }) => {
     await seedLetter(page);
 
-    const layout = await openSection(page, /^Layout$/);
-    const select = layout.locator("[data-letter-footer-mode-control]");
+    const chrome = await openSection(page, /^Header & Footer$/);
+    const select = chrome.locator("[data-letter-footer-mode-control]");
     const preview = page.locator("main [data-letter-page]");
     const exportPage = page.locator("[data-letter-standalone-export] [data-letter-page]");
     const textLayer = preview.locator("[data-letter-text-layer]");
@@ -271,8 +271,8 @@ test.describe("M3 compact letter footer", () => {
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();
-    const reloadedLayout = await openSection(page, /^Layout$/);
-    await expect(reloadedLayout.locator("[data-letter-footer-mode-control]")).toHaveValue("none");
+    const reloadedChrome = await openSection(page, /^Header & Footer$/);
+    await expect(reloadedChrome.locator("[data-letter-footer-mode-control]")).toHaveValue("none");
     await expect(page.locator("main [data-letter-page]")).toHaveAttribute(
       "data-letter-footer-mode",
       "none",
@@ -296,9 +296,9 @@ test.describe("M4 centralized letter layout", () => {
 
     for (const [template, archetype] of samples) {
       await setStoredTemplate(page, template);
-      const layout = await openSection(page, /^Layout$/);
-      const headerSelect = layout.locator("[data-letter-header-mode-control]");
-      const footerSelect = layout.locator("[data-letter-footer-mode-control]");
+      const chrome = await openSection(page, /^Header & Footer$/);
+      const headerSelect = chrome.locator("[data-letter-header-mode-control]");
+      const footerSelect = chrome.locator("[data-letter-footer-mode-control]");
       const preview = page.locator("main [data-letter-page]");
       const exportPage = page.locator("[data-letter-standalone-export] [data-letter-page]");
       const previewLayer = preview.locator("[data-letter-text-layer]");

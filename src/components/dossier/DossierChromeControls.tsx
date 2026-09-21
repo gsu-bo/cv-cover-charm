@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { FONT_LABELS, type FontKey } from "@/components/cover/types";
 import {
   DEFAULT_DOSSIER_CHROME_STATE,
@@ -179,7 +179,8 @@ export function DossierChromeControls({
         ? "contact-inline"
         : "contact-stacked"
       : options.headerMode;
-  const headerInlineSeparator = options.headerInlineSeparator ?? "icons";
+  const headerInlineSeparator =
+    options.headerInlineSeparator === "icons" ? "dot" : (options.headerInlineSeparator ?? "dot");
   const continuationHeaderControlValue = options.headerContinuationMode ?? "legacy";
   const contactHeaderVisible =
     options.headerMode === "contact" ||
@@ -197,15 +198,34 @@ export function DossierChromeControls({
     onOptionsChange?.(patch);
   };
 
-  const headerDefaultHeight = options.headerMode === "contact" ? 22 : 3;
-  const headerHeight = options.headerHeightMm ?? headerDefaultHeight;
-  const headerGap = options.headerGapMm ?? 12;
-  const headerContentOffsetY = options.headerContentOffsetYMm ?? 0;
-  const recipientOffsetY = options.letterRecipientOffsetYMm ?? 0;
+  // The retired icon separator remains readable in old JSON/localStorage but is
+  // migrated immediately to the supported midpoint variant when the editor opens.
+  useEffect(() => {
+    if (options.headerInlineSeparator !== "icons") return;
+    const patch = { headerInlineSeparator: "dot" as DossierChromeInlineSeparator };
+    patchDossierChrome(scope, patch);
+    onOptionsChange?.(patch);
+  }, [onOptionsChange, options.headerInlineSeparator, scope]);
+
+  const headerDefaultHeight =
+    options.headerMode === "contact"
+      ? options.headerTextLayout === "inline"
+        ? 26
+        : 32
+      : 4;
   const headerMin =
     options.headerMode === "contact" ? (options.headerTextLayout === "stacked" ? 18 : 10) : 1;
-  const headerMax = options.headerMode === "contact" ? 40 : 18;
-  const footerDefaultHeight = options.footerMode === "details" ? 10 : 2.4;
+  const headerMax = 80;
+  // Display exactly the geometry the renderer can use. Older saved projects can
+  // contain a 10 mm value from compact mode even after switching to a stacked
+  // contact header; showing that stale raw value made the Warm slider look dead.
+  const headerHeight = Math.min(
+    headerMax,
+    Math.max(headerMin, options.headerHeightMm ?? headerDefaultHeight),
+  );
+  const headerGap = options.headerGapMm ?? 12;
+  const headerContentOffsetY = options.headerContentOffsetYMm ?? 0;
+  const footerDefaultHeight = options.footerMode === "details" ? 10 : 4;
   const footerHeight = options.footerHeightMm ?? footerDefaultHeight;
   const footerContentOffsetY = options.footerContentOffsetYMm ?? 0;
   const footerMin = options.footerMode === "details" ? 4 : 1;
@@ -241,7 +261,7 @@ export function DossierChromeControls({
       data-dossier-chrome-controls={scope}
       className="rounded-lg border bg-background p-3 shadow-sm"
     >
-      <div className="mt-3 grid gap-3 border-t pt-3">
+      <div className="mt-3 grid gap-3 pt-3">
         <div className="grid gap-2 rounded-md border p-2.5">
           <label className="block text-xs font-medium">
             Header
@@ -257,8 +277,8 @@ export function DossierChromeControls({
                     headerMode: "contact",
                     headerTextLayout: value === "contact-inline" ? "inline" : "stacked",
                     headerHeightMm: null,
-                    ...(value === "contact-inline" && options.headerInlineSeparator == null
-                      ? { headerInlineSeparator: "icons" as DossierChromeInlineSeparator }
+                    ...(options.headerInlineSeparator == null || options.headerInlineSeparator === "icons"
+                      ? { headerInlineSeparator: "dot" as DossierChromeInlineSeparator }
                       : {}),
                   });
                   return;
@@ -271,16 +291,16 @@ export function DossierChromeControls({
               className={selectClass}
             >
               <option value="compact">Header kompakt</option>
-              <option value="contact-stacked">Kontaktdaten untereinander</option>
+              <option value="contact-stacked">Kontaktdaten in Zeilen</option>
               <option value="contact-inline">Kontaktdaten waagrecht · getrennt</option>
               <option value="none">Kein Header</option>
             </select>
           </label>
 
           <span className="text-[11px] leading-relaxed text-muted-foreground">
-            Kompakt zeigt nur das Designband. Die Kontaktvarianten integrieren Name,
-            Adresse/Wohnort, Telefon und E-Mail direkt in den farbigen Header. Bei der waagrechten
-            Variante kannst du die Trennung unten auswählen.
+            Kompakt zeigt nur das Designband. „In Zeilen“ zeigt den Namen separat und bündelt
+            Strasse · Ort sowie Telefon · E-Mail. Waagrecht setzt alle Angaben in eine Zeile bzw.
+            lässt sie bei Bedarf umbrechen. Das Trennzeichen kannst du unten wählen.
           </span>
 
           {options.headerMode !== "none" ? (
@@ -334,27 +354,13 @@ export function DossierChromeControls({
             </div>
           ) : null}
 
-          {scope === "letter" || options.headerMode === "contact" ? (
+          {options.headerMode === "contact" ? (
             <VerticalOffsetControl
-              label={
-                scope === "letter"
-                  ? "Eigene Anschrift – vertikale Position"
-                  : "Header-Inhalt – vertikale Position"
-              }
+              label="Header-Inhalt – vertikale Position"
               value={headerContentOffsetY}
               min={-12}
               max={12}
               onChange={(headerContentOffsetYMm) => patchOptions({ headerContentOffsetYMm })}
-            />
-          ) : null}
-
-          {scope === "letter" ? (
-            <VerticalOffsetControl
-              label="Firma / Lehrbetrieb – vertikale Position"
-              value={recipientOffsetY}
-              min={-12}
-              max={12}
-              onChange={(letterRecipientOffsetYMm) => patchOptions({ letterRecipientOffsetYMm })}
             />
           ) : null}
 
@@ -371,7 +377,7 @@ export function DossierChromeControls({
                   min={headerMin}
                   max={headerMax}
                   step={1}
-                  value={Math.min(headerMax, Math.max(headerMin, headerHeight))}
+                  value={headerHeight}
                   onChange={(event) => patchOptions({ headerHeightMm: Number(event.target.value) })}
                   className="w-full accent-primary"
                 />
@@ -433,32 +439,31 @@ export function DossierChromeControls({
                     ))}
                   </div>
 
-                  {options.headerTextLayout === "inline" ? (
-                    <label className="block text-xs font-medium">
-                      Trennung der Angaben
-                      <select
-                        data-dossier-header-inline-separator-control
-                        value={headerInlineSeparator}
-                        onChange={(event) =>
-                          patchOptions({
-                            headerInlineSeparator: event.target
-                              .value as DossierChromeInlineSeparator,
-                          })
-                        }
-                        className={selectClass}
-                      >
-                        <option value="dot">Mittelpunkt ·</option>
-                        <option value="icons">Symbole: Handy + Brief</option>
-                        <option value="slash">Schrägstrich /</option>
-                        <option value="pipe">Senkrechter Strich |</option>
-                        <option value="space">Leerraum (5 Leerzeichen)</option>
-                      </select>
-                      <span className="mt-1 block text-[11px] font-normal leading-relaxed text-muted-foreground">
-                        Symbole setzt vor Telefon und E-Mail feine einfarbige Icons; die übrigen
-                        Angaben bleiben ruhig mit Mittelpunkt getrennt.
-                      </span>
-                    </label>
-                  ) : null}
+                  <label className="block text-xs font-medium">
+                    {options.headerTextLayout === "stacked"
+                      ? "Trennung innerhalb der Kontaktzeilen"
+                      : "Trennung der Angaben"}
+                    <select
+                      data-dossier-header-inline-separator-control
+                      value={headerInlineSeparator}
+                      onChange={(event) =>
+                        patchOptions({
+                          headerInlineSeparator: event.target.value as DossierChromeInlineSeparator,
+                        })
+                      }
+                      className={selectClass}
+                    >
+                      <option value="dot">Mittelpunkt ·</option>
+                      <option value="slash">Schrägstrich /</option>
+                      <option value="pipe">Senkrechter Strich |</option>
+                      <option value="space">Leerraum (5 Leerzeichen)</option>
+                    </select>
+                    <span className="mt-1 block text-[11px] font-normal leading-relaxed text-muted-foreground">
+                      {options.headerTextLayout === "stacked"
+                        ? "Gilt zwischen Strasse und Ort sowie zwischen Telefon und E-Mail."
+                        : "Wähle eine ruhige Trennung für die waagrecht angeordneten Kontaktdaten."}
+                    </span>
+                  </label>
                 </>
               ) : null}
 

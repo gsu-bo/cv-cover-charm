@@ -39,10 +39,17 @@ function markup(
 
 describe("Package 2 continuation header model", () => {
   test("legacy JSON without continuation field preserves reduced contact behavior", () => {
+    const legacyOptions: Partial<typeof DEFAULT_DOSSIER_CHROME_OPTIONS> = {
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      headerMode: "contact",
+    };
+    delete legacyOptions.headerDifferentFirstPage;
+
     const state = normalizeDossierChromeState({
       sync: true,
-      shared: { ...DEFAULT_DOSSIER_CHROME_OPTIONS, headerMode: "contact" },
+      shared: legacyOptions,
     });
+    expect(state.shared.headerDifferentFirstPage).toBe(true);
     expect(state.shared.headerContinuationMode).toBeUndefined();
     expect(hasReducedContinuationHeader(state.shared, 1)).toBe(true);
     expect(effectiveDossierHeaderModeForOptions(state.shared, 1)).toBe("contact");
@@ -54,6 +61,7 @@ describe("Package 2 continuation header model", () => {
       shared: {
         ...DEFAULT_DOSSIER_CHROME_OPTIONS,
         headerMode: "contact",
+        headerDifferentFirstPage: true,
         headerContinuationMode: "compact",
       },
     });
@@ -66,6 +74,7 @@ describe("Package 2 continuation header model", () => {
     const options = {
       ...DEFAULT_DOSSIER_CHROME_OPTIONS,
       headerMode: "contact" as const,
+      headerDifferentFirstPage: true,
       headerContinuationMode: "compact" as const,
     };
     const html = markup(options, 1);
@@ -80,6 +89,7 @@ describe("Package 2 continuation header model", () => {
     const options = {
       ...DEFAULT_DOSSIER_CHROME_OPTIONS,
       headerMode: "compact" as const,
+      headerDifferentFirstPage: true,
       headerContinuationMode: "contact" as const,
     };
     const html = markup(options, 1);
@@ -94,6 +104,7 @@ describe("Package 2 continuation header model", () => {
     const options = {
       ...DEFAULT_DOSSIER_CHROME_OPTIONS,
       headerMode: "contact" as const,
+      headerDifferentFirstPage: true,
       headerContinuationMode: "none" as const,
     };
     const html = markup(options, 1);

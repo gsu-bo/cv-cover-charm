@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { DEFAULT_DOSSIER_CHROME_OPTIONS } from "../../src/lib/dossier-chrome";
 import {
   defaultHeaderGapMmForTemplate,
+  defaultHeaderHeightMmForTemplate,
   defaultHeaderModeForTemplate,
   resolveTemplateChromeOptions,
 } from "../../src/lib/template-chrome";
@@ -13,21 +14,23 @@ const warmColors = {
 };
 
 describe("Warm 1 dossier chrome", () => {
-  test("uses the compact contract that drives the reviewed letter masthead and CV edge", () => {
-    expect(defaultHeaderModeForTemplate("freundlich")).toBe("compact");
-    expect(defaultHeaderGapMmForTemplate("freundlich")).toBe(12);
+  test("defaults to the reviewed stacked-contact geometry", () => {
+    expect(defaultHeaderModeForTemplate("freundlich")).toBe("contact");
+    expect(defaultHeaderHeightMmForTemplate("freundlich")).toBe(44);
+    expect(defaultHeaderGapMmForTemplate("freundlich")).toBe(4);
+    expect(defaultHeaderHeightMmForTemplate("modern")).toBeNull();
   });
 
   test("preserves an explicit contact header and user geometry", () => {
     const resolved = resolveTemplateChromeOptions("freundlich", warmColors, {
       ...DEFAULT_DOSSIER_CHROME_OPTIONS,
       headerMode: "contact",
-      headerHeightMm: 22,
+      headerHeightMm: 61,
       headerGapMm: 4,
     });
 
     expect(resolved.headerMode).toBe("contact");
-    expect(resolved.headerHeightMm).toBe(22);
+    expect(resolved.headerHeightMm).toBe(61);
     expect(resolved.headerGapMm).toBe(4);
   });
 

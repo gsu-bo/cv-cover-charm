@@ -71,7 +71,7 @@ describe("retired dossier hyphenation", () => {
     );
   });
 
-  test("Web/PDF policy is permanently no-hyphenation and the retired control renders nothing", () => {
+  test("Web/PDF policy stays no-hyphenation while the retired control slot hosts title spacing", () => {
     const source = readFileSync(
       "src/components/dossier/DossierHyphenationControl.tsx",
       "utf8",
@@ -82,6 +82,8 @@ describe("retired dossier hyphenation", () => {
     expect(source).toContain("overflow-wrap: normal;");
     expect(source).not.toContain("hyphens: auto;");
     expect(source).toContain("export function DossierHyphenationControl() {");
-    expect(source).toContain("return null;");
+    expect(source).toContain("data-cv-doc-title-margin-top-control");
+    expect(source).toContain("Dokumenttitel – Abstand nach oben");
+    expect(source).not.toContain("setDossierHyphenation");
   });
 });

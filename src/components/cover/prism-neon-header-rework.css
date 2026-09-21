@@ -1,0 +1,167 @@
+/* PRISM + NEON — CV header identity rework only.
+ *
+ * These rules intentionally live on the shared dossier chrome surface. They do
+ * not change header heights, stored chrome state, motif opacity, page margins or
+ * pagination. User-selected header colours remain authoritative: the identity
+ * treatment only applies while the shared chrome still uses template defaults.
+ */
+
+/* -------------------------------------------------------------------------- */
+/* PRISM                                                                       */
+/* -------------------------------------------------------------------------- */
+/* Mirror the established interior DNA: navy field + royal diagonal cap. The
+ * page motif stays suppressed in Compact; identity now comes from the masthead
+ * itself instead of restoring the large hero geometry. */
+[data-dossier-document="cv"][data-cv-template="prism"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="prism"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  background: linear-gradient(
+    104deg,
+    color-mix(in srgb, var(--chrome-primary) 94%, #09132f) 0%,
+    var(--chrome-primary) 57%,
+    color-mix(in srgb, var(--chrome-secondary) 82%, var(--chrome-primary)) 100%
+  ) !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+[data-dossier-document="cv"][data-cv-template="prism"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="prism"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: -1mm;
+  top: 0;
+  width: 68%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(
+    108deg,
+    color-mix(in srgb, var(--chrome-primary) 90%, #09132f) 0%,
+    var(--chrome-primary) 100%
+  );
+  clip-path: polygon(0 0, 100% 0, 78% 100%, 0 72%);
+}
+
+[data-dossier-document="cv"][data-cv-template="prism"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="prism"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  right: -1mm;
+  top: 0;
+  width: 39%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(
+    132deg,
+    var(--chrome-secondary) 0%,
+    color-mix(in srgb, var(--chrome-secondary) 78%, var(--chrome-accent)) 100%
+  );
+  clip-path: polygon(28% 0, 100% 0, 100% 100%, 0 78%);
+}
+
+[data-dossier-document="cv"][data-cv-template="prism"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="prism"][data-dossier-header-custom-surface="false"]
+  :is([data-dossier-integrated-contact], [data-dossier-continuation-contact-header]) {
+  color: #ffffff !important;
+  text-shadow: 0 0.25mm 0.55mm rgba(3, 10, 28, 0.3);
+}
+
+[data-dossier-document="cv"][data-cv-template="prism"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="prism"][data-dossier-header-custom-surface="false"]
+  [data-dossier-integrated-contact] {
+  padding-right: 46mm !important;
+}
+
+[data-dossier-document="cv"][data-cv-template="prism"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="prism"]
+  [data-dossier-continuation-contact] {
+  position: relative;
+  z-index: 1;
+}
+
+/* -------------------------------------------------------------------------- */
+/* NEON                                                                        */
+/* -------------------------------------------------------------------------- */
+/* Neon is one continuous dark gradient identity. The old solid-pink header is
+ * replaced by a darkened pink-to-violet surface with one integrated glow; the
+ * glow is part of the masthead, never a detached decorative block. */
+[data-dossier-document="cv"][data-cv-template="neon"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="neon"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  ) {
+  background:
+    radial-gradient(
+      circle at 82% 18%,
+      color-mix(in srgb, var(--chrome-secondary) 72%, #ffffff) 0%,
+      color-mix(in srgb, var(--chrome-secondary) 54%, transparent) 16%,
+      transparent 34%
+    ),
+    linear-gradient(
+      112deg,
+      color-mix(in srgb, var(--chrome-paper) 84%, var(--chrome-primary)) 0%,
+      color-mix(in srgb, var(--chrome-primary) 58%, var(--chrome-paper)) 42%,
+      color-mix(in srgb, var(--chrome-secondary) 88%, var(--chrome-paper)) 100%
+    ) !important;
+  border-bottom: 0 !important;
+  box-shadow: inset 0 -0.35mm 0 color-mix(in srgb, #ffffff 22%, transparent) !important;
+  overflow: hidden !important;
+}
+
+[data-dossier-document="cv"][data-cv-template="neon"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="neon"][data-dossier-header-custom-surface="false"]
+  :is(
+    [data-dossier-compact-header],
+    [data-dossier-contact-header-background],
+    [data-dossier-continuation-contact-header]
+  )::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  right: -12mm;
+  top: -12mm;
+  width: 62mm;
+  height: 38mm;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--chrome-primary) 38%, #ffffff) 0%,
+    color-mix(in srgb, var(--chrome-secondary) 42%, transparent) 38%,
+    transparent 72%
+  );
+  opacity: 0.56;
+}
+
+[data-dossier-document="cv"][data-cv-template="neon"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="neon"][data-dossier-header-custom-surface="false"]
+  :is([data-dossier-integrated-contact], [data-dossier-continuation-contact-header]) {
+  color: #ffffff !important;
+  text-shadow: 0 0.3mm 0.7mm rgba(4, 3, 24, 0.36);
+}
+
+[data-dossier-document="cv"][data-cv-template="neon"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="neon"]
+  [data-dossier-continuation-contact] {
+  position: relative;
+  z-index: 1;
+}

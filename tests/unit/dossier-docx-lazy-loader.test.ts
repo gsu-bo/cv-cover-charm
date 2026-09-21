@@ -7,13 +7,14 @@ import {
 import { DOSSIER_DOCX_TEMPLATE_PLANS } from "../../src/lib/dossier-docx-family";
 
 describe("lazy DOCX template modules", () => {
-  test("registers exactly the 39 active dossier templates", () => {
+  test("registers exactly the 39 active DOCX dossier templates", () => {
     const lazyIds = [...DOSSIER_DOCX_LAZY_TEMPLATE_IDS].sort();
     const planIds = Object.keys(DOSSIER_DOCX_TEMPLATE_PLANS).sort();
 
     expect(lazyIds).toHaveLength(39);
     expect(new Set(lazyIds).size).toBe(39);
     expect(lazyIds).toEqual(planIds);
+    expect(lazyIds).not.toContain("frame");
     expect(lazyIds.every((templateId) => hasDossierDocxTemplateLoader(templateId))).toBe(true);
   });
 

@@ -21,6 +21,38 @@ async function extractPdfPages(path: string): Promise<string[]> {
   return pages;
 }
 
+async function expectOnlyInvisibleNativeText(path: string, pageNumber: number) {
+  const { getDocument, OPS } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const data = new Uint8Array(await readFile(path));
+  const document = await getDocument({ data, disableFontFace: true }).promise;
+  const pdfPage = await document.getPage(pageNumber);
+  const operatorList = await pdfPage.getOperatorList();
+  const textOperators = new Set([
+    OPS.showText,
+    OPS.showSpacedText,
+    OPS.nextLineShowText,
+    OPS.nextLineSetSpacingShowText,
+  ]);
+  let renderingMode = 0;
+  let nativeTextRuns = 0;
+
+  for (let index = 0; index < operatorList.fnArray.length; index += 1) {
+    const operator = operatorList.fnArray[index];
+    if (operator === OPS.setTextRenderingMode) {
+      renderingMode = Number(operatorList.argsArray[index]?.[0] ?? 0);
+      continue;
+    }
+    if (!textOperators.has(operator)) continue;
+    nativeTextRuns += 1;
+    expect(
+      renderingMode,
+      `page ${pageNumber}: every native PDF text run must be invisible`,
+    ).toBe(3);
+  }
+
+  expect(nativeTextRuns, `page ${pageNumber}: searchable native text must exist`).toBeGreaterThan(0);
+}
+
 function expectCabinEmbedded(source: string) {
   expect(source, "Cabin must be embedded as the real PDF font").toMatch(/Cabin/i);
 }
@@ -66,7 +98,7 @@ function cvPayload({ long = false } = {}) {
   return {
     version: 6,
     data: {
-      titel: "Lebenslauf",
+      titel: "LEBENSLAUF",
       person: {
         vorname: "Lea",
         nachname: "Müller",
@@ -94,11 +126,20 @@ function cvPayload({ long = false } = {}) {
       hidden: {},
     },
     design: {
-      template: "modern",
-      colors: { primary: "#24364b", accent: "#d6a47d", bg: "#ffffff" },
+      template: "freundlich",
+      colors: {
+        primary: "#0f766e",
+        secondary: "#f59e0b",
+        ink: "#0b1f24",
+        bg: "#fff9ef",
+      },
       font: "freundlich",
       bgOpacity: 0.25,
       useElements: false,
+      docTitleColor: "#ff0000",
+      docTitleFontSizePx: 39,
+      docTitleItalic: true,
+      docTitleUnderline: true,
     },
     elements: [],
     elementStyles: {},
@@ -108,18 +149,19 @@ function cvPayload({ long = false } = {}) {
 function coverPayload() {
   return {
     version: 7,
-    template: "modern",
+    template: "freundlich",
     colors: {
-      modern: {
-        bg: "#ffffff",
-        primary: "#24364b",
-        accent: "#d6a47d",
+      freundlich: {
+        primary: "#0f766e",
+        secondary: "#f59e0b",
+        ink: "#0b1f24",
+        bg: "#fff9ef",
       },
     },
-    layout: { modern: {} },
+    layout: { freundlich: {} },
     customs: [],
     fontScale: 1.2,
-    font: "sans",
+    font: "freundlich",
     data: {
       meta: { title: "", author: "", subject: "", keywords: "" },
       kicker: "Bewerbung um eine Lehrstelle als",
@@ -167,9 +209,15 @@ function letterPayload() {
       unterschrift: "Lea Müller",
     },
     design: {
-      template: "modern",
-      colors: { bg: "#ffffff", primary: "#24364b", accent: "#d6a47d" },
+      template: "freundlich",
+      colors: {
+        primary: "#0f766e",
+        secondary: "#f59e0b",
+        ink: "#0b1f24",
+        bg: "#fff9ef",
+      },
       font: "freundlich",
+      fontOverride: "freundlich",
     },
   };
 }
@@ -194,7 +242,7 @@ async function downloadStandaloneCv(page: import("@playwright/test").Page) {
 test.describe("CV PDF real text layer", () => {
   test.setTimeout(120_000);
 
-  test("standalone CV masks raster glyphs and exports searchable/selectable native text", async ({
+  test("standalone CV keeps browser typography visible and native text invisible/searchable", async ({
     page,
   }) => {
     await seedCv(page);
@@ -206,14 +254,34 @@ test.describe("CV PDF real text layer", () => {
     await expect(preview.first()).toContainText("Lea");
     await expect(preview.first()).toContainText("Beispielbetrieb Solothurn");
 
-    const exportText = page
+    const previewTitles = preview.first().locator("[data-cv-doc-title]");
+    const exportTitles = page
       .locator('[data-dossier-document="cv"][data-export-mode="true"] [data-cv-page]')
       .first()
-      .getByText("Lea", { exact: false })
-      .first();
-    await expect
-      .poll(async () => exportText.evaluate((element) => getComputedStyle(element).color))
-      .toMatch(/rgba\([^)]*,\s*0\)|transparent/i);
+      .locator("[data-cv-doc-title]");
+    await expect(previewTitles).toHaveCount(1);
+    await expect(exportTitles).toHaveCount(1);
+    const previewTitle = previewTitles.first();
+    const exportTitle = exportTitles.first();
+
+    const readTitleStyle = (element: Element) => {
+      const style = getComputedStyle(element);
+      return {
+        color: style.color,
+        fontFamily: style.fontFamily,
+        fontSize: style.fontSize,
+        fontStyle: style.fontStyle,
+        textDecorationLine: style.textDecorationLine,
+      };
+    };
+    const previewTitleStyle = await previewTitle.evaluate(readTitleStyle);
+    const exportTitleStyle = await exportTitle.evaluate(readTitleStyle);
+    expect(exportTitleStyle).toEqual(previewTitleStyle);
+    expect(exportTitleStyle.color).toBe("rgb(255, 0, 0)");
+    expect(exportTitleStyle.fontFamily).toMatch(/Cabin/i);
+    expect(exportTitleStyle.fontSize).toBe("39px");
+    expect(exportTitleStyle.fontStyle).toBe("italic");
+    expect(exportTitleStyle.textDecorationLine).toContain("underline");
 
     const download = await downloadStandaloneCv(page);
     const path = await download.path();
@@ -224,6 +292,8 @@ test.describe("CV PDF real text layer", () => {
     const pdfSource = (await readFile(path ?? "")).toString("latin1");
     const pdfPages = await extractPdfPages(path ?? "");
     const pdfText = pdfPages.join(" ");
+    await expectOnlyInvisibleNativeText(path ?? "", 1);
+    expect(pdfText.match(/\bLEBENSLAUF\b/g) ?? []).toHaveLength(1);
     expect(pdfText).toContain("Lea");
     expect(pdfText).toContain("Sekundarschule");
     expect(pdfText).toContain("Beispielbetrieb");
@@ -250,6 +320,7 @@ test.describe("CV PDF real text layer", () => {
     const pdfPages = await extractPdfPages(path ?? "");
     expect(pdfPages.length).toBeGreaterThan(1);
     expect(pdfPages.slice(1).join(" ")).toContain(marker ?? "__missing_second_page_marker__");
+    await expectOnlyInvisibleNativeText(path ?? "", 2);
   });
 
   test("combined dossier keeps letter before real CV text", async ({ page }) => {
@@ -294,6 +365,8 @@ test.describe("CV PDF real text layer", () => {
     expect(pdfPages.length).toBeGreaterThanOrEqual(3);
     expect(pdfPages[1]).toContain("Bewerbung Informatik Textlayer Test");
     expect(pdfPages.slice(2).join(" ")).toContain("Sekundarschule");
+    await expectOnlyInvisibleNativeText(path ?? "", 2);
+    await expectOnlyInvisibleNativeText(path ?? "", 3);
     expectCabinEmbedded(pdfSource);
   });
 });

@@ -13,6 +13,14 @@ const section = readFileSync(
   new URL("../../src/components/cover/Section.tsx", import.meta.url),
   "utf8",
 );
+const chromeControls = readFileSync(
+  new URL("../../src/components/dossier/DossierChromeControls.tsx", import.meta.url),
+  "utf8",
+);
+const letterLayoutControls = readFileSync(
+  new URL("../../src/components/letter/LetterLayoutControls.tsx", import.meta.url),
+  "utf8",
+);
 const coverRoute = readFileSync(new URL("../../src/routes/titelblatt.tsx", import.meta.url), "utf8");
 const letterRoute = readFileSync(
   new URL("../../src/routes/anschreiben.tsx", import.meta.url),
@@ -51,5 +59,22 @@ describe("shared dossier form UI", () => {
   test("CV chrome controls have one visible owner instead of a duplicate panel host", () => {
     expect(panel).not.toContain("DossierChromeControls");
     expect(cvRoute).toContain('<DossierChromeControls scope="cv" />');
+  });
+
+  test("CV and letter share the same common header/footer control structure", () => {
+    expect(chromeControls).toContain('label="Header-Inhalt – vertikale Position"');
+    expect(chromeControls).not.toContain("Eigene Anschrift – vertikale Position");
+    expect(chromeControls).not.toContain("Firma / Lehrbetrieb – vertikale Position");
+    expect(letterLayoutControls).toContain('scope="letter"');
+  });
+
+  test("letter-only geometry is grouped below the shared chrome controls", () => {
+    expect(letterLayoutControls).toContain("Briefspezifische Positionen");
+    expect(letterLayoutControls).toContain("data-letter-specific-layout-controls");
+    expect(letterLayoutControls).toContain("data-letter-recipient-offset-control");
+    expect(letterLayoutControls).toContain('label="Meine Kontaktdaten"');
+    expect(letterLayoutControls.indexOf("<DossierChromeControls")).toBeLessThan(
+      letterLayoutControls.indexOf("Briefspezifische Positionen"),
+    );
   });
 });

@@ -4,17 +4,18 @@ import {
   defaultFooterModeForTemplate,
   defaultHeaderGapMmForTemplate,
   defaultHeaderModeForTemplate,
+  recommendedHeaderPatchForTemplate,
   resolveTemplateChromeOptions,
 } from "../../src/lib/template-chrome";
 
 describe("template-owned dossier chrome", () => {
-  test("Brief owns the neutral no-header/no-footer fallback", () => {
-    expect(defaultHeaderModeForTemplate("brief")).toBe("none");
-    expect(defaultFooterModeForTemplate("brief")).toBe("none");
+  test("Brief uses the shared compact header/footer fallback", () => {
+    expect(defaultHeaderModeForTemplate("brief")).toBe("compact");
+    expect(defaultFooterModeForTemplate("brief")).toBe("compact");
     expect(defaultHeaderGapMmForTemplate("brief")).toBe(12);
   });
 
-  test("ordinary templates and Warm default to compact headers", () => {
+  test("all normal visual templates default to compact headers", () => {
     for (const template of [
       "klassisch",
       "modern",
@@ -27,20 +28,7 @@ describe("template-owned dossier chrome", () => {
       "welle",
       "edge",
       "ribbon",
-      "freundlich",
-    ]) {
-      expect(defaultHeaderModeForTemplate(template)).toBe("compact");
-      expect(defaultHeaderGapMmForTemplate(template)).toBe(12);
-    }
-  });
-
-  test("Aurora keeps the reviewed deep contact clearance", () => {
-    expect(defaultHeaderModeForTemplate("aurora")).toBe("contact");
-    expect(defaultHeaderGapMmForTemplate("aurora")).toBe(12);
-  });
-
-  test("designed masthead families opt into contact headers", () => {
-    for (const template of [
+      "aurora",
       "horizon",
       "violetPulse",
       "studio",
@@ -54,13 +42,30 @@ describe("template-owned dossier chrome", () => {
       "verlauf2",
       "verlauf3",
       "prism",
+      "cove",
+      "citrus",
+      "neon",
     ]) {
-      expect(defaultHeaderModeForTemplate(template)).toBe("contact");
-      expect(defaultHeaderGapMmForTemplate(template)).toBe(4);
+      expect(defaultHeaderModeForTemplate(template)).toBe("compact");
+      expect(defaultHeaderGapMmForTemplate(template)).toBe(12);
+      expect(recommendedHeaderPatchForTemplate(template)).toBeNull();
     }
   });
 
-  test("contact gradient families inherit both template colours", () => {
+  test("Warm alone intentionally recommends the reviewed stacked contact header", () => {
+    expect(defaultHeaderModeForTemplate("freundlich")).toBe("contact");
+    expect(defaultHeaderGapMmForTemplate("freundlich")).toBe(4);
+    expect(recommendedHeaderPatchForTemplate("freundlich")).toMatchObject({
+      headerMode: "contact",
+      headerTextLayout: "stacked",
+      headerHeightMm: 44,
+      headerGapMm: 4,
+    });
+    expect(defaultHeaderModeForTemplate("citrus")).toBe("compact");
+    expect(recommendedHeaderPatchForTemplate("citrus")).toBeNull();
+  });
+
+  test("contact gradient families inherit both template colours when contact is explicit", () => {
     const source = {
       ...DEFAULT_DOSSIER_CHROME_OPTIONS,
       headerMode: "contact" as const,

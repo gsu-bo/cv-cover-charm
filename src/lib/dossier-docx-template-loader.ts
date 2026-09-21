@@ -29,7 +29,6 @@ const DOSSIER_DOCX_TEMPLATE_LOADERS = {
   edelDark: () => import("./dossier-docx-templates/edelDark"),
   edge: () => import("./dossier-docx-templates/edge"),
   glow: () => import("./dossier-docx-templates/glow"),
-  frame: () => import("./dossier-docx-templates/frame"),
   monoLuxe: () => import("./dossier-docx-templates/monoLuxe"),
   horizon: () => import("./dossier-docx-templates/horizon"),
   sunrise: () => import("./dossier-docx-templates/sunrise"),
@@ -49,6 +48,7 @@ const DOSSIER_DOCX_TEMPLATE_LOADERS = {
   cove: () => import("./dossier-docx-templates/cove"),
   warm4: () => import("./dossier-docx-templates/warm4"),
   warm5: () => import("./dossier-docx-templates/warm5"),
+  diagonal: () => import("./dossier-docx-templates/diagonal"),
 } satisfies Record<string, DossierDocxTemplateLoader>;
 
 export const DOSSIER_DOCX_LAZY_TEMPLATE_IDS = Object.freeze(

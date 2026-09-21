@@ -1,10 +1,21 @@
-import { hasReducedContinuationHeader } from "@/lib/dossier-chrome";
+import {
+  DEFAULT_DOSSIER_CHROME_OPTIONS,
+  dossierFooterVisualHeightMmForOptions,
+  dossierHeaderVisualHeightMmForOptions,
+  effectiveDossierHeaderModeForOptions,
+  type DossierChromeOptions,
+} from "@/lib/dossier-chrome";
 import type { TemplateId } from "@/components/cover/types";
 import { defaultHeaderModeForTemplate, defaultFooterModeForTemplate } from "@/lib/template-chrome";
 import { cvFrameFor } from "@/components/cv/archetype";
 import {
+  dossierPageMarginMinimumsForContentMinimums,
+  dossierPageMarginsFromContentMargins,
+  resolveDossierContentMargins,
+  type DossierPageReserves,
+} from "@/lib/dossier-page-geometry";
+import {
   DOSSIER_PAGE_MARGIN_MIN_MM,
-  clampDossierPageMarginsToMinimums,
   getDossierPageMargins,
   type DossierPageMargins,
 } from "@/lib/dossier-page-margins";
@@ -33,8 +44,10 @@ export type LetterPageContext = {
   pageIndex?: number;
   /** Attachments belong only on the final page of a multi-page letter. */
   finalPage?: boolean;
-  /** Additional template-owned whitespace after the header. Ignored once the user owns the page margins. */
+  /** Legacy caller override. Live rendering should pass chromeOptions instead. */
   headerGapMm?: number;
+  /** Exact shared chrome snapshot used by DossierHeaderFooterChrome for this page. */
+  chromeOptions?: DossierChromeOptions;
 };
 
 type MmRect = {
@@ -130,12 +143,16 @@ export function letterFooterHeightMm(
   heightOverrideMm: number | null = null,
 ): number {
   if (mode === "none") return 0;
-  if (heightOverrideMm !== null && Number.isFinite(heightOverrideMm)) {
-    return mode === "compact"
-      ? Math.min(18, Math.max(1, heightOverrideMm))
-      : Math.min(40, Math.max(4, heightOverrideMm));
+  if (mode === "compact") {
+    return dossierFooterVisualHeightMmForOptions({
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      footerMode: "compact",
+      footerHeightMm: heightOverrideMm,
+    });
   }
-  if (mode === "compact") return 2.4;
+  if (heightOverrideMm !== null && Number.isFinite(heightOverrideMm)) {
+    return Math.min(40, Math.max(4, heightOverrideMm));
+  }
 
   const attachments = data.showBeilagen !== false ? visibleLetterAttachments(data) : [];
   if (!attachments.length) return 4;
@@ -149,65 +166,142 @@ export function letterFooterHeightMm(
   return Math.min(30, 7 + visualLineCount * 3.8);
 }
 
-function effectiveHeaderMode(design: LetterDesign, _pageIndex: number): LetterHeaderMode {
+function requestedHeaderMode(design: LetterDesign, context: LetterPageContext): LetterHeaderMode {
+  return (
+    context.chromeOptions?.headerMode ??
+    design.headerMode ??
+    defaultHeaderModeForTemplate(design.template)
+  );
+}
+
+function requestedFooterMode(design: LetterDesign, context: LetterPageContext): LetterFooterMode {
+  const mode = context.chromeOptions?.footerMode;
+  if (mode === "details") return "attachments";
+  if (mode === "compact" || mode === "none") return mode;
+  return design.footerMode ?? (defaultFooterModeForTemplate(design.template) as LetterFooterMode);
+}
+
+function effectiveHeaderMode(
+  design: LetterDesign,
+  pageIndex: number,
+  context: LetterPageContext,
+): LetterHeaderMode {
+  if (context.chromeOptions) {
+    return effectiveDossierHeaderModeForOptions(
+      context.chromeOptions,
+      pageIndex,
+    ) as LetterHeaderMode;
+  }
   return design.headerMode ?? defaultHeaderModeForTemplate(design.template);
 }
 
 function effectiveFooterMode(
   design: LetterDesign,
   finalPage: boolean,
-  _pageIndex: number,
+  context: LetterPageContext,
 ): LetterFooterMode {
-  const requested = design.footerMode ?? defaultFooterModeForTemplate(design.template);
+  const requested = requestedFooterMode(design, context);
   // Attachment lists belong on the final page only. Earlier pages keep the compact band.
-  return requested === "attachments" && !finalPage ? "compact" : (requested as LetterFooterMode);
+  return requested === "attachments" && !finalPage ? "compact" : requested;
+}
+
+function legacyLetterHeaderVisualHeightMm(
+  design: LetterDesign,
+  pageIndex: number,
+  mode: LetterHeaderMode,
+): number {
+  return dossierHeaderVisualHeightMmForOptions(
+    {
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      headerMode: mode,
+      headerDifferentFirstPage: design.headerDifferentFirstPage,
+      headerHeightMm: design.headerHeightMm ?? null,
+      headerTextLayout: design.headerTextLayout === "inline" ? "inline" : "stacked",
+    },
+    pageIndex,
+  );
 }
 
 function letterHeaderVisualHeightMm(
   design: LetterDesign,
   pageIndex: number,
   mode: LetterHeaderMode,
+  context: LetterPageContext,
 ): number {
   if (mode === "none") return 0;
-  const custom = design.headerHeightMm;
-  if (hasReducedContinuationHeader({ ...design, headerMode: mode }, pageIndex)) {
-    return custom === null || custom === undefined ? 8 : Math.min(18, Math.max(5, custom));
+  if (context.chromeOptions) {
+    return dossierHeaderVisualHeightMmForOptions(context.chromeOptions, pageIndex);
   }
-  if (mode === "contact") {
-    return custom === null || custom === undefined ? 22 : Math.min(40, Math.max(10, custom));
+  return legacyLetterHeaderVisualHeightMm(design, pageIndex, mode);
+}
+
+function letterHeaderReserveMm(
+  design: LetterDesign,
+  pageIndex: number,
+  mode: LetterHeaderMode,
+  context: LetterPageContext,
+): number {
+  if (mode === "none") return 0;
+  if (isWarmFirstPageCompactHeader(design.template, mode, pageIndex)) {
+    return WARM_FIRST_PAGE_HEADER_HEIGHT_MM;
   }
-  return custom === null || custom === undefined ? 3 : Math.min(18, Math.max(1, custom));
+  return letterHeaderVisualHeightMm(design, pageIndex, mode, context);
+}
+
+function letterHeaderGapMm(mode: LetterHeaderMode, context: LetterPageContext): number {
+  if (mode === "none") return 0;
+  const value = context.chromeOptions?.headerGapMm ?? context.headerGapMm ?? 0;
+  return Math.min(40, Math.max(0, value));
 }
 
 function letterContentTopMm(
   design: LetterDesign,
   pageIndex: number,
   mode: LetterHeaderMode,
+  context: LetterPageContext,
 ): number {
   if (mode === "none") return pageIndex > 0 ? 16 : 18;
 
-  // Warm's first page deliberately owns a 52 mm masthead. The old generic compact
-  // calculation started body flow around 21 mm and then visually dragged the sender
-  // upward with a transform. Reserve the real masthead instead so the sender can be
-  // centred inside it while recipient/body flow starts naturally below it.
+  // Warm's first page deliberately owns a 52 mm masthead. Reserve the actual
+  // masthead instead of a generic compact-header value.
   if (isWarmFirstPageCompactHeader(design.template, mode, pageIndex)) {
     return WARM_FIRST_PAGE_HEADER_HEIGHT_MM;
   }
 
-  const height = letterHeaderVisualHeightMm(design, pageIndex, mode);
-  if (pageIndex > 0 && design.headerDifferentFirstPage !== false) {
+  const height = letterHeaderVisualHeightMm(design, pageIndex, mode, context);
+  const differentFirstPage = context.chromeOptions
+    ? context.chromeOptions.headerDifferentFirstPage !== false
+    : design.headerDifferentFirstPage !== false;
+  if (pageIndex > 0 && differentFirstPage) {
     return mode === "contact" ? Math.max(18, height + 10) : Math.max(18, height + 15);
   }
   return mode === "contact" ? Math.max(18, height + 9) : Math.max(18, height + 18);
 }
 
+function letterPageReservesMm(
+  data: LetterData,
+  design: LetterDesign,
+  context: LetterPageContext,
+): DossierPageReserves {
+  const paginationContext = letterPaginationPageContext(design);
+  const pageIndex = Math.max(0, context.pageIndex ?? paginationContext?.pageIndex ?? 0);
+  const finalPage = context.finalPage ?? paginationContext?.finalPage ?? true;
+  const headerMode = effectiveHeaderMode(design, pageIndex, context);
+  const footerMode = effectiveFooterMode(design, finalPage, context);
+  const heightOverride = context.chromeOptions?.footerHeightMm ?? design.footerHeightMm ?? null;
+  return {
+    headerReserveMm: letterHeaderReserveMm(design, pageIndex, headerMode, context),
+    headerGapMm: letterHeaderGapMm(headerMode, context),
+    footerReserveMm: letterFooterHeightMm(data, footerMode, heightOverride),
+  };
+}
+
 const roundHalfMm = (value: number) => Math.round(value * 2) / 2;
 
 /**
- * Hard collision minimums for custom motivation-letter margins. The values are
- * intentionally smaller than the normal template text box where whitespace is
- * optional, but they protect shared header/footer chrome and structural rails,
- * frames and fresh-template edge motifs.
+ * Hard collision minimums for custom motivation-letter page margins. Shared
+ * header/footer reserve is not baked into these values; it is composed exactly
+ * once by letterPageGeometry.
  */
 export function letterSafePageMarginMinimums(
   data: LetterData,
@@ -217,12 +311,8 @@ export function letterSafePageMarginMinimums(
   const floor = DOSSIER_PAGE_MARGIN_MIN_MM;
   const paginationContext = letterPaginationPageContext(design);
   const pageIndex = Math.max(0, context.pageIndex ?? paginationContext?.pageIndex ?? 0);
-  const finalPage = context.finalPage ?? paginationContext?.finalPage ?? true;
   const fresh = freshLetterSpec(design.template);
   const archetype = fresh?.archetype ?? letterArchetypeFor(design.template);
-  const headerMode = effectiveHeaderMode(design, pageIndex);
-  const footerMode = effectiveFooterMode(design, finalPage, pageIndex);
-  const footerHeight = letterFooterHeightMm(data, footerMode, design.footerHeightMm ?? null);
 
   let left = floor;
   let right = floor;
@@ -249,18 +339,54 @@ export function letterSafePageMarginMinimums(
     if (railRight > 0) left = Math.max(left, railRight + 5);
   }
 
-  const headerHeight = isWarmFirstPageCompactHeader(design.template, headerMode, pageIndex)
-    ? WARM_FIRST_PAGE_HEADER_HEIGHT_MM
-    : letterHeaderVisualHeightMm(design, pageIndex, headerMode);
-  const top = Math.max(templateTop, headerMode === "none" ? floor : headerHeight + 5);
-  const bottom = Math.max(templateBottom, footerMode === "none" ? floor : footerHeight + 5);
+  return dossierPageMarginMinimumsForContentMinimums(
+    {
+      top: roundHalfMm(templateTop),
+      right: roundHalfMm(right),
+      bottom: roundHalfMm(templateBottom),
+      left: roundHalfMm(left),
+    },
+    letterPageReservesMm(data, design, { ...context, pageIndex }),
+  );
+}
 
-  return {
-    top: roundHalfMm(top),
-    right: roundHalfMm(right),
-    bottom: roundHalfMm(bottom),
-    left: roundHalfMm(left),
+/** Physical page-margin defaults corresponding to the reviewed Letter content box. */
+export function letterDefaultPageMargins(
+  data: LetterData,
+  design: LetterDesign,
+  context: LetterPageContext = {},
+): DossierPageMargins {
+  const paginationContext = letterPaginationPageContext(design);
+  const pageIndex = Math.max(0, context.pageIndex ?? paginationContext?.pageIndex ?? 0);
+  const finalPage = context.finalPage ?? paginationContext?.finalPage ?? true;
+  const fresh = freshLetterSpec(design.template);
+  const archetype = fresh?.archetype ?? letterArchetypeFor(design.template);
+  const headerMode = effectiveHeaderMode(design, pageIndex, context);
+  const footerMode = effectiveFooterMode(design, finalPage, context);
+  const heightOverride = context.chromeOptions?.footerHeightMm ?? design.footerHeightMm ?? null;
+  const footerHeight = letterFooterHeightMm(data, footerMode, heightOverride);
+  const insets = fresh ? { left: fresh.left, right: fresh.right } : CONTENT_INSETS[archetype];
+  const contentMargins: DossierPageMargins = {
+    left: insets.left,
+    right: insets.right,
+    top:
+      letterContentTopMm(design, pageIndex, headerMode, context) +
+      letterHeaderGapMm(headerMode, context),
+    bottom:
+      footerMode === "none"
+        ? 10
+        : footerMode === "attachments"
+          ? footerHeight + 7
+          : footerHeight + 14.6,
   };
+  const minimums = letterSafePageMarginMinimums(data, design, context);
+  return (
+    dossierPageMarginsFromContentMargins(
+      contentMargins,
+      minimums,
+      letterPageReservesMm(data, design, context),
+    ) ?? minimums
+  );
 }
 
 export function letterPageGeometry(
@@ -275,15 +401,17 @@ export function letterPageGeometry(
   const fresh = freshLetterSpec(design.template);
   const archetype = fresh?.archetype ?? letterArchetypeFor(design.template);
   const freshTemplate = fresh !== null;
-  const requestedHeaderMode = design.headerMode ?? defaultHeaderModeForTemplate(design.template);
-  const requestedFooterMode = design.footerMode ?? defaultFooterModeForTemplate(design.template);
-  const headerMode = effectiveHeaderMode(design, pageIndex);
-  const footerMode = effectiveFooterMode(design, finalPage, pageIndex);
-  const footerHeight = letterFooterHeightMm(data, footerMode, design.footerHeightMm ?? null);
+  const requestedHeader = requestedHeaderMode(design, context);
+  const requestedFooter = requestedFooterMode(design, context);
+  const headerMode = effectiveHeaderMode(design, pageIndex, context);
+  const footerMode = effectiveFooterMode(design, finalPage, context);
+  const heightOverride = context.chromeOptions?.footerHeightMm ?? design.footerHeightMm ?? null;
+  const footerHeight = letterFooterHeightMm(data, footerMode, heightOverride);
   const defaultInsets = fresh
     ? { left: fresh.left, right: fresh.right }
     : CONTENT_INSETS[archetype];
-  const defaultTop = letterContentTopMm(design, pageIndex, headerMode);
+  const headerGapMm = letterHeaderGapMm(headerMode, context);
+  const defaultTop = letterContentTopMm(design, pageIndex, headerMode, context) + headerGapMm;
   const defaultBottom =
     footerMode === "none"
       ? 10
@@ -291,21 +419,18 @@ export function letterPageGeometry(
         ? footerHeight + 7
         : footerHeight + 14.6;
   const storedCustomMargins = getDossierPageMargins("letter");
-  const customMargins = storedCustomMargins
-    ? clampDossierPageMarginsToMinimums(
+  const customContentMargins = storedCustomMargins
+    ? resolveDossierContentMargins(
         storedCustomMargins,
         letterSafePageMarginMinimums(data, design, context),
+        letterPageReservesMm(data, design, context),
       )
     : null;
-  const headerGapMm =
-    customMargins || headerMode === "none"
-      ? 0
-      : Math.min(40, Math.max(0, context.headerGapMm ?? 0));
-  const insets = customMargins
-    ? { left: customMargins.left, right: customMargins.right }
+  const insets = customContentMargins
+    ? { left: customContentMargins.left, right: customContentMargins.right }
     : defaultInsets;
-  const top = customMargins?.top ?? defaultTop + headerGapMm;
-  const bottom = customMargins?.bottom ?? defaultBottom;
+  const top = customContentMargins?.top ?? defaultTop;
+  const bottom = customContentMargins?.bottom ?? defaultBottom;
   const width = LETTER_PAGE_MM.width - insets.left - insets.right;
   const height = LETTER_PAGE_MM.height - top - bottom;
   const showAttachments =
@@ -313,6 +438,17 @@ export function letterPageGeometry(
     finalPage &&
     data.showBeilagen !== false &&
     visibleLetterAttachments(data).length > 0;
+  const contactHeight = context.chromeOptions
+    ? dossierHeaderVisualHeightMmForOptions(
+        {
+          ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+          ...context.chromeOptions,
+          headerMode: "contact",
+          headerContinuationMode: undefined,
+        },
+        0,
+      )
+    : legacyLetterHeaderVisualHeightMm(design, pageIndex, "contact");
 
   return {
     pageIndex,
@@ -320,9 +456,9 @@ export function letterPageGeometry(
     finalPage,
     archetype,
     freshTemplate,
-    requestedHeaderMode,
+    requestedHeaderMode: requestedHeader,
     effectiveHeaderMode: headerMode,
-    requestedFooterMode,
+    requestedFooterMode: requestedFooter,
     effectiveFooterMode: footerMode,
     content: {
       left: insets.left,
@@ -333,9 +469,9 @@ export function letterPageGeometry(
       height,
     },
     header: {
-      contactHeight: letterHeaderVisualHeightMm(design, pageIndex, "contact"),
-      contactLeft: 24,
-      contactRight: 23,
+      contactHeight,
+      contactLeft: insets.left,
+      contactRight: insets.right,
       contactTop: 3.1,
       contactMinHeight: 15,
       sidebarWidth: archetype === "sidebar" ? 6 : 0,
@@ -348,8 +484,8 @@ export function letterPageGeometry(
     },
     footer: {
       height: footerHeight,
-      contentLeft: 24,
-      contentRight: 23,
+      contentLeft: insets.left,
+      contentRight: insets.right,
       paddingY: 2.2,
       showAttachments,
     },

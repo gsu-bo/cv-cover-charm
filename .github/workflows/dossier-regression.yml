@@ -88,11 +88,14 @@ jobs:
               tests/e2e/dossier-state-roundtrip.spec.ts
               tests/e2e/dossier-state-isolation.spec.ts
               tests/e2e/dossier-chrome-sync.spec.ts
+              tests/e2e/dossier-chrome-document-content.spec.ts
+              tests/e2e/devtools-keyboard.spec.ts
               tests/e2e/dossier-docx-reference.spec.ts
               tests/e2e/dossier-docx-alignment.spec.ts
               tests/e2e/dossier-docx-warm.spec.ts
               tests/e2e/dossier-docx-studio3.spec.ts
               tests/e2e/dossier-docx-family-gallery.spec.ts
+              tests/e2e/dossier-docx-v2-shadow.spec.ts
           - group: letter-m1-m5
             files: >-
               tests/e2e/letter-header-modes.spec.ts
@@ -120,10 +123,12 @@ jobs:
             files: >-
               tests/e2e/cover-edge-smoke.spec.ts
               tests/e2e/template-cleanup.spec.ts
+              tests/e2e/prism-neon-header-identity.spec.ts
               tests/e2e/gradient-edge-smoke.spec.ts
           - group: fresh-dossier-templates
             files: >-
               tests/e2e/canonical-brief-default.spec.ts
+              tests/e2e/retired-frame-compatibility.spec.ts
               tests/e2e/fresh-dossier-templates.spec.ts
               tests/e2e/fresh-modern-sidebar-geometry.spec.ts
               tests/e2e/dossier-docx-fresh-gallery.spec.ts
@@ -178,6 +183,15 @@ jobs:
         with:
           name: dossier-docx-reference
           path: artifacts/dossier-docx-reference
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload DOCX V2 shadow references
+        if: matrix.group == 'dossier-flow' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dossier-docx-v2-shadow
+          path: artifacts/dossier-docx-v2-shadow
           if-no-files-found: warn
           retention-days: 14
 

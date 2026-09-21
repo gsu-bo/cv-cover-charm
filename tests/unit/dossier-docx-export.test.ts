@@ -218,6 +218,7 @@ describe("DOCX family fallback coverage", () => {
     ).toBe(true);
     expect(DOSSIER_DOCX_TEMPLATE_PLANS.warm4).toBeUndefined();
     expect(DOSSIER_DOCX_TEMPLATE_PLANS.warm5).toBeUndefined();
+    expect(DOSSIER_DOCX_TEMPLATE_PLANS.frame).toBeUndefined();
   });
 
   test("keeps every geometry family populated", () => {

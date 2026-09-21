@@ -5,6 +5,10 @@ const css = readFileSync(
   new URL("../../src/components/cover/templatefix-24-25.css", import.meta.url),
   "utf8",
 );
+const forestDefaults = readFileSync(
+  new URL("../../src/components/cover/forest-flow-cover-defaults.ts", import.meta.url),
+  "utf8",
+);
 const chromePolicy = readFileSync(
   new URL("../../src/components/dossier/chrome-policy.css", import.meta.url),
   "utf8",
@@ -48,11 +52,14 @@ describe("templateFIX Sunrise + Forest Flow", () => {
     expect(gradientCss).not.toContain('data-dossier-template="forestFlow"');
   });
 
-  test("Forest Flow cover keeps its deliberate grove/content grid", () => {
-    expect(css).toContain('[data-block-id="name"]');
-    expect(css).toContain("left: 72mm !important;");
-    expect(css).toContain('[data-block-id="kontakt"]');
-    expect(css).toContain("left: 7mm !important;");
+  test("Forest Flow cover keeps its deliberate grid without pinning editable blocks in CSS", () => {
+    expect(forestDefaults).toContain("name: { x: 72, y: 111, w: 112");
+    expect(forestDefaults).toContain("kontakt: { x: 7, y: 203, w: 38");
+    expect(forestDefaults).toContain("foto: { x: 143, y: 27");
+    expect(css).toContain('data-block-id="name"');
+    expect(css).toContain('data-block-id="kontakt"');
+    expect(css).not.toContain("left: 72mm !important;");
+    expect(css).not.toContain("left: 7mm !important;");
     expect(css).not.toContain("translate(-34mm");
   });
 

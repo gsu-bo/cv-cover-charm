@@ -15,31 +15,23 @@
 
 html[data-cv-variant="minimal"] [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page]) > [data-cv-accent="page"] {
-  left: 24mm !important;
+  left: var(--cv-classic-main-left) !important;
   right: auto !important;
   width: 22mm !important;
   top: 10mm !important;
 }
 
 html[data-cv-variant="minimal"] [data-cv-layout="classic"]
-  :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main] {
-  left: 24mm !important;
-  right: 24mm !important;
-  top: 20mm !important;
-  bottom: 18mm !important;
-}
-
-html[data-cv-variant="minimal"] [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page]) [data-cv-header] {
-  margin-bottom: 7.5mm !important;
-  gap: 8.5mm !important;
+  margin-bottom: 5.2mm !important;
+  gap: 8mm !important;
 }
 
 /* Keep layout spacing inside the measured row wrapper. Margins on the direct
  * pagination wrappers are not part of getBoundingClientRect().height. */
 html[data-cv-variant="minimal"] [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page]) [data-cv-section] {
-  margin-top: 6.3mm !important;
+  margin-top: 5.2mm !important;
 }
 
 html[data-cv-variant="minimal"] [data-cv-layout="classic"]
@@ -49,39 +41,22 @@ html[data-cv-variant="minimal"] [data-cv-layout="classic"]
 }
 
 html[data-cv-variant="minimal"] [data-cv-layout="classic"]
-  :is([data-cv-page], [data-cv-measure-page]) [data-cv-entry]:has(> [data-cv-rail]) {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) auto !important;
-  column-gap: 7mm !important;
-  align-items: start !important;
-}
-
-html[data-cv-variant="minimal"] [data-cv-layout="classic"]
-  :is([data-cv-page], [data-cv-measure-page]) [data-cv-entry] > [data-cv-rail] {
-  grid-column: 2 !important;
-  grid-row: 1 !important;
-  width: auto !important;
-  min-width: 23mm !important;
-  text-align: right !important;
-  padding-top: 0.45mm !important;
-}
-
-html[data-cv-variant="minimal"] [data-cv-layout="classic"]
-  :is([data-cv-page], [data-cv-measure-page]) [data-cv-entry]:has(> [data-cv-rail])
-  > :not([data-cv-rail]) {
-  grid-column: 1 !important;
-  grid-row: 1 !important;
+  :is([data-cv-page], [data-cv-measure-page]) [data-cv-entry] {
+  margin-bottom: 2.5mm !important;
 }
 
 /* -------------------------------------------------------------------------- */
 /* Timeline                                                                   */
 /* -------------------------------------------------------------------------- */
 
+/* Package 4: the timeline no longer expands the outer page content box by
+ * 11 mm. Package 3 owns that boundary; the timeline identity lives entirely
+ * inside the safe area through the padding, axis and markers below. */
+
 html[data-cv-variant="timeline"] [data-cv-layout="classic"]
-  :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main] {
-  left: 21mm !important;
-  right: 19mm !important;
-  top: 16mm !important;
+  :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main]
+  > div:has([data-cv-header]) {
+  padding-left: 11mm;
 }
 
 html[data-cv-variant="timeline"] [data-cv-layout="classic"]
@@ -185,17 +160,9 @@ html[data-cv-variant="executive"] [data-cv-layout="modern"]:not([data-cv-archety
   left: 60mm !important;
 }
 
-/*
- * Nur die waagrechte Aufteilung stammt aus dem Aufbau. Oben und unten gehören
- * der Bauform: dort sitzen Kopfband und Fusszeile, deren Höhe je Vorlage und
- * je Seite verschieden ist. Ein festes `top` hier hätte den Text bei Sonne
- * oder Studio unter das Farbband geschoben.
- */
-html[data-cv-variant="executive"] [data-cv-layout="modern"]:not([data-cv-archetype="column"])
-  :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main] {
-  left: 69mm !important;
-  right: 19mm !important;
-}
+/* Package 4: the sidebar remains an internal 60 mm layout surface, but the
+ * outer readable main box now comes exclusively from cvContentBox / Package 3.
+ * This also means the user sidebar percentage and page margins can visibly win. */
 
 html[data-cv-variant="executive"] [data-cv-layout="modern"]
   :is([data-cv-page], [data-cv-measure-page]) [data-cv-main]
@@ -222,19 +189,11 @@ html[data-cv-variant="executive"] [data-cv-layout="modern"] [data-cv-page="0"]
 
 html[data-cv-variant="editorial"] [data-cv-layout="classic"]
   :is([data-cv-page], [data-cv-measure-page]) > [data-cv-accent="page"] {
-  left: 21mm !important;
+  left: max(0mm, calc(var(--cv-classic-main-left) - 3mm)) !important;
   right: auto !important;
   top: 19mm !important;
   width: var(--dossier-line-thickness) !important;
   height: 34mm !important;
-}
-
-html[data-cv-variant="editorial"] [data-cv-layout="classic"]
-  :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main] {
-  left: 30mm !important;
-  right: 22mm !important;
-  top: 20mm !important;
-  bottom: 18mm !important;
 }
 
 /*
@@ -282,48 +241,9 @@ html[data-cv-variant="editorial"] [data-cv-layout="classic"]
 /* Zweispalten-Aufbauten spiegeln                                             */
 /* -------------------------------------------------------------------------- */
 
-html[data-cv-mirrored="true"] [data-cv-layout="modern"] [data-cv-page] {
-  transform: scaleX(-1);
-  transform-origin: center;
-}
-
-/*
- * Die Seite wird gespiegelt, damit Spalte und Hauptteil die Seite tauschen –
- * und jedes Kind, das Text trägt, wird zurückgespiegelt, sonst stünde die
- * Schrift verkehrt herum. Wer hier ein neues Textelement einhängt, muss es in
- * diese Liste aufnehmen: Kopfband und Fusszeile fehlten und der Name stand
- * seitenverkehrt auf dem Blatt.
- */
-html[data-cv-mirrored="true"] [data-cv-layout="modern"] [data-cv-page]
-  > [data-cv-sidebar],
-html[data-cv-mirrored="true"] [data-cv-layout="modern"] [data-cv-page]
-  > [data-cv-main],
-html[data-cv-mirrored="true"] [data-cv-layout="modern"] [data-cv-page]
-  > [data-cv-band-header],
-html[data-cv-mirrored="true"] [data-cv-layout="modern"] [data-cv-page]
-  > [data-cv-page-label],
-html[data-cv-mirrored="true"] [data-cv-layout="modern"] [data-cv-page]
-  > [data-cv-photo-free] {
-  transform: scaleX(-1);
-  transform-origin: center;
-}
-/* -------------------------------------------------------------------------- */
-/* Bauform vor Aufbau: senkrechte Ränder                                      */
-/* -------------------------------------------------------------------------- */
-
-/*
- * Wo die Vorlage ein Kopfband hat, bestimmt dessen Höhe den oberen Rand des
- * Textbereichs – und zwar je Seite verschieden, weil Seite 1 das volle Band
- * trägt und die Folgeseiten nur einen Streifen.
- *
- * Die Aufbauten oben setzen feste `top`/`bottom`-Werte mit `!important`, die
- * von einer 55 mm hohen Kopffläche nichts wissen; der Text landete damit unter
- * dem Band. Diese Regel ist um ein Attribut spezifischer und gibt der Bauform
- * das letzte Wort zurück. Die Werte kommen aus `cvContentBox`, gesetzt vom
- * Renderer als `--cv-main-top` / `--cv-main-bottom`.
- */
-html[data-cv-variant] [data-cv-layout][data-cv-band-head="true"]
-  :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main] {
-  top: var(--cv-main-top) !important;
-  bottom: var(--cv-main-bottom) !important;
-}
+/* Die physische Seite wird vom Renderer gesetzt. Kein scaleX: Text, freie
+ * Elemente und Bildausschnitte bleiben unverändert und PDF/Preview verwenden
+ * dieselbe echte Geometrie. */
+/* Vertical page geometry is intentionally absent here. It is resolved once by
+ * CvCanvasBase and enforced for every layout/template in
+ * content-geometry-contract.css. */

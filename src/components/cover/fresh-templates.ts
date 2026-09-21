@@ -6,6 +6,7 @@ import {
   type FreshTemplateId,
 } from "./fresh-template-registry";
 import { TEMPLATES, type TemplateDefinition, type TemplateId } from "./types";
+import { CANONICAL_DOSSIER_PRESENTATION } from "@/lib/dossier-default-presentation";
 import "./gradient-templates.css";
 import "./studio-warm-variants.css";
 import "./warm-4-5.css";
@@ -22,9 +23,10 @@ import "./templatefix-27-28.css";
 import "./templatefix-29-31.css";
 import "./templatefix-prism.css";
 import "./templatefix-32-36.css";
+import "./ribbon-cover-redesign.css";
 import "./templatefix-32-36-cv-masthead.css";
 import "./templatefix-glow-density.css";
-import "./templatefix-frame.css";
+import "./template-diagonal.css";
 import "./templatefix-mono-luxe.css";
 import "./warm2-redesign.css";
 import "./templatefix-studio-pdf-scale.css";
@@ -105,15 +107,33 @@ const freshDefinitions: TemplateDefinition[] = FRESH_TEMPLATE_REGISTRY.map((defi
 }));
 
 /**
- * Edel blockig and Bogen were retired from the product catalogue. Keep their
- * old ids in the persisted type boundary only so old JSON cannot crash while
- * loading; once this module registers the live catalogue they are no longer
- * selectable, exportable gallery cases, or valid normalized document designs.
+ * Retired templates must not remain selectable after HMR or old drafts. Keep
+ * their ids only at the persisted type boundary; there is no runtime alias or
+ * replacement mapping. Frame is intentionally retired outright rather than
+ * falling back to Diagonal.
  */
-const RETIRED_TEMPLATE_IDS = new Set(["edelBlockig", "sonnig"]);
+const RETIRED_TEMPLATE_IDS = new Set(["edelBlockig", "sonnig", "frame"]);
 for (let index = TEMPLATES.length - 1; index >= 0; index -= 1) {
   if (RETIRED_TEMPLATE_IDS.has(TEMPLATES[index].id as string)) TEMPLATES.splice(index, 1);
 }
+
+/**
+ * Diagonal is the surviving geometric corner template. It is a standalone
+ * dossier style with two equal, same-colour diagonal masses and a quiet paper
+ * centre.
+ */
+const diagonalDefinition: TemplateDefinition = {
+  id: "diagonal" as TemplateId,
+  name: "Diagonal",
+  description: "Klare blaue Diagonalen, modern und editorial",
+  slots: [
+    { key: "bg", label: "Papier", default: "#f8fafc" },
+    { key: "primary", label: "Fläche", default: "#1d4ed8" },
+    { key: "secondary", label: "Akzent", default: "#0f766e" },
+    { key: "accent", label: "Akzent 2", default: "#0891b2" },
+    { key: "ink", label: "Text", default: "#172033" },
+  ],
+};
 
 /**
  * Edel Dark deliberately reuses the proven Edel composition instead of
@@ -138,12 +158,35 @@ const edelDarkDefinition: TemplateDefinition = {
 for (const definition of freshDefinitions) {
   if (!TEMPLATES.some((template) => template.id === definition.id)) TEMPLATES.push(definition);
 }
+if (!TEMPLATES.some((template) => (template.id as string) === "diagonal")) {
+  TEMPLATES.push(diagonalDefinition);
+}
 if (!TEMPLATES.some((template) => (template.id as string) === "edelDark")) {
   TEMPLATES.push(edelDarkDefinition);
 }
 
-export function isFreshTemplate(template: TemplateId): template is TemplateId & FreshTemplateId {
-  return isFreshTemplateId(template as string);
+/**
+ * Canonical persisted-template compatibility boundary.
+ *
+ * Retired and unknown ids resolve to the neutral Brief template. In particular,
+ * old `frame` saves must never leave a stale id in one dossier document while
+ * the other documents and export adapters already use Brief.
+ */
+export function normalizeActiveTemplateId(value: unknown): TemplateId {
+  if (typeof value !== "string") return CANONICAL_DOSSIER_PRESENTATION.template;
+  return (
+    TEMPLATES.find((template) => String(template.id) === value)?.id ??
+    CANONICAL_DOSSIER_PRESENTATION.template
+  );
+}
+
+/**
+ * CoverBackground only needs to know whether the stable three-field structural
+ * scaffold is available. Diagonal uses that scaffold too, but stays outside the
+ * historic Fresh registry.
+ */
+export function isFreshTemplate(template: TemplateId): boolean {
+  return isFreshTemplateId(template as string) || (template as string) === "diagonal";
 }
 
 /** Compatibility helper; the family itself is owned centrally. */
