@@ -302,6 +302,8 @@ function restoreCvIdentityContrast(source: string, cv: CvPdfDocument) {
   const person = cv.data.person;
   const identityLine = [
     person.geburtsdatum ? `Geburtsdatum ${person.geburtsdatum}` : "",
+    person.geburtsort ? `Geburtsort ${person.geburtsort}` : "",
+    person.heimatort ? `Heimatort ${person.heimatort}` : "",
     person.nationalitaet ? `Nationalität ${person.nationalitaet}` : "",
   ]
     .filter(Boolean)
