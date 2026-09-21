@@ -127,10 +127,14 @@ html[data-dossier-template="forestFlow"]
 
 html[data-dossier-template="forestFlow"]
   [data-dossier-document="cover"]
-  :is([data-block-id="eyebrow"], [data-block-id="ortDatum"], [data-block-id="kontaktTitel"], [data-block-id="kontakt"])
+  :is(
+    [data-block-id="eyebrow"],
+    [data-block-id="ortDatum"],
+    [data-block-id="kontaktTitel"],
+    [data-block-id="kontakt"]
+  )
   > div {
   color: #f7faf8 !important;
-  text-align: left !important;
 }
 
 html[data-dossier-template="forestFlow"]
@@ -140,7 +144,10 @@ html[data-dossier-template="forestFlow"]
   font-family: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif !important;
 }
 
-html[data-dossier-template="forestFlow"] [data-dossier-document="cover"] [data-block-id="kontakt"] > div {
+html[data-dossier-template="forestFlow"]
+  [data-dossier-document="cover"]
+  [data-block-id="kontakt"]
+  > div {
   font-size: 8.2pt !important;
   line-height: 1.42 !important;
 }
@@ -244,12 +251,18 @@ html[data-dossier-template="forestFlow"] [data-dossier-document="cv"] [data-cv-s
 
 html[data-dossier-template="forestFlow"]
   [data-dossier-chrome="cv"]
-  :is([data-dossier-contact-header-background], [data-dossier-compact-header], [data-dossier-continuation-contact-header]) {
+  :is(
+    [data-dossier-contact-header-background],
+    [data-dossier-compact-header],
+    [data-dossier-continuation-contact-header]
+  ) {
   background: transparent !important;
   box-shadow: none !important;
 }
 
-html[data-dossier-template="forestFlow"] [data-dossier-chrome="cv"] [data-dossier-integrated-contact],
+html[data-dossier-template="forestFlow"]
+  [data-dossier-chrome="cv"]
+  [data-dossier-integrated-contact],
 html[data-dossier-template="forestFlow"]
   [data-dossier-chrome="cv"]
   [data-dossier-continuation-contact-header] {
@@ -262,7 +275,9 @@ html[data-dossier-template="forestFlow"]
   font-family: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif !important;
 }
 
-html[data-dossier-template="forestFlow"] [data-dossier-document="cv"] [data-dossier-footer="compact"] {
+html[data-dossier-template="forestFlow"]
+  [data-dossier-document="cv"]
+  [data-dossier-footer="compact"] {
   background: transparent !important;
   border-color: transparent !important;
   box-shadow: none !important;
