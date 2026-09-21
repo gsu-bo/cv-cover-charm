@@ -1,0 +1,14 @@
+/*
+ * Mobile CV content guard.
+ *
+ * The legacy phone cleanup in styles.css hides the first editor child. On the
+ * CV route that first child can be the complete data-cv-content-editor, which
+ * accidentally removes Persönliche Angaben, Schule, Erfahrung, etc. Keep the
+ * actual CV content editor visible; only optional instructional chrome may be
+ * reduced on phones.
+ */
+@media (max-width: 639px) {
+  [data-editor-panel] [data-cv-content-editor] {
+    display: flex !important;
+  }
+}
