@@ -847,6 +847,8 @@ function cvContactBlocks(cv: CvPdfDocument, font: string, ink: string, muted: st
     [person.telefon, body],
     [person.email, body],
     [person.geburtsdatum ? `Geburtsdatum ${person.geburtsdatum}` : "", meta],
+    [person.geburtsort ? `Geburtsort ${person.geburtsort}` : "", meta],
+    [person.heimatort ? `Heimatort ${person.heimatort}` : "", meta],
     [person.nationalitaet ? `Nationalität ${person.nationalitaet}` : "", meta],
   ];
   return values

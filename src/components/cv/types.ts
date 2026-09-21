@@ -53,6 +53,10 @@ export type CvPerson = {
   telefon: string;
   email: string;
   geburtsdatum: string;
+  /** Freitext, z. B. "Solothurn". Optional für ältere gespeicherte CVs. */
+  geburtsort?: string;
+  /** Schweizer Heimatort/Bürgerort. Optional für ältere gespeicherte CVs. */
+  heimatort?: string;
   nationalitaet: string;
   /** Zeile unter dem Namen, z. B. "Schülerin, 3. Sek B". */
   untertitel: string;
@@ -444,6 +448,8 @@ export const emptyPerson: CvPerson = {
   telefon: "",
   email: "",
   geburtsdatum: "",
+  geburtsort: "",
+  heimatort: "",
   nationalitaet: "",
   untertitel: "",
   foto: null,

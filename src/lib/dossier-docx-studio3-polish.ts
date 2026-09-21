@@ -143,6 +143,8 @@ function polishDocumentXml(
   const cvTitle = (cv.data.titel || "Lebenslauf").toUpperCase();
   const cvPersonal = [
     cv.data.person.geburtsdatum ? `Geburtsdatum ${cv.data.person.geburtsdatum}` : "",
+    cv.data.person.geburtsort ? `Geburtsort ${cv.data.person.geburtsort}` : "",
+    cv.data.person.heimatort ? `Heimatort ${cv.data.person.heimatort}` : "",
     cv.data.person.nationalitaet ? `Nationalität ${cv.data.person.nationalitaet}` : "",
   ]
     .filter(Boolean)

@@ -606,14 +606,28 @@ export function FormCvPerson({
         </Field>
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <Field label="Geburtsdatum (freiwillig)">
+        <Field label="Geburtsdatum">
           <input
             className={inputCls}
             value={person.geburtsdatum}
             onChange={(e) => onChange({ geburtsdatum: e.target.value })}
           />
         </Field>
-        <Field label="Nationalität (optional)">
+        <Field label="Geburtsort">
+          <input
+            className={inputCls}
+            value={person.geburtsort ?? ""}
+            onChange={(e) => onChange({ geburtsort: e.target.value })}
+          />
+        </Field>
+        <Field label="Heimatort (Schweizer Staatsbürger)">
+          <input
+            className={inputCls}
+            value={person.heimatort ?? ""}
+            onChange={(e) => onChange({ heimatort: e.target.value })}
+          />
+        </Field>
+        <Field label="Nationalität">
           <input
             className={inputCls}
             value={person.nationalitaet}
