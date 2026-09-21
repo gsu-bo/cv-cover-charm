@@ -49,14 +49,13 @@ async function expectOnlyInvisibleNativeText(path: string, pageNumber: number) {
     }
     if (!textOperators.has(operator)) continue;
     nativeTextRuns += 1;
-    expect(renderingMode, `page ${pageNumber}: every native PDF text run must be invisible`).toBe(
-      3,
-    );
+    expect(
+      renderingMode,
+      `page ${pageNumber}: every native PDF text run must be invisible`,
+    ).toBe(3);
   }
 
-  expect(nativeTextRuns, `page ${pageNumber}: searchable native text must exist`).toBeGreaterThan(
-    0,
-  );
+  expect(nativeTextRuns, `page ${pageNumber}: searchable native text must exist`).toBeGreaterThan(0);
 }
 
 function expectCabinEmbedded(source: string) {
@@ -452,7 +451,7 @@ test.describe("CV PDF real text layer", () => {
     );
     await page.reload({ waitUntil: "domcontentloaded" });
 
-    const downloadToggle = page.locator("button[data-editor-ready]");
+    const downloadToggle = page.locator('button[data-editor-ready]');
     await expect(downloadToggle).toHaveAttribute("data-editor-ready", "true", { timeout: 10_000 });
     await downloadToggle.click();
 
