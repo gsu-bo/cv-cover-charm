@@ -11,6 +11,7 @@ import type {
   LetterPdfDocument,
 } from "@/lib/dossier-pdf-document";
 import { downloadBlob } from "@/lib/download";
+import { cvPersonalInfoLines } from "@/lib/cv-personal-info";
 
 const WORD_FONT = "Cabin";
 const WORD_FONT_FALLBACK = "Trebuchet MS";
@@ -399,12 +400,7 @@ function cvPage(document: CvPdfDocument, images: EmbeddedImage[]) {
   const fullName = [person.vorname, person.nachname].filter(Boolean).join(" ");
   const address = [person.adresse, person.plzOrt].filter(Boolean).join(", ");
   const direct = [person.telefon, person.email].filter(Boolean).join(" · ");
-  const personal = [
-    person.geburtsdatum ? `Geburtsdatum ${person.geburtsdatum}` : "",
-    person.geburtsort ? `Geburtsort ${person.geburtsort}` : "",
-    person.heimatort ? `Heimatort ${person.heimatort}` : "",
-    person.nationalitaet ? `Nationalität ${person.nationalitaet}` : "",
-  ].filter(Boolean).join(" · ");
+  const personal = cvPersonalInfoLines(person, document.design).join(" · ");
   const labels = data.labels ?? {};
   const hidden = data.hidden ?? {};
   const decorations = [

@@ -225,6 +225,12 @@ export function cvPdfDocumentFromSaved(raw: unknown): CvPdfDocument | null {
     ...(typeof incomingDesign.bodyScale === "number"
       ? { bodyScale: incomingDesign.bodyScale }
       : {}),
+    ...(typeof incomingDesign.personalInfoColons === "boolean"
+      ? { personalInfoColons: incomingDesign.personalInfoColons }
+      : {}),
+    ...(typeof incomingDesign.personalInfoAligned === "boolean"
+      ? { personalInfoAligned: incomingDesign.personalInfoAligned }
+      : {}),
     ...(typeof incomingDesign.sectionTitlePill === "boolean"
       ? { sectionTitlePill: incomingDesign.sectionTitlePill }
       : {}),

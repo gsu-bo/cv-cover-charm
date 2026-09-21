@@ -38,6 +38,7 @@ import {
 import { isWarmFirstPageCompactHeader } from "@/components/letter/warm-letter-layout";
 import type { DossierChromeOptions } from "@/lib/dossier-chrome";
 import type { CvPdfDocument, LetterPdfDocument } from "@/lib/dossier-pdf-document";
+import { cvPersonalInfoLines } from "@/lib/cv-personal-info";
 import { dossierDefaultFontKey, dossierThemeFor } from "@/lib/dossier-theme";
 
 export type DossierDocxV2FlowIssue = {
@@ -846,10 +847,9 @@ function cvContactBlocks(cv: CvPdfDocument, font: string, ink: string, muted: st
     [person.plzOrt, body],
     [person.telefon, body],
     [person.email, body],
-    [person.geburtsdatum ? `Geburtsdatum ${person.geburtsdatum}` : "", meta],
-    [person.geburtsort ? `Geburtsort ${person.geburtsort}` : "", meta],
-    [person.heimatort ? `Heimatort ${person.heimatort}` : "", meta],
-    [person.nationalitaet ? `Nationalität ${person.nationalitaet}` : "", meta],
+    ...cvPersonalInfoLines(person, cv.design).map(
+      (value): [string, DossierDocxV2TextStyle] => [value, meta],
+    ),
   ];
   return values
     .filter(([value]) => value.trim())
