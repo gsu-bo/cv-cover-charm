@@ -338,9 +338,17 @@ export async function resolveDossierDocxV2RenderedCover(
       .map((node) => node.id);
     const scene: DossierDocxV2CoverScene = {
       ...fallback,
-      nodes: fallback.nodes.map((node) => {
+      nodes: fallback.nodes.flatMap((node) => {
         const element = elements.get(node.id);
-        return element ? measureNode(node, element, pageRect, mmX, mmY) : node;
+        if (!element) return [node];
+
+        // CSS-hidden template blocks are intentionally absent from the browser/PDF.
+        // Do not turn their 0×0 DOM box into a DOCX QA blocker (Neon deliberately
+        // hides the legacy `trenner` separator).
+        const style = getComputedStyle(element);
+        if (style.display === "none" || style.visibility === "hidden") return [];
+
+        return [measureNode(node, element, pageRect, mmX, mmY)];
       }),
     };
 
