@@ -3,6 +3,11 @@ import { readFile, stat } from "node:fs/promises";
 
 const BASE_URL = "http://127.0.0.1:4173";
 
+// Privacy-safe synthetic JPEG carrying the same small Google sRGB ICC profile
+// as the legacy student photo that exposed the html2canvas photo-frame bug.
+const LEGACY_ICC_PHOTO =
+  "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAAAAAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAAYACADAREAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAAAAcI/8QAGRAAAgMBAAAAAAAAAAAAAAAAABYCU6EB/8QAFwEBAQEBAAAAAAAAAAAAAAAAAAYBBf/EABcRAQEBAQAAAAAAAAAAAAAAAAAUYRX/2gAMAwEAAhEDEQA/ANwNcrdNv1xxrlbov0GuVui/Qa5W6L9EabOW6Rd4NnLdF4NnLdF4NnLdF4jLXG3SK6Gg1xt0dDQa426OhoNcbdHQ0f/Z";
+
 async function extractPdfPages(path: string): Promise<string[]> {
   const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const data = new Uint8Array(await readFile(path));
@@ -44,13 +49,14 @@ async function expectOnlyInvisibleNativeText(path: string, pageNumber: number) {
     }
     if (!textOperators.has(operator)) continue;
     nativeTextRuns += 1;
-    expect(
-      renderingMode,
-      `page ${pageNumber}: every native PDF text run must be invisible`,
-    ).toBe(3);
+    expect(renderingMode, `page ${pageNumber}: every native PDF text run must be invisible`).toBe(
+      3,
+    );
   }
 
-  expect(nativeTextRuns, `page ${pageNumber}: searchable native text must exist`).toBeGreaterThan(0);
+  expect(nativeTextRuns, `page ${pageNumber}: searchable native text must exist`).toBeGreaterThan(
+    0,
+  );
 }
 
 function expectCabinEmbedded(source: string) {
@@ -323,6 +329,115 @@ test.describe("CV PDF real text layer", () => {
     await expectOnlyInvisibleNativeText(path ?? "", 2);
   });
 
+  test("legacy ICC photo keeps its center pixels in the raw html2canvas output", async ({
+    page,
+  }) => {
+    await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
+    await page.evaluate(
+      ({ payload, photo }) => {
+        payload.data.person.foto = photo;
+        payload.design.template = "brief";
+        payload.design.colors = {
+          bg: "#ffffff",
+          ink: "#111111",
+          primary: "#111111",
+          accent: "#111111",
+        };
+        localStorage.clear();
+        localStorage.setItem("lebenslauf:v1", JSON.stringify(payload));
+        localStorage.setItem("lebenslauf:layout:v1", "minimal");
+        localStorage.setItem(
+          "lebenslauf:photo:v2",
+          JSON.stringify({ shape: "portrait", zoom: 1, x: 50, y: 50, borderWidth: 2 }),
+        );
+        localStorage.setItem(
+          "lebenslauf:photo-place:v1",
+          JSON.stringify({
+            mode: "right",
+            xMm: 136.4,
+            yMm: 34.36,
+            widthMm: 52.65,
+            frameColor: null,
+          }),
+        );
+      },
+      { payload: cvPayload(), photo: LEGACY_ICC_PHOTO },
+    );
+    await page.reload({ waitUntil: "domcontentloaded" });
+
+    const exportPage = page
+      .locator('[data-dossier-document="cv"][data-export-mode="true"] [data-cv-page]')
+      .first();
+    const exportPhotos = exportPage.locator("[data-cv-photo]");
+    await expect(exportPhotos).toHaveCount(1);
+    const exportPhoto = exportPhotos.first();
+    await expect(exportPhoto.locator("img")).toHaveCount(1);
+    await expect(exportPhoto.locator("canvas")).toHaveCount(0);
+    await expect(exportPhoto).toHaveCSS("background-image", "none");
+    await expect
+      .poll(() =>
+        exportPhoto.locator("img").evaluate((image) => image.complete && image.naturalWidth > 0),
+      )
+      .toBe(true);
+
+    await page.evaluate(() => {
+      const originalToDataUrl = HTMLCanvasElement.prototype.toDataURL;
+      HTMLCanvasElement.prototype.toDataURL = function (type?: string, quality?: number) {
+        if (this.width > 1_000 && this.height > 1_000) {
+          const photo = document.querySelector<HTMLElement>(
+            '[data-dossier-document="cv"][data-export-mode="true"] [data-cv-photo]',
+          );
+          const page = photo?.closest<HTMLElement>("[data-cv-page]");
+          const context = this.getContext("2d", { willReadFrequently: true });
+          if (photo && page && context) {
+            const photoBox = photo.getBoundingClientRect();
+            const pageBox = page.getBoundingClientRect();
+            const scaleX = this.width / pageBox.width;
+            const scaleY = this.height / pageBox.height;
+            const sample = (relativeX: number, relativeY: number) =>
+              Array.from(
+                context.getImageData(
+                  Math.round((photoBox.left - pageBox.left + photoBox.width * relativeX) * scaleX),
+                  Math.round((photoBox.top - pageBox.top + photoBox.height * relativeY) * scaleY),
+                  1,
+                  1,
+                ).data,
+              );
+            Object.assign(window, {
+              __cvRawCanvasProbe: {
+                center: sample(0.5, 0.5),
+                frame: sample(0.02, 0.5),
+              },
+            });
+          }
+        }
+        return originalToDataUrl.call(this, type, quality);
+      };
+    });
+
+    const download = await downloadStandaloneCv(page);
+    expect(await download.path()).not.toBeNull();
+
+    const probe = await page.evaluate(
+      () =>
+        (
+          window as typeof window & {
+            __cvRawCanvasProbe?: { center: number[]; frame: number[] };
+          }
+        ).__cvRawCanvasProbe,
+    );
+    expect(probe, "raw html2canvas page was sampled before jsPDF.addImage").toBeTruthy();
+    expect(probe?.center[3]).toBe(255);
+    expect(
+      Math.max(...(probe?.center.slice(0, 3) ?? [0])),
+      "the photo center must not be the opaque black frame layer",
+    ).toBeGreaterThan(70);
+    expect(
+      Math.max(...(probe?.frame.slice(0, 3) ?? [255])),
+      "the 2 mm frame itself must remain dark",
+    ).toBeLessThan(50);
+  });
+
   test("combined dossier keeps letter before real CV text", async ({ page }) => {
     await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
     await page.evaluate(
@@ -337,7 +452,7 @@ test.describe("CV PDF real text layer", () => {
     );
     await page.reload({ waitUntil: "domcontentloaded" });
 
-    const downloadToggle = page.locator('button[data-editor-ready]');
+    const downloadToggle = page.locator("button[data-editor-ready]");
     await expect(downloadToggle).toHaveAttribute("data-editor-ready", "true", { timeout: 10_000 });
     await downloadToggle.click();
 
