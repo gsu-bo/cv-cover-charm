@@ -475,6 +475,10 @@ export function FormCvPerson({
     setPhotoMessage({ error: false, text: "Foto und Ausschnitt vom Titelblatt übernommen" });
   };
 
+  // Die CV-Paginierung hält gerenderte Zeilen im State. Ein reiner Design-Toggle
+  // würde sonst erst beim nächsten Daten-Update (z. B. Feldwechsel) sichtbar.
+  const refreshPaginatedPreview = () => onChange({});
+
   return (
     <div className="flex flex-col gap-3">
       <BlockPlacementControl block="kontakt" label="Kontaktangaben" />
@@ -628,13 +632,15 @@ export function FormCvPerson({
             onChange={(e) => onChange({ geburtsort: e.target.value })}
           />
         </Field>
-        <Field label="Heimatort (Schweizer Staatsbürger)">
-          <input
-            className={inputCls}
-            value={person.heimatort ?? ""}
-            onChange={(e) => onChange({ heimatort: e.target.value })}
-          />
-        </Field>
+        <div className="sm:col-span-2">
+          <Field label="Heimatort (Schweizer Staatsbürger)">
+            <input
+              className={inputCls}
+              value={person.heimatort ?? ""}
+              onChange={(e) => onChange({ heimatort: e.target.value })}
+            />
+          </Field>
+        </div>
         <Field label="Nationalität">
           <input
             className={inputCls}
@@ -648,7 +654,10 @@ export function FormCvPerson({
           <input
             type="checkbox"
             checked={personalInfoColons}
-            onChange={(event) => onPersonalInfoColons(event.target.checked)}
+            onChange={(event) => {
+              onPersonalInfoColons(event.target.checked);
+              refreshPaginatedPreview();
+            }}
           />
           <span>Doppelpunkte anzeigen</span>
         </label>
@@ -656,7 +665,10 @@ export function FormCvPerson({
           <input
             type="checkbox"
             checked={personalInfoAligned}
-            onChange={(event) => onPersonalInfoAligned(event.target.checked)}
+            onChange={(event) => {
+              onPersonalInfoAligned(event.target.checked);
+              refreshPaginatedPreview();
+            }}
           />
           <span>Gemeinsamer Abstand</span>
         </label>
