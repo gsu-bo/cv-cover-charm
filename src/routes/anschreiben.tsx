@@ -3,10 +3,19 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { ColorChooser } from "@/components/cover/ColorChooser";
 import { Section } from "@/components/cover/Section";
 import { ThemeToggle } from "@/components/cover/ThemeToggle";
-import { FileDown, History, RotateCcw, Sparkles } from "lucide-react";
+import {
+  FileDown,
+  Files,
+  FolderOpen,
+  History,
+  RotateCcw,
+  Save,
+  Sparkles,
+} from "lucide-react";
 import { EditorMenuLabel } from "@/components/dossier/EditorMenuLabel";
 import { DossierChromeControls } from "@/components/dossier/DossierChromeControls";
 import { DossierChromeDocumentContentControls } from "@/components/dossier/DossierChromeDocumentContentControls";
+import { DossierPdfCanvas } from "@/components/dossier/DossierPdfCanvas";
 import { useForeignWrite, usePageVisible } from "@/lib/autosave";
 import {
   HISTORY_KEYS,
@@ -31,7 +40,22 @@ import { LetterTemplatePicker } from "@/components/letter/LetterTemplatePicker";
 import { useTemplateQaTemplateSwitch } from "@/lib/template-qa-switch";
 import { resolveLetterPalette, resolveLetterPaperColor } from "@/components/letter/letter-paper";
 import { DocumentTextColorControl } from "@/components/dossier/DocumentTextColorControl";
-import { downloadLetterPdf } from "@/lib/dossier-pdf";
+import { downloadCombinedDossierPdf, downloadLetterPdf } from "@/lib/dossier-pdf";
+import {
+  coverPdfDocumentFromSaved,
+  coverPdfHasContent,
+  cvPdfDocumentFromSaved,
+  cvPdfHasContent,
+} from "@/lib/dossier-pdf-document";
+import { downloadBlob } from "@/lib/download";
+import {
+  COVER_STORAGE_KEY,
+  CV_STORAGE_KEY,
+  createDossierProject,
+  parseDossierProject,
+  readStoredDossierPart,
+  storeDossierProject,
+} from "@/lib/dossier-project";
 import { readPhoto } from "@/lib/image";
 import { readDossierContact } from "@/lib/dossier-contact";
 import {
@@ -236,6 +260,7 @@ function Anschreiben() {
     text: string;
   } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const dossierExportRef = useRef<HTMLDivElement>(null);
   const visible = usePageVisible();
   const { markWritten, changedElsewhere } = useForeignWrite(LETTER_STORAGE_KEY);
   const [takeover, setTakeover] = useState({
@@ -435,6 +460,27 @@ function Anschreiben() {
     [design.template],
   );
 
+  const storedCoverDocument = coverPdfDocumentFromSaved(readStoredDossierPart(COVER_STORAGE_KEY));
+  const storedCvDocument = cvPdfDocumentFromSaved(readStoredDossierPart(CV_STORAGE_KEY));
+  const coverReadyForDossier =
+    !!storedCoverDocument && coverPdfHasContent(storedCoverDocument.data);
+  const cvReadyForDossier = !!storedCvDocument && cvPdfHasContent(storedCvDocument.data);
+  const letterReadyForDossier =
+    letterHasStarted(data) && letterPagination.ready && !letterPagination.issue;
+  const canDownloadDossierPdf =
+    coverReadyForDossier && letterReadyForDossier && cvReadyForDossier;
+  const dossierPdfHint = !coverReadyForDossier
+    ? cvReadyForDossier
+      ? "Zuerst das Titelblatt bearbeiten."
+      : "Zuerst Titelblatt und Lebenslauf bearbeiten."
+    : !cvReadyForDossier
+      ? "Zuerst den Lebenslauf bearbeiten."
+      : !letterHasStarted(data)
+        ? "Zuerst das Motivationsschreiben bearbeiten."
+        : letterPagination.issue
+          ? letterPagination.issue.message
+          : "Motivationsschreiben wird noch vorbereitet.";
+
   const patch = (value: Partial<LetterData>) => setData((current) => ({ ...current, ...value }));
 
   const addLetterImage = async (file?: File) => {
@@ -510,6 +556,83 @@ function Anschreiben() {
     } finally {
       setPdfDownloading(false);
     }
+  };
+
+  const downloadWholeDossier = async () => {
+    if (!dossierExportRef.current || !canDownloadDossierPdf || pdfDownloading) return;
+    setMenuOpen(false);
+    setPdfError(null);
+    setPdfDownloading(true);
+    const name = data.absenderName.trim();
+    try {
+      await downloadCombinedDossierPdf(
+        dossierExportRef.current,
+        `Bewerbungsdossier-${name || "Bewerbung"}.pdf`,
+        {
+          title: name ? `Bewerbungsdossier – ${name}` : "Bewerbungsdossier",
+          author: name,
+        },
+      );
+      setTransferNote({ kind: "ok", text: "Ganzes Dossier als PDF heruntergeladen" });
+    } catch (error) {
+      setPdfError(error instanceof Error ? error.message : "Dossier-PDF konnte nicht erstellt werden.");
+    } finally {
+      setPdfDownloading(false);
+    }
+  };
+
+  const downloadDossierProject = () => {
+    setMenuOpen(false);
+    const project = createDossierProject({
+      cover: readStoredDossierPart(COVER_STORAGE_KEY),
+      letter: snapshotPayload() as unknown as Record<string, unknown>,
+      cv: readStoredDossierPart(CV_STORAGE_KEY),
+    });
+    downloadBlob(
+      new Blob([JSON.stringify(project, null, 2)], { type: "application/json" }),
+      `Bewerbungsdossier-${data.absenderName.trim() || "Bewerbung"}.json`,
+    );
+    setTransferNote({ kind: "ok", text: "Dossier als JSON gespeichert" });
+  };
+
+  const importDossierProject = (file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onerror = () =>
+      setTransferNote({ kind: "error", text: "Dossier-Datei konnte nicht gelesen werden." });
+    reader.onload = () => {
+      try {
+        const parsed: unknown = JSON.parse(String(reader.result));
+        const project = parseDossierProject(parsed);
+        if (!project) throw new Error("Keine gültige Dossier-Datei.");
+        keepSnapshot("Vor dem Laden", true);
+        const loaded = storeDossierProject(project);
+        if (loaded.letter && project.letter) {
+          const saved = project.letter as Partial<SavedLetter>;
+          if (saved.data && typeof saved.data === "object") {
+            setData({ ...EMPTY_LETTER, ...saved.data });
+          }
+          if (saved.design) setDesign(normalizeLetterDesign(saved.design));
+          const raw = window.localStorage.getItem(LETTER_STORAGE_KEY);
+          if (raw) markWritten(raw);
+        }
+        refreshSource();
+        setSaveState("saved");
+        setMenuOpen(false);
+        setTransferNote({
+          kind: "ok",
+          text: loaded.letter
+            ? "Dossier geladen"
+            : "Dossier geladen – Motivationsschreiben war in der Datei nicht enthalten.",
+        });
+      } catch (error) {
+        setTransferNote({
+          kind: "error",
+          text: error instanceof Error ? error.message : "Dossier konnte nicht geladen werden.",
+        });
+      }
+    };
+    reader.readAsText(file);
   };
 
   const syncAllFromDossier = () => {
@@ -680,6 +803,23 @@ function Anschreiben() {
             >
               <button
                 type="button"
+                onClick={() => void downloadWholeDossier()}
+                disabled={!canDownloadDossierPdf}
+                title={canDownloadDossierPdf ? "Titelblatt, Motivationsschreiben und alle CV-Seiten gemeinsam herunterladen" : dossierPdfHint}
+                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <EditorMenuLabel icon={Files}>Ganzes Dossier als PDF</EditorMenuLabel>
+                <span className="text-xs text-muted-foreground">
+                  Titelblatt + Motivationsschreiben + CV
+                </span>
+              </button>
+              {!canDownloadDossierPdf ? (
+                <p className="border-t bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+                  {dossierPdfHint}
+                </p>
+              ) : null}
+              <button
+                type="button"
                 onClick={() => {
                   setMenuOpen(false);
                   void downloadMotivationLetter();
@@ -687,11 +827,34 @@ function Anschreiben() {
                 disabled={
                   !letterPagination.ready || !!letterPagination.issue || !letterHasStarted(data)
                 }
-                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
+                className="flex w-full items-center justify-between border-t px-3 py-2 text-left text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
               >
                 <EditorMenuLabel icon={FileDown}>Nur Motivationsschreiben als PDF</EditorMenuLabel>
                 <span className="text-xs text-muted-foreground">.pdf</span>
               </button>
+              <button
+                type="button"
+                onClick={downloadDossierProject}
+                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-accent"
+              >
+                <EditorMenuLabel icon={Save}>Dossier speichern</EditorMenuLabel>
+                <span className="text-xs text-muted-foreground">
+                  Titelblatt + Motivationsschreiben + CV
+                </span>
+              </button>
+              <label className="flex cursor-pointer items-center justify-between border-t px-3 py-2 text-left text-sm hover:bg-accent">
+                <EditorMenuLabel icon={FolderOpen}>Dossier laden</EditorMenuLabel>
+                <span className="text-xs text-muted-foreground">.json</span>
+                <input
+                  type="file"
+                  accept="application/json"
+                  className="hidden"
+                  onChange={(event) => {
+                    importDossierProject(event.target.files?.[0]);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
               {confirmDemo ? (
                 <div className="flex items-center gap-1 border-t bg-accent/40 px-3 py-2">
                   <span className="mr-auto text-xs font-medium">Beispieldaten übernehmen?</span>
@@ -1273,6 +1436,27 @@ function Anschreiben() {
             ariaLabel="Exportansicht Motivationsschreiben"
           />
         </div>
+
+        {canDownloadDossierPdf ? (
+          <div
+            aria-hidden
+            style={{
+              position: "fixed",
+              left: "-20000px",
+              top: 0,
+              pointerEvents: "none",
+              zIndex: -1,
+            }}
+          >
+            <DossierPdfCanvas
+              ref={dossierExportRef}
+              cover={storedCoverDocument}
+              letter={{ data, design }}
+              cv={storedCvDocument}
+              chromeState={chromeState}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );
