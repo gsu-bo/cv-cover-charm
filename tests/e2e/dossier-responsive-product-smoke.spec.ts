@@ -172,6 +172,22 @@ test.describe("M9 responsive product smoke", () => {
         if (viewport.width < 640) {
           const panel = page.locator("[data-editor-panel] aside");
           await expect(panel).toHaveAttribute("aria-hidden", "false");
+
+          if (route.path === "/lebenslauf") {
+            await expect(
+              page.locator("[data-cv-content-editor]"),
+              "Lebenslauf: content editor must stay visible on mobile",
+            ).toBeVisible();
+            await expect(
+              page.locator('[data-editor-section-title="Persönliche Angaben"]'),
+              "Lebenslauf: personal section must stay visible on mobile",
+            ).toBeVisible();
+            await expect(
+              page.locator('[data-editor-section-title="Schule"]'),
+              "Lebenslauf: school section must stay visible on mobile",
+            ).toBeVisible();
+          }
+
           const toggle = page.locator(route.mobileToggle).first();
           await expect(toggle, `${route.name}: mobile form toggle`).toBeVisible();
           await toggle.click();

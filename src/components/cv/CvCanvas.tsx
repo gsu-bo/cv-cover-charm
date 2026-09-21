@@ -50,6 +50,8 @@ type BaseProps = ComponentProps<typeof BaseCvCanvas>;
 type Props = Omit<BaseProps, "chromeOptions" | "chromeContact" | "chromeDocumentContent"> & {
   chromeOptions?: DossierChromeOptions;
   chromeContact?: DossierChromeContact;
+  /** Hidden multi-document renderers must not seize the live html template scope. */
+  manageGlobalTemplateScope?: boolean;
 };
 
 /**
@@ -102,6 +104,7 @@ export function resolveCvChromeContact(
 export function CvCanvas({
   chromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
   chromeContact,
+  manageGlobalTemplateScope = true,
   ...props
 }: Props) {
   const bodyAlignment = useSyncExternalStore(
@@ -153,12 +156,18 @@ export function CvCanvas({
     () => cvBodyData(props.data, canvasChromeOptions),
     [canvasChromeOptions, props.data],
   );
+  // CvCanvasBase stores paginated React rows in state and recalculates that state
+  // when its `data` input changes. Design-only edits used to leave those cached
+  // rows stale until some unrelated field edit changed the data. Give the base
+  // renderer a fresh top-level data identity whenever the effective design changes
+  // so every typography/color/spacing toggle is reflected immediately.
+  const paginationData = useMemo(() => ({ ...data }), [data, design]);
 
-  // Layout defaults are template-aware, but an explicit student choice remains
-  // in localStorage. Update the active template before paint and notify the
-  // external-store subscribers so Kolumne can start in Sidebar without writing
-  // a permanent layout choice that would leak into the next template.
+  // The visible CV editor still owns the legacy html[data-dossier-template]
+  // route scope. Hidden mixed-template PDF renderers opt out; their local
+  // marker is mirrored into html only inside html2canvas' throw-away clone.
   useLayoutEffect(() => {
+    if (!manageGlobalTemplateScope) return;
     const root = document.documentElement;
     const previous = root.dataset.dossierTemplate;
     root.dataset.dossierTemplate = design.template as string;
@@ -169,7 +178,7 @@ export function CvCanvas({
       else root.dataset.dossierTemplate = previous;
       window.dispatchEvent(new CustomEvent(CV_LAYOUT_EVENT));
     };
-  }, [design.template]);
+  }, [design.template, manageGlobalTemplateScope]);
 
   const frame = cvFrameFor(design.template);
   const classicBox = cvContentBox(frame, 0, "classic", design.sidebarPct, canvasChromeOptions);
@@ -217,6 +226,7 @@ export function CvCanvas({
   return (
     <div
       style={geometryStyle}
+      data-dossier-template={design.template}
       data-cv-body-align={bodyAlignment}
       data-cv-heading-rule={design.headingRule}
       data-cv-user-heading-rule={props.design.headingRule === "full" ? "full" : undefined}
@@ -241,7 +251,7 @@ export function CvCanvas({
     >
       <BaseCvCanvas
         {...props}
-        data={data}
+        data={paginationData}
         design={design}
         chromeOptions={canvasChromeOptions}
         chromeContact={resolvedContact}

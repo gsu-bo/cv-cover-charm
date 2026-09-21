@@ -475,6 +475,10 @@ export function FormCvPerson({
     setPhotoMessage({ error: false, text: "Foto und Ausschnitt vom Titelblatt übernommen" });
   };
 
+  // Die CV-Paginierung hält gerenderte Zeilen im State. Ein reiner Design-Toggle
+  // würde sonst erst beim nächsten Daten-Update (z. B. Feldwechsel) sichtbar.
+  const refreshPaginatedPreview = () => onChange({});
+
   return (
     <div className="flex flex-col gap-3">
       <BlockPlacementControl block="kontakt" label="Kontaktangaben" />
@@ -628,13 +632,15 @@ export function FormCvPerson({
             onChange={(e) => onChange({ geburtsort: e.target.value })}
           />
         </Field>
-        <Field label="Heimatort (Schweizer Staatsbürger)">
-          <input
-            className={inputCls}
-            value={person.heimatort ?? ""}
-            onChange={(e) => onChange({ heimatort: e.target.value })}
-          />
-        </Field>
+        <div className="sm:col-span-2">
+          <Field label="Heimatort (Schweizer Staatsbürger)">
+            <input
+              className={inputCls}
+              value={person.heimatort ?? ""}
+              onChange={(e) => onChange({ heimatort: e.target.value })}
+            />
+          </Field>
+        </div>
         <Field label="Nationalität">
           <input
             className={inputCls}
@@ -648,7 +654,10 @@ export function FormCvPerson({
           <input
             type="checkbox"
             checked={personalInfoColons}
-            onChange={(event) => onPersonalInfoColons(event.target.checked)}
+            onChange={(event) => {
+              onPersonalInfoColons(event.target.checked);
+              refreshPaginatedPreview();
+            }}
           />
           <span>Doppelpunkte anzeigen</span>
         </label>
@@ -656,7 +665,10 @@ export function FormCvPerson({
           <input
             type="checkbox"
             checked={personalInfoAligned}
-            onChange={(event) => onPersonalInfoAligned(event.target.checked)}
+            onChange={(event) => {
+              onPersonalInfoAligned(event.target.checked);
+              refreshPaginatedPreview();
+            }}
           />
           <span>Gemeinsamer Abstand</span>
         </label>
@@ -665,7 +677,7 @@ export function FormCvPerson({
   );
 }
 
-/** Schule und Praktika teilen sich denselben Aufbau. */
+/** Schule und Praktika teilen sich denselben Aufbau; Familie nutzt bewusst keinen Zeitraum. */
 export function FormCvEntries({
   entries,
   onChange,
@@ -688,6 +700,7 @@ export function FormCvEntries({
         ? "schule"
         : "erfahrung"
       : placement;
+  const isFamily = placement === null && titelLabel === "Bezug" && ortLabel === "Name / Beruf";
   const isExperience = block === "erfahrung";
   const [autoSort, setAutoSort] = useState(readAutoSortExperience);
   const sortedOnce = useRef(false);
@@ -745,20 +758,23 @@ export function FormCvEntries({
           {isExperience && !autoSort && <DragHandle scope="erfahrung" index={i} />}
           <div className={isExperience && !autoSort ? "min-w-0 flex-1" : undefined}>
             <Item onRemove={() => onChange(entries.filter((x) => x.id !== e.id))}>
-              <Field label="Zeitraum">
-                <input
-                  className={inputCls}
-                  placeholder="2023 – heute"
-                  value={e.zeit}
-                  onChange={(ev) => patch(e.id, { zeit: ev.target.value })}
-                  onBlur={() => {
-                    if (isExperience && autoSort) sortNow();
-                  }}
-                />
-              </Field>
+              {!isFamily && (
+                <Field label="Zeitraum">
+                  <input
+                    className={inputCls}
+                    placeholder="2023 – heute"
+                    value={e.zeit}
+                    onChange={(ev) => patch(e.id, { zeit: ev.target.value })}
+                    onBlur={() => {
+                      if (isExperience && autoSort) sortNow();
+                    }}
+                  />
+                </Field>
+              )}
               <Field label={titelLabel}>
                 <input
                   className={inputCls}
+                  placeholder={isFamily ? "z. B. Mutter, Vater, Schwester" : undefined}
                   value={e.titel}
                   onChange={(ev) => patch(e.id, { titel: ev.target.value })}
                 />
@@ -766,6 +782,7 @@ export function FormCvEntries({
               <Field label={ortLabel}>
                 <input
                   className={inputCls}
+                  placeholder={isFamily ? "z. B. Evelyn Flückiger, Kauffrau" : undefined}
                   value={e.ort}
                   onChange={(ev) => patch(e.id, { ort: ev.target.value })}
                 />
@@ -782,7 +799,7 @@ export function FormCvEntries({
         </div>
       ))}
       <button type="button" className={addBtn} onClick={() => onChange([...entries, emptyEntry()])}>
-        + Eintrag
+        {isFamily ? "+ Familienmitglied" : "+ Eintrag"}
       </button>
     </div>
   );

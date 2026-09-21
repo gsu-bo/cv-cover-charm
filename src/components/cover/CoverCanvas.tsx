@@ -99,6 +99,8 @@ type Props = {
   /** Globale Schriftskalierung (1 = Vorlagen-Standard). */
   fontScale?: number;
   editable?: boolean;
+  /** Hidden multi-document renderers must not seize the live html template scope. */
+  manageGlobalTemplateScope?: boolean;
   /** Zeichenmodus: Ziehen erzeugt eine Freihandform statt zu verschieben. */
   drawing?: boolean;
   onDrawn?: (points: Point[]) => void;
@@ -111,7 +113,18 @@ type Props = {
  * Lebenslauf dieselbe Bedienung braucht.
  */
 export const CoverCanvas = forwardRef<HTMLDivElement, Props>(function CoverCanvas(
-  { template, data, colors, blocks, selected, onSelect, onMove, fontOverride, ...rest },
+  {
+    template,
+    data,
+    colors,
+    blocks,
+    selected,
+    onSelect,
+    onMove,
+    fontOverride,
+    manageGlobalTemplateScope = true,
+    ...rest
+  },
   ref,
 ) {
   const { editable = true, drawing = false, fontScale = 1 } = rest;
@@ -131,12 +144,12 @@ export const CoverCanvas = forwardRef<HTMLDivElement, Props>(function CoverCanva
     else if (ref) ref.current = node;
   };
 
-  // Fresh cover CSS historically scopes itself through html[data-dossier-template].
-  // The visible editor already establishes that route-level scope, but the hidden
-  // combined-PDF canvas can be mounted from another route. Keep the actual cover
-  // template active while this canvas exists so Edge-Cove do not rasterise as a
-  // flat primary-colour page. M14 will remove this global CSS dependency entirely.
+  // Legacy cover CSS still has html[data-dossier-template] selectors for the
+  // visible editor. Hidden mixed-template dossier renderers opt out and carry
+  // their own local template marker; html2canvas mirrors that marker only in
+  // its throw-away clone so it cannot move the live cover immediately pre-PDF.
   useLayoutEffect(() => {
+    if (!manageGlobalTemplateScope) return;
     const root = document.documentElement;
     const previous = root.dataset.dossierTemplate;
     root.dataset.dossierTemplate = template as string;
@@ -145,7 +158,7 @@ export const CoverCanvas = forwardRef<HTMLDivElement, Props>(function CoverCanva
       if (previous === undefined) delete root.dataset.dossierTemplate;
       else root.dataset.dossierTemplate = previous;
     };
-  }, [template]);
+  }, [manageGlobalTemplateScope, template]);
 
   /*
    * Resolve the final rendered geometry, not only the data-model geometry.
@@ -223,6 +236,7 @@ export const CoverCanvas = forwardRef<HTMLDivElement, Props>(function CoverCanva
     <div
       ref={setCanvasRef}
       data-dossier-document="cover"
+      data-dossier-template={template}
       data-cover-template={template}
       data-cover-text-override={coverTextOverride ? "true" : undefined}
       data-dossier-font-source={resolvedOverride ? "override" : "family"}

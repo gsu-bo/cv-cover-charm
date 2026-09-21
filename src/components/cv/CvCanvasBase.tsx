@@ -682,6 +682,43 @@ export function CvCanvas({
     ),
   });
 
+  /** Familie ist keine zeitbasierte Station und bekommt deshalb bewusst keine Datums-Rail. */
+  const familyEntryRow = (id: string, relation: string, nameAndJob: string, extra: string): Row => ({
+    id,
+    node: (
+      <div
+        data-cv-entry
+        data-cv-family-entry
+        style={{
+          marginBottom: "1.65mm",
+          fontSize: pt(9.9),
+          lineHeight: 1.35,
+          color: pal.ink,
+          overflowWrap: "anywhere",
+        }}
+      >
+        {(relation || nameAndJob) && (
+          <div>
+            {relation && (
+              <span data-cv-entry-title style={{ fontWeight: 700, color: pal.ink }}>
+                {relation}{nameAndJob ? ": " : ""}
+              </span>
+            )}
+            {nameAndJob && <span>{nameAndJob}</span>}
+          </div>
+        )}
+        {extra && (
+          <div
+            data-cv-muted
+            style={{ marginTop: "0.3mm", fontSize: pt(9.4), color: pal.muted, lineHeight: 1.3 }}
+          >
+            {extra}
+          </div>
+        )}
+      </div>
+    ),
+  });
+
   const referenceRows = (): Row[] => {
     const list = data.referenzen.filter(
       (r) => r.name.trim() || r.funktion.trim() || r.kontakt.trim(),
@@ -845,7 +882,9 @@ export function CvCanvas({
       return [
         heading(key),
         ...entries.map((entry) =>
-          entryRow(`${key}-${entry.id}`, entry.zeit, entry.titel, entry.ort, entry.beschreibung),
+          custom.preset === "familie"
+            ? familyEntryRow(`${key}-${entry.id}`, entry.titel, entry.ort, entry.beschreibung)
+            : entryRow(`${key}-${entry.id}`, entry.zeit, entry.titel, entry.ort, entry.beschreibung),
         ),
       ];
     }

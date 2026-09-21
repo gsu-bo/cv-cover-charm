@@ -62,10 +62,14 @@ export const DossierPdfCanvas = forwardRef<
           onMove={ignoreMove}
           fontScale={cover.fontScale}
           editable={false}
+          manageGlobalTemplateScope={false}
         />
       ) : null}
       {storedLetter ? (
-        <div data-dossier-document="letter">
+        <div
+          data-dossier-document="letter"
+          data-dossier-template={storedLetter.design.template}
+        >
           <LetterDocument
             data={storedLetter.data}
             design={storedLetter.design}
@@ -84,6 +88,7 @@ export const DossierPdfCanvas = forwardRef<
           elements={cv.elements}
           elementStyles={cv.elementStyles}
           exportMode
+          manageGlobalTemplateScope={false}
           onLayoutWarnings={onCvLayoutWarnings}
           onPageCount={onCvPageCount}
         />

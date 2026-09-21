@@ -1708,7 +1708,13 @@ function Titelblatt() {
         onDownload={downloadDossierPdf}
       />
 
-      {canDownloadDossierPdf && (dossierReviewOpen || downloading) ? (
+      {/*
+        Mount the combined dossier canvas only while the dossier review/export
+        flow is open. A title-only PDF also toggles `downloading`; mounting the
+        stored CV in that path changes the shared html[data-dossier-template]
+        scope and can move the live cover photo immediately before rasterizing.
+      */}
+      {canDownloadDossierPdf && dossierReviewOpen ? (
         <div
           aria-hidden
           style={{
