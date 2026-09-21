@@ -266,17 +266,16 @@ function exportRoots(): HTMLElement[] {
 }
 
 function isDossierRoot(root: HTMLElement): boolean {
-  let current = root.parentElement;
-  while (current && current !== document.body) {
-    if (
-      current.querySelector('[data-dossier-document="cover"]') &&
-      current.querySelector('[data-dossier-document="letter"]')
-    ) {
-      return true;
-    }
-    current = current.parentElement;
-  }
-  return false;
+  // Each hidden export renderer lives inside its own aria-hidden boundary.
+  // Inspect only that nearest boundary. Walking farther up the route used to
+  // see the separate full-dossier renderer and misclassify the standalone CV
+  // as a dossier CV whenever title page + letter were also present.
+  const exportBoundary = root.closest<HTMLElement>("[aria-hidden]");
+  if (!exportBoundary) return false;
+  return Boolean(
+    exportBoundary.querySelector('[data-dossier-document="cover"]') &&
+      exportBoundary.querySelector('[data-dossier-document="letter"]'),
+  );
 }
 
 function standalonePages(): HTMLElement[] | null {
