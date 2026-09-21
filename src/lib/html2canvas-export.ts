@@ -35,6 +35,20 @@ export function jpegDataUrlHasIccProfile(src: string) {
   }
 }
 
+function loadedLiveImageForClone(image: HTMLImageElement, src: string) {
+  const frameElement = image.ownerDocument.defaultView?.frameElement;
+  const liveDocument = frameElement?.ownerDocument;
+  if (!liveDocument || liveDocument === image.ownerDocument) return null;
+
+  for (const candidate of liveDocument.querySelectorAll<HTMLImageElement>("img")) {
+    const candidateSrc = candidate.getAttribute("src") ?? candidate.src;
+    if (candidateSrc !== src) continue;
+    if (!candidate.complete || candidate.naturalWidth <= 0 || candidate.naturalHeight <= 0) continue;
+    return candidate;
+  }
+  return null;
+}
+
 /**
  * html2canvas-pro arbeitet beim PDF-Export mit einem geklonten Dokument.
  * Einige ältere/importierte JPEG-Data-URLs enthalten ein eingebettetes
@@ -44,6 +58,10 @@ export function jpegDataUrlHasIccProfile(src: string) {
  * Neue Uploads laufen bereits durch readPhoto() und haben dieses Profil nicht
  * mehr. Sie werden hier bewusst NICHT nochmals als JPEG komprimiert. Für ein
  * mehrfach verwendetes Legacy-Foto wird das normalisierte Ergebnis gecacht.
+ *
+ * Wichtig: Der Clone kann beim onclone-Hook noch kein naturalWidth haben,
+ * obwohl dasselbe Foto im Live-Dokument längst dekodiert und sichtbar ist.
+ * Dann wird genau dieses bereits geladene Original als Rasterquelle benutzt.
  */
 export function normalizeDataUrlJpegsForHtml2Canvas(root: HTMLElement) {
   const images: HTMLImageElement[] = [];
@@ -63,18 +81,23 @@ export function normalizeDataUrlJpegsForHtml2Canvas(root: HTMLElement) {
     // Avoid a second lossy JPEG pass for normal uploads. The compatibility
     // re-encode is only needed for legacy ICC-bearing JPEG data URLs.
     if (!jpegDataUrlHasIccProfile(src)) continue;
-    if (!image.complete || image.naturalWidth <= 0 || image.naturalHeight <= 0) continue;
+
+    const rasterSource =
+      image.complete && image.naturalWidth > 0 && image.naturalHeight > 0
+        ? image
+        : loadedLiveImageForClone(image, src);
+    if (!rasterSource) continue;
 
     try {
       const canvas = image.ownerDocument.createElement("canvas");
-      canvas.width = image.naturalWidth;
-      canvas.height = image.naturalHeight;
+      canvas.width = rasterSource.naturalWidth;
+      canvas.height = rasterSource.naturalHeight;
       const ctx = canvas.getContext("2d");
       if (!ctx) continue;
 
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(rasterSource, 0, 0, canvas.width, canvas.height);
       const normalized = canvas.toDataURL("image/jpeg", 0.94);
       if (!normalized || normalized === "data:,") continue;
 
