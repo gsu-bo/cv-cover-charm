@@ -27,7 +27,6 @@
 [data-dossier-role="name"] > div,
 [data-cv-name] {
   font-family: var(--dossier-font) !important;
-  font-weight: var(--dossier-name-weight) !important;
   letter-spacing: var(--dossier-name-tracking) !important;
   line-height: var(--dossier-name-line-height) !important;
   text-wrap: balance;
@@ -36,13 +35,34 @@
   hyphens: none;
 }
 
+/*
+ * Cover element controls are the final authority for weight/case. BlockLayer
+ * already writes the resolved element values inline, so using !important here
+ * made the B/AA buttons look active while the family rule silently won. Keep
+ * the CV family contract hardened; on the editable cover the inline value wins.
+ */
+[data-dossier-role="name"] > div {
+  font-weight: var(--dossier-name-weight);
+}
+
+[data-cv-name] {
+  font-weight: var(--dossier-name-weight) !important;
+}
+
 [data-dossier-role="subtitle"] > div,
 [data-cv-subtitle] {
   font-family: var(--dossier-font) !important;
-  font-weight: var(--dossier-subtitle-weight) !important;
   letter-spacing: var(--dossier-subtitle-tracking) !important;
   line-height: var(--dossier-subtitle-line-height) !important;
   text-wrap: balance;
+}
+
+[data-dossier-role="subtitle"] > div {
+  font-weight: var(--dossier-subtitle-weight);
+}
+
+[data-cv-subtitle] {
+  font-weight: var(--dossier-subtitle-weight) !important;
 }
 
 [data-cv-subtitle] {
@@ -52,11 +72,19 @@
 [data-dossier-role="heading"] > div,
 [data-cv-section-title] {
   font-family: var(--dossier-font) !important;
-  font-weight: var(--dossier-heading-weight) !important;
   letter-spacing: var(--dossier-heading-tracking) !important;
-  text-transform: var(--dossier-heading-transform) !important;
   line-height: var(--dossier-heading-line-height) !important;
   text-wrap: balance;
+}
+
+[data-dossier-role="heading"] > div {
+  font-weight: var(--dossier-heading-weight);
+  text-transform: var(--dossier-heading-transform);
+}
+
+[data-cv-section-title] {
+  font-weight: var(--dossier-heading-weight) !important;
+  text-transform: var(--dossier-heading-transform) !important;
 }
 
 [data-cv-entry-title] {
@@ -71,18 +99,32 @@
 [data-dossier-role="body"] > div,
 [data-cv-body] {
   font-family: var(--dossier-font) !important;
-  font-weight: var(--dossier-body-weight) !important;
   line-height: var(--dossier-body-line-height) !important;
   text-wrap: pretty;
   white-space: pre-line;
 }
 
+[data-dossier-role="body"] > div {
+  font-weight: var(--dossier-body-weight);
+}
+
+[data-cv-body] {
+  font-weight: var(--dossier-body-weight) !important;
+}
+
 [data-dossier-role="muted"] > div,
 [data-cv-muted] {
   font-family: var(--dossier-font) !important;
-  font-weight: var(--dossier-body-weight) !important;
   line-height: var(--dossier-body-line-height) !important;
   opacity: var(--dossier-muted-opacity) !important;
+}
+
+[data-dossier-role="muted"] > div {
+  font-weight: var(--dossier-body-weight);
+}
+
+[data-cv-muted] {
+  font-weight: var(--dossier-body-weight) !important;
 }
 
 /*
