@@ -19,7 +19,9 @@ describe("CV photo defaults and frame", () => {
 
   test("photo frame is drawn inside the crop so clipped edges stay even", () => {
     expect(layoutCss).toContain("[data-cv-photo]::after");
-    expect(layoutCss).toContain("box-shadow: inset 0 0 0 var(--cv-photo-border-width, 0.3mm)");
+    expect(layoutCss).toContain("box-sizing: border-box");
+    expect(layoutCss).toContain("border: var(--cv-photo-border-width, 0.3mm) solid");
+    expect(layoutCss).not.toContain("box-shadow: inset 0 0 0 var(--cv-photo-border-width, 0.3mm)");
     expect(layoutCss).toContain("border-radius: inherit");
     expect(layoutCss).toContain('[data-dossier-template="freundlich"]');
   });
