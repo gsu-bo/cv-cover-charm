@@ -95,10 +95,7 @@ async function selectBlock(page: Page, id: string) {
 }
 
 function proportionCheckbox(page: Page) {
-  return page
-    .locator("label")
-    .filter({ hasText: /^\s*behalten\s*$/ })
-    .locator('input[type="checkbox"]');
+  return page.getByRole("checkbox", { name: "Proportionen beibehalten" });
 }
 
 function slider(page: Page, label: "Breite" | "Höhe") {
