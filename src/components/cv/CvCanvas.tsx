@@ -156,6 +156,12 @@ export function CvCanvas({
     () => cvBodyData(props.data, canvasChromeOptions),
     [canvasChromeOptions, props.data],
   );
+  // CvCanvasBase stores paginated React rows in state and recalculates that state
+  // when its `data` input changes. Design-only edits used to leave those cached
+  // rows stale until some unrelated field edit changed the data. Give the base
+  // renderer a fresh top-level data identity whenever the effective design changes
+  // so every typography/color/spacing toggle is reflected immediately.
+  const paginationData = useMemo(() => ({ ...data }), [data, design]);
 
   // The visible CV editor still owns the legacy html[data-dossier-template]
   // route scope. Hidden mixed-template PDF renderers opt out; their local
@@ -245,7 +251,7 @@ export function CvCanvas({
     >
       <BaseCvCanvas
         {...props}
-        data={data}
+        data={paginationData}
         design={design}
         chromeOptions={canvasChromeOptions}
         chromeContact={resolvedContact}
