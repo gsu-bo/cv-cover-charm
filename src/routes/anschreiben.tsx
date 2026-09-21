@@ -147,6 +147,27 @@ function MillimeterField({
   fallback: number;
   onChange: (value: number) => void;
 }) {
+  const resolvedValue = normalizeLetterSpacingMm(value, fallback);
+  const [draft, setDraft] = useState(String(resolvedValue));
+  const editingRef = useRef(false);
+
+  useEffect(() => {
+    if (!editingRef.current) {
+      setDraft(String(normalizeLetterSpacingMm(value, fallback)));
+    }
+  }, [fallback, value]);
+
+  const commitDraft = () => {
+    editingRef.current = false;
+    const trimmed = draft.trim();
+    const parsed = trimmed === "" ? Number.NaN : Number(trimmed);
+    const next = Number.isFinite(parsed)
+      ? normalizeLetterSpacingMm(parsed, fallback)
+      : normalizeLetterSpacingMm(fallback, fallback);
+    setDraft(String(next));
+    if (next !== value) onChange(next);
+  };
+
   return (
     <label className="block text-xs font-medium text-foreground">
       {label}
@@ -157,10 +178,24 @@ function MillimeterField({
           min={0}
           max={MAX_LETTER_SIGNATURE_SPACING_MM}
           step={1}
-          value={normalizeLetterSpacingMm(value, fallback)}
-          onChange={(event) =>
-            onChange(normalizeLetterSpacingMm(event.currentTarget.valueAsNumber, fallback))
-          }
+          value={draft}
+          onFocus={(event) => {
+            editingRef.current = true;
+            event.currentTarget.select();
+          }}
+          onChange={(event) => {
+            const nextDraft = event.currentTarget.value;
+            setDraft(nextDraft);
+            if (nextDraft.trim() === "") return;
+            const parsed = Number(nextDraft);
+            if (!Number.isFinite(parsed)) return;
+            if (parsed < 0 || parsed > MAX_LETTER_SIGNATURE_SPACING_MM) return;
+            onChange(normalizeLetterSpacingMm(parsed, fallback));
+          }}
+          onBlur={commitDraft}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
+          }}
           className={`${inputClass} pr-11`}
         />
         <span className="pointer-events-none absolute bottom-2 right-3 text-xs text-muted-foreground">
