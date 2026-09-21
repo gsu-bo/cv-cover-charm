@@ -9,6 +9,9 @@ test("letter inline typography appears only for a real text selection", () => {
   expect(source).toContain("range.collapsed");
   expect(source).toContain("range.getBoundingClientRect()");
   expect(source).toContain('window.addEventListener("scroll", onSelectionChange, true)');
+  expect(source).toContain('aria-label="Schriftfarbe"');
+  expect(source).toContain('document.execCommand("foreColor", false, color)');
+  expect(source).toContain("colorPickerActiveRef.current = true");
   expect(source).toContain("window.innerHeight - bubbleEdge");
   expect(source).toContain("window.innerHeight - bubbleHeight - bubbleEdge");
 

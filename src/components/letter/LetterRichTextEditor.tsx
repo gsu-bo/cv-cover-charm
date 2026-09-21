@@ -6,6 +6,7 @@ import {
   compatibleLetterTextAlign,
   letterRichHtml,
   letterTextAlign,
+  normalizeLetterInlineColor,
   richHtmlToPlainText,
   sanitizeLetterRichHtml,
   type LetterTextAlign,
@@ -22,6 +23,7 @@ type ToolbarState = {
   bold: boolean;
   italic: boolean;
   underline: boolean;
+  color: string;
   align: LetterTextAlign | null;
   columns: LetterBodyColumns | null;
   list: LetterListStyle | null;
@@ -142,6 +144,13 @@ function listForBlock(block: HTMLElement | null): LetterListStyle | null {
     : null;
 }
 
+function selectionColor(node: Node | null): string {
+  const element = node instanceof HTMLElement ? node : node?.parentElement;
+  return (
+    normalizeLetterInlineColor(element ? window.getComputedStyle(element).color : null) ?? "#111111"
+  );
+}
+
 function makeTable(rows: number, columns: number): HTMLTableElement {
   const table = document.createElement("table");
   table.dataset.letterTable = "true";
@@ -171,6 +180,7 @@ export function LetterRichTextEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef("");
   const savedRangeRef = useRef<Range | null>(null);
+  const colorPickerActiveRef = useRef(false);
   const [empty, setEmpty] = useState(!text.trim() && !richTextHtml?.trim());
   const [listOpen, setListOpen] = useState(false);
   const [tableOpen, setTableOpen] = useState(false);
@@ -180,6 +190,7 @@ export function LetterRichTextEditor({
     bold: false,
     italic: false,
     underline: false,
+    color: "#111111",
     align: "justify",
     columns: 1,
     list: null,
@@ -242,6 +253,7 @@ export function LetterRichTextEditor({
       !selection.anchorNode ||
       !editor.contains(selection.anchorNode)
     ) {
+      if (colorPickerActiveRef.current) return;
       setSelectionBubble(null);
       return;
     }
@@ -271,6 +283,7 @@ export function LetterRichTextEditor({
       bold: document.queryCommandState("bold"),
       italic: document.queryCommandState("italic"),
       underline: document.queryCommandState("underline"),
+      color: selectionColor(selection.anchorNode),
       align: documentAlignment(editor),
       columns,
       list,
@@ -342,6 +355,16 @@ export function LetterRichTextEditor({
     document.execCommand(name, false);
     emit();
     readToolbarState();
+  };
+
+  const setTextColor = (value: string) => {
+    const color = normalizeLetterInlineColor(value);
+    if (!color || !restoreRange()) return;
+    document.execCommand("styleWithCSS", false, "true");
+    document.execCommand("foreColor", false, color);
+    document.execCommand("styleWithCSS", false, "false");
+    emit();
+    setToolbar((current) => ({ ...current, color }));
   };
 
   const setAlignment = (align: LetterTextAlign) => {
@@ -503,6 +526,31 @@ export function LetterRichTextEditor({
           >
             U
           </button>
+          <span aria-hidden="true" className="mx-0.5 h-6 w-px bg-border" />
+          <label
+            className="relative flex h-8 w-9 cursor-pointer items-center justify-center rounded-md border-0 hover:bg-muted focus-within:ring-2 focus-within:ring-ring"
+            title="Schriftfarbe"
+          >
+            <span
+              aria-hidden="true"
+              className="h-4 w-4 rounded-full border border-foreground/25 shadow-sm"
+              style={{ backgroundColor: toolbar.color }}
+            />
+            <input
+              type="color"
+              aria-label="Schriftfarbe"
+              value={toolbar.color}
+              onPointerDown={() => {
+                rememberRange();
+                colorPickerActiveRef.current = true;
+              }}
+              onChange={(event) => setTextColor(event.currentTarget.value)}
+              onBlur={() => {
+                colorPickerActiveRef.current = false;
+              }}
+              className="absolute inset-0 cursor-pointer opacity-0"
+            />
+          </label>
         </div>
       ) : null}
       <div
@@ -669,10 +717,10 @@ export function LetterRichTextEditor({
         />
       </div>
       <p className="text-[11px] leading-relaxed text-muted-foreground">
-        Text markieren: Fett, Kursiv, Unterstrichen und Formatierung entfernen erscheinen direkt an
-        der Auswahl. Die Ausrichtung gilt immer für den gesamten Brieftext; Blocksatz ist
-        standardmässig aktiv. Spalten und Listen gelten für den aktuellen Absatz. Tabellen werden
-        beim aktuellen Absatz eingefügt.
+        Text markieren: Fett, Kursiv, Unterstrichen, Schriftfarbe und Formatierung entfernen
+        erscheinen direkt an der Auswahl. Die Ausrichtung gilt immer für den gesamten Brieftext;
+        Blocksatz ist standardmässig aktiv. Spalten und Listen gelten für den aktuellen Absatz.
+        Tabellen werden beim aktuellen Absatz eingefügt.
       </p>
     </div>
   );
