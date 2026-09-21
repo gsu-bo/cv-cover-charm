@@ -50,8 +50,7 @@
   z-index: 1 !important;
 }
 
-[data-cv-page]
-  > :is([data-cv-main], [data-cv-sidebar], [data-cv-band-header], [data-cv-footer]) {
+[data-cv-page] > :is([data-cv-main], [data-cv-sidebar], [data-cv-band-header], [data-cv-footer]) {
   z-index: 2;
 }
 
@@ -73,9 +72,7 @@
     [data-cv-template="ribbon"],
     [data-cv-template="monoLuxe"]
   )
-  [data-cv-page]:has(
-    [data-dossier-chrome="cv"][data-dossier-effective-header-mode="compact"]
-  )
+  [data-cv-page]:has([data-dossier-chrome="cv"][data-dossier-effective-header-mode="compact"])
   [data-dossier-sheet-motif]:not(#compact-motif-suppression-a):not(
     #compact-motif-suppression-b
   ):not(#compact-motif-suppression-c) {
@@ -86,9 +83,7 @@
 
 /* Glow: keep both large soft circles; only remove the isolated short trace. */
 [data-dossier-document="cv"][data-cv-template="glow"]
-  [data-cv-page]:has(
-    [data-dossier-chrome="cv"][data-dossier-effective-header-mode="compact"]
-  )
+  [data-cv-page]:has([data-dossier-chrome="cv"][data-dossier-effective-header-mode="compact"])
   [data-dossier-sheet-background="glow"]
   > [data-dossier-sheet-motif]:first-child
   > div:nth-child(3) {
@@ -109,19 +104,4 @@
   [data-dossier-compact-header]::before {
   content: none !important;
   display: none !important;
-}
-
-/* Edel Light: one continuous top gold treatment, with no added layout height.
- * The existing ::after diamond and lower gold hairlines remain untouched. */
-[data-dossier-document="cv"][data-cv-template="edel"]
-  [data-dossier-chrome="cv"][data-dossier-template-chrome="edel"][data-dossier-effective-header-mode="compact"][data-dossier-header-custom-surface="false"]
-  [data-dossier-compact-header]::before {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  height: 0.55mm;
-  background: var(--chrome-accent);
-  opacity: 0.92;
-  pointer-events: none;
 }
