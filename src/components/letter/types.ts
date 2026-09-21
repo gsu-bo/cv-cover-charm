@@ -144,8 +144,8 @@ export type SavedLetter = {
 export { LETTER_STORAGE_KEY };
 
 export const DEFAULT_LETTER_BEILAGEN = ["Lebenslauf", "Zeugnis"] as const;
-export const DEFAULT_LETTER_CLOSING_GAP_MM = 9;
-export const DEFAULT_LETTER_SIGNATURE_GAP_MM = 9;
+export const DEFAULT_LETTER_CLOSING_GAP_MM = 4;
+export const DEFAULT_LETTER_SIGNATURE_GAP_MM = 1;
 export const MAX_LETTER_SIGNATURE_SPACING_MM = 50;
 export const DEFAULT_LETTER_MOTIF_OPACITY = 0.25;
 
