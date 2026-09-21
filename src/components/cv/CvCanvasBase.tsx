@@ -2812,6 +2812,7 @@ export function CvCanvas({
       className="flex flex-col items-center gap-4"
       data-dossier-document="cv"
       data-cv-template={design.template}
+      data-cv-header-mode={chromeOptions.headerMode}
       data-cv-layout={layout}
       data-cv-archetype={frame.id}
       data-cv-photo-position={photoPosition}

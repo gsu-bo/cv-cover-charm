@@ -9,6 +9,10 @@ const css = readFileSync(
   new URL("../../src/components/dossier/chrome-policy.css", import.meta.url),
   "utf8",
 );
+const cvCanvas = readFileSync(
+  new URL("../../src/components/cv/CvCanvasBase.tsx", import.meta.url),
+  "utf8",
+);
 
 describe("global quiet chrome policy", () => {
   test("shared chrome loads the global policy", () => {
@@ -45,5 +49,14 @@ describe("global quiet chrome policy", () => {
     );
     expect(css).toContain("width: 44mm !important;");
     expect(css).toContain("background: var(--cover-ink) !important;");
+  });
+
+  test("Neon and Verlauf hero clearance only applies to contact headers", () => {
+    expect(cvCanvas).toContain("data-cv-header-mode={chromeOptions.headerMode}");
+    expect(css).toContain('[data-cv-template="neon"][data-cv-header-mode="contact"]');
+    expect(css).toContain('[data-cv-template="verlauf"][data-cv-header-mode="contact"]');
+    expect(css).not.toContain(
+      '[data-cv-template="neon"] :is([data-cv-page="0"], [data-cv-measure-page])',
+    );
   });
 });
