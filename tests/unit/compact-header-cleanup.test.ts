@@ -60,16 +60,8 @@ describe("compact CV header cleanup", () => {
     expect(colorful).toContain("color: #fff !important");
   });
 
-  test("Edel Light adds only an absolute full-width top gold treatment", () => {
-    const edel = css.match(/Edel Light:([\s\S]*?)$/)?.[1];
-    expect(edel).toBeDefined();
-    expect(edel).toContain('[data-cv-template="edel"]');
-    expect(edel).toContain('data-dossier-effective-header-mode="compact"');
-    expect(edel).toContain("inset-inline: 0");
-    expect(edel).toContain("top: 0");
-    expect(edel).toContain("height: 0.55mm");
-    expect(edel).toContain("background: var(--chrome-accent)");
-    expect(edel).not.toContain("margin");
-    expect(edel).not.toContain("padding");
+  test("Edel Light leaves the shared compact header artwork untouched", () => {
+    expect(css).not.toContain('data-cv-template="edel"');
+    expect(css).not.toContain("Edel Light:");
   });
 });

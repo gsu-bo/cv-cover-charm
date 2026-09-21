@@ -13,15 +13,184 @@ import type { Block, BlockStyle, TemplateId } from "./types";
  * function name is kept for import stability while these reviewed compositions
  * share this small default adapter.
  */
+const EDGE_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
+  eyebrow: {
+    x: 16,
+    y: 10,
+    w: 62,
+    size: 8.5,
+    color: "bg",
+    weight: 700,
+    uppercase: true,
+    tracking: 0.18,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  ortDatum: {
+    x: 124,
+    y: 10,
+    w: 70,
+    size: 8.5,
+    color: "bg",
+    align: "right",
+    uppercase: true,
+    tracking: 0.18,
+    opacity: 0.72,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  foto: {
+    x: 151,
+    y: 43,
+    w: 38,
+    ratio: 1,
+    radius: 999,
+    color: "primary",
+    fill: "bg",
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  name: {
+    x: 20,
+    y: 124,
+    w: 112,
+    size: 26,
+    color: "ink",
+    align: "left",
+    weight: 800,
+    tracking: -0.02,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  beruf: {
+    x: 20,
+    y: 146,
+    w: 112,
+    size: 12,
+    color: "ink",
+    align: "left",
+    lineHeight: 1.25,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  lehrbeginn: {
+    x: 20,
+    y: 174,
+    w: 112,
+    size: 9.5,
+    color: "ink",
+    align: "left",
+    weight: 700,
+    bg: "secondary",
+    padX: 5,
+    padY: 1.8,
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  kontaktTitel: {
+    x: 20,
+    w: 74,
+    size: 8,
+    color: "primary",
+    align: "left",
+    weight: 700,
+    uppercase: true,
+    tracking: 0.12,
+    above: "kontakt",
+    follows: null,
+    gap: 1.5,
+    anchorBottom: false,
+  },
+  kontakt: {
+    x: 20,
+    y: 277,
+    w: 74,
+    size: 8.5,
+    color: "ink",
+    align: "left",
+    opacity: 0.88,
+    lineHeight: 1.4,
+    follows: null,
+    above: null,
+    anchorBottom: true,
+  },
+  anTitel: {
+    x: 116,
+    w: 74,
+    size: 8,
+    color: "primary",
+    align: "right",
+    weight: 700,
+    uppercase: true,
+    tracking: 0.12,
+    above: "empfaenger",
+    follows: null,
+    gap: 1.5,
+    anchorBottom: false,
+  },
+  empfaenger: {
+    x: 116,
+    y: 277,
+    w: 74,
+    size: 8.5,
+    color: "ink",
+    align: "right",
+    opacity: 0.88,
+    lineHeight: 1.4,
+    follows: null,
+    above: null,
+    anchorBottom: true,
+  },
+  trenner: { hidden: true },
+};
+
 const FOREST_FLOW_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
-  eyebrow: { x: 7, y: 17, w: 38, follows: null, above: null, anchorBottom: false },
-  ortDatum: { x: 7, y: 268, w: 38, follows: null, above: null, anchorBottom: false },
+  eyebrow: {
+    x: 7,
+    y: 17,
+    w: 38,
+    align: "center",
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  ortDatum: {
+    x: 7,
+    y: 268,
+    w: 38,
+    align: "center",
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
   foto: { x: 143, y: 27, follows: null, above: null, anchorBottom: false },
   name: { x: 72, y: 111, w: 112, follows: null, above: null, anchorBottom: false },
   beruf: { x: 72, y: 137, w: 112, follows: null, above: null, anchorBottom: false },
   lehrbeginn: { x: 72, y: 159, w: 112, follows: null, above: null, anchorBottom: false },
-  kontaktTitel: { x: 7, y: 192, w: 38, follows: null, above: null, anchorBottom: false },
-  kontakt: { x: 7, y: 203, w: 38, follows: null, above: null, anchorBottom: false },
+  kontaktTitel: {
+    x: 7,
+    y: 192,
+    w: 38,
+    align: "center",
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
+  kontakt: {
+    x: 7,
+    y: 203,
+    w: 38,
+    align: "center",
+    follows: null,
+    above: null,
+    anchorBottom: false,
+  },
   anTitel: { x: 72, y: 239, w: 112, follows: null, above: null, anchorBottom: false },
   empfaenger: { x: 72, y: 250, w: 112, follows: null, above: null, anchorBottom: false },
 };
@@ -204,7 +373,7 @@ const DIAGONAL_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
     y: 18,
     w: 64,
     size: 8.5,
-    color: "ink",
+    color: "bg",
     align: "right",
     opacity: 0.68,
     follows: null,
@@ -224,9 +393,9 @@ const DIAGONAL_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
     anchorBottom: false,
   },
   kicker: {
-    x: 42,
-    y: 91,
-    w: 126,
+    x: 84,
+    y: 120,
+    w: 106,
     size: 9,
     color: "primary",
     weight: 700,
@@ -239,9 +408,9 @@ const DIAGONAL_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
     anchorBottom: false,
   },
   beruf: {
-    x: 42,
-    y: 104,
-    w: 126,
+    x: 84,
+    y: 134,
+    w: 106,
     size: 27,
     color: "ink",
     weight: 750,
@@ -254,9 +423,9 @@ const DIAGONAL_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
     anchorBottom: false,
   },
   name: {
-    x: 42,
-    y: 145,
-    w: 126,
+    x: 84,
+    y: 169,
+    w: 106,
     size: 18,
     color: "primary",
     weight: 800,
@@ -266,9 +435,9 @@ const DIAGONAL_COVER_DEFAULTS: Record<string, Partial<BlockStyle>> = {
     anchorBottom: false,
   },
   lehrbeginn: {
-    x: 42,
-    y: 161,
-    w: 126,
+    x: 84,
+    y: 185,
+    w: 92,
     size: 9.5,
     color: "secondary",
     weight: 700,
@@ -341,13 +510,15 @@ export function applyForestFlowCoverDefaults(
 ): Block {
   const templateId = template as string;
   const defaults =
-    templateId === "forestFlow"
-      ? FOREST_FLOW_COVER_DEFAULTS[block.id]
-      : templateId === "ribbon"
-        ? RIBBON_COVER_DEFAULTS[block.id]
-        : templateId === "diagonal"
-          ? DIAGONAL_COVER_DEFAULTS[block.id]
-          : undefined;
+    templateId === "edge"
+      ? EDGE_COVER_DEFAULTS[block.id]
+      : templateId === "forestFlow"
+        ? FOREST_FLOW_COVER_DEFAULTS[block.id]
+        : templateId === "ribbon"
+          ? RIBBON_COVER_DEFAULTS[block.id]
+          : templateId === "diagonal"
+            ? DIAGONAL_COVER_DEFAULTS[block.id]
+            : undefined;
   if (!defaults) return block;
 
   const custom = overrides[block.id] ?? {};

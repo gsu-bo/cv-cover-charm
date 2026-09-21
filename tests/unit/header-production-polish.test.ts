@@ -17,6 +17,10 @@ const polishCss = readFileSync(
   new URL("../../src/components/dossier/header-production-polish.css", import.meta.url),
   "utf8",
 );
+const chromePolicyCss = readFileSync(
+  new URL("../../src/components/dossier/chrome-policy.css", import.meta.url),
+  "utf8",
+);
 
 describe("header production polish", () => {
   test("icon separator is no longer user-selectable and old values migrate to midpoint", () => {
@@ -34,12 +38,14 @@ describe("header production polish", () => {
     expect(letterPicker).toContain("if (recommendation) patchDossierChrome");
   });
 
-  test("Citrus uses light contact text and Edel gets a restrained lower gold band", () => {
+  test("Citrus keeps its light contact text without overriding Edel's compact standard", () => {
     expect(polishCss).toContain('[data-dossier-template-chrome="citrus"]');
     expect(polishCss).toContain("color: #ffffff !important");
-    expect(polishCss).toContain('[data-dossier-template-chrome="edel"]');
-    expect(polishCss).toContain("inset 0 -1.35mm 0 var(--chrome-accent)");
-    expect(polishCss).toContain("width: 1.65mm");
+    expect(polishCss).not.toContain('[data-dossier-template-chrome="edel"]');
+    expect(chromePolicyCss).toContain('[data-dossier-template-chrome="edel"]');
+    expect(chromePolicyCss).toContain("border-bottom: 0.28mm solid var(--chrome-accent)");
+    expect(chromePolicyCss).toContain("inset 0 -1.52mm 0 var(--chrome-accent)");
+    expect(chromePolicyCss).toContain("width: 2.2mm");
     expect(polishCss).not.toContain("freundlich");
   });
 });

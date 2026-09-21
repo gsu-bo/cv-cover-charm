@@ -286,8 +286,9 @@ test.describe("DOCX V2 shadow browser contract", () => {
 
     const result = await generateShadow(page);
     await saveShadow(result, "modern-shadow.docx");
-    expect(result.documentXml).toContain("cv-main-p1-grid-");
+    expect(result.documentXml).toContain('id="docx-v2-flow-cv-main-p1"');
     expect(result.documentXml).toContain("<w:tbl>");
+    expect(result.documentXml).toContain('w:tcW w:w="2500" w:type="pct"');
     expect(result.documentXml).toContain('behindDoc="1"');
     expect(result.mediaNames.length).toBeGreaterThanOrEqual(1);
   });

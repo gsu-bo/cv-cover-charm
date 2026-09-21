@@ -30,7 +30,7 @@ html[data-dossier-template="edge"]
   right: auto !important;
   top: 0 !important;
   bottom: auto !important;
-  width: 6mm !important;
+  width: 5mm !important;
   height: 24mm !important;
   border-radius: 0 !important;
   opacity: 1 !important;
@@ -39,36 +39,20 @@ html[data-dossier-template="edge"]
 html[data-dossier-template="edge"]
   [data-dossier-document="cover"]
   [data-fresh-cover-field="accent"] {
-  left: 24mm !important;
-  right: auto !important;
-  top: 21.5mm !important;
+  left: auto !important;
+  right: 0 !important;
+  top: 24mm !important;
   bottom: auto !important;
-  width: 52mm !important;
-  height: 1.5mm !important;
-  border-radius: 999px !important;
+  width: 92mm !important;
+  height: 72mm !important;
+  border-radius: 0 !important;
+  background: linear-gradient(135deg, var(--cover-secondary), var(--cover-accent)) !important;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 88% 100%, 88% 14%, 0 14%);
   opacity: 1 !important;
 }
 
-html[data-dossier-template="edge"] [data-dossier-document="cover"] [data-block-id="foto"] {
-  transform: translate(48mm, -14mm) scale(0.78);
-  transform-origin: top left;
-}
-
-html[data-dossier-template="edge"] [data-dossier-document="cover"] [data-block-id="name"] {
-  transform: translate(-34mm, -24mm);
-}
-
-html[data-dossier-template="edge"] [data-dossier-document="cover"] [data-block-id="beruf"],
-html[data-dossier-template="edge"] [data-dossier-document="cover"] [data-block-id="lehrbeginn"] {
-  transform: translate(-34mm, -20mm);
-}
-
-html[data-dossier-template="edge"]
-  [data-dossier-document="cover"]
-  :is([data-block-id="name"], [data-block-id="beruf"], [data-block-id="lehrbeginn"])
-  > div {
-  text-align: left !important;
-}
+/* Editable content uses real editor defaults rather than CSS transforms, so
+ * dragging, resizing and resetting always agree with the rendered position. */
 
 /* Edge CV: same masthead, scaled down. */
 html[data-dossier-template="edge"]
@@ -405,7 +389,9 @@ html[data-dossier-template="monoLuxe"] [data-dossier-document="cover"] [data-blo
 }
 
 html[data-dossier-template="monoLuxe"] [data-dossier-document="cover"] [data-block-id="beruf"],
-html[data-dossier-template="monoLuxe"] [data-dossier-document="cover"] [data-block-id="lehrbeginn"] {
+html[data-dossier-template="monoLuxe"]
+  [data-dossier-document="cover"]
+  [data-block-id="lehrbeginn"] {
   transform: translate(-34mm, -26mm);
 }
 

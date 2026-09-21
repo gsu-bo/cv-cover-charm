@@ -7,34 +7,6 @@ html
   color: #ffffff !important;
 }
 
-/* Edel: replace the detached double hairline with a restrained gold lower band.
- * The small paper diamond sits inside that band so it reads as one intentional seal. */
-html
-  [data-dossier-template-chrome="edel"][data-dossier-header-custom-surface="false"]
-  :is(
-    [data-dossier-compact-header],
-    [data-dossier-contact-header-background],
-    [data-dossier-continuation-contact-header]
-  ) {
-  border-bottom: 0 !important;
-  box-shadow: inset 0 -1.35mm 0 var(--chrome-accent) !important;
-}
-
-html
-  [data-dossier-template-chrome="edel"]
-  :is(
-    [data-dossier-compact-header],
-    [data-dossier-contact-header-background],
-    [data-dossier-continuation-contact-header]
-  )::after {
-  bottom: 0.2mm;
-  width: 1.65mm;
-  height: 1.65mm;
-  border: 0.22mm solid var(--chrome-accent);
-  background: var(--chrome-paper);
-  transform: translate(-50%, 0) rotate(45deg);
-}
-
 /* Sonne: the cover is a confident yellow/dark sun composition. The CV used to
  * reduce that identity to a plain yellow hairline. Keep the compact geometry,
  * but let a small concentric sun break below the strip into the existing top
@@ -194,11 +166,7 @@ html
   top: 0;
   width: 8.2mm;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    var(--chrome-primary) 0 85%,
-    var(--chrome-accent) 85% 100%
-  );
+  background: linear-gradient(90deg, var(--chrome-primary) 0 85%, var(--chrome-accent) 85% 100%);
 }
 
 [data-dossier-document="cv"][data-cv-template="edge"]
@@ -211,11 +179,7 @@ html
   width: 38mm;
   height: 1.2mm;
   border-radius: 0 999px 999px 0;
-  background: linear-gradient(
-    90deg,
-    var(--chrome-accent) 0 3mm,
-    var(--chrome-secondary) 3mm 100%
-  );
+  background: linear-gradient(90deg, var(--chrome-accent) 0 3mm, var(--chrome-secondary) 3mm 100%);
 }
 
 /* FOREST FLOW — compact and contact are the same family: pale paper masthead,
