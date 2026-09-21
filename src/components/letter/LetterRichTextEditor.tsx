@@ -16,6 +16,10 @@ import type { LetterBodyColumns } from "@/components/letter/types";
 const toolClass =
   "rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const activeToolClass = "bg-primary text-primary-foreground hover:bg-primary/90";
+const toolbarGroupClass =
+  "m-0 flex min-w-0 items-center gap-1 rounded-md border border-input bg-background px-1.5 pb-1 pt-0.5";
+const toolbarLegendClass =
+  "px-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 
 type LetterListStyle = "bullet" | "dash" | "plus" | "dot";
 
@@ -555,23 +559,20 @@ export function LetterRichTextEditor({
       ) : null}
       <div
         data-letter-rich-toolbar
-        className="relative flex flex-wrap gap-1.5 rounded-t-md border border-b-0 bg-muted/30 p-2"
+        className="relative flex flex-wrap items-start gap-2 rounded-t-md border border-b-0 bg-muted/30 p-2"
       >
-        <TextAlignmentControl
-          value={toolbar.align}
-          onChange={setAlignment}
-          ariaLabel="Textausrichtung"
-          alignments={BODY_TEXT_ALIGNMENTS}
-        />
+        <fieldset data-letter-alignment-control className={toolbarGroupClass}>
+          <legend className={toolbarLegendClass}>Textausrichtung</legend>
+          <TextAlignmentControl
+            value={toolbar.align}
+            onChange={setAlignment}
+            ariaLabel="Textausrichtung"
+            alignments={BODY_TEXT_ALIGNMENTS}
+          />
+        </fieldset>
 
-        <span aria-hidden="true" className="h-0 basis-full" />
-        <fieldset
-          data-letter-column-control
-          className="m-0 flex min-w-0 items-center gap-1 rounded-md border border-input bg-background px-1.5 pb-1 pt-0.5"
-        >
-          <legend className="px-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            Spalten
-          </legend>
+        <fieldset data-letter-column-control className={toolbarGroupClass}>
+          <legend className={toolbarLegendClass}>Spalten</legend>
           {([1, 2, 3] as const).map((count) => (
             <button
               key={count}
@@ -587,106 +588,109 @@ export function LetterRichTextEditor({
           ))}
         </fieldset>
 
-        <div className="relative">
-          <button
-            type="button"
-            className={`${toolClass} flex items-center justify-center px-2 ${toolbar.list ? activeToolClass : ""}`}
-            aria-label="Liste"
-            aria-expanded={listOpen}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => {
-              setListOpen((current) => !current);
-              setTableOpen(false);
-            }}
-          >
-            <List className="h-4 w-4" />
-          </button>
-          {listOpen ? (
-            <div className="absolute left-0 top-full z-30 mt-1 min-w-44 rounded-md border bg-popover p-1 shadow-lg">
-              {LIST_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className="flex w-full items-center gap-3 rounded px-2 py-1.5 text-left text-xs hover:bg-muted"
-                  aria-label={option.label}
-                  aria-pressed={
-                    option.value === "none" ? toolbar.list === null : toolbar.list === option.value
-                  }
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => setListStyle(option.value)}
+        <fieldset data-letter-insert-control className={toolbarGroupClass}>
+          <legend className={toolbarLegendClass}>Einfügen</legend>
+          <div className="relative">
+            <button
+              type="button"
+              className={`${toolClass} flex items-center justify-center px-2 ${toolbar.list ? activeToolClass : ""}`}
+              aria-label="Liste"
+              aria-expanded={listOpen}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                setListOpen((current) => !current);
+                setTableOpen(false);
+              }}
+            >
+              <List className="h-4 w-4" />
+            </button>
+            {listOpen ? (
+              <div className="absolute left-0 top-full z-30 mt-1 min-w-44 rounded-md border bg-popover p-1 shadow-lg">
+                {LIST_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded px-2 py-1.5 text-left text-xs hover:bg-muted"
+                    aria-label={option.label}
+                    aria-pressed={
+                      option.value === "none" ? toolbar.list === null : toolbar.list === option.value
+                    }
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => setListStyle(option.value)}
+                  >
+                    <span className="w-4 text-center text-sm">{option.marker}</span>
+                    <span>{option.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="relative">
+            <button
+              type="button"
+              className={`${toolClass} flex items-center justify-center px-2`}
+              aria-label="Tabelle"
+              aria-expanded={tableOpen}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                setTableOpen((current) => !current);
+                setListOpen(false);
+              }}
+            >
+              <Table2 className="h-4 w-4" />
+            </button>
+            {tableOpen ? (
+              <div className="absolute left-0 top-full z-30 mt-1 rounded-md border bg-popover p-2 shadow-lg">
+                <div className="mb-2 whitespace-nowrap text-center text-[11px] font-medium text-foreground">
+                  {tableHover
+                    ? `${tableHover.rows} × ${tableHover.columns} Tabelle`
+                    : "Tabellengrösse"}
+                </div>
+                <div
+                  role="grid"
+                  aria-label="Tabellengrösse auswählen"
+                  className="grid grid-cols-8 gap-1"
+                  onMouseLeave={() => setTableHover(null)}
                 >
-                  <span className="w-4 text-center text-sm">{option.marker}</span>
-                  <span>{option.label}</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
+                  {Array.from({ length: TABLE_GRID_SIZE * TABLE_GRID_SIZE }, (_, index) => {
+                    const row = Math.floor(index / TABLE_GRID_SIZE) + 1;
+                    const column = (index % TABLE_GRID_SIZE) + 1;
+                    const highlighted =
+                      !!tableHover && row <= tableHover.rows && column <= tableHover.columns;
+                    return (
+                      <button
+                        key={`${row}-${column}`}
+                        type="button"
+                        role="gridcell"
+                        aria-label={`Tabelle ${row} × ${column} einfügen`}
+                        className={`h-4 w-4 rounded-[2px] border ${
+                          highlighted
+                            ? "border-primary bg-primary/25"
+                            : "bg-background hover:bg-muted"
+                        }`}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onMouseEnter={() => setTableHover({ rows: row, columns: column })}
+                        onFocus={() => setTableHover({ rows: row, columns: column })}
+                        onClick={() => insertTable(row, column)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+          </div>
 
-        <div className="relative">
           <button
             type="button"
-            className={`${toolClass} flex items-center justify-center px-2`}
-            aria-label="Tabelle"
-            aria-expanded={tableOpen}
+            className={toolClass}
+            aria-label="Trennlinie einfügen"
             onMouseDown={(event) => event.preventDefault()}
-            onClick={() => {
-              setTableOpen((current) => !current);
-              setListOpen(false);
-            }}
+            onClick={insertRule}
           >
-            <Table2 className="h-4 w-4" />
+            ─
           </button>
-          {tableOpen ? (
-            <div className="absolute left-0 top-full z-30 mt-1 rounded-md border bg-popover p-2 shadow-lg">
-              <div className="mb-2 whitespace-nowrap text-center text-[11px] font-medium text-foreground">
-                {tableHover
-                  ? `${tableHover.rows} × ${tableHover.columns} Tabelle`
-                  : "Tabellengrösse"}
-              </div>
-              <div
-                role="grid"
-                aria-label="Tabellengrösse auswählen"
-                className="grid grid-cols-8 gap-1"
-                onMouseLeave={() => setTableHover(null)}
-              >
-                {Array.from({ length: TABLE_GRID_SIZE * TABLE_GRID_SIZE }, (_, index) => {
-                  const row = Math.floor(index / TABLE_GRID_SIZE) + 1;
-                  const column = (index % TABLE_GRID_SIZE) + 1;
-                  const highlighted =
-                    !!tableHover && row <= tableHover.rows && column <= tableHover.columns;
-                  return (
-                    <button
-                      key={`${row}-${column}`}
-                      type="button"
-                      role="gridcell"
-                      aria-label={`Tabelle ${row} × ${column} einfügen`}
-                      className={`h-4 w-4 rounded-[2px] border ${
-                        highlighted
-                          ? "border-primary bg-primary/25"
-                          : "bg-background hover:bg-muted"
-                      }`}
-                      onMouseDown={(event) => event.preventDefault()}
-                      onMouseEnter={() => setTableHover({ rows: row, columns: column })}
-                      onFocus={() => setTableHover({ rows: row, columns: column })}
-                      onClick={() => insertTable(row, column)}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        <button
-          type="button"
-          className={toolClass}
-          aria-label="Trennlinie einfügen"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={insertRule}
-        >
-          ─
-        </button>
+        </fieldset>
       </div>
       <div className="relative">
         {empty ? (
