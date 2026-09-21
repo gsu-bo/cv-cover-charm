@@ -4,12 +4,11 @@ import {
   letterPageGeometry,
   visibleLetterAttachments,
 } from "../../src/components/letter/layout-system";
-import { plainTextToRichHtml } from "../../src/components/letter/rich-text";
 import {
-  DEMO_LETTER,
-  emptyLetterDesign,
-  type LetterData,
-} from "../../src/components/letter/types";
+  normalizeLetterInlineColor,
+  plainTextToRichHtml,
+} from "../../src/components/letter/rich-text";
+import { DEMO_LETTER, emptyLetterDesign, type LetterData } from "../../src/components/letter/types";
 
 function letter(patch: Partial<LetterData> = {}): LetterData {
   return {
@@ -70,5 +69,13 @@ describe("M8 adversarial motivation-letter boundaries", () => {
     expect(html).toContain("Élodie O&#039;Connor-García");
     expect(html).not.toContain("<script>");
     expect(html).toContain("&lt;script&gt;alert(&#039;x&#039;)&lt;/script&gt;");
+  });
+
+  test("inline letter colors accept only canonical opaque RGB values", () => {
+    expect(normalizeLetterInlineColor("#A3C")).toBe("#aa33cc");
+    expect(normalizeLetterInlineColor("rgb(12, 34, 56)")).toBe("#0c2238");
+    expect(normalizeLetterInlineColor("rgba(12, 34, 56, 0)")).toBeUndefined();
+    expect(normalizeLetterInlineColor("rgba(12, 34, 56, 0.5)")).toBeUndefined();
+    expect(normalizeLetterInlineColor("url(javascript:alert(1))")).toBeUndefined();
   });
 });

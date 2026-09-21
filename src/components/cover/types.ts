@@ -186,8 +186,9 @@ export type BlockStyle = {
 };
 
 /**
- * Nur die frei veränderbare Geometrie entfernen, ohne Farbe, Schrift,
- * Rahmen, Sichtbarkeit oder Ebenenwahl anzutasten.
+ * Frei veränderbare Geometrie und Sichtbarkeit entfernen, ohne Farbe,
+ * Schrift, Rahmen oder Ebenenwahl anzutasten. Damit stellt der globale
+ * Layout-Reset auch versehentlich ausgeblendete Vorlagen-Elemente wieder her.
  */
 export function withoutBlockGeometry(style: Partial<BlockStyle>): Partial<BlockStyle> {
   const {
@@ -200,6 +201,7 @@ export function withoutBlockGeometry(style: Partial<BlockStyle>): Partial<BlockS
     above: _above,
     gap: _gap,
     anchorBottom: _anchorBottom,
+    hidden: _hidden,
     ...visualStyle
   } = style;
   return visualStyle;

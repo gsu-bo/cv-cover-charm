@@ -1018,6 +1018,7 @@ test.describe("M5.8 dossier regression", () => {
     await selectionToolbar.getByRole("button", { name: "Fett", exact: true }).click();
     await selectionToolbar.getByRole("button", { name: "Kursiv", exact: true }).click();
     await selectionToolbar.getByRole("button", { name: "Unterstrichen", exact: true }).click();
+    await selectionToolbar.getByLabel("Schriftfarbe").fill("#c026d3");
 
     await page.getByRole("button", { name: "Liste" }).click();
     await expect(page.getByRole("button", { name: "Bullet", exact: true })).toBeVisible();
@@ -1078,6 +1079,15 @@ test.describe("M5.8 dossier regression", () => {
     await expect(previewBlocks.nth(0).locator("strong")).toContainText("Absatz eins formatiert");
     await expect(previewBlocks.nth(0).locator("em")).toContainText("Absatz eins formatiert");
     await expect(previewBlocks.nth(0).locator("u")).toContainText("Absatz eins formatiert");
+    const previewColor = previewBlocks.nth(0).locator('[data-letter-text-color="#c026d3"]');
+    await expect(previewColor).toContainText("Absatz eins formatiert");
+    await expect(previewColor).toHaveCSS("color", "rgb(192, 38, 211)");
+    const exportColor = page
+      .locator("[data-letter-standalone-export] [data-letter-document-pages]")
+      .locator('[data-letter-text-color="#c026d3"]')
+      .first();
+    await expect(exportColor).toContainText("Absatz eins formatiert");
+    await expect(exportColor).toHaveCSS("color", "rgb(192, 38, 211)");
     expect(
       await previewBlocks
         .nth(0)

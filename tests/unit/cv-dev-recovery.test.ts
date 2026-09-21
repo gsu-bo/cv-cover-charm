@@ -93,7 +93,8 @@ test("demo CV no longer adds a redundant subtitle below the candidate name", () 
 test("optional personal details are separate, left-aligned and not prefilled", () => {
   expect(DEMO_CV.person.nationalitaet).toBe("");
   expect(canvas).not.toContain('angaben.join(" · ")');
-  expect(canvas).toContain("{angaben.map((line) => (");
+  expect(canvas).toContain("const angaben = cvPersonalInfoRows(p)");
+  expect(canvas).toContain("{personalInfoRows()}");
   expect(canvas).toContain('textAlign: "left"');
   expect(route).toContain('order={editorSectionOrder("person")}');
   expect(route).toContain("order={editorSectionOrder(key)}");
