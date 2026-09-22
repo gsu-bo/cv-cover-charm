@@ -30,8 +30,8 @@ export type DossierChromeOptions = {
   headerInlineSeparator?: DossierChromeInlineSeparator;
   headerBackgroundColor: string | null;
   headerGradientColor: string | null;
-  /** Explicit header text color. null keeps automatic readable template contrast. */
-  headerTextColor: string | null;
+  /** Explicit header text color. Missing/null keeps automatic readable template contrast. */
+  headerTextColor?: string | null;
   footerMode: DossierFooterMode;
   footerHeightMm: number | null;
   /** Signed vertical nudge for footer details. Does not move the footer surface. */
@@ -39,8 +39,8 @@ export type DossierChromeOptions = {
   footerTextLayout: DossierChromeTextLayout;
   footerBackgroundColor: string | null;
   footerGradientColor: string | null;
-  /** Explicit footer text color. null keeps automatic readable template contrast. */
-  footerTextColor: string | null;
+  /** Explicit footer text color. Missing/null keeps automatic readable template contrast. */
+  footerTextColor?: string | null;
   borderEnabled: boolean;
   borderColor: string | null;
   borderWidthMm: number;
