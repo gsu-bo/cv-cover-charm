@@ -8,6 +8,11 @@ import {
   type CvInfoPosition,
   type CvLayoutId,
 } from "./layout";
+import {
+  CV_PAGE_FIT_STORAGE_KEY,
+  setCvPageFitMode,
+  type CvPageFitMode,
+} from "./page-fit";
 import { setCvPlacement } from "./placement";
 import { setCvPhotoStyle } from "./photo";
 import {
@@ -36,6 +41,7 @@ const LAYOUT_KEY = "lebenslauf:layout:v1";
 const MIRROR_KEY = "lebenslauf:layout-mirror:v1";
 const INFO_POSITION_KEY = CV_INFO_POSITION_STORAGE_KEY;
 const SECTION_GAP_KEY = "lebenslauf:section-gap:v1";
+const PAGE_FIT_KEY = CV_PAGE_FIT_STORAGE_KEY;
 const PLACEMENT_KEY = "lebenslauf:placement:v1";
 const PHOTO_KEY = "lebenslauf:photo:v2";
 const PHOTO_PLACEMENT_KEY = "lebenslauf:photo-place:v1";
@@ -45,6 +51,7 @@ const PORTABLE_CV_STORAGE_KEYS = [
   MIRROR_KEY,
   INFO_POSITION_KEY,
   SECTION_GAP_KEY,
+  PAGE_FIT_KEY,
   PLACEMENT_KEY,
   PHOTO_KEY,
   PHOTO_PLACEMENT_KEY,
@@ -61,6 +68,7 @@ export type PortableCvState = {
   mirrored?: boolean;
   infoPosition?: CvInfoPosition;
   sectionGapMm?: number;
+  pageFitMode?: CvPageFitMode;
   placements?: Partial<CvPlacements>;
   photoStyle?: Partial<DossierPhotoStyle>;
   photoPlacement?: Partial<CvPhotoPlacement>;
@@ -97,6 +105,8 @@ export function readPortableCvState(): PortableCvState | undefined {
     const infoPosition =
       infoPositionRaw === "standard" || infoPositionRaw === "mirrored" ? infoPositionRaw : undefined;
     const sectionGapRaw = storage.getItem(SECTION_GAP_KEY);
+    const pageFitRaw = storage.getItem(PAGE_FIT_KEY);
+    const pageFitMode = pageFitRaw === "one" || pageFitRaw === "two" ? pageFitRaw : undefined;
     const placementsRaw = storage.getItem(PLACEMENT_KEY);
     const photoRaw = storage.getItem(PHOTO_KEY);
     const photoPlacementRaw = storage.getItem(PHOTO_PLACEMENT_KEY);
@@ -143,6 +153,7 @@ export function readPortableCvState(): PortableCvState | undefined {
       ...(mirroredRaw !== null ? { mirrored: mirroredRaw === "true" } : {}),
       ...(infoPosition ? { infoPosition } : {}),
       ...(sectionGapMm !== null ? { sectionGapMm } : {}),
+      ...(pageFitMode ? { pageFitMode } : {}),
       ...(placements ? { placements } : {}),
       ...(photoStyle ? { photoStyle } : {}),
       ...(photoPlacement ? { photoPlacement } : {}),
@@ -162,6 +173,7 @@ export function clearPortableCvState() {
   } catch {
     // Blockierter Browser-Speicher darf den restlichen Import nicht abbrechen.
   }
+  setCvPageFitMode(null);
   clearCvTextAlignment();
 }
 
@@ -179,6 +191,9 @@ export function applyPortableCvState(state?: PortableCvState | null) {
     setCvInfoPosition(state.infoPosition);
   }
   if (typeof state.sectionGapMm === "number") setCvSectionGapMm(state.sectionGapMm);
+  if (state.pageFitMode === "one" || state.pageFitMode === "two") {
+    setCvPageFitMode(state.pageFitMode);
+  }
 
   if (state.placements && typeof state.placements === "object") {
     for (const key of Object.keys(DEFAULT_CV_PLACEMENTS) as CvPlacementKey[]) {

@@ -8,7 +8,29 @@ import {
   type CvRenderLayout,
 } from "./archetype";
 import { getCvLayout, subscribeCvLayout } from "./layout";
+import {
+  getCvPageFitMode,
+  getCvPageFitPageCount,
+  setCvPageFitMode,
+  subscribeCvPageFit,
+  type CvPageFitMode,
+} from "./page-fit";
 import type { CvDesign } from "./types";
+
+function pageFitStatus(mode: CvPageFitMode | null, pageCount: number): string {
+  if (!pageCount) return "Die Vorschau prüft gleich, wie viele Seiten dein Lebenslauf braucht.";
+  if (mode === "one") {
+    return pageCount === 1
+      ? "✓ Passt auf 1 Seite."
+      : "Zu viel Inhalt für 1 Seite – 2 Seiten empfohlen.";
+  }
+  if (mode === "two") {
+    if (pageCount === 2) return "✓ Inhalt ausgewogen auf 2 Seiten verteilt.";
+    if (pageCount === 1) return "Sehr wenig Inhalt – 1 Seite würde ruhiger wirken.";
+    return "Sehr viel Inhalt – trotz automatischer Anpassung sind mehr als 2 Seiten nötig.";
+  }
+  return pageCount === 1 ? "✓ Passt gut auf 1 Seite." : "2 Seiten empfohlen.";
+}
 
 /**
  * Editor-only adapter around the existing shared page-margin store and the
@@ -27,6 +49,8 @@ export function CvPageMarginsControl({
     getCvLayout,
     () => "classic",
   );
+  const pageFitMode = useSyncExternalStore(subscribeCvPageFit, getCvPageFitMode, () => null);
+  const pageCount = useSyncExternalStore(subscribeCvPageFit, getCvPageFitPageCount, () => 0);
   const frame = cvFrameFor(design.template);
   const defaultMargins = cvDefaultContentBox(frame, 0, layout, design.sidebarPct, chromeOptions);
   const minimumMargins = cvSafePageMarginMinimums(
@@ -39,11 +63,63 @@ export function CvPageMarginsControl({
   const accentColor = design.colors.accent ?? design.colors.primary ?? design.colors.ink;
 
   return (
-    <DossierPageMarginsControl
-      scope="cv"
-      defaultMargins={defaultMargins}
-      minimumMargins={minimumMargins}
-      accentColor={accentColor}
-    />
+    <div className="grid gap-3">
+      <div data-cv-page-fit-control className="grid gap-2 rounded-md border bg-muted/20 p-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-xs font-semibold">Seitenaufteilung</div>
+          {pageCount > 0 ? (
+            <span className="text-[11px] text-muted-foreground">
+              aktuell {pageCount} {pageCount === 1 ? "Seite" : "Seiten"}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          {([
+            ["one", "1 Seite"],
+            ["two", "2 Seiten"],
+          ] as const).map(([mode, label]) => {
+            const active = pageFitMode === mode;
+            return (
+              <button
+                key={mode}
+                type="button"
+                data-cv-page-fit-mode-control={mode}
+                aria-pressed={active}
+                onClick={() => setCvPageFitMode(mode)}
+                className={`rounded-md border px-3 py-2 text-xs font-semibold transition ${
+                  active
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-input bg-background hover:bg-accent"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          Schriftgrössen, Abstände und Rubriken werden automatisch angepasst. Es wird kein Inhalt
+          gelöscht oder gekürzt. Bei 2 Seiten verteilt die App die Rubriken möglichst ausgewogen
+          und lässt mehr Weissraum.
+        </p>
+        <p
+          aria-live="polite"
+          className={`text-[11px] font-medium ${
+            pageFitMode === "one" && pageCount > 1 ? "text-amber-700 dark:text-amber-300" : ""
+          }`}
+        >
+          {pageFitStatus(pageFitMode, pageCount)}
+        </p>
+      </div>
+
+      <DossierPageMarginsControl
+        scope="cv"
+        defaultMargins={defaultMargins}
+        minimumMargins={minimumMargins}
+        accentColor={accentColor}
+      />
+    </div>
   );
 }
