@@ -30,6 +30,8 @@ export type DossierChromeOptions = {
   headerInlineSeparator?: DossierChromeInlineSeparator;
   headerBackgroundColor: string | null;
   headerGradientColor: string | null;
+  /** Explicit header text color. null keeps automatic readable template contrast. */
+  headerTextColor: string | null;
   footerMode: DossierFooterMode;
   footerHeightMm: number | null;
   /** Signed vertical nudge for footer details. Does not move the footer surface. */
@@ -37,6 +39,8 @@ export type DossierChromeOptions = {
   footerTextLayout: DossierChromeTextLayout;
   footerBackgroundColor: string | null;
   footerGradientColor: string | null;
+  /** Explicit footer text color. null keeps automatic readable template contrast. */
+  footerTextColor: string | null;
   borderEnabled: boolean;
   borderColor: string | null;
   borderWidthMm: number;
@@ -84,12 +88,14 @@ export const DEFAULT_DOSSIER_CHROME_OPTIONS: DossierChromeOptions = {
   headerInlineSeparator: "icons",
   headerBackgroundColor: null,
   headerGradientColor: null,
+  headerTextColor: null,
   footerMode: "compact",
   footerHeightMm: null,
   footerContentOffsetYMm: 0,
   footerTextLayout: "inline",
   footerBackgroundColor: null,
   footerGradientColor: null,
+  footerTextColor: null,
   borderEnabled: false,
   borderColor: null,
   borderWidthMm: 0.6,
@@ -211,6 +217,7 @@ function normalizeOptions(
           ),
     headerBackgroundColor: normalizedColor(value.headerBackgroundColor),
     headerGradientColor: normalizedColor(value.headerGradientColor),
+    headerTextColor: normalizedColor(value.headerTextColor),
     footerMode:
       value.footerMode === "details" ||
       value.footerMode === "none" ||
@@ -227,6 +234,7 @@ function normalizeOptions(
     footerTextLayout: value.footerTextLayout === "stacked" ? "stacked" : "inline",
     footerBackgroundColor: normalizedColor(value.footerBackgroundColor),
     footerGradientColor: normalizedColor(value.footerGradientColor),
+    footerTextColor: normalizedColor(value.footerTextColor),
     borderEnabled:
       typeof value.borderEnabled === "boolean" ? value.borderEnabled : fallback.borderEnabled,
     borderColor: normalizedColor(value.borderColor),
@@ -260,6 +268,7 @@ function optionsFromSavedLetter(storage: Storage): DossierChromeOptions | null {
       headerInlineSeparator: design.headerInlineSeparator,
       headerBackgroundColor: design.headerBackgroundColor,
       headerGradientColor: design.headerGradientColor,
+      headerTextColor: design.chromeHeaderTextColor,
       footerMode:
         design.footerMode === "attachments"
           ? "details"
@@ -268,6 +277,7 @@ function optionsFromSavedLetter(storage: Storage): DossierChromeOptions | null {
       footerTextLayout: design.footerTextLayout,
       footerBackgroundColor: design.footerBackgroundColor,
       footerGradientColor: design.footerGradientColor,
+      footerTextColor: design.chromeFooterTextColor,
       borderEnabled: design.chromeBorderEnabled,
       borderColor: design.chromeBorderColor,
       borderWidthMm: design.chromeBorderWidthMm,
@@ -419,11 +429,13 @@ function mirrorLegacyLetterDesign(next: DossierChromeState) {
       design.headerInlineSeparator === (options.headerInlineSeparator ?? "icons") &&
       design.headerBackgroundColor === options.headerBackgroundColor &&
       design.headerGradientColor === options.headerGradientColor &&
+      design.chromeHeaderTextColor === options.headerTextColor &&
       design.footerMode === footerMode &&
       design.footerHeightMm === options.footerHeightMm &&
       design.footerTextLayout === options.footerTextLayout &&
       design.footerBackgroundColor === options.footerBackgroundColor &&
       design.footerGradientColor === options.footerGradientColor &&
+      design.chromeFooterTextColor === options.footerTextColor &&
       design.chromeBorderEnabled === options.borderEnabled &&
       design.chromeBorderColor === options.borderColor &&
       design.chromeBorderWidthMm === options.borderWidthMm &&
@@ -447,11 +459,13 @@ function mirrorLegacyLetterDesign(next: DossierChromeState) {
         headerInlineSeparator: options.headerInlineSeparator ?? "icons",
         headerBackgroundColor: options.headerBackgroundColor,
         headerGradientColor: options.headerGradientColor,
+        chromeHeaderTextColor: options.headerTextColor,
         footerMode,
         footerHeightMm: options.footerHeightMm,
         footerTextLayout: options.footerTextLayout,
         footerBackgroundColor: options.footerBackgroundColor,
         footerGradientColor: options.footerGradientColor,
+        chromeFooterTextColor: options.footerTextColor,
         chromeBorderEnabled: options.borderEnabled,
         chromeBorderColor: options.borderColor,
         chromeBorderWidthMm: options.borderWidthMm,
