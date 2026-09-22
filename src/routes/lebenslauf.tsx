@@ -54,6 +54,7 @@ import {
   FormCvSprachen,
   SectionLayoutControls,
   SectionOptions,
+  StructuredRowLayoutControls,
 } from "@/components/cv/CvForm";
 import {
   CV_SECTION_LABELS,
@@ -80,6 +81,7 @@ import {
   entryFilled,
   isCustomSectionKey,
   normalizeCvSectionLayout,
+  normalizeCvStructuredRowLayout,
   type CvData,
   type CvCustomSectionPresetKey,
   type CvDesign,
@@ -1900,11 +1902,24 @@ function Lebenslauf() {
                       />
                     </div>
                     {section.preset === "familie" ? (
-                      <p className="mb-2 rounded-md bg-muted/40 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
-                        Optionaler Bereich. Sinnvolle Aufteilung: „Eltern“ mit Namen und Berufen
-                        sowie „Geschwister“ mit Jahrgang und Tätigkeit. Die Angaben erscheinen erst
-                        im CV, wenn du sie einträgst.
-                      </p>
+                      <div className="mb-2 grid gap-2">
+                        <p className="rounded-md bg-muted/40 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
+                          Optionaler Bereich. Sinnvolle Aufteilung: „Eltern“ mit Namen und Berufen
+                          sowie „Geschwister“ mit Jahrgang und Tätigkeit. Die Angaben erscheinen
+                          erst im CV, wenn du sie einträgst.
+                        </p>
+                        <StructuredRowLayoutControls
+                          value={normalizeCvStructuredRowLayout(section.rowLayout)}
+                          onChange={(patch) =>
+                            patchCustomSection(section.id, {
+                              rowLayout: normalizeCvStructuredRowLayout({
+                                ...section.rowLayout,
+                                ...patch,
+                              }),
+                            })
+                          }
+                        />
+                      </div>
                     ) : section.preset === "digitale-kenntnisse" ? (
                       <p className="mb-2 rounded-md bg-muted/40 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
                         Programme und Technologien mit Niveau oder konkreter Anwendung angeben, z.
