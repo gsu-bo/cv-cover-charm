@@ -1048,13 +1048,15 @@ test.describe("M5.8 dossier regression", () => {
 
     const previewBody = preview.locator('[data-letter-pdf-richtext="body"]');
     const previewBlocks = previewBody.locator(":scope > div");
-    await expect(previewBlocks).toHaveCount(2);
+    await expect(previewBlocks).toHaveCount(3);
     await expect(previewBlocks.nth(0)).not.toHaveAttribute("data-columns", /.+/);
     await expect(previewBlocks.nth(0)).toHaveAttribute("data-list", "bullet");
     await expect(previewBlocks.nth(1)).toHaveAttribute("data-columns", "2");
     await expect(previewBlocks.nth(1)).toHaveAttribute("data-align", "left");
     await expect(previewBlocks.nth(1)).toHaveCSS("text-align", "left");
     await expect(previewBlocks.nth(1)).toHaveCSS("column-count", "2");
+    await expect(previewBlocks.nth(2)).toHaveAttribute("data-align", "justify");
+    await expect(previewBlocks.nth(2)).toHaveText("");
     await expect(previewBlocks.nth(0).locator("strong")).toContainText("Absatz eins formatiert");
     await expect(previewBlocks.nth(0).locator("em")).toContainText("Absatz eins formatiert");
     await expect(previewBlocks.nth(0).locator("u")).toContainText("Absatz eins formatiert");
