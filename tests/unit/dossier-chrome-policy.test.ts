@@ -43,6 +43,20 @@ describe("global quiet chrome policy", () => {
     expect(css).toContain("top: 9mm !important;");
   });
 
+  test("template contrast colors yield to explicit header and footer colors", () => {
+    for (const template of ["citrus", "cove", "edel"]) {
+      expect(css).toContain(
+        `[data-dossier-template-chrome="${template}"][data-dossier-header-custom-surface="false"][data-dossier-header-text-color="automatic"]`,
+      );
+    }
+    expect(css).toContain(
+      '[data-cv-template="edge"]\n  [data-dossier-header-text-color="automatic"]\n  [data-dossier-integrated-contact]',
+    );
+    expect(css).toContain(
+      '[data-dossier-template-chrome="edel"][data-dossier-footer-custom-surface="false"][data-dossier-footer-text-color="automatic"]',
+    );
+  });
+
   test("Ribbon eyebrow stays readable across the sidebar seam", () => {
     expect(css).toContain(
       'html[data-dossier-template="ribbon"] [data-dossier-document="cover"] [data-block-id="eyebrow"]',
