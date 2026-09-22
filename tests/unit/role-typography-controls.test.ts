@@ -59,6 +59,9 @@ describe("user-owned typography roles", () => {
   test("header and footer expose independent font-size and text-color controls", () => {
     expect(headerControls).toContain("data-dossier-font-size-control={kind}");
     expect(headerControls).toContain("data-dossier-text-color-control={kind}");
+    expect(headerControls).toContain(
+      "onInput={(event) => onColor(event.currentTarget.value)}",
+    );
     expect(headerControls).toContain('kind="header"');
     expect(headerControls).toContain('kind="footer"');
     expect(headerRenderer).toContain("data-dossier-header-font-size");
