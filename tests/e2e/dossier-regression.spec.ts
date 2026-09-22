@@ -1012,17 +1012,17 @@ test.describe("M5.8 dossier regression", () => {
 
     await selectBlock(1);
     const toolbar = page.locator("[data-letter-rich-toolbar]");
+    const alignmentControl = toolbar.getByRole("group", { name: "Textausrichtung" });
     const columnsControl = toolbar.getByRole("group", { name: "Spalten" });
+    const insertControl = toolbar.getByRole("group", { name: "Einfügen" });
     const oneColumnButton = columnsControl.getByRole("button", { name: "1 Spalte" });
     const twoColumnButton = columnsControl.getByRole("button", { name: "2 Spalten" });
+    await expect(alignmentControl).toBeVisible();
     await expect(columnsControl).toBeVisible();
-    const toolbarTop = await toolbar
-      .getByRole("button", { name: "Linksbündig" })
-      .evaluate((button) => button.getBoundingClientRect().top);
-    const columnsTop = await columnsControl.evaluate(
-      (control) => control.getBoundingClientRect().top,
-    );
-    expect(columnsTop).toBeGreaterThan(toolbarTop + 1);
+    await expect(insertControl).toBeVisible();
+    await expect(toolbar.locator("[data-letter-alignment-control]")).toHaveCount(1);
+    await expect(toolbar.locator("[data-letter-column-control]")).toHaveCount(1);
+    await expect(toolbar.locator("[data-letter-insert-control]")).toHaveCount(1);
     await twoColumnButton.click();
     await expect(twoColumnButton).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("button", { name: "Linksbündig" })).toHaveAttribute(
