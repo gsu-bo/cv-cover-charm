@@ -1012,9 +1012,9 @@ test.describe("M5.8 dossier regression", () => {
 
     await selectBlock(1);
     const toolbar = page.locator("[data-letter-rich-toolbar]");
-    const alignmentControl = toolbar.getByRole("group", { name: "Textausrichtung" });
-    const columnsControl = toolbar.getByRole("group", { name: "Spalten" });
-    const insertControl = toolbar.getByRole("group", { name: "Einfügen" });
+    const alignmentControl = toolbar.locator("[data-letter-alignment-control]");
+    const columnsControl = toolbar.locator("[data-letter-column-control]");
+    const insertControl = toolbar.locator("[data-letter-insert-control]");
     const oneColumnButton = columnsControl.getByRole("button", { name: "1 Spalte" });
     const twoColumnButton = columnsControl.getByRole("button", { name: "2 Spalten" });
     await expect(alignmentControl).toBeVisible();
