@@ -3,13 +3,15 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LetterCanvas } from "../../src/components/letter/LetterCanvas";
 import {
+  DEFAULT_LETTER_CLOSING_GAP_MM,
+  DEFAULT_LETTER_SIGNATURE_GAP_MM,
   DEMO_LETTER,
   emptyLetterDesign,
   normalizeLetterSpacingMm,
 } from "../../src/components/letter/types";
 
 describe("motivation-letter closing and signature spacing", () => {
-  test("uses the established 9 mm spacing for older letters", () => {
+  test("uses the compact spacing defaults when no saved spacing exists", () => {
     const markup = renderToStaticMarkup(
       createElement(LetterCanvas, {
         data: DEMO_LETTER,
@@ -17,8 +19,12 @@ describe("motivation-letter closing and signature spacing", () => {
       }),
     );
 
-    expect(markup).toContain('data-letter-closing-gap-mm="9"');
-    expect(markup).toContain('data-letter-signature-gap-mm="9"');
+    expect(markup).toContain(
+      `data-letter-closing-gap-mm="${DEFAULT_LETTER_CLOSING_GAP_MM}"`,
+    );
+    expect(markup).toContain(
+      `data-letter-signature-gap-mm="${DEFAULT_LETTER_SIGNATURE_GAP_MM}"`,
+    );
   });
 
   test("renders both user-defined distances independently", () => {

@@ -5,6 +5,7 @@ import { resolveColor } from "./layouts";
 import { ShapeElement } from "./ShapeElement";
 import { resolveLayout } from "./resolve";
 import { clampBlockDragPosition } from "./drag-bounds";
+import { hasUserStyle } from "./user-style-precedence";
 import { FRAME, PAGE } from "@/default-config";
 
 const MM = 96 / 25.4; // px pro mm bei 96dpi
@@ -474,6 +475,7 @@ export function BlockLayer({
         const isPhoto = b.kind === "photo";
         const isShape = b.kind === "shape";
         const isImage = b.kind === "image";
+        const isText = b.kind === "text";
         const isLine = isShape && b.shape === "line";
         if (isPhoto && !data) return null;
         const empty = isPhoto
@@ -520,6 +522,19 @@ export function BlockLayer({
             data-dossier-role={role}
             data-dossier-accent={b.id === "trenner" ? "rule" : undefined}
             data-dossier-photo={isPhoto ? "applicant" : undefined}
+            data-cover-user-weight={isText && hasUserStyle(b, "weight") ? "true" : undefined}
+            data-cover-user-uppercase={isText && hasUserStyle(b, "uppercase") ? "true" : undefined}
+            data-cover-user-font={isText && hasUserStyle(b, "font") ? "true" : undefined}
+            data-cover-user-size={isText && hasUserStyle(b, "size") ? "true" : undefined}
+            data-cover-user-tracking={isText && hasUserStyle(b, "tracking") ? "true" : undefined}
+            data-cover-user-line-height={
+              isText && hasUserStyle(b, "lineHeight") ? "true" : undefined
+            }
+            data-cover-user-color={isText && hasUserStyle(b, "color") ? "true" : undefined}
+            data-cover-user-opacity={isText && hasUserStyle(b, "opacity") ? "true" : undefined}
+            data-cover-user-italic={isText && hasUserStyle(b, "italic") ? "true" : undefined}
+            data-cover-user-underline={isText && hasUserStyle(b, "underline") ? "true" : undefined}
+            data-cover-user-align={isText && hasUserStyle(b, "align") ? "true" : undefined}
             onPointerDown={(e) => startDrag(e, b)}
             className="absolute"
             style={{
@@ -528,6 +543,17 @@ export function BlockLayer({
               width: bleedRight ? `calc(${st.w}mm + ${EDGE_BLEED_PX}px)` : `${st.w}mm`,
               ["--dossier-font" as string]:
                 role && dossierFont ? dossierFont : FONT_STACKS[st.font],
+              ["--cover-user-font-weight" as string]: `${st.weight}`,
+              ["--cover-user-text-transform" as string]: st.uppercase ? "uppercase" : "none",
+              ["--cover-user-font-family" as string]: FONT_STACKS[st.font],
+              ["--cover-user-font-size" as string]: `${size}pt`,
+              ["--cover-user-letter-spacing" as string]: `${st.tracking}em`,
+              ["--cover-user-line-height" as string]: `${st.lineHeight}`,
+              ["--cover-user-color" as string]: resolveColor(st.color, colors),
+              ["--cover-user-opacity" as string]: `${st.opacity}`,
+              ["--cover-user-font-style" as string]: st.italic ? "italic" : "normal",
+              ["--cover-user-text-decoration" as string]: st.underline ? "underline" : "none",
+              ["--cover-user-text-align" as string]: st.align,
               zIndex,
               pointerEvents: isShape && b.shape === "path" ? "none" : undefined,
               cursor: editable && !drawing ? "move" : "default",

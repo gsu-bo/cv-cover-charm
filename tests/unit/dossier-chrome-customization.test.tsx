@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DossierHeaderFooterChrome } from "../../src/components/dossier/DossierHeaderFooterChrome";
+import { onColorRoles } from "../../src/components/cv/palette";
 import {
   DEFAULT_DOSSIER_CHROME_OPTIONS,
   dossierFooterContentBottomMmForOptions,
@@ -36,8 +37,10 @@ describe("dossier chrome customization", () => {
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerHeightMm).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerBackgroundColor).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerGradientColor).toBeNull();
+    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerTextColor).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerBackgroundColor).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerGradientColor).toBeNull();
+    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerTextColor).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.borderEnabled).toBe(false);
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.borderColor).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.borderWidthMm).toBe(0.6);
@@ -102,6 +105,18 @@ describe("dossier chrome customization", () => {
     expect(legacy.shared.headerDifferentFirstPage).toBe(true);
   });
 
+  test("legacy saved state without text-color keys stays automatic", () => {
+    const {
+      headerTextColor: _headerTextColor,
+      footerTextColor: _footerTextColor,
+      ...legacyShared
+    } = DEFAULT_DOSSIER_CHROME_OPTIONS;
+    const state = normalizeDossierChromeState({ sync: true, shared: legacyShared });
+
+    expect(state.shared.headerTextColor).toBeNull();
+    expect(state.shared.footerTextColor).toBeNull();
+  });
+
   test("legacy inline headers keep their historical midpoint separator", () => {
     const { headerInlineSeparator: _removed, ...legacyShared } = DEFAULT_DOSSIER_CHROME_OPTIONS;
     const state = normalizeDossierChromeState({
@@ -130,7 +145,9 @@ describe("dossier chrome customization", () => {
         footerTextLayout: "stacked",
         headerBackgroundColor: "#123456",
         headerGradientColor: "#abcdef",
+        headerTextColor: "#ABCDEF",
         footerBackgroundColor: "not-a-color",
+        footerTextColor: "#654321",
         borderEnabled: false,
         borderColor: "#fedcba",
         borderWidthMm: 1.2,
@@ -153,7 +170,9 @@ describe("dossier chrome customization", () => {
     expect(state.shared.footerTextLayout).toBe("stacked");
     expect(state.shared.headerBackgroundColor).toBe("#123456");
     expect(state.shared.headerGradientColor).toBe("#abcdef");
+    expect(state.shared.headerTextColor).toBe("#abcdef");
     expect(state.shared.footerBackgroundColor).toBeNull();
+    expect(state.shared.footerTextColor).toBe("#654321");
     expect(state.shared.borderEnabled).toBe(false);
     expect(state.shared.borderColor).toBe("#fedcba");
     expect(state.shared.borderWidthMm).toBe(1.2);
@@ -161,6 +180,8 @@ describe("dossier chrome customization", () => {
     expect(state.cv.borderEnabled).toBe(false);
     expect(state.cv.borderColor).toBeNull();
     expect(state.cv.borderWidthMm).toBe(1.2);
+    expect(state.cv.headerTextColor).toBeNull();
+    expect(state.cv.footerTextColor).toBeNull();
   });
 
   test("custom heights reserve matching CV content space", () => {
@@ -191,7 +212,7 @@ describe("dossier chrome customization", () => {
     expect(geometry.content.bottom).toBe(25);
   });
 
-  test("renderer applies font, gradients and an explicitly enabled custom border", () => {
+  test("renderer applies font, gradients, explicit text colors and an explicitly enabled custom border", () => {
     const options = {
       ...DEFAULT_DOSSIER_CHROME_OPTIONS,
       headerMode: "contact" as const,
@@ -200,8 +221,10 @@ describe("dossier chrome customization", () => {
       footerTextLayout: "inline" as const,
       headerBackgroundColor: "#112233",
       headerGradientColor: "#445566",
+      headerTextColor: "#123456",
       footerBackgroundColor: "#778899",
       footerGradientColor: "#aabbcc",
+      footerTextColor: "#654321",
       borderEnabled: true,
       borderColor: "#fedcba",
       borderWidthMm: 0.9,
@@ -221,18 +244,53 @@ describe("dossier chrome customization", () => {
 
     expect(markup).toContain('data-dossier-header-text-layout="stacked"');
     expect(markup).toContain('data-dossier-footer-text-layout="inline"');
+    expect(markup).toContain('data-dossier-header-text-color="#123456"');
+    expect(markup).toContain('data-dossier-footer-text-color="#654321"');
     expect(markup).toContain('data-dossier-border-enabled="true"');
     expect(markup).toContain('data-dossier-border-color="#fedcba"');
     expect(markup).toContain('data-dossier-border-width-mm="0.9"');
     expect(markup).toContain('data-dossier-chrome-font="freundlich"');
     expect(markup).toContain("linear-gradient(90deg, #112233, #445566)");
     expect(markup).toContain("linear-gradient(90deg, #778899, #aabbcc)");
+    expect(markup).toContain("color:#123456");
+    expect(markup).toContain("color:#654321");
     expect(markup).toContain("border-bottom:0.9mm solid #fedcba");
     expect(markup).toContain("border-top:0.9mm solid #fedcba");
     expect(markup).toContain("Lea Müller");
     expect(markup).toContain("Dorfstrasse 12");
     expect(markup).toContain(">Lebenslauf</div>");
     expect(markup).toContain("> · Zeugnis</div>");
+  });
+
+  test("automatic text colors still use the readable surface contrast", () => {
+    const headerInk = onColorRoles("#ffffff", "#ffffff").ink;
+    const footerInk = onColorRoles("#000000", "#000000").ink;
+    const markup = renderToStaticMarkup(
+      createElement(DossierHeaderFooterChrome, {
+        scope: "letter",
+        template: "modern",
+        colors: { primary: "#ffffff", secondary: "#ffffff", accent: "#ffffff" },
+        contact,
+        options: {
+          ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+          headerMode: "contact",
+          footerMode: "details",
+          headerBackgroundColor: "#ffffff",
+          headerGradientColor: "#ffffff",
+          footerBackgroundColor: "#000000",
+          footerGradientColor: "#000000",
+          headerTextColor: null,
+          footerTextColor: null,
+        },
+        footerLabel: "Beilagen:",
+        footerDetails: ["Lebenslauf"],
+      }),
+    );
+
+    expect(markup).toContain('data-dossier-header-text-color="automatic"');
+    expect(markup).toContain('data-dossier-footer-text-color="automatic"');
+    expect(markup).toContain(`color:${headerInk}`);
+    expect(markup).toContain(`color:${footerInk}`);
   });
 
   test("inline contact icons inherit the computed header contrast", () => {
