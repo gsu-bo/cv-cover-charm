@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { DEMO_CV } from "../../src/components/cv/types";
+import { CV_SECTION_LABELS, DEMO_CV } from "../../src/components/cv/types";
 
 const BASE_URL = "http://127.0.0.1:4173";
 
@@ -183,7 +183,7 @@ test.describe("M9 responsive product smoke", () => {
               "Lebenslauf: personal section must stay visible on mobile",
             ).toBeVisible();
             await expect(
-              page.locator('[data-editor-section-title="Schule"]'),
+              page.locator(`[data-editor-section-title="${CV_SECTION_LABELS.schule}"]`),
               "Lebenslauf: school section must stay visible on mobile",
             ).toBeVisible();
           }
