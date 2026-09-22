@@ -541,28 +541,31 @@ export function FormCvPerson({
               </div>
             )}
           </div>
-          <div className="min-w-0 flex-1">
-            <PhotoStyleControls
-              value={photoStyle}
-              onChange={setCvPhotoStyle}
-              hasPhoto={!!person.foto}
-              compact
-            />
+          <div className="min-w-0 flex-1 text-[11px] leading-snug text-muted-foreground">
+            <p>Der Ausschnitt wird direkt in der Vorschau und im Dokument angezeigt.</p>
             <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
               Form, Rahmen und Ausschnitt bleiben beim Wechsel des CV-Layouts erhalten.
             </p>
-            <CvPhotoPlaceControls borderWidth={photoStyle.borderWidth} />
-            {photoMessage && (
-              <p
-                className={`mt-1.5 text-[11px] ${
-                  photoMessage.error ? "text-destructive" : "text-primary"
-                }`}
-              >
-                {photoMessage.text}
-              </p>
-            )}
           </div>
         </div>
+        <div className="mt-3 border-t pt-3">
+          <PhotoStyleControls
+            value={photoStyle}
+            onChange={setCvPhotoStyle}
+            hasPhoto={!!person.foto}
+            compact
+          />
+        </div>
+        <CvPhotoPlaceControls borderWidth={photoStyle.borderWidth} />
+        {photoMessage && (
+          <p
+            className={`mt-1.5 text-[11px] ${
+              photoMessage.error ? "text-destructive" : "text-primary"
+            }`}
+          >
+            {photoMessage.text}
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <Field label="Vorname">
@@ -818,11 +821,7 @@ export function StructuredRowLayoutControls({
   return (
     <div className="grid gap-3 rounded-md border bg-muted/20 p-2.5">
       <div className="text-xs font-semibold">Darstellung der Einträge</div>
-      <div
-        className="grid grid-cols-2 gap-1"
-        role="group"
-        aria-label="Anordnung der Einträge"
-      >
+      <div className="grid grid-cols-2 gap-1" role="group" aria-label="Anordnung der Einträge">
         {(
           [
             ["inline", "Name daneben"],
