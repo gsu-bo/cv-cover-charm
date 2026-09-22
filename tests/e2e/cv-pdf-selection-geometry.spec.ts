@@ -2,7 +2,11 @@ import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 const BASE_URL = "http://127.0.0.1:4173";
-const TARGETS = ["Sekundarschule", "Schnupperlehre Informatik", "Volleyball"] as const;
+const TARGETS = [
+  "Sekundarschule",
+  "Schnupperlehre Informatik",
+  "Schwerpunkt Mathematik und Informatik",
+] as const;
 type Target = (typeof TARGETS)[number];
 
 type NormalizedBox = {
