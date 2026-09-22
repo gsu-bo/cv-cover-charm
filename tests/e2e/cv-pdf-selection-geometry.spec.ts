@@ -141,6 +141,9 @@ test.describe("CV PDF selection geometry", () => {
       .locator('[data-dossier-document="cv"][data-export-mode="true"] [data-cv-page]')
       .first();
     await exportPage.waitFor({ state: "attached" });
+    await expect(exportPage).toContainText("Sekundarschule");
+    await expect(exportPage).toContainText("Schnupperlehre");
+    await expect(exportPage).toContainText("Volleyball");
 
     const browserBoxes = await exportPage.evaluate((element, targets) => {
       const pageElement = element as HTMLElement;
