@@ -110,10 +110,14 @@
  * PDF text geometry and user-selected chrome settings. */
 [data-cv-template="edge"] [data-dossier-integrated-contact] {
   top: 9mm !important;
-  color: var(--cover-ink) !important;
 }
 
-[data-cv-template="monoLuxe"] [data-dossier-integrated-contact] {
+[data-cv-template="edge"]
+  [data-dossier-header-text-color="automatic"]
+  [data-dossier-integrated-contact],
+[data-cv-template="monoLuxe"]
+  [data-dossier-header-text-color="automatic"]
+  [data-dossier-integrated-contact] {
   color: var(--cover-ink) !important;
 }
 
@@ -230,7 +234,7 @@ html[data-dossier-template="ribbon"] [data-dossier-document="cover"] [data-block
   opacity: var(--dossier-motif-opacity, 1);
 }
 
-[data-dossier-template-chrome="citrus"][data-dossier-header-custom-surface="false"]
+[data-dossier-template-chrome="citrus"][data-dossier-header-custom-surface="false"][data-dossier-header-text-color="automatic"]
   :is([data-dossier-integrated-contact], [data-dossier-continuation-contact-header]) {
   color: var(--chrome-ink) !important;
 }
@@ -298,7 +302,7 @@ html[data-dossier-template="ribbon"] [data-dossier-document="cover"] [data-block
   opacity: 0.94;
 }
 
-[data-dossier-template-chrome="cove"][data-dossier-header-custom-surface="false"]
+[data-dossier-template-chrome="cove"][data-dossier-header-custom-surface="false"][data-dossier-header-text-color="automatic"]
   :is([data-dossier-integrated-contact], [data-dossier-continuation-contact-header]) {
   color: var(--chrome-paper) !important;
 }
@@ -360,7 +364,7 @@ html[data-dossier-template="ribbon"] [data-dossier-document="cover"] [data-block
   box-sizing: border-box;
 }
 
-[data-dossier-template-chrome="edel"][data-dossier-header-custom-surface="false"]
+[data-dossier-template-chrome="edel"][data-dossier-header-custom-surface="false"][data-dossier-header-text-color="automatic"]
   :is([data-dossier-integrated-contact], [data-dossier-continuation-contact-header]) {
   color: var(--chrome-ink) !important;
 }
@@ -372,6 +376,10 @@ html[data-dossier-template="ribbon"] [data-dossier-document="cover"] [data-block
   box-shadow:
     inset 0 1.25mm 0 var(--chrome-paper),
     inset 0 1.52mm 0 var(--chrome-accent);
+}
+
+[data-dossier-template-chrome="edel"][data-dossier-footer-custom-surface="false"][data-dossier-footer-text-color="automatic"]
+  [data-dossier-footer] {
   color: var(--chrome-ink) !important;
 }
 
