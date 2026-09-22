@@ -156,7 +156,7 @@ function normalizedChromeFontSize(value: unknown): number | null {
   if (value === null || value === undefined || value === "") return null;
   const numeric = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(numeric)) return null;
-  return Math.min(14, Math.max(6, Math.round(numeric * 2) / 2));
+  return Math.min(30, Math.max(6, Math.round(numeric * 2) / 2));
 }
 
 function normalizedBorderWidth(value: unknown, fallback: number): number {
