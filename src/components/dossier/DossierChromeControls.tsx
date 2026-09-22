@@ -162,7 +162,9 @@ function TextColorControl({
         <select
           data-dossier-text-color-mode-control={kind}
           value={custom ? "custom" : "automatic"}
-          onChange={(event) => onColor(event.target.value === "automatic" ? null : color ?? fallback)}
+          onChange={(event) =>
+            onColor(event.target.value === "automatic" ? null : (color ?? fallback))
+          }
           className={selectClass}
         >
           <option value="automatic">Automatisch</option>
@@ -183,6 +185,51 @@ function TextColorControl({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function FontSizeControl({
+  kind,
+  value,
+  fallback,
+  onChange,
+}: {
+  kind: "header" | "footer";
+  value: number | null;
+  fallback: number;
+  onChange: (value: number | null) => void;
+}) {
+  const size = value ?? fallback;
+  const label = kind === "header" ? "Header" : "Footer";
+  return (
+    <label className="grid gap-1 text-xs">
+      <span className="flex items-center justify-between gap-2 text-muted-foreground">
+        <span>Schriftgrösse</span>
+        <span>{size.toFixed(size % 1 ? 1 : 0)} pt</span>
+      </span>
+      <input
+        data-dossier-font-size-control={kind}
+        type="range"
+        min={6}
+        max={14}
+        step={0.5}
+        value={size}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="w-full accent-primary"
+        aria-label={`${label}-Schriftgrösse`}
+      />
+      {value !== null ? (
+        <button
+          type="button"
+          className={`${smallButtonClass} justify-self-start`}
+          onClick={() => onChange(null)}
+        >
+          Wie Vorlage
+        </button>
+      ) : (
+        <span className="text-[11px] text-muted-foreground">Automatisch passend zur Vorlage</span>
+      )}
+    </label>
   );
 }
 
@@ -251,11 +298,7 @@ export function DossierChromeControls({
   }, [onOptionsChange, options.headerInlineSeparator, scope]);
 
   const headerDefaultHeight =
-    options.headerMode === "contact"
-      ? options.headerTextLayout === "inline"
-        ? 26
-        : 32
-      : 4;
+    options.headerMode === "contact" ? (options.headerTextLayout === "inline" ? 26 : 32) : 4;
   const headerMin =
     options.headerMode === "contact" ? (options.headerTextLayout === "stacked" ? 18 : 10) : 1;
   const headerMax = 80;
@@ -271,6 +314,9 @@ export function DossierChromeControls({
   const footerDefaultHeight = options.footerMode === "details" ? 10 : 4;
   const footerHeight = options.footerHeightMm ?? footerDefaultHeight;
   const footerContentOffsetY = options.footerContentOffsetYMm ?? 0;
+  const headerFontSizeFallback =
+    options.headerMode === "contact" && options.headerTextLayout === "stacked" ? 8 : 8.5;
+  const footerFontSizeFallback = options.footerMode === "details" ? 8.5 : 6.5;
   const footerMin = options.footerMode === "details" ? 4 : 1;
   const footerMax = options.footerMode === "details" ? 40 : 18;
   const syncControl = (
@@ -320,7 +366,8 @@ export function DossierChromeControls({
                     headerMode: "contact",
                     headerTextLayout: value === "contact-inline" ? "inline" : "stacked",
                     headerHeightMm: null,
-                    ...(options.headerInlineSeparator == null || options.headerInlineSeparator === "icons"
+                    ...(options.headerInlineSeparator == null ||
+                    options.headerInlineSeparator === "icons"
                       ? { headerInlineSeparator: "dot" as DossierChromeInlineSeparator }
                       : {}),
                   });
@@ -524,6 +571,12 @@ export function DossierChromeControls({
                 fallback="#ffffff"
                 onColor={(headerTextColor) => patchOptions({ headerTextColor })}
               />
+              <FontSizeControl
+                kind="header"
+                value={options.headerFontSizePt ?? null}
+                fallback={headerFontSizeFallback}
+                onChange={(headerFontSizePt) => patchOptions({ headerFontSizePt })}
+              />
             </>
           ) : null}
         </div>
@@ -627,6 +680,12 @@ export function DossierChromeControls({
                 color={options.footerTextColor ?? null}
                 fallback="#ffffff"
                 onColor={(footerTextColor) => patchOptions({ footerTextColor })}
+              />
+              <FontSizeControl
+                kind="footer"
+                value={options.footerFontSizePt ?? null}
+                fallback={footerFontSizeFallback}
+                onChange={(footerFontSizePt) => patchOptions({ footerFontSizePt })}
               />
             </>
           ) : null}

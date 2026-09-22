@@ -299,7 +299,12 @@ describe("resolved Word section chrome", () => {
           headerMode: mode,
           headerShowName: false,
           headerShowAddress: false,
+          headerTextColor: "#123456",
+          headerFontSizePt: 11,
           footerMode: mode === "contact" ? "details" : mode,
+          footerTextColor: "#654321",
+          footerFontSizePt: 10,
+          textFont: "serif",
         });
       }
       const output = await applyDossierChromeToDocx(
@@ -319,6 +324,16 @@ describe("resolved Word section chrome", () => {
       expect(xml("word/document.xml").includes("semantic-footer-final")).toBe(mode === "contact");
       expect(xml("word/document.xml")).toContain("Beilagen");
       expect(xml("word/document.xml")).not.toContain("<w:pgBorders");
+      if (mode === "contact") {
+        expect(header).toContain('<w:rFonts w:ascii="Georgia" w:hAnsi="Georgia"/>');
+        expect(header).toContain('<w:sz w:val="22"/>');
+        expect(header).toContain('<w:color w:val="123456"/>');
+        expect(xml("word/document.xml")).toContain(
+          '<w:rFonts w:ascii="Georgia" w:hAnsi="Georgia"/>',
+        );
+        expect(xml("word/document.xml")).toContain('<w:sz w:val="20"/>');
+        expect(xml("word/document.xml")).toContain('<w:color w:val="654321"/>');
+      }
       if (process.env.DOCX_CHROME_QA_DIR)
         await Bun.write(`${process.env.DOCX_CHROME_QA_DIR}/brief-${mode}.docx`, output);
     }

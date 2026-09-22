@@ -353,7 +353,11 @@ export function FormBetrieb({ data, onChange }: Props) {
   );
 }
 
-export function FormBeilagen({ data, onChange }: Props) {
+export function FormBeilagen({
+  data,
+  onChange,
+  onRealignFooter,
+}: Props & { onRealignFooter?: () => void }) {
   const values = coverAttachmentValues(data);
 
   return (
@@ -367,6 +371,20 @@ export function FormBeilagen({ data, onChange }: Props) {
         <span>Auf Titelblatt anzeigen</span>
       </label>
       <AttachmentListEditor values={values} onChange={(beilagen) => onChange({ beilagen })} />
+      {onRealignFooter ? (
+        <div className="rounded-md border border-dashed p-2.5">
+          <button
+            type="button"
+            onClick={onRealignFooter}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent"
+          >
+            Kontakt &amp; Beilagen neu ausrichten
+          </button>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+            Setzt nur Position und Grösse dieser beiden Bereiche passend zur Vorlage zurück.
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }

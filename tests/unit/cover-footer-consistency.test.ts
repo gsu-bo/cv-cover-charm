@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { buildBlocks } from "../../src/components/cover/layouts";
+import { buildBlocks, resetCoverFooterGeometry } from "../../src/components/cover/layouts";
 import { resolveLayout } from "../../src/components/cover/resolve";
 import {
   DEFAULT_COVER_BEILAGEN,
@@ -100,5 +100,21 @@ describe("global cover footer consistency", () => {
 
     expect(layout.beilagenTitel.y).toBe(210);
     expect(layout.beilagen.y).toBe(220);
+  });
+
+  test("footer realignment restores geometry links without deleting visual choices", () => {
+    const overrides = resetCoverFooterGeometry({
+      kontaktTitel: { x: 31, y: 190, w: 62, color: "#123456", weight: 800 },
+      kontakt: { x: 31, y: 205, above: null, anchorBottom: false, font: "serif" },
+      beilagenTitel: { x: 122, y: 214, follows: null, uppercase: false },
+      beilagen: { x: 122, y: 228, w: 70, gap: 9, align: "left" },
+      name: { x: 44, y: 88, color: "accent" },
+    });
+
+    expect(overrides.kontaktTitel).toEqual({ color: "#123456", weight: 800 });
+    expect(overrides.kontakt).toEqual({ font: "serif" });
+    expect(overrides.beilagenTitel).toEqual({ uppercase: false });
+    expect(overrides.beilagen).toEqual({ align: "left" });
+    expect(overrides.name).toEqual({ x: 44, y: 88, color: "accent" });
   });
 });

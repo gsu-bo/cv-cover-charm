@@ -50,7 +50,11 @@ import {
   type NewElement,
 } from "@/components/cover/new-element";
 import { Section } from "@/components/cover/Section";
-import { buildBlocks, type StyleOverrides } from "@/components/cover/layouts";
+import {
+  buildBlocks,
+  resetCoverFooterGeometry,
+  type StyleOverrides,
+} from "@/components/cover/layouts";
 import { downloadBlob, safeFileName } from "@/lib/download";
 import { downloadCombinedDossierPdf } from "@/lib/dossier-pdf";
 import { normalizeCssZoomForHtml2Canvas } from "@/lib/html2canvas-export";
@@ -709,6 +713,19 @@ function Titelblatt() {
     },
     [snapshotPayload],
   );
+
+  const realignContactAndAttachments = () => {
+    keepSnapshot("Vor dem Ausrichten von Kontakt und Beilagen", true);
+    setLayoutByTemplate((current) => ({
+      ...current,
+      [template]: resetCoverFooterGeometry(current[template]),
+    }));
+    setSelected(null);
+    setStatus({
+      kind: "ok",
+      text: "Kontakt und Beilagen passend zur Vorlage neu ausgerichtet",
+    });
+  };
 
   // Entwurf sichern
   useEffect(() => {
@@ -1411,7 +1428,11 @@ function Titelblatt() {
               onToggle={() => toggleSection("beilagen")}
               hint={data.showBeilagenOnCover !== false ? "angezeigt" : "ausgeblendet"}
             >
-              <FormBeilagen data={data} onChange={patch} />
+              <FormBeilagen
+                data={data}
+                onChange={patch}
+                onRealignFooter={realignContactAndAttachments}
+              />
             </Section>
 
             <div className="mt-2 h-px bg-border" />
