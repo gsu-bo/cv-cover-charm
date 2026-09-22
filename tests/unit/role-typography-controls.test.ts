@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import {
-  emptyLetterDesign,
-  normalizeLetterDesign,
-} from "../../src/components/letter/types";
+import { emptyLetterDesign, normalizeLetterDesign } from "../../src/components/letter/types";
 
 const cvOverrideCss = readFileSync(
   new URL("../../src/components/cv/document-title-user-override.css", import.meta.url),
@@ -50,11 +47,22 @@ describe("user-owned typography roles", () => {
 
   test("stacked contact header groups address/place and phone/email with configurable separator", () => {
     expect(headerControls).toContain("Kontaktdaten in Zeilen");
-    expect(headerControls).toContain("Gilt zwischen Strasse und Ort sowie zwischen Telefon und E-Mail.");
+    expect(headerControls).toContain(
+      "Gilt zwischen Strasse und Ort sowie zwischen Telefon und E-Mail.",
+    );
     expect(headerRenderer).toContain("stackedAddressRows");
     expect(headerRenderer).toContain("stackedPhoneRows");
     expect(headerRenderer).toContain("data-dossier-stacked-contact");
     expect(headerRenderer).toContain("style={inlineSeparator}");
+  });
+
+  test("header and footer expose independent font-size and text-color controls", () => {
+    expect(headerControls).toContain("data-dossier-font-size-control={kind}");
+    expect(headerControls).toContain("data-dossier-text-color-control={kind}");
+    expect(headerControls).toContain('kind="header"');
+    expect(headerControls).toContain('kind="footer"');
+    expect(headerRenderer).toContain("data-dossier-header-font-size");
+    expect(headerRenderer).toContain("data-dossier-footer-font-size");
   });
 
   test("letter role typography is normalized and clamped without changing untouched defaults", () => {

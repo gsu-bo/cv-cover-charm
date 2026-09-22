@@ -38,9 +38,11 @@ describe("dossier chrome customization", () => {
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerBackgroundColor).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerGradientColor).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerTextColor).toBeNull();
+    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.headerFontSizePt).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerBackgroundColor).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerGradientColor).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerTextColor).toBeNull();
+    expect(DEFAULT_DOSSIER_CHROME_OPTIONS.footerFontSizePt).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.borderEnabled).toBe(false);
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.borderColor).toBeNull();
     expect(DEFAULT_DOSSIER_CHROME_OPTIONS.borderWidthMm).toBe(0.6);
@@ -146,8 +148,10 @@ describe("dossier chrome customization", () => {
         headerBackgroundColor: "#123456",
         headerGradientColor: "#abcdef",
         headerTextColor: "#ABCDEF",
+        headerFontSizePt: 11.2,
         footerBackgroundColor: "not-a-color",
         footerTextColor: "#654321",
+        footerFontSizePt: 9.8,
         borderEnabled: false,
         borderColor: "#fedcba",
         borderWidthMm: 1.2,
@@ -171,8 +175,10 @@ describe("dossier chrome customization", () => {
     expect(state.shared.headerBackgroundColor).toBe("#123456");
     expect(state.shared.headerGradientColor).toBe("#abcdef");
     expect(state.shared.headerTextColor).toBe("#abcdef");
+    expect(state.shared.headerFontSizePt).toBe(11);
     expect(state.shared.footerBackgroundColor).toBeNull();
     expect(state.shared.footerTextColor).toBe("#654321");
+    expect(state.shared.footerFontSizePt).toBe(10);
     expect(state.shared.borderEnabled).toBe(false);
     expect(state.shared.borderColor).toBe("#fedcba");
     expect(state.shared.borderWidthMm).toBe(1.2);
@@ -222,9 +228,11 @@ describe("dossier chrome customization", () => {
       headerBackgroundColor: "#112233",
       headerGradientColor: "#445566",
       headerTextColor: "#123456",
+      headerFontSizePt: 11,
       footerBackgroundColor: "#778899",
       footerGradientColor: "#aabbcc",
       footerTextColor: "#654321",
+      footerFontSizePt: 10,
       borderEnabled: true,
       borderColor: "#fedcba",
       borderWidthMm: 0.9,
@@ -246,6 +254,8 @@ describe("dossier chrome customization", () => {
     expect(markup).toContain('data-dossier-footer-text-layout="inline"');
     expect(markup).toContain('data-dossier-header-text-color="#123456"');
     expect(markup).toContain('data-dossier-footer-text-color="#654321"');
+    expect(markup).toContain('data-dossier-header-font-size="11"');
+    expect(markup).toContain('data-dossier-footer-font-size="10"');
     expect(markup).toContain('data-dossier-border-enabled="true"');
     expect(markup).toContain('data-dossier-border-color="#fedcba"');
     expect(markup).toContain('data-dossier-border-width-mm="0.9"');
@@ -254,6 +264,8 @@ describe("dossier chrome customization", () => {
     expect(markup).toContain("linear-gradient(90deg, #778899, #aabbcc)");
     expect(markup).toContain("color:#123456");
     expect(markup).toContain("color:#654321");
+    expect(markup).toContain("font-size:11pt");
+    expect(markup).toContain("font-size:10pt");
     expect(markup).toContain("border-bottom:0.9mm solid #fedcba");
     expect(markup).toContain("border-top:0.9mm solid #fedcba");
     expect(markup).toContain("Lea Müller");

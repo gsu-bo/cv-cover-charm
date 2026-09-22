@@ -1,7 +1,7 @@
 import { DEFAULTS } from "@/default-config";
 import { dossierDefaultFontKey } from "@/lib/dossier-theme";
 import type { Block, BlockStyle, ColorSlot, CoverData, CustomField, TemplateId } from "./types";
-import { coverAttachmentValues } from "./types";
+import { coverAttachmentValues, withoutBlockGeometry } from "./types";
 import { buildBlocks as buildBaseBlocks } from "./layouts-base";
 import type { StyleOverrides } from "./layouts-base";
 import { isFreshTemplate } from "./fresh-templates";
@@ -26,6 +26,20 @@ const DIAGONAL_BEILAGEN_X_MM = 142;
 const DIAGONAL_BEILAGEN_WIDTH_MM = 48;
 
 const EDITORIAL_HEADING_IDS = new Set(["eyebrow", "kicker", "kontaktTitel", "anTitel"]);
+const COVER_FOOTER_BLOCK_IDS = new Set(["kontaktTitel", "kontakt", "beilagenTitel", "beilagen"]);
+
+/**
+ * Reconnect Kontakt and Beilagen to the active template's footer grid without
+ * discarding deliberate typography, colour or visibility changes.
+ */
+export function resetCoverFooterGeometry(overrides: StyleOverrides): StyleOverrides {
+  return Object.fromEntries(
+    Object.entries(overrides).map(([id, style]) => [
+      id,
+      COVER_FOOTER_BLOCK_IDS.has(id) ? withoutBlockGeometry(style) : style,
+    ]),
+  );
+}
 
 function setDefaultStyle<K extends keyof BlockStyle>(
   patch: Partial<BlockStyle>,

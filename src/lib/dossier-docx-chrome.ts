@@ -26,8 +26,19 @@ function ink(background: string) {
   const rgb = [0, 2, 4].map((offset) => parseInt(background.slice(offset, offset + 2), 16));
   return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722 > 148 ? "111111" : "FFFFFF";
 }
-function paragraph(text: string, foreground: string, bold = false) {
-  return `<w:p><w:pPr><w:spacing w:after="0" w:line="200" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Cabin" w:hAnsi="Cabin"/><w:sz w:val="16"/><w:color w:val="${foreground}"/>${bold ? "<w:b/>" : ""}</w:rPr><w:t xml:space="preserve">${escape(text)}</w:t></w:r></w:p>`;
+const WORD_FONT = {
+  sans: "Arial",
+  serif: "Georgia",
+  times: "Times New Roman",
+  humanist: "Verdana",
+  freundlich: "Cabin",
+  schmal: "Arial Narrow",
+  maschine: "Courier New",
+  plakativ: "Impact",
+} as const;
+function paragraph(text: string, foreground: string, bold = false, fontSizePt = 8, font = "Cabin") {
+  const halfPoints = Math.max(12, Math.min(28, Math.round(fontSizePt * 2)));
+  return `<w:p><w:pPr><w:spacing w:after="0" w:line="200" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="${font}" w:hAnsi="${font}"/><w:sz w:val="${halfPoints}"/><w:color w:val="${foreground}"/>${bold ? "<w:b/>" : ""}</w:rPr><w:t xml:space="preserve">${escape(text)}</w:t></w:r></w:p>`;
 }
 function band(id: string, background: string, y: number, height: number) {
   return `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="1" w:lineRule="exact"/></w:pPr><w:r><w:pict><v:rect id="${id}" style="position:absolute;margin-left:0mm;margin-top:${y}mm;width:210mm;height:${height}mm;z-index:251658240;mso-position-horizontal-relative:page;mso-position-vertical-relative:page" fillcolor="#${background}" stroked="f"/></w:pict></w:r></w:p>`;
@@ -80,6 +91,9 @@ function header(
     options.headerBackgroundColor ?? colors.primary ?? colors.accent,
     "111111",
   );
+  const foreground = color(options.headerTextColor, ink(background));
+  const fontSizePt = options.headerFontSizePt ?? (options.headerTextLayout === "stacked" ? 8 : 8.5);
+  const font = options.textFont ? WORD_FONT[options.textFont] : "Cabin";
   let body = band(
     `semantic-header-${page}`,
     background,
@@ -89,19 +103,17 @@ function header(
   const reduced = hasReducedContinuationHeader(options, page);
   if (!reduced) {
     if (content?.headerTitle?.trim()) {
-      body += paragraph(content.headerTitle.trim(), ink(background), true);
+      body += paragraph(content.headerTitle.trim(), foreground, true, fontSizePt, font);
     }
     if (content?.headerText?.trim()) {
-      body += paragraph(content.headerText.trim(), ink(background));
+      body += paragraph(content.headerText.trim(), foreground, false, fontSizePt, font);
     }
   }
   if (mode === "contact") {
     const rows = (
       reduced
         ? [
-            options.headerShowName && contact.name
-              ? { key: "name", value: contact.name }
-              : null,
+            options.headerShowName && contact.name ? { key: "name", value: contact.name } : null,
             options.headerShowEmail && contact.email
               ? { key: "email", value: contact.email }
               : null,
@@ -110,9 +122,7 @@ function header(
               : null,
           ]
         : [
-            options.headerShowName && contact.name
-              ? { key: "name", value: contact.name }
-              : null,
+            options.headerShowName && contact.name ? { key: "name", value: contact.name } : null,
             options.headerShowAddress && contact.address
               ? { key: "address", value: contact.address }
               : null,
@@ -135,8 +145,10 @@ function header(
       .map((line) =>
         paragraph(
           line,
-          ink(background),
+          foreground,
           !inline && options.headerShowName && line === contact.name,
+          fontSizePt,
+          font,
         ),
       )
       .join("");
@@ -155,6 +167,9 @@ function footer(
     options.footerBackgroundColor ?? colors.accent ?? colors.secondary,
     "4B5563",
   );
+  const foreground = color(options.footerTextColor, ink(background));
+  const fontSizePt = options.footerFontSizePt ?? 8.5;
+  const font = options.textFont ? WORD_FONT[options.textFont] : "Cabin";
   const height = dossierFooterVisualHeightMmForOptions(options);
   const customText = [content?.footerTitle?.trim(), content?.footerText?.trim()]
     .filter((value): value is string => !!value)
@@ -163,7 +178,7 @@ function footer(
   return part(
     "footer",
     band("semantic-footer", background, 297 - height, height) +
-      (resolvedText ? paragraph(resolvedText, ink(background)) : ""),
+      (resolvedText ? paragraph(resolvedText, foreground, false, fontSizePt, font) : ""),
   );
 }
 function finalPageDetailsFooter(
@@ -177,13 +192,16 @@ function finalPageDetailsFooter(
     "4B5563",
   );
   const height = dossierFooterVisualHeightMmForOptions(options);
-  const foreground = ink(background);
+  const foreground = color(options.footerTextColor, ink(background));
+  const fontSizePt = options.footerFontSizePt ?? 8.5;
+  const halfPoints = Math.max(12, Math.min(28, Math.round(fontSizePt * 2)));
+  const font = options.textFont ? WORD_FONT[options.textFont] : "Cabin";
   return (
     band("semantic-footer-final", background, 297 - height, height).replace(
       "<v:rect ",
       '<v:rect xmlns:v="urn:schemas-microsoft-com:vml" ',
     ) +
-    `<w:p><w:pPr><w:framePr w:w="${twips(170)}" w:h="${twips(Math.max(4, height - 4))}" w:hAnchor="page" w:vAnchor="page" w:x="${twips(20)}" w:y="${twips(297 - height + 2)}" w:wrap="none" w:hRule="atLeast"/><w:spacing w:after="0" w:line="200" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Cabin" w:hAnsi="Cabin"/><w:sz w:val="16"/><w:color w:val="${foreground}"/></w:rPr><w:t xml:space="preserve">${escape(text)}</w:t></w:r></w:p>`
+    `<w:p><w:pPr><w:framePr w:w="${twips(170)}" w:h="${twips(Math.max(4, height - 4))}" w:hAnchor="page" w:vAnchor="page" w:x="${twips(20)}" w:y="${twips(297 - height + 2)}" w:wrap="none" w:hRule="atLeast"/><w:spacing w:after="0" w:line="200" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="${font}" w:hAnsi="${font}"/><w:sz w:val="${halfPoints}"/><w:color w:val="${foreground}"/></w:rPr><w:t xml:space="preserve">${escape(text)}</w:t></w:r></w:p>`
   );
 }
 const paragraphText = (xml: string) =>
@@ -395,8 +413,7 @@ export async function applyDossierChromeToDocx(
       // Template-specific DOCX recipes can already provide part of the visual
       // separation below the 32 mm header. Keep the visible header unchanged
       // and only reclaim redundant body safety space in the CV section.
-      const cvTopAllowanceMm =
-        scope === "cv" ? (warmRecipe ? 0.35 : citrusRecipe ? 8 : 0) : 0;
+      const cvTopAllowanceMm = scope === "cv" ? (warmRecipe ? 0.35 : citrusRecipe ? 8 : 0) : 0;
       const minTop = twips(chromeTopMm - cvTopAllowanceMm);
       properties = properties.replace(
         /w:top="(\d+)"/,
