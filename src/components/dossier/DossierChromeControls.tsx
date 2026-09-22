@@ -520,7 +520,7 @@ export function DossierChromeControls({
               />
               <TextColorControl
                 kind="header"
-                color={options.headerTextColor}
+                color={options.headerTextColor ?? null}
                 fallback="#ffffff"
                 onColor={(headerTextColor) => patchOptions({ headerTextColor })}
               />
@@ -624,7 +624,7 @@ export function DossierChromeControls({
               />
               <TextColorControl
                 kind="footer"
-                color={options.footerTextColor}
+                color={options.footerTextColor ?? null}
                 fallback="#ffffff"
                 onColor={(footerTextColor) => patchOptions({ footerTextColor })}
               />
