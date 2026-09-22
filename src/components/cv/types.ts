@@ -100,7 +100,41 @@ export type CvCustomSection = {
   entries: CvEntry[];
   /** Optionales Schnellwahl-Preset; Titel und Inhalte bleiben danach frei editierbar. */
   preset?: CvCustomSectionPresetKey;
+  /** Wiederverwendbare Darstellung für Rubriken mit Bezeichnung-Wert-Zeilen. */
+  rowLayout?: Partial<CvStructuredRowLayout>;
 };
+
+export type CvStructuredRowDirection = "inline" | "stacked";
+
+export type CvStructuredRowLayout = {
+  direction: CvStructuredRowDirection;
+  /** Horizontaler Abstand zwischen Bezeichnung und Wert. */
+  columnGapMm: number;
+  /** Vertikaler Abstand zwischen zwei vollständigen Zeilen. */
+  rowGapMm: number;
+};
+
+export const DEFAULT_CV_STRUCTURED_ROW_LAYOUT: CvStructuredRowLayout = {
+  direction: "inline",
+  columnGapMm: 2,
+  rowGapMm: 2,
+};
+
+const finiteStructuredGap = (value: unknown, fallback: number) =>
+  typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(8, value)) : fallback;
+
+export function normalizeCvStructuredRowLayout(
+  value?: Partial<CvStructuredRowLayout> | null,
+): CvStructuredRowLayout {
+  return {
+    direction: value?.direction === "stacked" ? "stacked" : "inline",
+    columnGapMm: finiteStructuredGap(
+      value?.columnGapMm,
+      DEFAULT_CV_STRUCTURED_ROW_LAYOUT.columnGapMm,
+    ),
+    rowGapMm: finiteStructuredGap(value?.rowGapMm, DEFAULT_CV_STRUCTURED_ROW_LAYOUT.rowGapMm),
+  };
+}
 
 export type CvCustomSectionPresetKey = "familie" | "digitale-kenntnisse" | "eigene-rubrik";
 

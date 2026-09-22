@@ -13,6 +13,9 @@ type JsPdfApiRegistry = {
   events: Array<[string, (this: JsPdf) => void]>;
   [PLUGIN_FLAG]?: boolean;
 };
+type PdfFontMetadata = {
+  ascender?: unknown;
+};
 
 const subjects = new WeakMap<object, string>();
 const textLayerApplied = new WeakSet<object>();
@@ -23,9 +26,9 @@ function installRasterTextMask() {
   const style = document.createElement("style");
   style.id = MASK_STYLE_ID;
   // Stable compatibility/diagnostic hook only. Visible CV typography belongs
-// to Chromium/html2canvas; hiding it here would force jsPDF to become a
-// second visible typography engine and reintroduce condensed/duplicate text.
-style.textContent = "";
+  // to Chromium/html2canvas; hiding it here would force jsPDF to become a
+  // second visible typography engine and reintroduce condensed/duplicate text.
+  style.textContent = "";
   document.head.appendChild(style);
 }
 
@@ -146,13 +149,73 @@ function visibleInsidePage(element: HTMLElement, page: HTMLElement): boolean {
   return true;
 }
 
+function activePdfFontAscentRatio(pdf: JsPdf): number {
+  const activeFont = pdf.getFont();
+  const metadata = activeFont.metadata as PdfFontMetadata | undefined;
+  const ascender = Number(metadata?.ascender);
+  if (Number.isFinite(ascender) && ascender > 0) {
+    // jsPDF normalizes embedded TrueType ascenders to a 1000-unit em before
+    // writing the FontDescriptor. PDF viewers use that same descriptor for the
+    // selectable text layer, so using the same ratio removes our old 0.82
+    // baseline guess.
+    const ratio = ascender / 1000;
+    if (ratio >= 0.4 && ratio <= 1.4) return ratio;
+  }
+
+  const name = activeFont.fontName.toLowerCase();
+  if (name.includes("helvetica")) return 0.718;
+  if (name.includes("times")) return 0.683;
+  if (name.includes("courier")) return 0.629;
+  return 0.8;
+}
+
+/**
+ * Geometry used by the invisible PDF text layer.
+ *
+ * The visible glyphs stay browser-rasterized. For selection, the PDF font size
+ * therefore follows the browser Range box height rather than the CSS font-size
+ * declaration. PDF viewers then build a selectable box with the same height as
+ * the text that the user actually sees.
+ */
+export function resolveCvPdfSelectionGeometry(
+  topMm: number,
+  rectHeightPx: number,
+  mmY: number,
+  fallbackFontSizePt: number,
+  ascentRatio: number,
+): { fontSizePt: number; baselineMm: number } {
+  const measuredHeightMm = rectHeightPx * mmY;
+  const measuredFontSizePt = measuredHeightMm / MM_PER_PT;
+  const fontSizePt =
+    Number.isFinite(measuredFontSizePt) && measuredFontSizePt > 0
+      ? measuredFontSizePt
+      : fallbackFontSizePt;
+  const safeAscentRatio =
+    Number.isFinite(ascentRatio) && ascentRatio > 0 ? ascentRatio : 0.8;
+
+  return {
+    fontSizePt,
+    baselineMm: topMm + fontSizePt * MM_PER_PT * safeAscentRatio,
+  };
+}
+
 function fittedHorizontalScale(pdf: JsPdf, text: string, targetWidthMm: number): number {
   const renderedWidthMm = pdf.getTextWidth(text);
   if (!Number.isFinite(renderedWidthMm) || renderedWidthMm <= 0 || targetWidthMm <= 0) return 1;
 
-  // The native layer is invisible, but matching the browser token width keeps
-  // selection/search geometry aligned with the visible raster typography.
-  return Math.max(0.5, Math.min(1.5, targetWidthMm / renderedWidthMm));
+  // This text is invisible, so exact browser selection geometry matters more
+  // than keeping the native font near its natural width. The old 0.5–1.5 clamp
+  // left visibly misplaced selection boxes when browser/PDF metrics diverged.
+  const scale = targetWidthMm / renderedWidthMm;
+  return Math.max(0.1, Math.min(10, scale));
+}
+
+function unionRects(rects: DOMRect[]): DOMRect {
+  const left = Math.min(...rects.map((rect) => rect.left));
+  const top = Math.min(...rects.map((rect) => rect.top));
+  const right = Math.max(...rects.map((rect) => rect.right));
+  const bottom = Math.max(...rects.map((rect) => rect.bottom));
+  return new DOMRect(left, top, right - left, bottom - top);
 }
 
 function drawCvTextLayer(pdf: JsPdf, page: HTMLElement) {
@@ -182,7 +245,7 @@ function drawCvTextLayer(pdf: JsPdf, page: HTMLElement) {
 
     const style = window.getComputedStyle(parent);
     const fontSizePx = Number.parseFloat(style.fontSize) || 14;
-    const fontSizePt = fontSizePx * (72 / 96);
+    const fallbackFontSizePt = fontSizePx * (72 / 96);
     const [red, green, blue] = rgb(style.color);
     const font = pdfFontForText(parent, page, style);
     const fontStyle = pdfFontStyle(style);
@@ -202,8 +265,17 @@ function drawCvTextLayer(pdf: JsPdf, page: HTMLElement) {
         fragments.push({ text: token, rect: rects[0] });
       } else {
         let fragment = "";
-        let fragmentRect: DOMRect | null = null;
+        let fragmentRects: DOMRect[] = [];
         let previousTop: number | null = null;
+
+        const flushFragment = () => {
+          if (fragment && fragmentRects.length) {
+            fragments.push({ text: fragment, rect: unionRects(fragmentRects) });
+          }
+          fragment = "";
+          fragmentRects = [];
+        };
+
         for (let offset = 0; offset < match[0].length; offset += 1) {
           range.setStart(node, start + offset);
           range.setEnd(node, start + offset + 1);
@@ -211,32 +283,39 @@ function drawCvTextLayer(pdf: JsPdf, page: HTMLElement) {
           if (rect.width <= 0 || rect.height <= 0) continue;
           const character = transformed(match[0][offset], style);
           if (previousTop !== null && Math.abs(rect.top - previousTop) > 1) {
-            if (fragment && fragmentRect) fragments.push({ text: fragment, rect: fragmentRect });
-            fragment = "";
-            fragmentRect = null;
+            flushFragment();
           }
           fragment += character;
-          if (!fragmentRect) fragmentRect = rect;
+          fragmentRects.push(rect);
           previousTop = rect.top;
         }
-        if (fragment && fragmentRect) fragments.push({ text: fragment, rect: fragmentRect });
+        flushFragment();
       }
 
       for (const fragment of fragments) {
         const x = (fragment.rect.left - pageRect.left) * mmX;
         const top = (fragment.rect.top - pageRect.top) * mmY;
-        const baseline = top + fontSizePt * MM_PER_PT * 0.82;
+
         pdf.setFont(font, fontStyle);
+        const ascentRatio = activePdfFontAscentRatio(pdf);
+        const { fontSizePt, baselineMm } = resolveCvPdfSelectionGeometry(
+          top,
+          fragment.rect.height,
+          mmY,
+          fallbackFontSizePt,
+          ascentRatio,
+        );
         pdf.setFontSize(fontSizePt);
         pdf.setTextColor(red, green, blue);
-        const horizontalScale =
-          rects.length === 1
-            ? fittedHorizontalScale(pdf, fragment.text, fragment.rect.width * mmX)
-            : 1;
-        // Browser/html2canvas owns every visible glyph and decoration. Keep
-        // native text only for search/copy/selection; jsPDF metrics must never
-        // affect the visible CV typography.
-        pdf.text(fragment.text, x, baseline, {
+        const horizontalScale = fittedHorizontalScale(
+          pdf,
+          fragment.text,
+          fragment.rect.width * mmX,
+        );
+        // Browser/html2canvas owns every visible glyph and decoration. The
+        // native text exists only for search/copy/selection, with its box fitted
+        // to the browser Range rectangle rather than a guessed baseline.
+        pdf.text(fragment.text, x, baselineMm, {
           horizontalScale,
           renderingMode: "invisible",
         });
