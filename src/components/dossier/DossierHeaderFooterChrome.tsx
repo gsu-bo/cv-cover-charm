@@ -198,6 +198,8 @@ export function DossierHeaderFooterChrome({
   const footerRoles = onColorRoles(footerBackground, visualOptions.footerGradientColor ?? primary);
   const headerTextColor = options.headerTextColor ?? headerRoles.ink;
   const footerTextColor = options.footerTextColor ?? footerRoles.ink;
+  const headerFontSizePt = options.headerFontSizePt ?? null;
+  const footerFontSizePt = options.footerFontSizePt ?? null;
   const headerSurface = surfaceBackground(
     headerBackground,
     headerVisualOptions.headerGradientColor,
@@ -235,9 +237,7 @@ export function DossierHeaderFooterChrome({
   const footerTitle = documentContent?.footerTitle?.trim() ?? "";
   const footerText = documentContent?.footerText?.trim() ?? "";
   const headerDocumentContentMm = (headerTitle ? 5 : 0) + (headerText ? 4 : 0);
-  const footerCustomValues = [footerTitle, footerText].filter(
-    (value): value is string => !!value,
-  );
+  const footerCustomValues = [footerTitle, footerText].filter((value): value is string => !!value);
   const contactRows = [
     options.headerShowName && resolvedContact.name
       ? { key: "name", value: resolvedContact.name, strong: true }
@@ -259,9 +259,7 @@ export function DossierHeaderFooterChrome({
   const stackedAddressRows = contactRows.filter(
     (row) => row.key === "address" || row.key === "place",
   );
-  const stackedPhoneRows = contactRows.filter(
-    (row) => row.key === "phone" || row.key === "email",
-  );
+  const stackedPhoneRows = contactRows.filter((row) => row.key === "phone" || row.key === "email");
   const stackedGroups = [stackedAddressRows, stackedPhoneRows].filter((rows) => rows.length > 0);
   const continuationRows = [
     options.headerShowName && resolvedContact.name
@@ -316,6 +314,8 @@ export function DossierHeaderFooterChrome({
       data-dossier-footer-text-layout={options.footerTextLayout}
       data-dossier-header-text-color={options.headerTextColor ?? "automatic"}
       data-dossier-footer-text-color={options.footerTextColor ?? "automatic"}
+      data-dossier-header-font-size={headerFontSizePt ?? "automatic"}
+      data-dossier-footer-font-size={footerFontSizePt ?? "automatic"}
       data-dossier-border-enabled={visualOptions.borderEnabled ? "true" : "false"}
       data-dossier-border-color={borderColor}
       data-dossier-border-width-mm={visualOptions.borderWidthMm}
@@ -366,7 +366,7 @@ export function DossierHeaderFooterChrome({
               background: headerSurface,
               borderBottom: borderStyle,
               color: headerTextColor,
-              fontSize: "7.6pt",
+              fontSize: `${headerFontSizePt ?? 7.6}pt`,
               lineHeight: 1.1,
             }}
           >
@@ -446,7 +446,7 @@ export function DossierHeaderFooterChrome({
                   : `${2 + headerDocumentContentMm}mm ${chromeContentRightMm}mm 2mm ${chromeContentLeftMm}mm`,
                 boxSizing: "border-box",
                 color: headerTextColor,
-                fontSize: stackedHeader ? "8pt" : "8.5pt",
+                fontSize: `${headerFontSizePt ?? (stackedHeader ? 8 : 8.5)}pt`,
                 lineHeight: stackedHeader ? 1.08 : 1.18,
                 overflow: "hidden",
               }}
@@ -458,7 +458,13 @@ export function DossierHeaderFooterChrome({
                   style={{ overflowWrap: "anywhere", transform: headerContentTransform }}
                 >
                   {stackedName ? (
-                    <div className="font-semibold" style={{ fontSize: "9.5pt", marginBottom: "0.2mm" }}>
+                    <div
+                      className="font-semibold"
+                      style={{
+                        fontSize: `${headerFontSizePt ?? 9.5}pt`,
+                        marginBottom: "0.2mm",
+                      }}
+                    >
                       {stackedName.value}
                     </div>
                   ) : null}
@@ -511,9 +517,7 @@ export function DossierHeaderFooterChrome({
         )
       ) : null}
 
-      {headerMode !== "none" &&
-      !continuationContact &&
-      (headerTitle || headerText) ? (
+      {headerMode !== "none" && !continuationContact && (headerTitle || headerText) ? (
         <div
           data-dossier-header-document-content
           className="absolute inset-x-0 top-0 flex min-w-0 flex-col justify-start"
@@ -528,14 +532,19 @@ export function DossierHeaderFooterChrome({
           }}
         >
           {headerTitle ? (
-            <div data-dossier-header-title className="truncate text-[7.6pt] font-semibold">
+            <div
+              data-dossier-header-title
+              className="truncate font-semibold"
+              style={{ fontSize: `${headerFontSizePt ?? 7.6}pt` }}
+            >
               {headerTitle}
             </div>
           ) : null}
           {headerText ? (
             <div
               data-dossier-header-custom-text
-              className="truncate text-[6.6pt] opacity-95"
+              className="truncate opacity-95"
+              style={{ fontSize: `${headerFontSizePt ?? 6.6}pt` }}
             >
               {headerText}
             </div>
@@ -564,12 +573,13 @@ export function DossierHeaderFooterChrome({
       {options.footerMode === "compact" && footerCustomValues.length ? (
         <div
           data-dossier-footer-custom-content
-          className="absolute inset-x-0 bottom-0 flex min-w-0 items-center text-[6.6pt]"
+          className="absolute inset-x-0 bottom-0 flex min-w-0 items-center"
           style={{
             height: `${compactFooterHeight}mm`,
             padding: `0 ${chromeContentRightMm}mm 0 ${chromeContentLeftMm}mm`,
             boxSizing: "border-box",
             color: footerTextColor,
+            fontSize: `${footerFontSizePt ?? 6.6}pt`,
             overflow: "hidden",
             transform: footerContentTransform,
           }}
@@ -586,7 +596,7 @@ export function DossierHeaderFooterChrome({
           data-dossier-footer-height-mm={detailsHeight}
           data-letter-footer={letter ? "attachments" : undefined}
           data-letter-footer-height-mm={letter ? detailsHeight : undefined}
-          className="absolute inset-x-0 bottom-0 text-[8.5pt] leading-[1.3]"
+          className="absolute inset-x-0 bottom-0 leading-[1.3]"
           style={{
             height: `${detailsHeight}mm`,
             padding: `2.2mm ${chromeContentRightMm}mm 2.2mm ${chromeContentLeftMm}mm`,
@@ -594,6 +604,7 @@ export function DossierHeaderFooterChrome({
             background: footerSurface,
             borderTop: borderStyle,
             color: footerTextColor,
+            fontSize: `${footerFontSizePt ?? 8.5}pt`,
             overflow: "hidden",
           }}
         >
@@ -605,7 +616,9 @@ export function DossierHeaderFooterChrome({
                 style={{ transform: footerContentTransform }}
               >
                 {footerTitle ? <div className="font-semibold">{footerTitle}</div> : null}
-                {footerText ? <div className="min-w-0 break-words opacity-95">{footerText}</div> : null}
+                {footerText ? (
+                  <div className="min-w-0 break-words opacity-95">{footerText}</div>
+                ) : null}
               </div>
             ) : (
               <div
@@ -615,7 +628,9 @@ export function DossierHeaderFooterChrome({
               >
                 {footerTitle ? <span className="shrink-0 font-semibold">{footerTitle}</span> : null}
                 {footerTitle && footerText ? <span className="mx-[2mm] opacity-60">·</span> : null}
-                {footerText ? <span className="min-w-0 break-words opacity-95">{footerText}</span> : null}
+                {footerText ? (
+                  <span className="min-w-0 break-words opacity-95">{footerText}</span>
+                ) : null}
               </div>
             )
           ) : footerLabel && footerDetails.length ? (

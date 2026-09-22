@@ -32,6 +32,8 @@ export type DossierChromeOptions = {
   headerGradientColor: string | null;
   /** Explicit header text color. Missing/null keeps automatic readable template contrast. */
   headerTextColor?: string | null;
+  /** Explicit header text size in points. Missing/null keeps the template default. */
+  headerFontSizePt?: number | null;
   footerMode: DossierFooterMode;
   footerHeightMm: number | null;
   /** Signed vertical nudge for footer details. Does not move the footer surface. */
@@ -41,6 +43,8 @@ export type DossierChromeOptions = {
   footerGradientColor: string | null;
   /** Explicit footer text color. Missing/null keeps automatic readable template contrast. */
   footerTextColor?: string | null;
+  /** Explicit footer text size in points. Missing/null keeps the template default. */
+  footerFontSizePt?: number | null;
   borderEnabled: boolean;
   borderColor: string | null;
   borderWidthMm: number;
@@ -89,6 +93,7 @@ export const DEFAULT_DOSSIER_CHROME_OPTIONS: DossierChromeOptions = {
   headerBackgroundColor: null,
   headerGradientColor: null,
   headerTextColor: null,
+  headerFontSizePt: null,
   footerMode: "compact",
   footerHeightMm: null,
   footerContentOffsetYMm: 0,
@@ -96,6 +101,7 @@ export const DEFAULT_DOSSIER_CHROME_OPTIONS: DossierChromeOptions = {
   footerBackgroundColor: null,
   footerGradientColor: null,
   footerTextColor: null,
+  footerFontSizePt: null,
   borderEnabled: false,
   borderColor: null,
   borderWidthMm: 0.6,
@@ -144,6 +150,13 @@ function normalizedColor(value: unknown): string | null {
 
 function normalizedFont(value: unknown): FontKey | null {
   return typeof value === "string" && value in FONT_LABELS ? (value as FontKey) : null;
+}
+
+function normalizedChromeFontSize(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  return Math.min(14, Math.max(6, Math.round(numeric * 2) / 2));
 }
 
 function normalizedBorderWidth(value: unknown, fallback: number): number {
@@ -218,6 +231,7 @@ function normalizeOptions(
     headerBackgroundColor: normalizedColor(value.headerBackgroundColor),
     headerGradientColor: normalizedColor(value.headerGradientColor),
     headerTextColor: normalizedColor(value.headerTextColor),
+    headerFontSizePt: normalizedChromeFontSize(value.headerFontSizePt),
     footerMode:
       value.footerMode === "details" ||
       value.footerMode === "none" ||
@@ -235,6 +249,7 @@ function normalizeOptions(
     footerBackgroundColor: normalizedColor(value.footerBackgroundColor),
     footerGradientColor: normalizedColor(value.footerGradientColor),
     footerTextColor: normalizedColor(value.footerTextColor),
+    footerFontSizePt: normalizedChromeFontSize(value.footerFontSizePt),
     borderEnabled:
       typeof value.borderEnabled === "boolean" ? value.borderEnabled : fallback.borderEnabled,
     borderColor: normalizedColor(value.borderColor),
@@ -269,6 +284,7 @@ function optionsFromSavedLetter(storage: Storage): DossierChromeOptions | null {
       headerBackgroundColor: design.headerBackgroundColor,
       headerGradientColor: design.headerGradientColor,
       headerTextColor: design.chromeHeaderTextColor,
+      headerFontSizePt: design.chromeHeaderFontSizePt,
       footerMode:
         design.footerMode === "attachments"
           ? "details"
@@ -278,6 +294,7 @@ function optionsFromSavedLetter(storage: Storage): DossierChromeOptions | null {
       footerBackgroundColor: design.footerBackgroundColor,
       footerGradientColor: design.footerGradientColor,
       footerTextColor: design.chromeFooterTextColor,
+      footerFontSizePt: design.chromeFooterFontSizePt,
       borderEnabled: design.chromeBorderEnabled,
       borderColor: design.chromeBorderColor,
       borderWidthMm: design.chromeBorderWidthMm,
@@ -430,12 +447,14 @@ function mirrorLegacyLetterDesign(next: DossierChromeState) {
       design.headerBackgroundColor === options.headerBackgroundColor &&
       design.headerGradientColor === options.headerGradientColor &&
       design.chromeHeaderTextColor === options.headerTextColor &&
+      design.chromeHeaderFontSizePt === options.headerFontSizePt &&
       design.footerMode === footerMode &&
       design.footerHeightMm === options.footerHeightMm &&
       design.footerTextLayout === options.footerTextLayout &&
       design.footerBackgroundColor === options.footerBackgroundColor &&
       design.footerGradientColor === options.footerGradientColor &&
       design.chromeFooterTextColor === options.footerTextColor &&
+      design.chromeFooterFontSizePt === options.footerFontSizePt &&
       design.chromeBorderEnabled === options.borderEnabled &&
       design.chromeBorderColor === options.borderColor &&
       design.chromeBorderWidthMm === options.borderWidthMm &&
@@ -460,12 +479,14 @@ function mirrorLegacyLetterDesign(next: DossierChromeState) {
         headerBackgroundColor: options.headerBackgroundColor,
         headerGradientColor: options.headerGradientColor,
         chromeHeaderTextColor: options.headerTextColor,
+        chromeHeaderFontSizePt: options.headerFontSizePt,
         footerMode,
         footerHeightMm: options.footerHeightMm,
         footerTextLayout: options.footerTextLayout,
         footerBackgroundColor: options.footerBackgroundColor,
         footerGradientColor: options.footerGradientColor,
         chromeFooterTextColor: options.footerTextColor,
+        chromeFooterFontSizePt: options.footerFontSizePt,
         chromeBorderEnabled: options.borderEnabled,
         chromeBorderColor: options.borderColor,
         chromeBorderWidthMm: options.borderWidthMm,
