@@ -1025,10 +1025,7 @@ test.describe("M5.8 dossier regression", () => {
     await expect(toolbar.locator("[data-letter-insert-control]")).toHaveCount(1);
     await twoColumnButton.click();
     await expect(twoColumnButton).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByRole("button", { name: "Linksbündig" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expect(alignmentControl.locator('button[aria-pressed="true"]')).toHaveCount(0);
     await expect(body.locator(":scope > div").nth(1)).toHaveAttribute("data-align", "left");
     await expect(body.locator(":scope > div").nth(1)).toHaveCSS("text-align", "left");
     await expect(body.locator(":scope > div").nth(1)).toHaveCSS("column-count", "2");
