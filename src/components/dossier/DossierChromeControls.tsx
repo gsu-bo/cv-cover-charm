@@ -212,7 +212,7 @@ function FontSizeControl({
         data-dossier-font-size-control={kind}
         type="range"
         min={6}
-        max={14}
+        max={30}
         step={0.5}
         value={size}
         onChange={(event) => onChange(Number(event.target.value))}
