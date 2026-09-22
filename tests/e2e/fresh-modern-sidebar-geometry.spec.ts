@@ -92,7 +92,7 @@ test("Fresh Sidebar templates keep their main column clear of the adjustable sid
   }
 
   const geometries = [];
-  for (const sidebarPct of [0.22, 0.42]) {
+  for (const sidebarPct of [0.22, 0.5]) {
     await applyTemplate(page, "warm2", sidebarPct);
     const geometry = await sidebarGeometry(page, "warm2");
     expect(geometry?.overlap ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(2);
@@ -100,7 +100,7 @@ test("Fresh Sidebar templates keep their main column clear of the adjustable sid
   }
 
   expect(geometries[0]?.rendererLeft).toBe("54mm");
-  expect(geometries[1]?.rendererLeft).toBe("96mm");
+  expect(geometries[1]?.rendererLeft).toBe("113mm");
   expect(
     geometries[1]?.mainLeft ?? Number.NEGATIVE_INFINITY,
     "wider user sidebar must move the main column right in the scaled preview",

@@ -187,10 +187,10 @@ describe("configurable CV and motivation-letter page margins", () => {
       cvFrameFor("klassisch"),
       0,
       "modern",
-      0.42,
+      0.5,
       DEFAULT_DOSSIER_CHROME_OPTIONS,
     );
-    expect(minimums.left).toBe(96);
+    expect(minimums.left).toBe(113);
     expect(DOSSIER_PAGE_MARGIN_HARD_MAX_MM).toBe(120);
     expect(
       clampDossierPageMarginsToMinimums({ top: 30, right: 20, bottom: 20, left: 110 }, minimums)
