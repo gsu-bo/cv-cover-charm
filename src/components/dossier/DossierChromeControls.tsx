@@ -178,6 +178,7 @@ function TextColorControl({
             data-dossier-text-color-control={kind}
             type="color"
             value={color ?? fallback}
+            onInput={(event) => onColor(event.currentTarget.value)}
             onChange={(event) => onColor(event.target.value)}
             className="h-7 w-10 cursor-pointer rounded border border-input bg-background"
             aria-label={`${kind === "header" ? "Header" : "Footer"}-Schriftfarbe`}
