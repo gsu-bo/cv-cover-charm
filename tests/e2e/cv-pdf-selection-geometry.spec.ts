@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 const BASE_URL = "http://127.0.0.1:4173";
-const TARGETS = ["Sekundarschule", "Schnupperlehre", "Volleyball"] as const;
+const TARGETS = ["Sekundarschule", "Schnupperlehre Informatik", "Volleyball"] as const;
 type Target = (typeof TARGETS)[number];
 
 type NormalizedBox = {
@@ -100,12 +100,12 @@ async function pdfSelectionBoxes(path: string): Promise<Partial<Record<Target, P
   const pdfPage = await document.getPage(1);
   const viewport = pdfPage.getViewport({ scale: 1 });
   const content = await pdfPage.getTextContent();
-  const boxes: Partial<Record<Target, PdfBox>> = {};
 
-  for (const item of content.items) {
-    if (!("str" in item) || !TARGETS.includes(item.str as Target)) continue;
+  const items = content.items.flatMap((item) => {
+    if (!("str" in item)) return [];
+    const text = item.str.trim().replace(/\s+/gu, " ");
+    if (!text) return [];
 
-    const target = item.str as Target;
     const transform = Util.transform(viewport.transform, item.transform);
     const fontHeight = Math.hypot(transform[2], transform[3]);
     const style = content.styles[item.fontName] as
@@ -118,14 +118,56 @@ async function pdfSelectionBoxes(path: string): Promise<Partial<Record<Target, P
           ? 1 + style.descent
           : 0.8;
 
-    boxes[target] = {
-      left: transform[4],
-      top: transform[5] - fontHeight * ascent,
-      width: item.width * viewport.scale,
-      height: fontHeight,
-      pageWidth: viewport.width,
-      pageHeight: viewport.height,
-    };
+    return [
+      {
+        text,
+        box: {
+          left: transform[4],
+          top: transform[5] - fontHeight * ascent,
+          width: item.width * viewport.scale,
+          height: fontHeight,
+          pageWidth: viewport.width,
+          pageHeight: viewport.height,
+        } satisfies PdfBox,
+      },
+    ];
+  });
+
+  const boxes: Partial<Record<Target, PdfBox>> = {};
+  for (const target of TARGETS) {
+    for (let start = 0; start < items.length; start += 1) {
+      const fragments: typeof items = [];
+      let combined = "";
+
+      for (let index = start; index < items.length; index += 1) {
+        fragments.push(items[index]);
+        combined = fragments.map((fragment) => fragment.text).join(" ").replace(/\s+/gu, " ");
+
+        if (combined === target) {
+          const left = Math.min(...fragments.map((fragment) => fragment.box.left));
+          const top = Math.min(...fragments.map((fragment) => fragment.box.top));
+          const right = Math.max(
+            ...fragments.map((fragment) => fragment.box.left + fragment.box.width),
+          );
+          const bottom = Math.max(
+            ...fragments.map((fragment) => fragment.box.top + fragment.box.height),
+          );
+          boxes[target] = {
+            left,
+            top,
+            width: right - left,
+            height: bottom - top,
+            pageWidth: viewport.width,
+            pageHeight: viewport.height,
+          };
+          break;
+        }
+
+        if (!target.startsWith(`${combined} `)) break;
+      }
+
+      if (boxes[target]) break;
+    }
   }
 
   return boxes;
@@ -141,9 +183,7 @@ test.describe("CV PDF selection geometry", () => {
       .locator('[data-dossier-document="cv"][data-export-mode="true"] [data-cv-page]')
       .first();
     await exportPage.waitFor({ state: "attached" });
-    await expect(exportPage).toContainText("Sekundarschule");
-    await expect(exportPage).toContainText("Schnupperlehre");
-    await expect(exportPage).toContainText("Volleyball");
+    for (const target of TARGETS) await expect(exportPage).toContainText(target);
 
     const browserBoxes = await exportPage.evaluate((element, targets) => {
       const pageElement = element as HTMLElement;
