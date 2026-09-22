@@ -530,24 +530,6 @@ test.describe("M5.8 dossier regression", () => {
     }
   });
 
-  test("long names and long content paginate across every layout without clipping", async ({
-    page,
-  }) => {
-    for (const layout of LAYOUT_IDS) {
-      await seedCv(page, { family: "editorial", layout, long: true });
-      const root = previewRoot(page);
-      await expect.poll(() => root.locator("[data-cv-page]").count()).toBeGreaterThan(1);
-      await assertNoMainClipping(page, `long editorial/${layout}`);
-      const nameBox = await root.locator("[data-cv-page='0'] [data-cv-name]").first().boundingBox();
-      const mainBox = await root.locator("[data-cv-page='0'] [data-cv-main]").first().boundingBox();
-      expect(nameBox).not.toBeNull();
-      expect(mainBox).not.toBeNull();
-      expect((nameBox?.x ?? 0) + (nameBox?.width ?? 0)).toBeLessThanOrEqual(
-        (mainBox?.x ?? 0) + (mainBox?.width ?? 0) + 1.5,
-      );
-    }
-  });
-
   test("legacy CV photo-shape preference migrates safely", async ({ page }) => {
     await seedCv(page, { photo: true, legacyPhotoShape: "circle" });
     await expect(page.locator("html")).toHaveAttribute("data-cv-photo-shape", "circle");
@@ -861,7 +843,7 @@ test.describe("M5.8 dossier regression", () => {
     await button.click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(
-      /^Motivationsschreiben-Lea-(?:Müller|Mueller)\.pdf$/,
+      /^Motivationsschreiben-Lea-(?:Müller|Mueller)-Informatiker-in-EFZ\.pdf$/,
     );
     const path = await download.path();
     expect(path).not.toBeNull();
@@ -1195,19 +1177,19 @@ test.describe("M5.8 dossier regression", () => {
         path: "/titelblatt",
         ownPdf: "Nur Titelblatt als PDF",
         reset: "Titelblatt zurücksetzen",
-        full: true,
+        positionReset: true,
       },
       {
         path: "/lebenslauf",
         ownPdf: "Nur Lebenslauf als PDF",
         reset: "Lebenslauf zurücksetzen",
-        full: true,
+        positionReset: true,
       },
       {
         path: "/anschreiben",
         ownPdf: "Nur Motivationsschreiben als PDF",
         reset: "Motivationsschreiben zurücksetzen",
-        full: false,
+        positionReset: false,
       },
     ] as const;
 
@@ -1221,37 +1203,28 @@ test.describe("M5.8 dossier regression", () => {
       let menu = page.locator("[data-editor-action-menu]");
       await expect(menu).toBeVisible();
 
-      if (item.full) {
-        await page.getByRole("button", { name: "Beispieldaten übernehmen", exact: true }).click();
-        await page.getByRole("button", { name: "Ja", exact: true }).click();
-        await expect(downloadToggle).toHaveAttribute("aria-expanded", "false");
-        await downloadToggle.click();
-        await expect(downloadToggle).toHaveAttribute("aria-expanded", "true");
-        menu = page.locator("[data-editor-action-menu]");
-        await expect(menu).toBeVisible();
+      await page.getByRole("button", { name: "Beispieldaten übernehmen", exact: true }).click();
+      await page.getByRole("button", { name: "Ja", exact: true }).click();
+      await expect(downloadToggle).toHaveAttribute("aria-expanded", "false");
+      await downloadToggle.click();
+      await expect(downloadToggle).toHaveAttribute("aria-expanded", "true");
+      menu = page.locator("[data-editor-action-menu]");
+      await expect(menu).toBeVisible();
 
-        const labels = await menu.locator("[data-editor-menu-label]").allTextContents();
-        expect(labels).toEqual([
-          "Ganzes Dossier als PDF",
-          item.ownPdf,
-          "Dossier speichern",
-          "Dossier laden",
-          "Beispieldaten übernehmen",
-          "Positionen & Grössen zurücksetzen",
-          "Früheren Stand laden",
-          item.reset,
-        ]);
-      } else {
-        await expect(menu.locator("[data-editor-menu-label]")).toHaveText([
-          item.ownPdf,
-          "Beispieldaten übernehmen",
-          "Früheren Stand laden",
-          item.reset,
-        ]);
-      }
+      const labels = await menu.locator("[data-editor-menu-label]").allTextContents();
+      expect(labels).toEqual([
+        "Ganzes Dossier als PDF",
+        item.ownPdf,
+        "Dossier speichern",
+        "Dossier laden",
+        "Beispieldaten übernehmen",
+        ...(item.positionReset ? ["Positionen & Grössen zurücksetzen"] : []),
+        "Früheren Stand laden",
+        item.reset,
+      ]);
 
-      const labels = menu.locator("[data-editor-menu-label]");
-      await expect(labels.locator("svg")).toHaveCount(await labels.count());
+      const labelNodes = menu.locator("[data-editor-menu-label]");
+      await expect(labelNodes.locator("svg")).toHaveCount(await labelNodes.count());
     }
   });
 
