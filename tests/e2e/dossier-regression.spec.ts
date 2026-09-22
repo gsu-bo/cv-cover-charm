@@ -1048,19 +1048,25 @@ test.describe("M5.8 dossier regression", () => {
 
     const previewBody = preview.locator('[data-letter-pdf-richtext="body"]');
     const previewBlocks = previewBody.locator(":scope > div");
+    const bulletBlock = previewBlocks.filter({ hasText: "Absatz eins formatiert" });
+    const columnsBlock = previewBlocks.filter({ hasText: "Absatz zwei bleibt separat" });
+    const continuationBlock = previewBlocks.filter({ hasText: /^\s*$/ });
     await expect(previewBlocks).toHaveCount(3);
-    await expect(previewBlocks.nth(0)).not.toHaveAttribute("data-columns", /.+/);
-    await expect(previewBlocks.nth(0)).toHaveAttribute("data-list", "bullet");
-    await expect(previewBlocks.nth(1)).toHaveAttribute("data-columns", "2");
-    await expect(previewBlocks.nth(1)).toHaveAttribute("data-align", "left");
-    await expect(previewBlocks.nth(1)).toHaveCSS("text-align", "left");
-    await expect(previewBlocks.nth(1)).toHaveCSS("column-count", "2");
-    await expect(previewBlocks.nth(2)).toHaveAttribute("data-align", "justify");
-    await expect(previewBlocks.nth(2)).toHaveText("");
-    await expect(previewBlocks.nth(0).locator("strong")).toContainText("Absatz eins formatiert");
-    await expect(previewBlocks.nth(0).locator("em")).toContainText("Absatz eins formatiert");
-    await expect(previewBlocks.nth(0).locator("u")).toContainText("Absatz eins formatiert");
-    const previewColor = previewBlocks.nth(0).locator('[data-letter-text-color="#c026d3"]');
+    await expect(bulletBlock).toHaveCount(1);
+    await expect(columnsBlock).toHaveCount(1);
+    await expect(continuationBlock).toHaveCount(1);
+    await expect(bulletBlock).not.toHaveAttribute("data-columns", /.+/);
+    await expect(bulletBlock).toHaveAttribute("data-list", "bullet");
+    await expect(columnsBlock).toHaveAttribute("data-columns", "2");
+    await expect(columnsBlock).toHaveAttribute("data-align", "left");
+    await expect(columnsBlock).toHaveCSS("text-align", "left");
+    await expect(columnsBlock).toHaveCSS("column-count", "2");
+    await expect(continuationBlock).toHaveAttribute("data-align", "justify");
+    await expect(continuationBlock).toHaveText("");
+    await expect(bulletBlock.locator("strong")).toContainText("Absatz eins formatiert");
+    await expect(bulletBlock.locator("em")).toContainText("Absatz eins formatiert");
+    await expect(bulletBlock.locator("u")).toContainText("Absatz eins formatiert");
+    const previewColor = bulletBlock.locator('[data-letter-text-color="#c026d3"]');
     await expect(previewColor).toContainText("Absatz eins formatiert");
     await expect(previewColor).toHaveCSS("color", "rgb(192, 38, 211)");
     const exportColor = page
@@ -1070,9 +1076,7 @@ test.describe("M5.8 dossier regression", () => {
     await expect(exportColor).toContainText("Absatz eins formatiert");
     await expect(exportColor).toHaveCSS("color", "rgb(192, 38, 211)");
     expect(
-      await previewBlocks
-        .nth(0)
-        .evaluate((element) => getComputedStyle(element, "::before").content),
+      await bulletBlock.evaluate((element) => getComputedStyle(element, "::before").content),
     ).toContain("•");
 
     const table = previewBody.locator("table[data-letter-table]");
