@@ -38,6 +38,7 @@ import {
 } from "./photo-place";
 import {
   CV_BLOCK_LABELS,
+  DEFAULT_CV_STRUCTURED_ROW_LAYOUT,
   DEFAULT_CV_PLACEMENTS,
   emptyEntry,
   emptyReferenz,
@@ -49,6 +50,7 @@ import {
   type CvPlacementKey,
   type CvReferenz,
   type CvSectionLayout,
+  type CvStructuredRowLayout,
   type CvSprache,
 } from "./types";
 
@@ -539,28 +541,31 @@ export function FormCvPerson({
               </div>
             )}
           </div>
-          <div className="min-w-0 flex-1">
-            <PhotoStyleControls
-              value={photoStyle}
-              onChange={setCvPhotoStyle}
-              hasPhoto={!!person.foto}
-              compact
-            />
+          <div className="min-w-0 flex-1 text-[11px] leading-snug text-muted-foreground">
+            <p>Der Ausschnitt wird direkt in der Vorschau und im Dokument angezeigt.</p>
             <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
               Form, Rahmen und Ausschnitt bleiben beim Wechsel des CV-Layouts erhalten.
             </p>
-            <CvPhotoPlaceControls borderWidth={photoStyle.borderWidth} />
-            {photoMessage && (
-              <p
-                className={`mt-1.5 text-[11px] ${
-                  photoMessage.error ? "text-destructive" : "text-primary"
-                }`}
-              >
-                {photoMessage.text}
-              </p>
-            )}
           </div>
         </div>
+        <div className="mt-3 border-t pt-3">
+          <PhotoStyleControls
+            value={photoStyle}
+            onChange={setCvPhotoStyle}
+            hasPhoto={!!person.foto}
+            compact
+          />
+        </div>
+        <CvPhotoPlaceControls borderWidth={photoStyle.borderWidth} />
+        {photoMessage && (
+          <p
+            className={`mt-1.5 text-[11px] ${
+              photoMessage.error ? "text-destructive" : "text-primary"
+            }`}
+          >
+            {photoMessage.text}
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <Field label="Vorname">
@@ -800,6 +805,87 @@ export function FormCvEntries({
       ))}
       <button type="button" className={addBtn} onClick={() => onChange([...entries, emptyEntry()])}>
         {isFamily ? "+ Familienmitglied" : "+ Eintrag"}
+      </button>
+    </div>
+  );
+}
+
+/** Gemeinsame Bedienung für Bezeichnung-Wert-Rubriken wie Familie und Sprachen. */
+export function StructuredRowLayoutControls({
+  value,
+  onChange,
+}: {
+  value: CvStructuredRowLayout;
+  onChange: (patch: Partial<CvStructuredRowLayout>) => void;
+}) {
+  return (
+    <div className="grid gap-3 rounded-md border bg-muted/20 p-2.5">
+      <div className="text-xs font-semibold">Darstellung der Einträge</div>
+      <div className="grid grid-cols-2 gap-1" role="group" aria-label="Anordnung der Einträge">
+        {(
+          [
+            ["inline", "Name daneben"],
+            ["stacked", "Name darunter"],
+          ] as const
+        ).map(([direction, label]) => (
+          <button
+            key={direction}
+            type="button"
+            aria-pressed={value.direction === direction}
+            onClick={() => onChange({ direction })}
+            className={`rounded-md border px-2 py-1.5 text-xs transition ${
+              value.direction === direction
+                ? "border-foreground bg-accent"
+                : "border-input bg-background hover:border-foreground/40"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {value.direction === "inline" ? (
+        <label className="grid gap-1 text-xs">
+          <span className="flex items-center justify-between gap-2 text-muted-foreground">
+            <span>Abstand zwischen Bezug und Name</span>
+            <span>{value.columnGapMm.toFixed(1)} mm</span>
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={8}
+            step={0.5}
+            value={value.columnGapMm}
+            onChange={(event) => onChange({ columnGapMm: Number(event.target.value) })}
+            className="w-full accent-primary"
+            aria-label="Abstand zwischen Bezug und Name"
+          />
+        </label>
+      ) : null}
+
+      <label className="grid gap-1 text-xs">
+        <span className="flex items-center justify-between gap-2 text-muted-foreground">
+          <span>Abstand zwischen Personen</span>
+          <span>{value.rowGapMm.toFixed(1)} mm</span>
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={8}
+          step={0.5}
+          value={value.rowGapMm}
+          onChange={(event) => onChange({ rowGapMm: Number(event.target.value) })}
+          className="w-full accent-primary"
+          aria-label="Abstand zwischen Familienmitgliedern"
+        />
+      </label>
+
+      <button
+        type="button"
+        onClick={() => onChange(DEFAULT_CV_STRUCTURED_ROW_LAYOUT)}
+        className="justify-self-start text-xs text-muted-foreground underline hover:text-foreground"
+      >
+        Standard wiederherstellen
       </button>
     </div>
   );

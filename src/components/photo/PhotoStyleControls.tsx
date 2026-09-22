@@ -3,6 +3,10 @@ import { DOSSIER_PHOTO_SHAPES, type DossierPhotoStyle } from "@/lib/dossier-phot
 const btn = "rounded-md border px-2 py-1 text-xs transition-colors border-input hover:bg-accent";
 const btnOn =
   "rounded-md border px-2 py-1 text-xs border-primary bg-primary text-primary-foreground";
+const nudgeBtn =
+  "shrink-0 rounded-md border border-input bg-background px-2 py-1 text-[11px] hover:bg-accent";
+
+const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -89,7 +93,7 @@ export function PhotoStyleControls({ value, onChange, hasPhoto, compact, cropOnl
 
       {hasPhoto ? (
         <>
-          <Row label={`Zuschnitt ${Math.round(value.zoom * 100)} %`}>
+          <Row label={`Foto zuschneiden ${Math.round(value.zoom * 100)} %`}>
             <input
               type="range"
               min={1}
@@ -111,8 +115,17 @@ export function PhotoStyleControls({ value, onChange, hasPhoto, compact, cropOnl
           </Row>
 
           {value.zoom > 1 && (
-            <div className="grid grid-cols-2 gap-3">
-              <Row label="Ausschnitt ↔">
+            <div className="grid gap-3">
+              <Row label={`Ausschnitt links / rechts · ${Math.round(value.x)} %`}>
+                <button
+                  type="button"
+                  className={nudgeBtn}
+                  aria-label="Ausschnitt nach links"
+                  title="Ausschnitt nach links"
+                  onClick={() => onChange({ x: clampPercent(value.x - 5) })}
+                >
+                  ← Links
+                </button>
                 <input
                   type="range"
                   min={0}
@@ -120,10 +133,29 @@ export function PhotoStyleControls({ value, onChange, hasPhoto, compact, cropOnl
                   step={1}
                   value={value.x}
                   onChange={(e) => onChange({ x: Number(e.target.value) })}
-                  className="w-full accent-primary"
+                  className="min-w-0 flex-1 accent-primary"
+                  aria-label="Ausschnitt horizontal verschieben"
                 />
+                <button
+                  type="button"
+                  className={nudgeBtn}
+                  aria-label="Ausschnitt nach rechts"
+                  title="Ausschnitt nach rechts"
+                  onClick={() => onChange({ x: clampPercent(value.x + 5) })}
+                >
+                  Rechts →
+                </button>
               </Row>
-              <Row label="Ausschnitt ↕">
+              <Row label={`Ausschnitt oben / unten · ${Math.round(value.y)} %`}>
+                <button
+                  type="button"
+                  className={nudgeBtn}
+                  aria-label="Ausschnitt nach oben"
+                  title="Ausschnitt nach oben"
+                  onClick={() => onChange({ y: clampPercent(value.y - 5) })}
+                >
+                  ↑ Oben
+                </button>
                 <input
                   type="range"
                   min={0}
@@ -131,8 +163,18 @@ export function PhotoStyleControls({ value, onChange, hasPhoto, compact, cropOnl
                   step={1}
                   value={value.y}
                   onChange={(e) => onChange({ y: Number(e.target.value) })}
-                  className="w-full accent-primary"
+                  className="min-w-0 flex-1 accent-primary"
+                  aria-label="Ausschnitt vertikal verschieben"
                 />
+                <button
+                  type="button"
+                  className={nudgeBtn}
+                  aria-label="Ausschnitt nach unten"
+                  title="Ausschnitt nach unten"
+                  onClick={() => onChange({ y: clampPercent(value.y + 5) })}
+                >
+                  Unten ↓
+                </button>
               </Row>
             </div>
           )}

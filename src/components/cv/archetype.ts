@@ -143,7 +143,7 @@ export const FOOTER_MM = 9;
 
 const SHEET_MM = 210;
 export const SIDEBAR_PCT_MIN = 0.22;
-export const SIDEBAR_PCT_MAX = 0.42;
+export const SIDEBAR_PCT_MAX = 0.5;
 
 export function sidebarWidthMm(frame: CvFrame, layout: CvRenderLayout, sidebarPct = 0.3): number {
   if (frame.id === "column") return frame.columnMm;
