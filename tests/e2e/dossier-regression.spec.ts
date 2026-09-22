@@ -1002,6 +1002,9 @@ test.describe("M5.8 dossier regression", () => {
     await selectionToolbar.getByRole("button", { name: "Unterstrichen", exact: true }).click();
     await selectionToolbar.getByLabel("Schriftfarbe").fill("#c026d3");
 
+    // Programmatic color filling does not exercise the native color input's
+    // pointer-down selection capture, so restore the intended paragraph first.
+    await selectBlock(0);
     await page.getByRole("button", { name: "Liste" }).click();
     await expect(page.getByRole("button", { name: "Bullet", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Strich", exact: true })).toBeVisible();
