@@ -76,6 +76,7 @@ export const DossierPdfCanvas = forwardRef<
             chromeOptions={resolvedChrome.letter.options}
             chromeContact={resolvedChrome.letter.contact}
             exportMode
+            ariaLabel="Exportansicht Dossier Motivationsschreiben"
           />
         </div>
       ) : null}
