@@ -112,6 +112,7 @@ jobs:
               tests/e2e/cv-card-refresh.spec.ts
               tests/e2e/cv-section-gap.spec.ts
               tests/e2e/cv-pdf-text.spec.ts
+              tests/e2e/cv-pdf-selection-geometry.spec.ts
           - group: cv-m9-pagination
             files: >-
               tests/e2e/cv-demo-pagination.spec.ts
