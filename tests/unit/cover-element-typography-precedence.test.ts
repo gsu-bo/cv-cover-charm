@@ -50,7 +50,7 @@ describe("cover element typography precedence", () => {
       "align",
     ]) {
       expect(blockLayer).toContain(`data-cover-user-${key}`);
-      expect(userOverrideCss).toContain(`data-cover-user-${key}=\"true\"`);
+      expect(userOverrideCss).toContain(`data-cover-user-${key}="true"`);
     }
 
     expect(blockLayer).toContain('["--cover-user-font-weight" as string]');
