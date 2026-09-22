@@ -196,6 +196,8 @@ export function DossierHeaderFooterChrome({
     headerVisualOptions.headerGradientColor ?? secondary,
   );
   const footerRoles = onColorRoles(footerBackground, visualOptions.footerGradientColor ?? primary);
+  const headerTextColor = options.headerTextColor ?? headerRoles.ink;
+  const footerTextColor = options.footerTextColor ?? footerRoles.ink;
   const headerSurface = surfaceBackground(
     headerBackground,
     headerVisualOptions.headerGradientColor,
@@ -312,6 +314,8 @@ export function DossierHeaderFooterChrome({
       data-dossier-header-text-layout={options.headerTextLayout}
       data-dossier-header-inline-separator={inlineSeparator}
       data-dossier-footer-text-layout={options.footerTextLayout}
+      data-dossier-header-text-color={options.headerTextColor ?? "automatic"}
+      data-dossier-footer-text-color={options.footerTextColor ?? "automatic"}
       data-dossier-border-enabled={visualOptions.borderEnabled ? "true" : "false"}
       data-dossier-border-color={borderColor}
       data-dossier-border-width-mm={visualOptions.borderWidthMm}
@@ -361,7 +365,7 @@ export function DossierHeaderFooterChrome({
               boxSizing: "border-box",
               background: headerSurface,
               borderBottom: borderStyle,
-              color: headerRoles.ink,
+              color: headerTextColor,
               fontSize: "7.6pt",
               lineHeight: 1.1,
             }}
@@ -441,7 +445,7 @@ export function DossierHeaderFooterChrome({
                   ? `${1 + headerDocumentContentMm}mm ${chromeContentRightMm}mm 1mm ${chromeContentLeftMm}mm`
                   : `${2 + headerDocumentContentMm}mm ${chromeContentRightMm}mm 2mm ${chromeContentLeftMm}mm`,
                 boxSizing: "border-box",
-                color: headerRoles.ink,
+                color: headerTextColor,
                 fontSize: stackedHeader ? "8pt" : "8.5pt",
                 lineHeight: stackedHeader ? 1.08 : 1.18,
                 overflow: "hidden",
@@ -517,7 +521,7 @@ export function DossierHeaderFooterChrome({
             height: `${headerVisualHeight}mm`,
             padding: `1.1mm ${chromeContentRightMm}mm 0 ${chromeContentLeftMm}mm`,
             boxSizing: "border-box",
-            color: headerRoles.ink,
+            color: headerTextColor,
             lineHeight: 1.05,
             overflow: "hidden",
             transform: headerContentTransform,
@@ -565,7 +569,7 @@ export function DossierHeaderFooterChrome({
             height: `${compactFooterHeight}mm`,
             padding: `0 ${chromeContentRightMm}mm 0 ${chromeContentLeftMm}mm`,
             boxSizing: "border-box",
-            color: footerRoles.ink,
+            color: footerTextColor,
             overflow: "hidden",
             transform: footerContentTransform,
           }}
@@ -589,7 +593,7 @@ export function DossierHeaderFooterChrome({
             boxSizing: "border-box",
             background: footerSurface,
             borderTop: borderStyle,
-            color: footerRoles.ink,
+            color: footerTextColor,
             overflow: "hidden",
           }}
         >
