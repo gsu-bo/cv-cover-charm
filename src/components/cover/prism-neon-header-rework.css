@@ -54,30 +54,7 @@
 }
 
 [data-dossier-document="cv"][data-cv-template="prism"]
-  [data-dossier-chrome="cv"][data-dossier-template-chrome="prism"][data-dossier-header-custom-surface="false"]
-  :is(
-    [data-dossier-compact-header],
-    [data-dossier-contact-header-background],
-    [data-dossier-continuation-contact-header]
-  )::after {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  right: -1mm;
-  top: 0;
-  width: 39%;
-  height: 100%;
-  pointer-events: none;
-  background: linear-gradient(
-    132deg,
-    var(--chrome-secondary) 0%,
-    color-mix(in srgb, var(--chrome-secondary) 78%, var(--chrome-accent)) 100%
-  );
-  clip-path: polygon(28% 0, 100% 0, 100% 100%, 0 78%);
-}
-
-[data-dossier-document="cv"][data-cv-template="prism"]
-  [data-dossier-chrome="cv"][data-dossier-template-chrome="prism"][data-dossier-header-custom-surface="false"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="prism"][data-dossier-header-custom-surface="false"][data-dossier-header-text-color="automatic"]
   :is([data-dossier-integrated-contact], [data-dossier-continuation-contact-header]) {
   color: #ffffff !important;
   text-shadow: 0 0.25mm 0.55mm rgba(3, 10, 28, 0.3);
@@ -153,7 +130,7 @@
 }
 
 [data-dossier-document="cv"][data-cv-template="neon"]
-  [data-dossier-chrome="cv"][data-dossier-template-chrome="neon"][data-dossier-header-custom-surface="false"]
+  [data-dossier-chrome="cv"][data-dossier-template-chrome="neon"][data-dossier-header-custom-surface="false"][data-dossier-header-text-color="automatic"]
   :is([data-dossier-integrated-contact], [data-dossier-continuation-contact-header]) {
   color: #ffffff !important;
   text-shadow: 0 0.3mm 0.7mm rgba(4, 3, 24, 0.36);
