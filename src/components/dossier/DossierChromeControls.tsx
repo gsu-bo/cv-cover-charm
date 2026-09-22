@@ -143,6 +143,49 @@ function BackgroundControl({
   );
 }
 
+function TextColorControl({
+  kind,
+  color,
+  fallback,
+  onColor,
+}: {
+  kind: "header" | "footer";
+  color: string | null;
+  fallback: string;
+  onColor: (value: string | null) => void;
+}) {
+  const custom = color !== null;
+  return (
+    <div className="grid gap-2 rounded-md border bg-muted/20 p-2.5">
+      <label className="block text-xs font-medium">
+        Schriftfarbe
+        <select
+          data-dossier-text-color-mode-control={kind}
+          value={custom ? "custom" : "automatic"}
+          onChange={(event) => onColor(event.target.value === "automatic" ? null : color ?? fallback)}
+          className={selectClass}
+        >
+          <option value="automatic">Automatisch</option>
+          <option value="custom">Eigene Farbe</option>
+        </select>
+      </label>
+      {custom ? (
+        <div className="flex flex-wrap items-center gap-2 pl-1">
+          <span className="mr-auto text-xs text-muted-foreground">Eigene Farbe</span>
+          <input
+            data-dossier-text-color-control={kind}
+            type="color"
+            value={color ?? fallback}
+            onChange={(event) => onColor(event.target.value)}
+            className="h-7 w-10 cursor-pointer rounded border border-input bg-background"
+            aria-label={`${kind === "header" ? "Header" : "Footer"}-Schriftfarbe`}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function DossierChromeControls({
   scope,
   onOptionsChange,
@@ -475,6 +518,12 @@ export function DossierChromeControls({
                 onColor={(headerBackgroundColor) => patchOptions({ headerBackgroundColor })}
                 onGradientColor={(headerGradientColor) => patchOptions({ headerGradientColor })}
               />
+              <TextColorControl
+                kind="header"
+                color={options.headerTextColor ?? null}
+                fallback="#ffffff"
+                onColor={(headerTextColor) => patchOptions({ headerTextColor })}
+              />
             </>
           ) : null}
         </div>
@@ -572,6 +621,12 @@ export function DossierChromeControls({
                 fallback="#64748b"
                 onColor={(footerBackgroundColor) => patchOptions({ footerBackgroundColor })}
                 onGradientColor={(footerGradientColor) => patchOptions({ footerGradientColor })}
+              />
+              <TextColorControl
+                kind="footer"
+                color={options.footerTextColor ?? null}
+                fallback="#ffffff"
+                onColor={(footerTextColor) => patchOptions({ footerTextColor })}
               />
             </>
           ) : null}

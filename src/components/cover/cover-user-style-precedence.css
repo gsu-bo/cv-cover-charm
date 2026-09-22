@@ -1,0 +1,105 @@
+/*
+ * Explicit title-page element edits are the final presentation authority.
+ *
+ * Family/template CSS is allowed to use !important for untouched semantic
+ * roles, but only properties that really exist in the saved per-element
+ * override bucket receive these data markers. That keeps the cascade stable:
+ *
+ *   explicit element edit > dossier family/template rule > block default
+ *
+ * The variables are emitted by BlockLayer from the resolved block values, so
+ * preview, standalone PDF and combined dossier PDF consume the same contract.
+ * The root selector intentionally carries more specificity than legacy
+ * template rules, so source-order accidents cannot steal an explicit edit.
+ */
+
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-weight="true"]
+  > div,
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-weight="true"]
+  > div
+  span {
+  font-weight: var(--cover-user-font-weight) !important;
+}
+
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-uppercase="true"]
+  > div,
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-uppercase="true"]
+  > div
+  * {
+  text-transform: var(--cover-user-text-transform) !important;
+}
+
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-font="true"]
+  > div,
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-font="true"]
+  > div
+  span {
+  font-family: var(--cover-user-font-family) !important;
+}
+
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-size="true"]
+  > div {
+  font-size: var(--cover-user-font-size) !important;
+}
+
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-tracking="true"]
+  > div {
+  letter-spacing: var(--cover-user-letter-spacing) !important;
+}
+
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-line-height="true"]
+  > div {
+  line-height: var(--cover-user-line-height) !important;
+}
+
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-color="true"]
+  > div,
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-color="true"]
+  > div
+  span {
+  color: var(--cover-user-color) !important;
+}
+
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-opacity="true"]
+  > div {
+  opacity: var(--cover-user-opacity) !important;
+  filter: none !important;
+}
+
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-italic="true"]
+  > div,
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-italic="true"]
+  > div
+  * {
+  font-style: var(--cover-user-font-style) !important;
+}
+
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-underline="true"]
+  > div,
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-underline="true"]
+  > div
+  * {
+  text-decoration: var(--cover-user-text-decoration) !important;
+}
+
+[data-dossier-document="cover"][data-cover-template]
+  [data-block-id][data-element-layer][data-cover-user-align="true"]
+  > div {
+  text-align: var(--cover-user-text-align) !important;
+}

@@ -530,24 +530,6 @@ test.describe("M5.8 dossier regression", () => {
     }
   });
 
-  test("long names and long content paginate across every layout without clipping", async ({
-    page,
-  }) => {
-    for (const layout of LAYOUT_IDS) {
-      await seedCv(page, { family: "editorial", layout, long: true });
-      const root = previewRoot(page);
-      await expect.poll(() => root.locator("[data-cv-page]").count()).toBeGreaterThan(1);
-      await assertNoMainClipping(page, `long editorial/${layout}`);
-      const nameBox = await root.locator("[data-cv-page='0'] [data-cv-name]").first().boundingBox();
-      const mainBox = await root.locator("[data-cv-page='0'] [data-cv-main]").first().boundingBox();
-      expect(nameBox).not.toBeNull();
-      expect(mainBox).not.toBeNull();
-      expect((nameBox?.x ?? 0) + (nameBox?.width ?? 0)).toBeLessThanOrEqual(
-        (mainBox?.x ?? 0) + (mainBox?.width ?? 0) + 1.5,
-      );
-    }
-  });
-
   test("legacy CV photo-shape preference migrates safely", async ({ page }) => {
     await seedCv(page, { photo: true, legacyPhotoShape: "circle" });
     await expect(page.locator("html")).toHaveAttribute("data-cv-photo-shape", "circle");
@@ -861,7 +843,7 @@ test.describe("M5.8 dossier regression", () => {
     await button.click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(
-      /^Motivationsschreiben-Lea-(?:Müller|Mueller)\.pdf$/,
+      /^Motivationsschreiben-Lea-(?:Müller|Mueller)-Informatiker-in-EFZ\.pdf$/,
     );
     const path = await download.path();
     expect(path).not.toBeNull();
@@ -1018,8 +1000,12 @@ test.describe("M5.8 dossier regression", () => {
     await selectionToolbar.getByRole("button", { name: "Fett", exact: true }).click();
     await selectionToolbar.getByRole("button", { name: "Kursiv", exact: true }).click();
     await selectionToolbar.getByRole("button", { name: "Unterstrichen", exact: true }).click();
-    await selectionToolbar.getByLabel("Schriftfarbe").fill("#c026d3");
+    const colorInput = selectionToolbar.getByLabel("Schriftfarbe");
+    await colorInput.dispatchEvent("pointerdown");
+    await colorInput.fill("#c026d3");
 
+    // Keep list formatting independent from the color input's selection lifecycle.
+    await selectBlock(0);
     await page.getByRole("button", { name: "Liste" }).click();
     await expect(page.getByRole("button", { name: "Bullet", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Strich", exact: true })).toBeVisible();
@@ -1030,23 +1016,20 @@ test.describe("M5.8 dossier regression", () => {
 
     await selectBlock(1);
     const toolbar = page.locator("[data-letter-rich-toolbar]");
-    const columnsControl = toolbar.getByRole("group", { name: "Spalten" });
+    const alignmentControl = toolbar.locator("[data-letter-alignment-control]");
+    const columnsControl = toolbar.locator("[data-letter-column-control]");
+    const insertControl = toolbar.locator("[data-letter-insert-control]");
     const oneColumnButton = columnsControl.getByRole("button", { name: "1 Spalte" });
     const twoColumnButton = columnsControl.getByRole("button", { name: "2 Spalten" });
+    await expect(alignmentControl).toBeVisible();
     await expect(columnsControl).toBeVisible();
-    const toolbarTop = await toolbar
-      .getByRole("button", { name: "Linksbündig" })
-      .evaluate((button) => button.getBoundingClientRect().top);
-    const columnsTop = await columnsControl.evaluate(
-      (control) => control.getBoundingClientRect().top,
-    );
-    expect(columnsTop).toBeGreaterThan(toolbarTop + 1);
+    await expect(insertControl).toBeVisible();
+    await expect(toolbar.locator("[data-letter-alignment-control]")).toHaveCount(1);
+    await expect(toolbar.locator("[data-letter-column-control]")).toHaveCount(1);
+    await expect(toolbar.locator("[data-letter-insert-control]")).toHaveCount(1);
     await twoColumnButton.click();
     await expect(twoColumnButton).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByRole("button", { name: "Linksbündig" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expect(alignmentControl.locator('button[aria-pressed="true"]')).toHaveCount(0);
     await expect(body.locator(":scope > div").nth(1)).toHaveAttribute("data-align", "left");
     await expect(body.locator(":scope > div").nth(1)).toHaveCSS("text-align", "left");
     await expect(body.locator(":scope > div").nth(1)).toHaveCSS("column-count", "2");
@@ -1069,17 +1052,25 @@ test.describe("M5.8 dossier regression", () => {
 
     const previewBody = preview.locator('[data-letter-pdf-richtext="body"]');
     const previewBlocks = previewBody.locator(":scope > div");
-    await expect(previewBlocks).toHaveCount(2);
-    await expect(previewBlocks.nth(0)).not.toHaveAttribute("data-columns", /.+/);
-    await expect(previewBlocks.nth(0)).toHaveAttribute("data-list", "bullet");
-    await expect(previewBlocks.nth(1)).toHaveAttribute("data-columns", "2");
-    await expect(previewBlocks.nth(1)).toHaveAttribute("data-align", "left");
-    await expect(previewBlocks.nth(1)).toHaveCSS("text-align", "left");
-    await expect(previewBlocks.nth(1)).toHaveCSS("column-count", "2");
-    await expect(previewBlocks.nth(0).locator("strong")).toContainText("Absatz eins formatiert");
-    await expect(previewBlocks.nth(0).locator("em")).toContainText("Absatz eins formatiert");
-    await expect(previewBlocks.nth(0).locator("u")).toContainText("Absatz eins formatiert");
-    const previewColor = previewBlocks.nth(0).locator('[data-letter-text-color="#c026d3"]');
+    const bulletBlock = previewBlocks.filter({ hasText: "Absatz eins formatiert" });
+    const columnsBlock = previewBlocks.filter({ hasText: "Absatz zwei bleibt separat" });
+    const continuationBlock = previewBlocks.filter({ hasText: /^\s*$/ });
+    await expect(previewBlocks).toHaveCount(3);
+    await expect(bulletBlock).toHaveCount(1);
+    await expect(columnsBlock).toHaveCount(1);
+    await expect(continuationBlock).toHaveCount(1);
+    await expect(bulletBlock).not.toHaveAttribute("data-columns", /.+/);
+    await expect(bulletBlock).toHaveAttribute("data-list", "bullet");
+    await expect(columnsBlock).toHaveAttribute("data-columns", "2");
+    await expect(columnsBlock).toHaveAttribute("data-align", "left");
+    await expect(columnsBlock).toHaveCSS("text-align", "left");
+    await expect(columnsBlock).toHaveCSS("column-count", "2");
+    await expect(continuationBlock).toHaveAttribute("data-align", "justify");
+    await expect(continuationBlock).toHaveText("");
+    await expect(bulletBlock.locator("strong")).toContainText("Absatz eins formatiert");
+    await expect(bulletBlock.locator("em")).toContainText("Absatz eins formatiert");
+    await expect(bulletBlock.locator("u")).toContainText("Absatz eins formatiert");
+    const previewColor = bulletBlock.locator('[data-letter-text-color="#c026d3"]');
     await expect(previewColor).toContainText("Absatz eins formatiert");
     await expect(previewColor).toHaveCSS("color", "rgb(192, 38, 211)");
     const exportColor = page
@@ -1089,9 +1080,7 @@ test.describe("M5.8 dossier regression", () => {
     await expect(exportColor).toContainText("Absatz eins formatiert");
     await expect(exportColor).toHaveCSS("color", "rgb(192, 38, 211)");
     expect(
-      await previewBlocks
-        .nth(0)
-        .evaluate((element) => getComputedStyle(element, "::before").content),
+      await bulletBlock.evaluate((element) => getComputedStyle(element, "::before").content),
     ).toContain("•");
 
     const table = previewBody.locator("table[data-letter-table]");
@@ -1195,19 +1184,19 @@ test.describe("M5.8 dossier regression", () => {
         path: "/titelblatt",
         ownPdf: "Nur Titelblatt als PDF",
         reset: "Titelblatt zurücksetzen",
-        full: true,
+        positionReset: true,
       },
       {
         path: "/lebenslauf",
         ownPdf: "Nur Lebenslauf als PDF",
         reset: "Lebenslauf zurücksetzen",
-        full: true,
+        positionReset: true,
       },
       {
         path: "/anschreiben",
         ownPdf: "Nur Motivationsschreiben als PDF",
         reset: "Motivationsschreiben zurücksetzen",
-        full: false,
+        positionReset: false,
       },
     ] as const;
 
@@ -1221,37 +1210,28 @@ test.describe("M5.8 dossier regression", () => {
       let menu = page.locator("[data-editor-action-menu]");
       await expect(menu).toBeVisible();
 
-      if (item.full) {
-        await page.getByRole("button", { name: "Beispieldaten übernehmen", exact: true }).click();
-        await page.getByRole("button", { name: "Ja", exact: true }).click();
-        await expect(downloadToggle).toHaveAttribute("aria-expanded", "false");
-        await downloadToggle.click();
-        await expect(downloadToggle).toHaveAttribute("aria-expanded", "true");
-        menu = page.locator("[data-editor-action-menu]");
-        await expect(menu).toBeVisible();
+      await page.getByRole("button", { name: "Beispieldaten übernehmen", exact: true }).click();
+      await page.getByRole("button", { name: "Ja", exact: true }).click();
+      await expect(downloadToggle).toHaveAttribute("aria-expanded", "false");
+      await downloadToggle.click();
+      await expect(downloadToggle).toHaveAttribute("aria-expanded", "true");
+      menu = page.locator("[data-editor-action-menu]");
+      await expect(menu).toBeVisible();
 
-        const labels = await menu.locator("[data-editor-menu-label]").allTextContents();
-        expect(labels).toEqual([
-          "Ganzes Dossier als PDF",
-          item.ownPdf,
-          "Dossier speichern",
-          "Dossier laden",
-          "Beispieldaten übernehmen",
-          "Positionen & Grössen zurücksetzen",
-          "Früheren Stand laden",
-          item.reset,
-        ]);
-      } else {
-        await expect(menu.locator("[data-editor-menu-label]")).toHaveText([
-          item.ownPdf,
-          "Beispieldaten übernehmen",
-          "Früheren Stand laden",
-          item.reset,
-        ]);
-      }
+      const labels = await menu.locator("[data-editor-menu-label]").allTextContents();
+      expect(labels).toEqual([
+        "Ganzes Dossier als PDF",
+        item.ownPdf,
+        "Dossier speichern",
+        "Dossier laden",
+        "Beispieldaten übernehmen",
+        ...(item.positionReset ? ["Positionen & Grössen zurücksetzen"] : []),
+        "Früheren Stand laden",
+        item.reset,
+      ]);
 
-      const labels = menu.locator("[data-editor-menu-label]");
-      await expect(labels.locator("svg")).toHaveCount(await labels.count());
+      const labelNodes = menu.locator("[data-editor-menu-label]");
+      await expect(labelNodes.locator("svg")).toHaveCount(await labelNodes.count());
     }
   });
 

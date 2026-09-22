@@ -2,9 +2,11 @@ import { forwardRef, useLayoutEffect, useMemo, useRef } from "react";
 import type { Block, BlockStyle, CoverData, FontKey, TemplateId } from "./types";
 import { CoverBackground } from "./CoverBackground";
 import { BlockLayer, type Point } from "./BlockLayer";
+import { hasUserStyle } from "./user-style-precedence";
 import { PAGE } from "@/default-config";
 import { dossierDefaultFontKey, effectiveDossierFont } from "@/lib/dossier-theme";
 import "./cover-text-color.css";
+import "./cover-user-style-precedence.css";
 
 /** Ganzzahlige Blattmasse – siehe PAGE in default-config. */
 const { WIDTH: PAGE_W, HEIGHT: PAGE_H } = PAGE;
@@ -30,7 +32,12 @@ const DOSSIER_TEXT_IDS = new Set([
 function sharedDossierBlockFont(blocks: Block[]): FontKey | null {
   const fonts = new Set(
     blocks
-      .filter((block) => block.kind === "text" && DOSSIER_TEXT_IDS.has(block.id))
+      .filter(
+        (block) =>
+          block.kind === "text" &&
+          DOSSIER_TEXT_IDS.has(block.id) &&
+          !hasUserStyle(block, "font"),
+      )
       .map((block) => block.style.font),
   );
   if (fonts.size !== 1) return null;
@@ -215,10 +222,9 @@ export const CoverCanvas = forwardRef<HTMLDivElement, Props>(function CoverCanva
     };
   }, [fontScale, renderBlocks, synchronizeFooterPair, template]);
 
-  // Die Titelblatt-Route trägt eine bewusst gewählte globale Schrift bereits
-  // in alle Standardblöcke ein. Ein von der Familienvorgabe abweichender
-  // gemeinsamer Block-Font ist deshalb der laufende Dossier-Override. Ohne
-  // Override entscheidet ausschliesslich die zentrale Dossier-Familie.
+  // The route writes the document-wide font into every standard block. A
+  // deliberate per-element font must not make that shared selection disappear,
+  // so only non-overridden semantic blocks participate in the inference.
   const liveFont = sharedDossierBlockFont(renderBlocks);
   const inferredOverride =
     liveFont && liveFont !== dossierDefaultFontKey(template) ? liveFont : null;

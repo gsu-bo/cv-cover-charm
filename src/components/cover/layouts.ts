@@ -7,6 +7,7 @@ import type { StyleOverrides } from "./layouts-base";
 import { isFreshTemplate } from "./fresh-templates";
 import { templateDecorations } from "./template-decorations";
 import { applyForestFlowCoverDefaults } from "./forest-flow-cover-defaults";
+import { hasUserStyle, withUserStyleKeys } from "./user-style-precedence";
 import "./editable-decorations.css";
 import "./fresh-cover-visual-cleanup.css";
 import "./template-typography-fixes.css";
@@ -478,7 +479,9 @@ function freshContentAdjustment(template: TemplateId, data: CoverData, block: Bl
       style: {
         ...block.style,
         maxLines: Math.max(3, block.style.maxLines ?? 0),
-        lineHeight: Math.max(1.2, block.style.lineHeight),
+        lineHeight: hasUserStyle(block, "lineHeight")
+          ? block.style.lineHeight
+          : Math.max(1.2, block.style.lineHeight),
       },
     };
   }
@@ -497,11 +500,20 @@ export function buildBlocks(
   // established Edel composition so both designs stay aligned as the editor
   // evolves, while keeping their palettes and interior-page contracts separate.
   const layoutTemplate = (template as string) === "edelDark" ? ("edel" as TemplateId) : template;
-  const blocks = buildBaseBlocks(layoutTemplate, data, customs, overrides, slots).map((block) =>
-    freshContentAdjustment(template, data, templateDefaultAdjustment(template, block, overrides)),
-  );
+  const blocks = buildBaseBlocks(layoutTemplate, data, customs, overrides, slots).map((block) => {
+    const annotated = withUserStyleKeys(block, overrides[block.id]);
+    return freshContentAdjustment(
+      template,
+      data,
+      templateDefaultAdjustment(template, annotated, overrides),
+    );
+  });
   const decorations = templateDecorations(layoutTemplate, overrides).map((block) =>
-    templateDefaultAdjustment(template, block, overrides),
+    templateDefaultAdjustment(
+      template,
+      withUserStyleKeys(block, overrides[block.id]),
+      overrides,
+    ),
   );
 
   const companyVisible = data.showBetriebOnCover === true;
@@ -585,24 +597,30 @@ export function buildBlocks(
       const bodyOverride = overrides.beilagen ?? {};
 
       contentBlocks.push(
-        {
-          id: "beilagenTitel",
-          label: "Titel Beilagen",
-          kind: "text",
-          lines: ["Beilagen:"],
-          style: {
-            ...titleBase,
-            ...titleOverride,
-            weight: Math.max(600, titleOverride.weight ?? titleBase.weight),
+        withUserStyleKeys(
+          {
+            id: "beilagenTitel",
+            label: "Titel Beilagen",
+            kind: "text",
+            lines: ["Beilagen:"],
+            style: {
+              ...titleBase,
+              ...titleOverride,
+              weight: titleOverride.weight ?? Math.max(600, titleBase.weight),
+            },
           },
-        },
-        {
-          id: "beilagen",
-          label: "Beilagen",
-          kind: "text",
-          lines: beilagen,
-          style: { ...bodyBase, ...bodyOverride },
-        },
+          titleOverride,
+        ),
+        withUserStyleKeys(
+          {
+            id: "beilagen",
+            label: "Beilagen",
+            kind: "text",
+            lines: beilagen,
+            style: { ...bodyBase, ...bodyOverride },
+          },
+          bodyOverride,
+        ),
       );
     }
   }

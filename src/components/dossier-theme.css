@@ -36,13 +36,13 @@
 }
 
 /*
- * Cover element controls are the final authority for weight/case. BlockLayer
- * already writes the resolved element values inline, so using !important here
- * made the B/AA buttons look active while the family rule silently won. Keep
- * the CV family contract hardened; on the editable cover the inline value wins.
+ * Untouched cover roles follow the dossier family, just like the CV. Explicit
+ * per-element cover edits are re-applied at higher specificity by
+ * cover-user-style-precedence.css, so the cascade is deterministic instead of
+ * depending on whether a template happened to use !important.
  */
 [data-dossier-role="name"] > div {
-  font-weight: var(--dossier-name-weight);
+  font-weight: var(--dossier-name-weight) !important;
 }
 
 [data-cv-name] {
@@ -58,7 +58,7 @@
 }
 
 [data-dossier-role="subtitle"] > div {
-  font-weight: var(--dossier-subtitle-weight);
+  font-weight: var(--dossier-subtitle-weight) !important;
 }
 
 [data-cv-subtitle] {
@@ -78,8 +78,8 @@
 }
 
 [data-dossier-role="heading"] > div {
-  font-weight: var(--dossier-heading-weight);
-  text-transform: var(--dossier-heading-transform);
+  font-weight: var(--dossier-heading-weight) !important;
+  text-transform: var(--dossier-heading-transform) !important;
 }
 
 [data-cv-section-title] {
@@ -105,7 +105,7 @@
 }
 
 [data-dossier-role="body"] > div {
-  font-weight: var(--dossier-body-weight);
+  font-weight: var(--dossier-body-weight) !important;
 }
 
 [data-cv-body] {
@@ -120,7 +120,7 @@
 }
 
 [data-dossier-role="muted"] > div {
-  font-weight: var(--dossier-body-weight);
+  font-weight: var(--dossier-body-weight) !important;
 }
 
 [data-cv-muted] {
@@ -257,114 +257,4 @@
 
 [data-cv-background="motif"] {
   filter: opacity(var(--dossier-background-intensity));
-}
-
-[data-dossier-document="cover"]
-  > .absolute.inset-0
-  > :not([data-block-id]):not(.z-10) {
-  filter: opacity(var(--dossier-background-intensity));
-}
-
-/* -------------------------------------------------------------------------- */
-/* Family signatures                                                          */
-/* -------------------------------------------------------------------------- */
-
-html[data-dossier-family="classic"] [data-cv-accent="section"] {
-  width: 14mm !important;
-  opacity: 0.52 !important;
-  flex: 0 0 auto !important;
-}
-
-html[data-dossier-family="classic"] [data-dossier-accent="rule"] {
-  opacity: 0.58 !important;
-}
-
-html[data-dossier-family="modern"] [data-cv-accent="section"] {
-  width: 20mm !important;
-  opacity: 0.9 !important;
-  flex: 0 0 auto !important;
-}
-
-html[data-dossier-family="modern"] [data-dossier-accent="rule"] {
-  opacity: 0.92 !important;
-}
-
-html[data-dossier-family="executive"] [data-cv-accent="section"] {
-  width: auto !important;
-  max-width: 28mm;
-  flex: 1 1 18mm !important;
-  opacity: 0.36 !important;
-}
-
-html[data-dossier-family="executive"] [data-dossier-accent="rule"] {
-  opacity: 0.44 !important;
-}
-
-html[data-dossier-family="executive"] [data-dossier-role="name"] > div,
-html[data-dossier-family="executive"] [data-cv-name] {
-  font-variant-ligatures: common-ligatures;
-}
-
-html[data-dossier-family="editorial"] [data-cv-accent="section"] {
-  width: auto !important;
-  flex: 1 1 auto !important;
-  opacity: 0.3 !important;
-}
-
-html[data-dossier-family="editorial"] [data-dossier-accent="rule"] {
-  opacity: 0.38 !important;
-}
-
-html[data-dossier-family="editorial"] [data-dossier-role="name"] > div,
-html[data-dossier-family="editorial"] [data-cv-name] {
-  font-variant-ligatures: common-ligatures;
-}
-
-/* -------------------------------------------------------------------------- */
-/* Template cleanup                                                           */
-/* -------------------------------------------------------------------------- */
-
-/*
- * Blockig lives from large rectangular color fields. Small standalone strokes
- * fight that language and read like accidental leftovers, so the short bar in
- * the background and the old footer divider are deliberately suppressed. The
- * same background cleanup applies to the CV to keep both dossier pages paired.
- */
-html[data-dossier-template="blockig"]
-  :is([data-dossier-document="cover"] > div:first-child, [data-cv-background="motif"] > div)
-  > div:nth-child(3),
-html[data-dossier-template="blockig"] [data-dossier-document="cover"] [data-block-id="trenner"] {
-  display: none !important;
-}
-
-/* -------------------------------------------------------------------------- */
-/* M5.7 — premium polish                                                      */
-/* -------------------------------------------------------------------------- */
-
-[data-cv-page-label] {
-  font-family: var(--dossier-font) !important;
-  font-size: 7.6pt !important;
-  font-weight: var(--dossier-body-weight) !important;
-  letter-spacing: 0.065em;
-  text-transform: uppercase;
-  opacity: var(--dossier-muted-opacity) !important;
-  filter: opacity(0.82);
-}
-
-/* Continuation pages keep exactly the same main-column capacity as measured. */
-[data-cv-page]:not([data-cv-page="0"]) [data-cv-sidebar] [data-cv-header] {
-  opacity: 0.82;
-}
-
-[data-cv-section] > div {
-  gap: 2.7mm !important;
-}
-
-[data-cv-date] {
-  font-variant-numeric: tabular-nums;
-}
-
-[data-dossier-document="cover"],
-[data-dossier-document="cv"] {
-  -webkit-font-smoothing: antialiased;
 }
