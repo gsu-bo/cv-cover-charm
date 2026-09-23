@@ -754,53 +754,96 @@ export function CvCanvas({
       (r) => r.name.trim() || r.funktion.trim() || r.kontakt.trim(),
     );
     if (!list.length || data.hidden.referenzen) return [];
-    return [
-      heading("referenzen"),
-      ...list.map(
-        (r): Row => ({
-          id: r.id,
-          node: (
-            <div data-cv-entry style={{ marginBottom: "2.1mm" }}>
-              {r.name && (
-                <div
-                  data-cv-entry-title
-                  style={{ fontSize: pt(10.8), fontWeight: 700, color: pal.ink, lineHeight: 1.25 }}
-                >
-                  {r.name}
-                </div>
-              )}
-              {r.funktion && (
-                <div
-                  data-cv-muted
-                  style={{
-                    fontSize: pt(9.7),
-                    color: pal.muted,
-                    marginTop: "0.3mm",
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {r.funktion}
-                </div>
-              )}
-              {r.kontakt && (
-                <div
-                  data-cv-body
-                  style={{
-                    fontSize: pt(9.7),
-                    color: pal.ink,
-                    marginTop: "0.35mm",
-                    lineHeight: 1.3,
-                    overflowWrap: "anywhere",
-                  }}
-                >
-                  {r.kontakt}
-                </div>
-              )}
-            </div>
-          ),
-        }),
-      ),
-    ];
+
+    const referenceCard = (
+      r: CvData["referenzen"][number],
+      sideBySide: boolean,
+    ): React.ReactNode => (
+      <div
+        key={r.id}
+        data-cv-entry
+        data-cv-reference-card
+        style={{ minWidth: 0, marginBottom: sideBySide ? undefined : "2.1mm" }}
+      >
+        {r.name && (
+          <div
+            data-cv-entry-title
+            style={{ fontSize: pt(10.8), fontWeight: 700, color: pal.ink, lineHeight: 1.25 }}
+          >
+            {r.name}
+          </div>
+        )}
+        {r.funktion && (
+          <div
+            data-cv-muted
+            style={{
+              fontSize: pt(9.7),
+              color: pal.muted,
+              marginTop: "0.3mm",
+              lineHeight: 1.3,
+            }}
+          >
+            {r.funktion}
+          </div>
+        )}
+        {r.kontakt && (
+          <div
+            data-cv-body
+            style={{
+              fontSize: pt(9.7),
+              color: pal.ink,
+              marginTop: "0.35mm",
+              lineHeight: 1.3,
+              overflowWrap: "anywhere",
+            }}
+          >
+            {r.kontakt}
+          </div>
+        )}
+      </div>
+    );
+
+    const sideBySide =
+      data.referencesSideBySide !== false &&
+      cvSectionLayout(data, "referenzen").width === "full" &&
+      (layout !== "modern" || resolveCvPlacement(placements, "referenzen") === "main");
+
+    if (!sideBySide) {
+      return [
+        heading("referenzen"),
+        ...list.map(
+          (r): Row => ({
+            id: r.id,
+            node: referenceCard(r, false),
+          }),
+        ),
+      ];
+    }
+
+    const pairs: Row[] = [];
+    for (let index = 0; index < list.length; index += 2) {
+      const pair = list.slice(index, index + 2);
+      pairs.push({
+        id: `references-${pair.map((reference) => reference.id).join("-")}`,
+        node: (
+          <div
+            data-cv-reference-grid
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              columnGap: "6mm",
+              rowGap: "2.1mm",
+              marginBottom: "2.1mm",
+              alignItems: "start",
+            }}
+          >
+            {pair.map((reference) => referenceCard(reference, true))}
+          </div>
+        ),
+      });
+    }
+
+    return [heading("referenzen"), ...pairs];
   };
 
   const languageRows = (): Row[] => {
