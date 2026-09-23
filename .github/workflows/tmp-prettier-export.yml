@@ -1,4 +1,4 @@
-name: Temporary Prettier Export
+name: Temporary Prettier Commit
 
 on:
   push:
@@ -7,31 +7,26 @@ on:
       - .github/workflows/tmp-prettier-export.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  format:
+  format-and-cleanup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: dev
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
-      - name: Format repository
-        run: bun run format
-      - name: Collect formatted files
+      - name: Format release-gated letter files
+        run: bunx prettier --write src/components/letter/LetterCanvas.tsx src/components/letter/LetterLayoutControls.tsx
+      - name: Commit formatting and remove temporary workflow
         run: |
-          git diff --name-only > /tmp/formatted-files.txt
-          mkdir -p /tmp/prettier-output
-          while IFS= read -r file; do
-            [ -z "$file" ] && continue
-            mkdir -p "/tmp/prettier-output/$(dirname "$file")"
-            cp "$file" "/tmp/prettier-output/$file"
-          done < /tmp/formatted-files.txt
-          cp /tmp/formatted-files.txt /tmp/prettier-output/formatted-files.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: prettier-output
-          path: /tmp/prettier-output
-          if-no-files-found: error
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/tmp-prettier-export.yml
+          git add src/components/letter/LetterCanvas.tsx src/components/letter/LetterLayoutControls.tsx
+          git commit -m "style(letter): format release-gated files"
+          git push origin HEAD:dev
