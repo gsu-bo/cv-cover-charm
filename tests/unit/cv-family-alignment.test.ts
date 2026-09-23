@@ -17,8 +17,11 @@ describe("CV family compact rows", () => {
     expect(canvas).toContain('{nameAndJob ? ":" : ""}');
   });
 
-  test("aligns all inline family values to one shared tab stop", () => {
-    expect(css).toContain('[data-cv-family-entry][data-cv-structured-row="inline"]');
-    expect(css).toContain("grid-template-columns: 20mm minmax(0, 1fr) !important");
+  test("aligns all inline family values to one shared tab stop without overriding the grid", () => {
+    expect(css).toContain(
+      '[data-cv-family-entry][data-cv-structured-row="inline"] > [data-cv-entry-title]',
+    );
+    expect(css).toContain("width: 20mm");
+    expect(css).not.toContain("grid-template-columns: 20mm minmax(0, 1fr) !important");
   });
 });
