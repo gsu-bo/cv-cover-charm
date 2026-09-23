@@ -184,6 +184,8 @@ export function LetterRichTextEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef("");
   const savedRangeRef = useRef<Range | null>(null);
+  const colorRangeRef = useRef<Range | null>(null);
+  const activeColorSpanRef = useRef<HTMLSpanElement | null>(null);
   const colorPickerActiveRef = useRef(false);
   const [empty, setEmpty] = useState(!text.trim() && !richTextHtml?.trim());
   const [listOpen, setListOpen] = useState(false);
@@ -364,8 +366,32 @@ export function LetterRichTextEditor({
   const setTextColor = (value: string) => {
     const editor = editorRef.current;
     const color = normalizeLetterInlineColor(value);
-    const range = restoreRange();
-    if (!editor || !color || !range || range.collapsed) return;
+    if (!editor || !color) return;
+
+    const activeSpan = activeColorSpanRef.current;
+    if (activeSpan?.isConnected && editor.contains(activeSpan)) {
+      activeSpan.dataset.letterTextColor = color;
+      activeSpan.style.color = color;
+      const selected = document.createRange();
+      selected.selectNodeContents(activeSpan);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(selected);
+      colorRangeRef.current = selected.cloneRange();
+      savedRangeRef.current = selected.cloneRange();
+      emit();
+      setToolbar((current) => ({ ...current, color }));
+      return;
+    }
+
+    const range = colorRangeRef.current?.cloneRange() ?? savedRangeRef.current?.cloneRange();
+    if (!range || range.collapsed) return;
+
+    const selection = window.getSelection();
+    if (!selection) return;
+    editor.focus({ preventScroll: true });
+    selection.removeAllRanges();
+    selection.addRange(range);
 
     const startBlock = topLevelChild(editor, range.startContainer);
     const endBlock = topLevelChild(editor, range.endContainer);
@@ -376,22 +402,20 @@ export function LetterRichTextEditor({
       colorSpan.style.color = color;
       colorSpan.appendChild(range.extractContents());
       range.insertNode(colorSpan);
+      activeColorSpanRef.current = colorSpan;
 
       const selected = document.createRange();
       selected.selectNodeContents(colorSpan);
-      const selection = window.getSelection();
-      selection?.removeAllRanges();
-      selection?.addRange(selected);
+      selection.removeAllRanges();
+      selection.addRange(selected);
+      colorRangeRef.current = selected.cloneRange();
       savedRangeRef.current = selected.cloneRange();
     } else {
-      // Cross-paragraph selections are still delegated to the browser because
-      // an inline span cannot legally wrap multiple block nodes. The common
-      // single-paragraph path above is deterministic and survives color-input
-      // focus changes in Chromium/Playwright.
       document.execCommand("styleWithCSS", false, "true");
       document.execCommand("foreColor", false, color);
       document.execCommand("styleWithCSS", false, "false");
-      rememberRange();
+      const remembered = rememberRange();
+      colorRangeRef.current = remembered?.cloneRange() ?? range.cloneRange();
     }
 
     emit();
@@ -572,13 +596,16 @@ export function LetterRichTextEditor({
               aria-label="Schriftfarbe"
               value={toolbar.color}
               onPointerDown={() => {
-                rememberRange();
+                const range = rememberRange();
+                colorRangeRef.current = range?.cloneRange() ?? null;
+                activeColorSpanRef.current = null;
                 colorPickerActiveRef.current = true;
               }}
               onInput={(event) => setTextColor(event.currentTarget.value)}
-              onChange={(event) => setTextColor(event.currentTarget.value)}
               onBlur={() => {
                 colorPickerActiveRef.current = false;
+                colorRangeRef.current = null;
+                activeColorSpanRef.current = null;
               }}
               className="absolute inset-0 cursor-pointer opacity-0"
             />
