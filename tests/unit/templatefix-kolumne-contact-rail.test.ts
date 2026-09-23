@@ -39,4 +39,12 @@ describe("Kolumne contact rail cleanup", () => {
       '[data-cv-section-title]:not([data-cv-user-section-color="true"])',
     );
   });
+
+  test("keeps rubric separator lines visible in the configurable sidebar", () => {
+    expect(canvas).toContain('data-cv-section="sidebar"');
+    expect(canvas).toContain('data-cv-accent="section"');
+    expect(cvCss).not.toContain(
+      '[data-cv-section="sidebar"]\n  [data-cv-accent="section"],\nhtml[data-cv-variant]',
+    );
+  });
 });

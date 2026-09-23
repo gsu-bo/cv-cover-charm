@@ -37,17 +37,10 @@ html[data-cv-variant][data-cv-variant][data-cv-variant]
 }
 
 /*
- * The Sidebar/Modern layout already gets its hierarchy from the split column,
- * typography and whitespace. Horizontal dashes inside the narrow sidebar add
- * noise and can look like truncated rules, so keep section rules for the main
- * column only. The short decorative dash below the name has the same problem:
- * in this layout it reads like a broken underline rather than a deliberate
- * separator.
+ * Keep the short decorative dash below the name hidden in the modern layout.
+ * Sidebar rubric rules remain visible so narrow columns still have a clear
+ * distinction between a title and its content.
  */
-html[data-cv-variant][data-cv-variant][data-cv-variant]
-  [data-dossier-document="cv"][data-cv-layout="modern"]
-  [data-cv-section="sidebar"]
-  [data-cv-accent="section"],
 html[data-cv-variant][data-cv-variant][data-cv-variant]
   [data-dossier-document="cv"][data-cv-layout="modern"]
   [data-cv-accent="header"] {

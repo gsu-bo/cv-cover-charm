@@ -233,33 +233,6 @@ export function PlacementToggle({
   );
 }
 
-function BlockPlacementControl({
-  block,
-  label = "Position",
-}: {
-  block: CvPlacementKey;
-  label?: string;
-}) {
-  const layout = useSyncExternalStore(subscribeCvLayout, getCvLayout, () => "classic");
-  const placements = useSyncExternalStore(
-    subscribeCvPlacements,
-    getCvPlacements,
-    () => DEFAULT_CV_PLACEMENTS,
-  );
-
-  if (layout !== "modern") return null;
-
-  return (
-    <div className="flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-2.5 py-2">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <PlacementToggle
-        value={placements[block]}
-        onChange={(value) => setCvPlacement(block, value)}
-      />
-    </div>
-  );
-}
-
 /** Rahmen um einen wiederholbaren Eintrag, mit Entfernen-Knopf. */
 function Item({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
   return (
@@ -469,7 +442,6 @@ export function FormCvPerson({
 
   return (
     <div className="flex flex-col gap-3">
-      <BlockPlacementControl block="kontakt" label="Kontaktangaben" />
       <label className="flex flex-col gap-1">
         <span className="text-xs text-muted-foreground">Überschrift über den Kontaktangaben</span>
         <input
@@ -710,7 +682,6 @@ export function FormCvEntries({
 
   return (
     <div className="flex flex-col gap-2">
-      {block && <BlockPlacementControl block={block} />}
       {isExperience && (
         <label className="flex items-center gap-2 rounded-md border bg-muted/20 px-2.5 py-2 text-xs">
           <input
@@ -889,7 +860,6 @@ export function FormCvSprachen({
 
   return (
     <div className="flex flex-col gap-2">
-      <BlockPlacementControl block="sprachen" />
       {list.map((s, i) => (
         <div
           key={s.id}
@@ -947,7 +917,6 @@ export function FormCvLines({
 
   return (
     <div className="flex flex-col gap-2">
-      <BlockPlacementControl block={block} />
       {list.map((v, i) => (
         <div
           key={i}
@@ -1004,7 +973,6 @@ export function FormCvReferenzen({
 
   return (
     <div className="flex flex-col gap-2">
-      <BlockPlacementControl block="referenzen" />
       {list.map((r, i) => (
         <div
           key={r.id}
@@ -1078,22 +1046,34 @@ export function SectionLayoutControls({
   onLayout: (patch: Partial<CvSectionLayout>) => void;
 }) {
   const sectionGapMm = useSyncExternalStore(subscribeCvSectionGap, getCvSectionGapMm, () => null);
+  const cvLayout = useSyncExternalStore(subscribeCvLayout, getCvLayout, () => "classic");
+  const placements = useSyncExternalStore(
+    subscribeCvPlacements,
+    getCvPlacements,
+    () => DEFAULT_CV_PLACEMENTS,
+  );
   const customSectionGap = sectionGapMm !== null;
+  const placementKey: CvPlacementKey | null =
+    section === "person"
+      ? "kontakt"
+      : Object.prototype.hasOwnProperty.call(DEFAULT_CV_PLACEMENTS, section)
+        ? (section as CvPlacementKey)
+        : null;
 
   return (
-    <details className="group rounded-md border bg-muted/20">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-2 text-xs font-semibold hover:bg-accent/60">
-        <span>⚙ Layout</span>
-        <span className="font-normal text-muted-foreground group-open:hidden">
-          Seite {layout.page} · {layout.width === "half" ? "Halbe Breite" : "Volle Breite"}
-          {layout.positioning === "free" && (layout.widthMm || layout.heightMm)
-            ? " · Eigene Grösse"
-            : ""}
-        </span>
-        <span className="hidden font-normal text-muted-foreground group-open:inline">
-          schliessen
-        </span>
-      </summary>
+    <div className="rounded-md border bg-muted/20">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-2">
+        <span className="text-xs font-semibold">Position &amp; Layout</span>
+        {cvLayout === "modern" && placementKey ? (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-muted-foreground">Bereich</span>
+            <PlacementToggle
+              value={placements[placementKey]}
+              onChange={(value) => setCvPlacement(placementKey, value)}
+            />
+          </div>
+        ) : null}
+      </div>
       <div className="grid gap-2 border-t p-2.5 sm:grid-cols-3">
         <label className="flex min-w-0 flex-col gap-1">
           <span className="text-[11px] font-medium">Seite</span>
@@ -1192,7 +1172,7 @@ export function SectionLayoutControls({
           </p>
         </div>
       )}
-    </details>
+    </div>
   );
 }
 
