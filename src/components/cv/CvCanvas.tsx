@@ -33,6 +33,7 @@ import { CvCanvas as BaseCvCanvas } from "./CvCanvasBase";
 import { resolveCvRubricOptions } from "./citrus-rubric";
 import {
   buildCvPageFitPlan,
+  consumeCvPageFitMode,
   getCvPageFitMode,
   getCvPageFitRevision,
   publishCvPageFitPageCount,
@@ -68,6 +69,8 @@ type Props = Omit<BaseProps, "chromeOptions" | "chromeContact" | "chromeDocument
   chromeContact?: DossierChromeContact;
   /** Hidden multi-document renderers must not seize the live html template scope. */
   manageGlobalTemplateScope?: boolean;
+  /** Persist the one-shot page-fit typography into the real CV design state. */
+  onPageFitDesign?: (patch: Pick<CvDesign, "titleScale" | "headingScale" | "bodyScale">) => void;
 };
 
 /**
@@ -143,7 +146,7 @@ export function CvCanvas({
   );
   const pageFitPlan = useMemo(
     () =>
-      pageFitMode
+      pageFitMode && !props.exportMode
         ? buildCvPageFitPlan(props.data, pageFitMode, {
             allowHalfWidth: pageFitLayout === "classic",
           })
@@ -153,18 +156,15 @@ export function CvCanvas({
   const baseDesign = useMemo(() => cvDesignWithFullSectionRules(props.design), [props.design]);
   const design = useMemo<CvDesign>(() => {
     if (!pageFitPlan) return baseDesign;
+    // Page-fit actions are deterministic and idempotent: clicking the same
+    // action again targets the same density instead of multiplying a prior fit.
     return {
       ...baseDesign,
-      titleScale: clampCvScale(
-        (baseDesign.titleScale ?? CV_TYPE_DEFAULTS.titleScale) * pageFitPlan.titleScaleFactor,
-      ),
+      titleScale: clampCvScale(CV_TYPE_DEFAULTS.titleScale * pageFitPlan.titleScaleFactor),
       headingScale: clampCvScale(
-        (baseDesign.headingScale ?? CV_TYPE_DEFAULTS.headingScale) *
-          pageFitPlan.headingScaleFactor,
+        CV_TYPE_DEFAULTS.headingScale * pageFitPlan.headingScaleFactor,
       ),
-      bodyScale: clampCvScale(
-        (baseDesign.bodyScale ?? CV_TYPE_DEFAULTS.bodyScale) * pageFitPlan.bodyScaleFactor,
-      ),
+      bodyScale: clampCvScale(CV_TYPE_DEFAULTS.bodyScale * pageFitPlan.bodyScaleFactor),
     };
   }, [baseDesign, pageFitPlan]);
   const rubric = useMemo(() => resolveCvRubricOptions(design), [design]);
@@ -238,7 +238,22 @@ export function CvCanvas({
         heightMm: null,
       });
     }
-  }, [pageFitPlan, pageFitRevision, props.exportMode, props.onSectionLayout]);
+
+    props.onPageFitDesign?.({
+      titleScale: clampCvScale(CV_TYPE_DEFAULTS.titleScale * pageFitPlan.titleScaleFactor),
+      headingScale: clampCvScale(
+        CV_TYPE_DEFAULTS.headingScale * pageFitPlan.headingScaleFactor,
+      ),
+      bodyScale: clampCvScale(CV_TYPE_DEFAULTS.bodyScale * pageFitPlan.bodyScaleFactor),
+    });
+    consumeCvPageFitMode(pageFitPlan.mode);
+  }, [
+    pageFitPlan,
+    pageFitRevision,
+    props.exportMode,
+    props.onPageFitDesign,
+    props.onSectionLayout,
+  ]);
 
   const handlePageCount = useCallback(
     (count: number) => {

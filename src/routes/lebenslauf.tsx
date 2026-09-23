@@ -994,6 +994,13 @@ function Lebenslauf() {
     if (key === selectedSection && nextPositioning !== "free") setSelectedSection(null);
   };
 
+  const applyPageFitDesign = useCallback(
+    (patch: Pick<CvDesign, "titleScale" | "headingScale" | "bodyScale">) => {
+      setDesign((current) => ({ ...current, ...patch }));
+    },
+    [],
+  );
+
   const sectionDisplayLabel = (key: CvLayoutSectionKey) => {
     if (key === "person") return "Persönliche Angaben";
     if (isCustomSectionKey(key)) {
@@ -1145,6 +1152,7 @@ function Lebenslauf() {
       onSelectSection={setSelectedSection}
       onMoveElement={patchStyle}
       onSectionLayout={setSectionLayout}
+      onPageFitDesign={applyPageFitDesign}
       onLayoutWarnings={receiveLayoutWarnings}
       drawing={drawing}
       onDrawn={(points, page) => {
