@@ -15,6 +15,7 @@ import {
   type DossierPageReserves,
 } from "@/lib/dossier-page-geometry";
 import {
+  CV_PAGE_MARGIN_BOTTOM_MM,
   DOSSIER_PAGE_MARGIN_MIN_MM,
   getDossierPageMargins,
   type DossierPageMargins,
@@ -274,8 +275,9 @@ export function cvDefaultContentBox(
 
 /**
  * Harte Sicherheitszone für eigene CV-Seitenränder. Vertikale Header-/Footer-
- * Reserven werden separat durch den gemeinsamen Dossier-Vertrag addiert; diese
- * Funktion schützt deshalb nur physische Seitenränder und Template-Struktur.
+ * Reserven werden separat durch den gemeinsamen Dossier-Vertrag addiert. Der
+ * physische untere Rand ist absichtlich immer 1 mm, damit die letzte Rubrik
+ * (typischerweise Referenzen) nicht durch einen hohen Template-Rand verschwindet.
  */
 export function cvSafePageMarginMinimums(
   frame: CvFrame,
@@ -324,13 +326,17 @@ export function cvSafePageMarginMinimums(
     };
   }
 
-  return dossierPageMarginMinimumsForContentMinimums(
+  const minimums = dossierPageMarginMinimumsForContentMinimums(
     contentMinimums,
     cvPageReserves(chrome, pageIndex),
   );
+  return { ...minimums, bottom: CV_PAGE_MARGIN_BOTTOM_MM };
 }
 
-/** Physical page-margin defaults corresponding to the reviewed CV content box. */
+/**
+ * Physical page-margin defaults corresponding to the reviewed CV content box,
+ * except for the intentionally global 1 mm bottom margin.
+ */
 export function cvDefaultPageMargins(
   frame: CvFrame,
   pageIndex: number,
@@ -339,19 +345,19 @@ export function cvDefaultPageMargins(
   chrome: DossierChromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
 ): DossierPageMargins {
   const minimums = cvSafePageMarginMinimums(frame, pageIndex, layout, sidebarPct, chrome);
-  return (
+  const resolved =
     dossierPageMarginsFromContentMargins(
       cvDefaultContentBox(frame, pageIndex, layout, sidebarPct, chrome),
       minimums,
       cvPageReserves(chrome, pageIndex),
-    ) ?? minimums
-  );
+    ) ?? minimums;
+  return { ...resolved, bottom: CV_PAGE_MARGIN_BOTTOM_MM };
 }
 
 /**
- * Textbereich einer CV-Seite. Ohne eigene Werte bleibt der bestehende
- * vorlagenabhängige Satzspiegel exakt erhalten. Eigene Werte own the physical
- * page margin; shared header/footer reserve is composed on top exactly once.
+ * Textbereich einer CV-Seite. Links/rechts/oben behalten die bestehende
+ * vorlagenabhängige Geometrie; unten gilt für jede Vorlage 1 mm physischer Rand.
+ * Shared header/footer reserve is composed on top exactly once.
  */
 export function cvContentBox(
   frame: CvFrame,
@@ -360,15 +366,15 @@ export function cvContentBox(
   sidebarPct?: number,
   chrome: DossierChromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
 ): CvContentBox {
-  const defaults = cvDefaultContentBox(frame, pageIndex, layout, sidebarPct, chrome);
+  const fallback = cvDefaultContentBox(frame, pageIndex, layout, sidebarPct, chrome);
   const custom = getDossierPageMargins("cv");
-  if (!custom) return defaults;
+  const pageMargins = custom ?? cvDefaultPageMargins(frame, pageIndex, layout, sidebarPct, chrome);
   return (
     resolveDossierContentMargins(
-      custom,
+      { ...pageMargins, bottom: CV_PAGE_MARGIN_BOTTOM_MM },
       cvSafePageMarginMinimums(frame, pageIndex, layout, sidebarPct, chrome),
       cvPageReserves(chrome, pageIndex),
-    ) ?? defaults
+    ) ?? fallback
   );
 }
 
