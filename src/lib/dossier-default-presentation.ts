@@ -8,6 +8,7 @@ export const CANONICAL_DOSSIER_PRESENTATION = {
   template: "brief",
   letter: {
     headerMode: "compact",
+    headerFontSizePt: 14,
     footerMode: "compact",
     continuationHeaderMode: "compact",
     continuationFooterMode: "compact",
@@ -15,6 +16,7 @@ export const CANONICAL_DOSSIER_PRESENTATION = {
   cv: {
     layout: "classic",
     headerMode: "compact",
+    headerFontSizePt: 14,
     footerMode: "compact",
   },
 } as const;

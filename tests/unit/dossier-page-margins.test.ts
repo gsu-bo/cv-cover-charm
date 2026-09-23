@@ -182,20 +182,20 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(cvSafePageMarginMinimums(frame, 0, "classic", undefined, noChrome).top).toBe(15);
   });
 
-  test("wide structural sidebars can still be enlarged above their safe minimum", () => {
+  test("wide structural sidebars clamp custom margins to their safe minimum", () => {
     const minimums = cvSafePageMarginMinimums(
       cvFrameFor("klassisch"),
       0,
       "modern",
-      0.42,
+      0.5,
       DEFAULT_DOSSIER_CHROME_OPTIONS,
     );
-    expect(minimums.left).toBe(96);
+    expect(minimums.left).toBe(113);
     expect(DOSSIER_PAGE_MARGIN_HARD_MAX_MM).toBe(120);
     expect(
       clampDossierPageMarginsToMinimums({ top: 30, right: 20, bottom: 20, left: 110 }, minimums)
         ?.left,
-    ).toBe(110);
+    ).toBe(113);
   });
 
   test("motivation-letter custom margins compose with header and footer reserve", () => {

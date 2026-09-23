@@ -45,6 +45,11 @@ export function defaultFooterModeForTemplate(template: string): "none" | "compac
     : "compact";
 }
 
+/** Default header type size for preview, PDF and DOCX unless the user overrides it. */
+export function defaultHeaderFontSizePtForTemplate(_template: string): number {
+  return CANONICAL_DOSSIER_PRESENTATION.cv.headerFontSizePt;
+}
+
 /**
  * Header height used only for a template recommendation/default.
  * Warm keeps the reviewed 44 mm masthead. Afterwards the value remains ordinary
@@ -81,8 +86,8 @@ export function recommendedHeaderPatchForTemplate(
 
 /**
  * Template-owned chrome styling without disabling the shared chrome controls.
- * Explicit user colours always win: template-derived contact gradients are only
- * supplied while both header colour controls remain on "Wie Vorlage".
+ * Explicit user colours and type sizes always win. A missing legacy font-size
+ * value now resolves to the reviewed 14 pt dossier default in every renderer.
  */
 export function resolveTemplateChromeOptions(
   template: string,
@@ -93,7 +98,10 @@ export function resolveTemplateChromeOptions(
   const secondary = colors.secondary ?? colors.accent ?? primary;
 
   // Modes and geometry are resolved user intent. Template styling must not replace them.
-  const resolvedOptions = options;
+  const resolvedOptions =
+    options.headerFontSizePt == null
+      ? { ...options, headerFontSizePt: defaultHeaderFontSizePtForTemplate(template) }
+      : options;
 
   if (
     resolvedOptions.headerMode === "contact" &&

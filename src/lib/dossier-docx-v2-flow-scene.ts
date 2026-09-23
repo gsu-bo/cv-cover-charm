@@ -16,6 +16,7 @@ import {
   type CvSectionKey,
 } from "@/components/cv/types";
 import type { CvInfoPosition, CvLayoutId } from "@/components/cv/layout";
+import { SIDEBAR_PCT_MAX, SIDEBAR_PCT_MIN } from "@/components/cv/archetype";
 import { resolveCvPalette } from "@/components/cv/cv-paper";
 import { onColorRoles } from "@/components/cv/palette";
 import type { CvPhotoPlacement } from "@/components/cv/photo-place";
@@ -1011,7 +1012,8 @@ export function buildDossierDocxV2CvFlowScene(
     }
     sideBlocks.push(...sectionGroups(cv, sideKeys, font, palette.ink, palette.muted, accent, options.sectionGapMm));
     mainBlocks.push(...sectionGroups(cv, mainKeys, font, palette.ink, palette.muted, accent, options.sectionGapMm));
-    const sidebarPct = Math.max(0.2, Math.min(0.45, cv.design.sidebarPct ?? 0.3)) * 100;
+    const sidebarPct =
+      Math.max(SIDEBAR_PCT_MIN, Math.min(SIDEBAR_PCT_MAX, cv.design.sidebarPct ?? 0.3)) * 100;
     const sideCell: DossierDocxV2FlowCell = { widthPct: sidebarPct, paddingMm: 1.8, blocks: sideBlocks };
     const mainCell: DossierDocxV2FlowCell = { widthPct: 100 - sidebarPct, paddingMm: 2.2, blocks: mainBlocks };
     const cells = options.infoPosition === "mirrored" ? [mainCell, sideCell] : [sideCell, mainCell];

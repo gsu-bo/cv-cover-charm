@@ -1,7 +1,10 @@
 import { cvBodyData } from "@/lib/dossier-body-contact";
 import {
+  useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useSyncExternalStore,
   type ComponentProps,
   type CSSProperties,
@@ -28,10 +31,21 @@ import { CV_LAYOUT_EVENT } from "./layout";
 import { CvCanvas as BaseCvCanvas } from "./CvCanvasBase";
 import { resolveCvRubricOptions } from "./citrus-rubric";
 import {
+  buildCvPageFitPlan,
+  getCvPageFitMode,
+  getCvPageFitRevision,
+  publishCvPageFitPageCount,
+  subscribeCvPageFit,
+} from "./page-fit";
+import {
   CV_NAME_FONT_SIZE_MAX,
   CV_NAME_FONT_SIZE_MIN,
+  CV_SCALE_MAX,
+  CV_SCALE_MIN,
+  CV_TYPE_DEFAULTS,
   type CvData,
   type CvDesign,
+  type CvLayoutSectionKey,
 } from "./types";
 import "@/components/dossier/edel-stationery.css";
 import "@/components/dossier/human-polish.css";
@@ -39,6 +53,7 @@ import "@/components/dossier/legacy-template-refinements.css";
 import "./full-section-rules.css";
 import "./fresh-modern-sidebar-geometry.css";
 import "./default-pagination-density.css";
+import "./page-fit.css";
 import "./user-typography.css";
 import "./citrus-rubric.css";
 import "./content-geometry-contract.css";
@@ -100,6 +115,8 @@ export function resolveCvChromeContact(
   };
 }
 
+const clampCvScale = (value: number) => Math.max(CV_SCALE_MIN, Math.min(CV_SCALE_MAX, value));
+
 /** Pure snapshot adapter: no dossier-chrome store reads happen below the route/editor boundary. */
 export function CvCanvas({
   chromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
@@ -112,6 +129,8 @@ export function CvCanvas({
     getCvTextAlignment,
     () => "left",
   );
+  const pageFitMode = useSyncExternalStore(subscribeCvPageFit, getCvPageFitMode, () => null);
+  const pageFitRevision = useSyncExternalStore(subscribeCvPageFit, getCvPageFitRevision, () => 0);
   // Page margins are stored outside the legacy CV JSON. Subscribing here keeps
   // preview, pagination and hidden PDF canvases on one geometry path.
   useSyncExternalStore(subscribeDossierPageMargins, getDossierPageMarginsSnapshot, () => "{}");
@@ -120,7 +139,27 @@ export function CvCanvas({
     () => resolveCvChromeContact(localContact, chromeContact),
     [chromeContact, localContact],
   );
-  const design = useMemo(() => cvDesignWithFullSectionRules(props.design), [props.design]);
+  const pageFitPlan = useMemo(
+    () => (pageFitMode ? buildCvPageFitPlan(props.data, pageFitMode) : null),
+    [pageFitMode, props.data],
+  );
+  const baseDesign = useMemo(() => cvDesignWithFullSectionRules(props.design), [props.design]);
+  const design = useMemo<CvDesign>(() => {
+    if (!pageFitPlan) return baseDesign;
+    return {
+      ...baseDesign,
+      titleScale: clampCvScale(
+        (baseDesign.titleScale ?? CV_TYPE_DEFAULTS.titleScale) * pageFitPlan.titleScaleFactor,
+      ),
+      headingScale: clampCvScale(
+        (baseDesign.headingScale ?? CV_TYPE_DEFAULTS.headingScale) *
+          pageFitPlan.headingScaleFactor,
+      ),
+      bodyScale: clampCvScale(
+        (baseDesign.bodyScale ?? CV_TYPE_DEFAULTS.bodyScale) * pageFitPlan.bodyScaleFactor,
+      ),
+    };
+  }, [baseDesign, pageFitPlan]);
   const rubric = useMemo(() => resolveCvRubricOptions(design), [design]);
   const chromeDocumentContent = useMemo(
     () =>
@@ -162,6 +201,41 @@ export function CvCanvas({
   // renderer a fresh top-level data identity whenever the effective design changes
   // so every typography/color/spacing toggle is reflected immediately.
   const paginationData = useMemo(() => ({ ...data }), [data, design]);
+
+  // The two pupil-facing buttons reuse the existing section-layout callback.
+  // Re-applying the same button is intentional; a monotonically increasing
+  // revision lets it reset manual page moves without inventing a third button.
+  const appliedPageFit = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pageFitPlan || props.exportMode || !props.onSectionLayout) {
+      if (!pageFitPlan) appliedPageFit.current = null;
+      return;
+    }
+    const requestKey = `${pageFitRevision}:${pageFitPlan.assignmentSignature}`;
+    if (appliedPageFit.current === requestKey) return;
+    appliedPageFit.current = requestKey;
+
+    for (const key of Object.keys(pageFitPlan.pageBySection) as CvLayoutSectionKey[]) {
+      const page = pageFitPlan.pageBySection[key];
+      if (!page) continue;
+      props.onSectionLayout(key, {
+        page,
+        positioning: "flow",
+        x: null,
+        y: null,
+        widthMm: null,
+        heightMm: null,
+      });
+    }
+  }, [pageFitPlan, pageFitRevision, props.exportMode, props.onSectionLayout]);
+
+  const handlePageCount = useCallback(
+    (count: number) => {
+      if (!props.exportMode) publishCvPageFitPageCount(count);
+      props.onPageCount?.(count);
+    },
+    [props.exportMode, props.onPageCount],
+  );
 
   // The visible CV editor still owns the legacy html[data-dossier-template]
   // route scope. Hidden mixed-template PDF renderers opt out; their local
@@ -227,6 +301,7 @@ export function CvCanvas({
     <div
       style={geometryStyle}
       data-dossier-template={design.template}
+      data-cv-page-fit-mode={pageFitMode ?? undefined}
       data-cv-body-align={bodyAlignment}
       data-cv-heading-rule={design.headingRule}
       data-cv-user-heading-rule={props.design.headingRule === "full" ? "full" : undefined}
@@ -256,6 +331,7 @@ export function CvCanvas({
         chromeOptions={canvasChromeOptions}
         chromeContact={resolvedContact}
         chromeDocumentContent={chromeDocumentContent}
+        onPageCount={handlePageCount}
       />
       {!props.exportMode ? (
         <CvTextAlignmentPortal

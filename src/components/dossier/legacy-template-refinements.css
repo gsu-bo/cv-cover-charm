@@ -78,6 +78,24 @@ html[data-dossier-template="terracotta"] [data-dossier-document="cv"] [data-cv-a
   opacity: 0.72 !important;
 }
 
+/* In der dunklen Kolumne muss die automatisch berechnete Kontrastfarbe der
+ * Sidebar gewinnen. Die allgemeine Terracotta-Regel darüber gilt nur für die
+ * hellen CV-Flächen; eine ausdrücklich gewählte Rubrikfarbe bleibt vorrangig. */
+html[data-dossier-template="terracotta"]
+  [data-dossier-document="cv"]
+  [data-cv-sidebar]
+  [data-cv-section-title]:not([data-cv-user-section-color="true"]) {
+  color: var(--cv-sidebar-section-color, #fff) !important;
+  -webkit-text-fill-color: var(--cv-sidebar-section-color, #fff) !important;
+}
+
+html[data-dossier-template="terracotta"]
+  [data-dossier-document="cv"]
+  [data-cv-sidebar]
+  [data-cv-accent="section"]:not([data-cv-user-section-color="true"]) {
+  background: var(--cv-sidebar-section-color, #fff) !important;
+}
+
 /* Kolumne already owns a vertical rail. Keep the generic compact zones in the
  * layout so pagination still reserves their space, but make their surfaces and
  * borders invisible. That removes the accidental horizontal scratches without

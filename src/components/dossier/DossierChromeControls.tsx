@@ -315,8 +315,7 @@ export function DossierChromeControls({
   const footerDefaultHeight = options.footerMode === "details" ? 10 : 4;
   const footerHeight = options.footerHeightMm ?? footerDefaultHeight;
   const footerContentOffsetY = options.footerContentOffsetYMm ?? 0;
-  const headerFontSizeFallback =
-    options.headerMode === "contact" && options.headerTextLayout === "stacked" ? 8 : 8.5;
+  const headerFontSizeFallback = 14;
   const footerFontSizeFallback = options.footerMode === "details" ? 8.5 : 6.5;
   const footerMin = options.footerMode === "details" ? 4 : 1;
   const footerMax = options.footerMode === "details" ? 40 : 18;
