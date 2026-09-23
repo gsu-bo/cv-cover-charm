@@ -1,0 +1,37 @@
+name: Temporary Prettier Export
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - .github/workflows/tmp-prettier-export.yml
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Format repository
+        run: bun run format
+      - name: Collect formatted files
+        run: |
+          git diff --name-only > /tmp/formatted-files.txt
+          mkdir -p /tmp/prettier-output
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            mkdir -p "/tmp/prettier-output/$(dirname "$file")"
+            cp "$file" "/tmp/prettier-output/$file"
+          done < /tmp/formatted-files.txt
+          cp /tmp/formatted-files.txt /tmp/prettier-output/formatted-files.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prettier-output
+          path: /tmp/prettier-output
+          if-no-files-found: error
