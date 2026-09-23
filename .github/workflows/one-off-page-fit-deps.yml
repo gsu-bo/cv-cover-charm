@@ -1,0 +1,40 @@
+name: One-off page-fit hook dependency cleanup
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - .github/workflows/one-off-page-fit-deps.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+      - name: Fix dependency
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/cv/CvCanvas.tsx')
+          text = p.read_text()
+          old = '    [pageFitLayout, pageFitMode, props.data],'
+          new = '    [pageFitLayout, pageFitMode, props.data, props.exportMode],'
+          if text.count(old) != 1:
+              raise SystemExit('expected page-fit dependency block once')
+          p.write_text(text.replace(old, new, 1))
+          PY
+      - name: Commit cleanup
+        run: |
+          rm .github/workflows/one-off-page-fit-deps.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(cv): include export mode in page-fit memo deps"
+          git push origin HEAD:dev
