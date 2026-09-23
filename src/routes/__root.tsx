@@ -187,35 +187,6 @@ function TemplateQaGate() {
   return enabled ? <TemplateQaKeyboardSwitch /> : null;
 }
 
-/**
- * The native colour input takes focus before it emits the chosen colour.
- * React's editor onBlur normally canonicalises innerHTML at that moment, which
- * replaces the selected text nodes and invalidates the saved Range. Suppress
- * only that internal editor -> colour-picker focusout so the selection remains
- * attached until the colour handler has applied and persisted the formatting.
- */
-function LetterColorSelectionGuard() {
-  useEffect(() => {
-    const keepSelectionAlive = (event: FocusEvent) => {
-      const editor = event.target;
-      const next = event.relatedTarget;
-      if (!(editor instanceof HTMLElement) || !editor.matches("[data-letter-rich-editor]")) return;
-      if (
-        !(next instanceof HTMLInputElement) ||
-        next.type !== "color" ||
-        next.getAttribute("aria-label") !== "Schriftfarbe"
-      )
-        return;
-      event.stopPropagation();
-    };
-
-    document.addEventListener("focusout", keepSelectionAlive, true);
-    return () => document.removeEventListener("focusout", keepSelectionAlive, true);
-  }, []);
-
-  return null;
-}
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
@@ -223,7 +194,6 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <DossierHyphenationBridge />
       <TemplateQaGate />
-      <LetterColorSelectionGuard />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
