@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
+  CV_PAGE_MARGIN_BOTTOM_MM,
   DOSSIER_PAGE_MARGIN_HARD_MAX_MM,
   DOSSIER_PAGE_MARGIN_MAX_MM,
   DOSSIER_PAGE_MARGIN_MIN_MM,
@@ -59,13 +60,20 @@ export function DossierPageMarginsControl({
     () => "{}",
   );
   const custom = getDossierPageMargins(scope);
+  const scopeMinimums = useMemo(
+    () => ({
+      ...GLOBAL_MINIMUMS,
+      bottom: scope === "cv" ? CV_PAGE_MARGIN_BOTTOM_MM : DOSSIER_PAGE_MARGIN_MIN_MM,
+    }),
+    [scope],
+  );
   const minimums = useMemo(
     () =>
       clampDossierPageMarginsToMinimums(
-        GLOBAL_MINIMUMS,
-        minimumMargins ?? GLOBAL_MINIMUMS,
-      ) ?? GLOBAL_MINIMUMS,
-    [minimumMargins],
+        scopeMinimums,
+        minimumMargins ?? scopeMinimums,
+      ) ?? scopeMinimums,
+    [minimumMargins, scopeMinimums],
   );
   const defaults = useMemo(
     () => clampDossierPageMarginsToMinimums(defaultMargins, minimums) ?? defaultMargins,
@@ -90,6 +98,7 @@ export function DossierPageMarginsControl({
   }, [custom, onApplied, safeCustom, scope]);
 
   const commit = (side: keyof DossierPageMargins) => {
+    if (scope === "cv" && side === "bottom") return;
     const raw = draft[side].trim();
     if (!raw) {
       setDraft(asDraft(values));
@@ -146,47 +155,65 @@ export function DossierPageMarginsControl({
 
       <div className="grid gap-3 border-t px-3 py-3">
         <div className="grid grid-cols-2 gap-2">
-          {SIDES.map(({ key, label }) => (
-            <label key={key} className="grid gap-1 text-[11px] font-medium">
-              <span>{label}</span>
-              <span className="relative">
-                <input
-                  type="number"
-                  min={minimums[key]}
-                  max={
-                    minimums[key] > DOSSIER_PAGE_MARGIN_MAX_MM
-                      ? DOSSIER_PAGE_MARGIN_HARD_MAX_MM
-                      : DOSSIER_PAGE_MARGIN_MAX_MM
-                  }
-                  step={0.5}
-                  value={draft[key]}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, [key]: event.target.value }))
-                  }
-                  onBlur={() => commit(key)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") event.currentTarget.blur();
-                    if (event.key === "Escape") {
-                      setDraft(asDraft(values));
-                      event.currentTarget.blur();
-                    }
-                  }}
-                  className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 pr-8 text-xs outline-none focus:ring-2 focus:ring-ring"
-                  aria-label={`Seitenrand ${label} in Millimetern`}
-                />
-                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
-                  mm
+          {SIDES.map(({ key, label }) => {
+            const lockedCvBottom = scope === "cv" && key === "bottom";
+            return (
+              <label key={key} className="grid gap-1 text-[11px] font-medium">
+                <span>
+                  {label}
+                  {lockedCvBottom ? (
+                    <span className="ml-1 font-normal text-muted-foreground">(fix)</span>
+                  ) : null}
                 </span>
-              </span>
-            </label>
-          ))}
+                <span className="relative">
+                  <input
+                    type="number"
+                    min={minimums[key]}
+                    max={
+                      minimums[key] > DOSSIER_PAGE_MARGIN_MAX_MM
+                        ? DOSSIER_PAGE_MARGIN_HARD_MAX_MM
+                        : DOSSIER_PAGE_MARGIN_MAX_MM
+                    }
+                    step={0.5}
+                    value={draft[key]}
+                    disabled={lockedCvBottom}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, [key]: event.target.value }))
+                    }
+                    onBlur={() => commit(key)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") event.currentTarget.blur();
+                      if (event.key === "Escape") {
+                        setDraft(asDraft(values));
+                        event.currentTarget.blur();
+                      }
+                    }}
+                    className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 pr-8 text-xs outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:bg-muted/40 disabled:text-muted-foreground"
+                    aria-label={`Seitenrand ${label} in Millimetern`}
+                  />
+                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
+                    mm
+                  </span>
+                </span>
+              </label>
+            );
+          })}
         </div>
 
         {extraControls ? <div className="grid gap-2 border-t pt-3">{extraControls}</div> : null}
 
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Ohne eigene Werte bleibt die bewährte Geometrie der gewählten Vorlage unverändert.
-          Mindestwerte schützen Header, Footer und tragende Vorlagenelemente.
+          {scope === "cv" ? (
+            <>
+              Der untere CV-Seitenrand ist fest auf 1 mm gesetzt, damit auch die letzte Rubrik
+              vollständig ins PDF gelangt. Header- und Footer-Abstände bleiben separat geschützt.
+            </>
+          ) : (
+            <>
+              Ohne eigene Werte bleibt die bewährte Geometrie der gewählten Vorlage unverändert.
+              Mindestwerte schützen Header, Footer und tragende Vorlagenelemente.
+            </>
+          )}
         </p>
 
         {custom ? (

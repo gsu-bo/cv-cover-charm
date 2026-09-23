@@ -38,10 +38,10 @@ describe("contextual letter typography", () => {
     expect(normalized.dateFont).toBe("sans");
     expect(normalized.bodyFont).toBe("serif");
     expect(normalized.attachmentsFont).toBe("freundlich");
-    expect(normalized.dateFontSizePt).toBe(8);
+    expect(normalized.dateFontSizePt).toBe(7);
     expect(normalized.salutationFontSizePt).toBe(9);
     expect(normalized.closingFontSizePt).toBe(11.5);
-    expect(normalized.signatureFontSizePt).toBe(16);
+    expect(normalized.signatureFontSizePt).toBe(20);
     expect(normalized.attachmentsFontSizePt).toBe(10.5);
   });
 

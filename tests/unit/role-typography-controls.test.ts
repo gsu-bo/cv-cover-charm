@@ -96,7 +96,7 @@ describe("user-owned typography roles", () => {
       italic: true,
       underline: true,
     });
-    expect(normalized.recipientTypography).toEqual({ fontSizePt: 7 });
+    expect(normalized.recipientTypography).toEqual({ fontSizePt: 5 });
     expect(normalized.subjectTypography).toBeUndefined();
   });
 

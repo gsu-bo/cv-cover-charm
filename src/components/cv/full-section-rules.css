@@ -50,7 +50,7 @@ html[data-cv-variant][data-cv-variant][data-cv-variant]
 /*
  * Neon PDF export does not always carry the route-only data-cv-variant marker.
  * Keep the modern cleanup template-scoped as well so sidebar/header micro-rules
- * cannot reappear in exported dossiers.
+ * cannot reappear in untouched exported dossiers.
  */
 html[data-dossier-template="neon"]
   [data-dossier-document="cv"][data-cv-layout="modern"]
@@ -92,7 +92,7 @@ html[data-dossier-template="neon"]
 /*
  * Glow is intentionally the calm light/gradient template. Long rules after
  * every heading and the short header dash turned that calm idea into a page of
- * repeated strokes. Let typography + whitespace carry the hierarchy instead.
+ * repeated strokes. Let typography + whitespace carry the untouched hierarchy.
  */
 html[data-dossier-template="glow"][data-dossier-template="glow"][data-dossier-template="glow"]
   [data-dossier-document="cv"]
@@ -101,4 +101,38 @@ html[data-dossier-template="glow"][data-dossier-template="glow"][data-dossier-te
   [data-dossier-document="cv"]
   [data-cv-accent="header"] {
   display: none !important;
+}
+
+/*
+ * Explicit user choice outranks template presentation defaults.
+ *
+ * CvCanvas publishes data-cv-user-heading-rule="full" only when the stored
+ * design explicitly contains headingRule="full". Missing/legacy values may
+ * still resolve to the visual default without receiving this marker, so Neon,
+ * Glow and other authored defaults remain intact until the user actually asks
+ * for the full rubric rule.
+ *
+ * Do not set a background here: the renderer's inline rubric colour (including
+ * the sidebar contrast colour or a user-selected rubric colour) remains the
+ * source of truth. The selector is intentionally route-independent so hidden
+ * PDF canvases get the same override as the live preview.
+ */
+html
+  [data-cv-user-heading-rule="full"][data-cv-heading-rule="full"][data-dossier-template]
+  [data-dossier-document="cv"]
+  [data-cv-section-title] {
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+}
+
+html
+  [data-cv-user-heading-rule="full"][data-cv-heading-rule="full"][data-dossier-template]
+  [data-dossier-document="cv"]
+  [data-cv-accent="section"] {
+  display: block !important;
+  width: auto !important;
+  max-width: none !important;
+  flex: 1 0 4mm !important;
+  min-width: 4mm !important;
+  margin-right: 0 !important;
 }

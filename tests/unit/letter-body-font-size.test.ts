@@ -29,20 +29,20 @@ describe("letter body font size", () => {
   test("keeps template size as the default and normalizes explicit overrides", () => {
     expect(emptyLetterDesign().bodyFontSizePt).toBeUndefined();
     expect(DEFAULT_LETTER_BODY_FONT_SIZE_PT).toBe(10.5);
-    expect(LETTER_BODY_FONT_SIZE_MIN).toBe(8);
-    expect(LETTER_BODY_FONT_SIZE_MAX).toBe(16);
+    expect(LETTER_BODY_FONT_SIZE_MIN).toBe(5);
+    expect(LETTER_BODY_FONT_SIZE_MAX).toBe(30);
 
-    expect(normalizeLetterDesign({ ...emptyLetterDesign(), bodyFontSizePt: 7 }).bodyFontSizePt).toBe(8);
-    expect(normalizeLetterDesign({ ...emptyLetterDesign(), bodyFontSizePt: 17 }).bodyFontSizePt).toBe(16);
+    expect(normalizeLetterDesign({ ...emptyLetterDesign(), bodyFontSizePt: 4 }).bodyFontSizePt).toBe(5);
+    expect(normalizeLetterDesign({ ...emptyLetterDesign(), bodyFontSizePt: 31 }).bodyFontSizePt).toBe(30);
     expect(normalizeLetterDesign({ ...emptyLetterDesign(), bodyFontSizePt: 11.24 }).bodyFontSizePt).toBe(11);
     expect(normalizeLetterDesign({ ...emptyLetterDesign(), bodyFontSizePt: 11.26 }).bodyFontSizePt).toBe(11.5);
   });
 
-  test("offers the requested compact 8–16 pt control with half-point steps", () => {
+  test("offers the shared 5–30 pt control with half-point steps", () => {
     expect(route).toContain('label="Fliesstext"');
     expect(route).toContain("value={design.bodyFontSizePt}");
-    expect(control).toContain("LETTER_BODY_FONT_SIZE_MIN");
-    expect(control).toContain("LETTER_BODY_FONT_SIZE_MAX");
+    expect(control).toContain("LETTER_FONT_SIZE_MIN");
+    expect(control).toContain("LETTER_FONT_SIZE_MAX");
     expect(control).toContain("step={0.5}");
     expect(control).toContain("Wie Vorlage");
   });

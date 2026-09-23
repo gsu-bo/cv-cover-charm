@@ -1,7 +1,7 @@
 import { FONT_LABELS, type FontKey } from "@/components/cover/types";
 import {
-  LETTER_BODY_FONT_SIZE_MAX,
-  LETTER_BODY_FONT_SIZE_MIN,
+  LETTER_FONT_SIZE_MAX,
+  LETTER_FONT_SIZE_MIN,
 } from "@/components/letter/types";
 
 export function LetterFontSizeControl({
@@ -9,8 +9,8 @@ export function LetterFontSizeControl({
   value,
   font,
   fallbackSize,
-  min = LETTER_BODY_FONT_SIZE_MIN,
-  max = LETTER_BODY_FONT_SIZE_MAX,
+  min = LETTER_FONT_SIZE_MIN,
+  max = LETTER_FONT_SIZE_MAX,
   hint,
   onChange,
   onFontChange,
@@ -26,8 +26,11 @@ export function LetterFontSizeControl({
   onFontChange: (value: FontKey | undefined) => void;
 }) {
   const rawSize = value ?? fallbackSize;
-  const effectiveMin = Math.min(min, rawSize);
-  const effectiveMax = Math.max(max, rawSize);
+  // Every letter typography control must expose at least the shared 5–30 pt range.
+  // Legacy narrower callers (for example the contact header's former 6 pt minimum)
+  // therefore cannot reintroduce a smaller slider range.
+  const effectiveMin = Math.min(LETTER_FONT_SIZE_MIN, min);
+  const effectiveMax = Math.max(LETTER_FONT_SIZE_MAX, max);
   const size = Math.min(effectiveMax, Math.max(effectiveMin, rawSize));
 
   return (

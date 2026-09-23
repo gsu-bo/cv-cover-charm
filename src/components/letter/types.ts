@@ -31,10 +31,13 @@ export type LetterRoleTypography = {
   underline?: boolean;
 };
 
-export const LETTER_ROLE_FONT_SIZE_MIN = 7;
-export const LETTER_ROLE_FONT_SIZE_MAX = 30;
-export const LETTER_BODY_FONT_SIZE_MIN = 8;
-export const LETTER_BODY_FONT_SIZE_MAX = 16;
+/** One predictable range for every letter typography control and persisted value. */
+export const LETTER_FONT_SIZE_MIN = 5;
+export const LETTER_FONT_SIZE_MAX = 30;
+export const LETTER_ROLE_FONT_SIZE_MIN = LETTER_FONT_SIZE_MIN;
+export const LETTER_ROLE_FONT_SIZE_MAX = LETTER_FONT_SIZE_MAX;
+export const LETTER_BODY_FONT_SIZE_MIN = LETTER_FONT_SIZE_MIN;
+export const LETTER_BODY_FONT_SIZE_MAX = LETTER_FONT_SIZE_MAX;
 export const DEFAULT_LETTER_BODY_FONT_SIZE_PT = 10.5;
 
 /** Frei platzierbares Bild im Anschreiben mit proportionaler Skalierung und automatischem Textfluss. */

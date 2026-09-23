@@ -15,10 +15,12 @@ import {
   type DossierPageReserves,
 } from "@/lib/dossier-page-geometry";
 import {
+  CV_PAGE_MARGIN_BOTTOM_MM,
   DOSSIER_PAGE_MARGIN_MIN_MM,
   getDossierPageMargins,
   type DossierPageMargins,
 } from "@/lib/dossier-page-margins";
+import { getCvContinuationGapMm } from "./layout";
 
 /**
  * Bauformen des Lebenslaufs.
@@ -155,16 +157,25 @@ export function sidebarWidthMm(frame: CvFrame, layout: CvRenderLayout, sidebarPc
 const SURFACE_PAD = 5;
 const roundHalfMm = (value: number) => Math.round(value * 2) / 2;
 
+/**
+ * Page 1 keeps the shared dossier gap. Continuation pages use the CV-only
+ * control so they can start higher without changing the motivation letter.
+ */
+function cvChromeForPage(chrome: DossierChromeOptions, pageIndex: number): DossierChromeOptions {
+  return pageIndex > 0 ? { ...chrome, headerGapMm: getCvContinuationGapMm() } : chrome;
+}
+
 export function cvPageReserves(
   chrome: DossierChromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
   pageIndex = 0,
 ): DossierPageReserves {
-  const headerReserveMm = dossierHeaderVisualHeightMmForOptions(chrome, pageIndex);
+  const pageChrome = cvChromeForPage(chrome, pageIndex);
+  const headerReserveMm = dossierHeaderVisualHeightMmForOptions(pageChrome, pageIndex);
   return {
     headerReserveMm,
     headerGapMm:
-      headerReserveMm > 0 ? Math.min(40, Math.max(0, chrome.headerGapMm ?? 12)) : 0,
-    footerReserveMm: dossierFooterVisualHeightMmForOptions(chrome),
+      headerReserveMm > 0 ? Math.min(40, Math.max(0, pageChrome.headerGapMm ?? 12)) : 0,
+    footerReserveMm: dossierFooterVisualHeightMmForOptions(pageChrome),
   };
 }
 
@@ -234,15 +245,16 @@ export function cvDefaultContentBox(
   sidebarPct?: number,
   chrome: DossierChromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
 ): CvContentBox {
-  const top = dossierHeaderContentTopMmForOptions(chrome, pageIndex);
-  const bottom = dossierFooterContentBottomMmForOptions(chrome);
+  const pageChrome = cvChromeForPage(chrome, pageIndex);
+  const top = dossierHeaderContentTopMmForOptions(pageChrome, pageIndex);
+  const bottom = dossierFooterContentBottomMmForOptions(pageChrome);
 
   if (frame.id === "card") {
     const inset = frame.cardInsetMm + 11;
     const contentTop =
       pageIndex === 0 &&
       frame.firstPageContentTopMm !== null &&
-      effectiveDossierHeaderModeForOptions(chrome, pageIndex) === "none"
+      effectiveDossierHeaderModeForOptions(pageChrome, pageIndex) === "none"
         ? frame.firstPageContentTopMm
         : Math.max(top, inset);
     const side = sidebarWidthMm(frame, layout, sidebarPct);
@@ -274,8 +286,9 @@ export function cvDefaultContentBox(
 
 /**
  * Harte Sicherheitszone für eigene CV-Seitenränder. Vertikale Header-/Footer-
- * Reserven werden separat durch den gemeinsamen Dossier-Vertrag addiert; diese
- * Funktion schützt deshalb nur physische Seitenränder und Template-Struktur.
+ * Reserven werden separat durch den gemeinsamen Dossier-Vertrag addiert. Der
+ * physische untere Rand ist absichtlich immer 1 mm, damit die letzte Rubrik
+ * (typischerweise Referenzen) nicht durch einen hohen Template-Rand verschwindet.
  */
 export function cvSafePageMarginMinimums(
   frame: CvFrame,
@@ -324,13 +337,17 @@ export function cvSafePageMarginMinimums(
     };
   }
 
-  return dossierPageMarginMinimumsForContentMinimums(
+  const minimums = dossierPageMarginMinimumsForContentMinimums(
     contentMinimums,
     cvPageReserves(chrome, pageIndex),
   );
+  return { ...minimums, bottom: CV_PAGE_MARGIN_BOTTOM_MM };
 }
 
-/** Physical page-margin defaults corresponding to the reviewed CV content box. */
+/**
+ * Physical page-margin defaults corresponding to the reviewed CV content box,
+ * except for the intentionally global 1 mm bottom margin.
+ */
 export function cvDefaultPageMargins(
   frame: CvFrame,
   pageIndex: number,
@@ -339,19 +356,19 @@ export function cvDefaultPageMargins(
   chrome: DossierChromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
 ): DossierPageMargins {
   const minimums = cvSafePageMarginMinimums(frame, pageIndex, layout, sidebarPct, chrome);
-  return (
+  const resolved =
     dossierPageMarginsFromContentMargins(
       cvDefaultContentBox(frame, pageIndex, layout, sidebarPct, chrome),
       minimums,
       cvPageReserves(chrome, pageIndex),
-    ) ?? minimums
-  );
+    ) ?? minimums;
+  return { ...resolved, bottom: CV_PAGE_MARGIN_BOTTOM_MM };
 }
 
 /**
- * Textbereich einer CV-Seite. Ohne eigene Werte bleibt der bestehende
- * vorlagenabhängige Satzspiegel exakt erhalten. Eigene Werte own the physical
- * page margin; shared header/footer reserve is composed on top exactly once.
+ * Textbereich einer CV-Seite. Links/rechts/oben behalten die bestehende
+ * vorlagenabhängige Geometrie; unten gilt für jede Vorlage 1 mm physischer Rand.
+ * Shared header/footer reserve is composed on top exactly once.
  */
 export function cvContentBox(
   frame: CvFrame,
@@ -360,15 +377,15 @@ export function cvContentBox(
   sidebarPct?: number,
   chrome: DossierChromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
 ): CvContentBox {
-  const defaults = cvDefaultContentBox(frame, pageIndex, layout, sidebarPct, chrome);
+  const fallback = cvDefaultContentBox(frame, pageIndex, layout, sidebarPct, chrome);
   const custom = getDossierPageMargins("cv");
-  if (!custom) return defaults;
+  const pageMargins = custom ?? cvDefaultPageMargins(frame, pageIndex, layout, sidebarPct, chrome);
   return (
     resolveDossierContentMargins(
-      custom,
+      { ...pageMargins, bottom: CV_PAGE_MARGIN_BOTTOM_MM },
       cvSafePageMarginMinimums(frame, pageIndex, layout, sidebarPct, chrome),
       cvPageReserves(chrome, pageIndex),
-    ) ?? defaults
+    ) ?? fallback
   );
 }
 
