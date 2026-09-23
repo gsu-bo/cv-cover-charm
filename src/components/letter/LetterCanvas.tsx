@@ -621,7 +621,9 @@ export function LetterCanvas({
               <div
                 className="mt-[9mm] text-[10pt] leading-[1.45]"
                 style={{
-                  fontFamily: design.attachmentsFont ? FONT_STACKS[design.attachmentsFont] : undefined,
+                  fontFamily: design.attachmentsFont
+                    ? FONT_STACKS[design.attachmentsFont]
+                    : undefined,
                   fontSize:
                     design.attachmentsFontSizePt !== undefined
                       ? `${design.attachmentsFontSizePt}pt`

@@ -339,7 +339,10 @@ describe("DOCX V2 browser-measured flow calibration", () => {
   test("uses the real CvCanvas photo rectangle instead of the auto-placement approximation", () => {
     const data = structuredClone(DEMO_CV);
     data.person.foto = "data:image/png;base64,iVBORw0KGgo=";
-    const baseline = buildDossierDocxV2CvFlowScene(cv(data), cvOptions);
+    const baseline = buildDossierDocxV2CvFlowScene(cv(data), {
+      ...cvOptions,
+      photoPlacement: { ...cvOptions.photoPlacement, mode: "auto" },
+    });
     expect(baseline.issues.some((issue) => issue.code === "cv-photo-auto-placement-approximate")).toBe(true);
     const calibrated = calibrateDossierDocxV2CvFlowScene(baseline, measuredCv(1));
     expect(calibrated.issues.some((issue) => issue.code === "cv-photo-auto-placement-approximate")).toBe(false);

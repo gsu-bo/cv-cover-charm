@@ -104,7 +104,7 @@ describe("dossier header spacing", () => {
     expect(controls).toContain("data-cv-header-gap-link");
     expect(controls).toContain("Seitenränder &amp; Abstände →");
     expect(controls).toContain("openCvPageSpacing");
-    expect(controls).toContain('[data-dossier-page-margins-control=\"cv\"]');
+    expect(controls).toContain('[data-dossier-page-margins-control="cv"]');
   });
 
   test("retains the 0–40 mm control in the shared chrome UI for the letter", () => {
