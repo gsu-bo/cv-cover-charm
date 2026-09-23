@@ -1,16 +1,13 @@
 /*
- * Visible CV rubric separators fill the remaining heading row.
+ * Visible main-column CV rubric separators fill the remaining heading row.
  *
  * Older structural/template variants still contain fixed-width rules and a few
  * template-specific `display: none !important` overrides from the period when
  * headings were allowed to replace the shared separator treatment. The editor
  * now has one explicit source of truth: `headingRule="none"` omits the element;
- * every rendered separator therefore stays visible and consumes the complete
- * remaining heading row in preview, pagination measurement and PDF export.
- *
- * This applies to BOTH the main column and sidebars. A template may still hide
- * decorative header dashes, but it must never override a user's rubric-rule
- * choice. The rule element is only rendered when the shared setting asks for it.
+ * every rendered main-column separator therefore stays visible and consumes
+ * the complete remaining heading row in preview, pagination measurement and
+ * PDF export.
  *
  * Keep a small guaranteed rule width. Display-heavy template typography (for
  * example Aurora) can otherwise consume the row's entire flex budget and
@@ -21,8 +18,6 @@
  * Some headings historically set `flexShrink: 0` inline. Override that legacy
  * detail so titles may wrap when space is tight.
  */
-[data-dossier-document="cv"][data-dossier-document="cv"][data-dossier-document="cv"]
-  [data-cv-section-title],
 html[data-cv-variant][data-cv-variant][data-cv-variant]
   [data-dossier-document="cv"]
   [data-cv-section-title] {
@@ -30,8 +25,6 @@ html[data-cv-variant][data-cv-variant][data-cv-variant]
   min-width: 0 !important;
 }
 
-[data-dossier-document="cv"][data-dossier-document="cv"][data-dossier-document="cv"]
-  [data-cv-accent="section"],
 html[data-cv-variant][data-cv-variant][data-cv-variant]
   [data-dossier-document="cv"]
   [data-cv-accent="section"] {
@@ -56,9 +49,13 @@ html[data-cv-variant][data-cv-variant][data-cv-variant]
 
 /*
  * Neon PDF export does not always carry the route-only data-cv-variant marker.
- * Keep only the decorative header dash hidden template-wide. Rubric separators
- * are controlled exclusively by the shared headingRule setting.
+ * Keep the modern cleanup template-scoped as well so sidebar/header micro-rules
+ * cannot reappear in untouched exported dossiers.
  */
+html[data-dossier-template="neon"]
+  [data-dossier-document="cv"][data-cv-layout="modern"]
+  [data-cv-section="sidebar"]
+  [data-cv-accent="section"],
 html[data-dossier-template="neon"]
   [data-dossier-document="cv"][data-cv-layout="modern"]
   [data-cv-accent="header"] {
@@ -93,11 +90,49 @@ html[data-dossier-template="neon"]
 }
 
 /*
- * Glow keeps its decorative header dash hidden, but rubric separators follow
- * the same user setting as every other CV template.
+ * Glow is intentionally the calm light/gradient template. Long rules after
+ * every heading and the short header dash turned that calm idea into a page of
+ * repeated strokes. Let typography + whitespace carry the untouched hierarchy.
  */
+html[data-dossier-template="glow"][data-dossier-template="glow"][data-dossier-template="glow"]
+  [data-dossier-document="cv"]
+  [data-cv-accent="section"],
 html[data-dossier-template="glow"][data-dossier-template="glow"][data-dossier-template="glow"]
   [data-dossier-document="cv"]
   [data-cv-accent="header"] {
   display: none !important;
+}
+
+/*
+ * Explicit user choice outranks template presentation defaults.
+ *
+ * CvCanvas publishes data-cv-user-heading-rule="full" only when the stored
+ * design explicitly contains headingRule="full". Missing/legacy values may
+ * still resolve to the visual default without receiving this marker, so Neon,
+ * Glow and other authored defaults remain intact until the user actually asks
+ * for the full rubric rule.
+ *
+ * Do not set a background here: the renderer's inline rubric colour (including
+ * the sidebar contrast colour or a user-selected rubric colour) remains the
+ * source of truth. The selector is intentionally route-independent so hidden
+ * PDF canvases get the same override as the live preview.
+ */
+html
+  [data-cv-user-heading-rule="full"][data-cv-heading-rule="full"][data-dossier-template]
+  [data-dossier-document="cv"]
+  [data-cv-section-title] {
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+}
+
+html
+  [data-cv-user-heading-rule="full"][data-cv-heading-rule="full"][data-dossier-template]
+  [data-dossier-document="cv"]
+  [data-cv-accent="section"] {
+  display: block !important;
+  width: auto !important;
+  max-width: none !important;
+  flex: 1 0 4mm !important;
+  min-width: 4mm !important;
+  margin-right: 0 !important;
 }
