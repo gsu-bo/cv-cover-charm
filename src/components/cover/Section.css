@@ -1,0 +1,58 @@
+/*
+ * CV editor rubric orientation.
+ *
+ * Important: this follows the rubrics' actual form/DOM order. The user's
+ * document order (used for CV/PDF layout) must never leak into the editor
+ * navigation, otherwise the form jumps around after reordering the CV.
+ */
+[data-cv-content-editor]
+  > [data-editor-rubric-tone]:nth-child(odd of [data-editor-rubric-tone])
+  > [data-editor-section-header] {
+  background: rgb(240 249 255 / 0.8);
+}
+
+[data-cv-content-editor]
+  > [data-editor-rubric-tone]:nth-child(odd of [data-editor-rubric-tone])
+  > [data-editor-section-body] {
+  background: rgb(240 249 255 / 0.3);
+}
+
+[data-cv-content-editor]
+  > [data-editor-rubric-tone]:nth-child(even of [data-editor-rubric-tone])
+  > [data-editor-section-header] {
+  background: rgb(245 243 255 / 0.75);
+}
+
+[data-cv-content-editor]
+  > [data-editor-rubric-tone]:nth-child(even of [data-editor-rubric-tone])
+  > [data-editor-section-body] {
+  background: rgb(245 243 255 / 0.25);
+}
+
+.dark
+  [data-cv-content-editor]
+  > [data-editor-rubric-tone]:nth-child(odd of [data-editor-rubric-tone])
+  > [data-editor-section-header] {
+  background: rgb(8 47 73 / 0.25);
+}
+
+.dark
+  [data-cv-content-editor]
+  > [data-editor-rubric-tone]:nth-child(odd of [data-editor-rubric-tone])
+  > [data-editor-section-body] {
+  background: rgb(8 47 73 / 0.1);
+}
+
+.dark
+  [data-cv-content-editor]
+  > [data-editor-rubric-tone]:nth-child(even of [data-editor-rubric-tone])
+  > [data-editor-section-header] {
+  background: rgb(46 16 101 / 0.2);
+}
+
+.dark
+  [data-cv-content-editor]
+  > [data-editor-rubric-tone]:nth-child(even of [data-editor-rubric-tone])
+  > [data-editor-section-body] {
+  background: rgb(46 16 101 / 0.1);
+}

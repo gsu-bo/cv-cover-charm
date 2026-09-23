@@ -1,14 +1,20 @@
 import { useId, type ReactNode } from "react";
+import "./Section.css";
 
 type Props = {
   title: string;
   open: boolean;
   onToggle: () => void;
-  /** Optional visual order inside an editor group. */
+  /**
+   * Legacy call-site compatibility only.
+   *
+   * The editor form deliberately keeps its own stable DOM order. CV/PDF rubric
+   * order is a document-layout concern and must not reorder the form itself.
+   */
   order?: number;
   /** Kurzinfo rechts im Kopf, z. B. "5 / 7 ausgefüllt". */
   hint?: string;
-  /** Feine wechselnde Orientierungstönung für inhaltliche CV-Rubriken. */
+  /** Markiert eine inhaltliche CV-Rubrik für die wechselnde Orientierungstönung. */
   rubricTone?: number;
   action?: ReactNode;
   children: ReactNode;
@@ -45,7 +51,6 @@ export function Section({
   title,
   open,
   onToggle,
-  order,
   hint,
   rubricTone,
   action,
@@ -54,30 +59,17 @@ export function Section({
   const id = useId();
   const group = formGroup(title);
   const marker = groupMarker(title);
-  const tone = rubricTone === undefined ? null : Math.abs(rubricTone) % 2;
-  const headerTone =
-    tone === 0
-      ? "bg-sky-50/80 dark:bg-sky-950/25"
-      : tone === 1
-        ? "bg-violet-50/75 dark:bg-violet-950/20"
-        : "";
-  const bodyTone =
-    tone === 0
-      ? "bg-sky-50/30 dark:bg-sky-950/10"
-      : tone === 1
-        ? "bg-violet-50/25 dark:bg-violet-950/10"
-        : "";
+  const isRubric = rubricTone !== undefined;
 
   return (
     <section
       data-editor-section
       data-editor-section-title={title}
       data-form-group={group}
-      data-editor-rubric-tone={tone === null ? undefined : tone}
+      data-editor-rubric-tone={isRubric ? "auto" : undefined}
       className="overflow-hidden rounded-lg border bg-background"
-      style={order === undefined ? undefined : { order }}
     >
-      <div className={`flex items-center gap-2 pr-2 sm:pr-3 ${headerTone}`}>
+      <div data-editor-section-header className="flex items-center gap-2 pr-2 sm:pr-3">
         <button
           type="button"
           data-editor-section-toggle
@@ -123,11 +115,7 @@ export function Section({
         {action}
       </div>
       {open && (
-        <div
-          id={id}
-          data-editor-section-body
-          className={`border-t px-3 py-3 sm:px-4 sm:py-4 ${bodyTone}`}
-        >
+        <div id={id} data-editor-section-body className="border-t px-3 py-3 sm:px-4 sm:py-4">
           {children}
         </div>
       )}
