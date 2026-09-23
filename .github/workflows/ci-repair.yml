@@ -1,0 +1,55 @@
+name: Temporary CI repair
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - .github/workflows/ci-repair.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+      - name: Diagnose Glow references
+        run: grep -Rni --exclude-dir=node_modules --exclude-dir=.git 'glow' src tests || true
+      - name: Apply deterministic CI repairs
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('tests/e2e/letter-header-modes.spec.ts')
+          text = path.read_text()
+          old = '''  await page.reload({ waitUntil: "domcontentloaded" });\n  await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();\n}\n\ntest.describe("M1/M2 compact letter header",'''
+          new = '''  await page.reload({ waitUntil: "domcontentloaded" });\n  await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();\n  await expect(page.locator("main [data-letter-page]").first()).toHaveAttribute(\n    "data-letter-template",\n    template,\n  );\n}\n\ntest.describe("M1/M2 compact letter header",'''
+          if old not in text:
+              raise SystemExit('letter-header-modes replacement anchor not found')
+          path.write_text(text.replace(old, new, 1))
+
+          path = Path('src/components/letter/LetterRichTextEditor.tsx')
+          text = path.read_text()
+          old = 'onChange={(event) => setTextColor(event.currentTarget.value)}'
+          new = 'onInput={(event) => setTextColor(event.currentTarget.value)}'
+          if old not in text:
+              raise SystemExit('rich-text color replacement anchor not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Format changed files
+        run: bunx prettier --write tests/e2e/letter-header-modes.spec.ts src/components/letter/LetterRichTextEditor.tsx
+      - name: Commit repairs and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/ci-repair.yml
+          git add tests/e2e/letter-header-modes.spec.ts src/components/letter/LetterRichTextEditor.tsx
+          git commit -m "fix(ci): harden letter browser interactions"
+          git push origin HEAD:dev
