@@ -83,6 +83,18 @@ function blockAttributes(element: HTMLElement): string {
   return ` ${attributes.join(" ")}`;
 }
 
+function inlineColorForElement(element: HTMLElement): string | undefined {
+  return normalizeLetterInlineColor(
+    element.dataset.letterTextColor ?? element.style.color ?? element.getAttribute("color"),
+  );
+}
+
+function wrapInlineColor(children: string, color: string | undefined): string {
+  return color
+    ? `<span data-letter-text-color="${color}" style="color: ${color}">${children}</span>`
+    : children;
+}
+
 function serializeNode(node: Node): string {
   if (node.nodeType === Node.TEXT_NODE) return escapeHtml(node.textContent ?? "");
   if (node.nodeType !== Node.ELEMENT_NODE) return "";
@@ -94,16 +106,16 @@ function serializeNode(node: Node): string {
 
   const children = Array.from(element.childNodes).map(serializeNode).join("");
   if (tag === "span" || tag === "font") {
-    const color = normalizeLetterInlineColor(
-      element.dataset.letterTextColor ?? element.style.color ?? element.getAttribute("color"),
-    );
-    return color
-      ? `<span data-letter-text-color="${color}" style="color: ${color}">${children}</span>`
-      : children;
+    return wrapInlineColor(children, inlineColorForElement(element));
   }
   if (ALLOWED_INLINE.has(tag)) {
     const canonical = tag === "b" ? "strong" : tag === "i" ? "em" : tag;
-    return `<${canonical}>${children}</${canonical}>`;
+    const formatted = `<${canonical}>${children}</${canonical}>`;
+
+    // Chromium may apply execCommand('foreColor') directly to the existing
+    // <strong>/<em>/<u> node instead of creating a span/font wrapper. Keep
+    // that user-visible color while still stripping every unrelated style.
+    return wrapInlineColor(formatted, inlineColorForElement(element));
   }
   if (ALLOWED_BLOCK.has(tag)) {
     return `<div${blockAttributes(element)}>${children || "<br>"}</div>`;
