@@ -118,12 +118,19 @@ function serializeNode(node: Node): string {
     return wrapInlineColor(formatted, inlineColorForElement(element));
   }
   if (ALLOWED_BLOCK.has(tag)) {
-    return `<div${blockAttributes(element)}>${children || "<br>"}</div>`;
+    // Selecting an entire paragraph can make Chromium put foreColor directly
+    // on the block node. Canonicalise that into the same safe inline span the
+    // preview/export renderer expects instead of silently dropping the color.
+    const blockChildren = wrapInlineColor(children || "<br>", inlineColorForElement(element));
+    return `<div${blockAttributes(element)}>${blockChildren}</div>`;
   }
   if (tag === "table") return `<table data-letter-table>${children}</table>`;
   if (tag === "tbody") return `<tbody>${children}</tbody>`;
   if (tag === "tr") return `<tr>${children}</tr>`;
-  if (tag === "td") return `<td>${children || "<br>"}</td>`;
+  if (tag === "td") {
+    const cellChildren = wrapInlineColor(children || "<br>", inlineColorForElement(element));
+    return `<td>${cellChildren}</td>`;
+  }
   return children;
 }
 
