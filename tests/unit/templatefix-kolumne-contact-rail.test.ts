@@ -40,11 +40,24 @@ describe("Kolumne contact rail cleanup", () => {
     );
   });
 
-  test("keeps rubric separator lines visible in the configurable sidebar", () => {
+  test("keeps rubric separator lines visible in every configurable sidebar", () => {
     expect(canvas).toContain('data-cv-section="sidebar"');
     expect(canvas).toContain('data-cv-accent="section"');
+
+    // The central rule must also work in PDF/export contexts where route-level
+    // html markers such as data-cv-variant may be absent.
+    expect(cvCss).toContain(
+      '[data-dossier-document="cv"][data-dossier-document="cv"][data-dossier-document="cv"]\n  [data-cv-accent="section"]',
+    );
+    expect(cvCss).toContain("display: block !important;");
+    expect(cvCss).toContain("flex: 1 0 4mm !important;");
+
+    // Templates may hide decorative header dashes, never actual rubric rules.
     expect(cvCss).not.toContain(
-      '[data-cv-section="sidebar"]\n  [data-cv-accent="section"],\nhtml[data-cv-variant]',
+      '[data-cv-section="sidebar"]\n  [data-cv-accent="section"],',
+    );
+    expect(cvCss).not.toContain(
+      'html[data-dossier-template="glow"][data-dossier-template="glow"][data-dossier-template="glow"]\n  [data-dossier-document="cv"]\n  [data-cv-accent="section"]',
     );
   });
 });
