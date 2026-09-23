@@ -7,23 +7,18 @@ const css = readFileSync(
 );
 
 describe("CV rubric horizontal offset clipping", () => {
-  test("reserves directional bleed so moved rubric titles are clipped only by the page", () => {
-    // Guard both offset directions and the shared preview/measurement geometry.
-    expect(css).toContain(
-      "--cv-rubric-left-bleed: max(0mm, calc(0mm - var(--cv-rubric-x, 0mm)));",
-    );
-    expect(css).toContain(
-      "--cv-rubric-right-bleed: max(0mm, var(--cv-rubric-x, 0mm));",
-    );
-    expect(css).toContain(
-      "left: calc(var(--cv-rubric-main-left) - var(--cv-rubric-left-bleed)) !important;",
-    );
-    expect(css).toContain(
-      "right: calc(var(--cv-rubric-main-right) - var(--cv-rubric-right-bleed)) !important;",
-    );
-    expect(css).toContain("padding-left: var(--cv-rubric-left-bleed) !important;");
-    expect(css).toContain("padding-right: var(--cv-rubric-right-bleed) !important;");
-    expect(css).toContain('[data-cv-info-position="mirrored"]');
-    expect(css).toContain(":is([data-cv-page], [data-cv-measure-page])");
+  test("lets rubric rows cross the main box without changing pagination geometry", () => {
+    expect(css).toContain('[data-cv-rubric-offset="custom"]');
+    expect(css).toContain("[data-cv-page]");
+    expect(css).toContain("> [data-cv-main]");
+    expect(css).toContain("overflow-x: visible !important;");
+    expect(css).toContain("overflow-y: clip !important;");
+    expect(css).toContain("translate: var(--cv-rubric-x, 0mm) 0;");
+
+    // The measurement surface must keep its original width/flow so a visual
+    // rubric offset cannot add pages or change wrapping.
+    expect(css).not.toContain("[data-cv-measure-page]");
+    expect(css).not.toContain("--cv-rubric-left-bleed");
+    expect(css).not.toContain("--cv-rubric-right-bleed");
   });
 });
