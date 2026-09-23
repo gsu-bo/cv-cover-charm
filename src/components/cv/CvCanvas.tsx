@@ -24,6 +24,7 @@ import {
   resolveDossierChromeDocumentContent,
   withDossierChromeDocumentContent,
 } from "@/lib/dossier-chrome-content";
+import { CvPageFitMenuPortal } from "./CvPageFitMenuPortal";
 import { CvTextAlignmentPortal } from "./CvTextAlignmentPortal";
 import { getCvTextAlignment, subscribeCvTextAlignment } from "./text-alignment";
 import { cvContentBox, cvFrameFor } from "./archetype";
@@ -342,6 +343,7 @@ export function CvCanvas({
         chromeDocumentContent={chromeDocumentContent}
         onPageCount={handlePageCount}
       />
+      {!props.exportMode ? <CvPageFitMenuPortal /> : null}
       {!props.exportMode ? (
         <CvTextAlignmentPortal
           template={design.template}
