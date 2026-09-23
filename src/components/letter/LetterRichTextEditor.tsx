@@ -362,11 +362,38 @@ export function LetterRichTextEditor({
   };
 
   const setTextColor = (value: string) => {
+    const editor = editorRef.current;
     const color = normalizeLetterInlineColor(value);
-    if (!color || !restoreRange()) return;
-    document.execCommand("styleWithCSS", false, "true");
-    document.execCommand("foreColor", false, color);
-    document.execCommand("styleWithCSS", false, "false");
+    const range = restoreRange();
+    if (!editor || !color || !range || range.collapsed) return;
+
+    const startBlock = topLevelChild(editor, range.startContainer);
+    const endBlock = topLevelChild(editor, range.endContainer);
+
+    if (startBlock && startBlock === endBlock) {
+      const colorSpan = document.createElement("span");
+      colorSpan.dataset.letterTextColor = color;
+      colorSpan.style.color = color;
+      colorSpan.appendChild(range.extractContents());
+      range.insertNode(colorSpan);
+
+      const selected = document.createRange();
+      selected.selectNodeContents(colorSpan);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(selected);
+      savedRangeRef.current = selected.cloneRange();
+    } else {
+      // Cross-paragraph selections are still delegated to the browser because
+      // an inline span cannot legally wrap multiple block nodes. The common
+      // single-paragraph path above is deterministic and survives color-input
+      // focus changes in Chromium/Playwright.
+      document.execCommand("styleWithCSS", false, "true");
+      document.execCommand("foreColor", false, color);
+      document.execCommand("styleWithCSS", false, "false");
+      rememberRange();
+    }
+
     emit();
     setToolbar((current) => ({ ...current, color }));
   };
