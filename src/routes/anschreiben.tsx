@@ -25,7 +25,7 @@ import {
   readHistory,
   type Snapshot,
 } from "@/lib/history";
-import { FONT_LABELS, TEMPLATES, type FontKey } from "@/components/cover/types";
+import { TEMPLATES } from "@/components/cover/types";
 import { DEFAULTS } from "@/default-config";
 import { ResizableEditorPanel } from "@/components/dossier/ResizableEditorPanel";
 import { AttachmentListEditor } from "@/components/dossier/AttachmentListEditor";
@@ -36,6 +36,7 @@ import {
   legacyLetterChromePatch,
 } from "@/components/letter/LetterLayoutControls";
 import { LetterRichTextEditor } from "@/components/letter/LetterRichTextEditor";
+import { LetterFontSizeControl } from "@/components/letter/LetterFontSizeControl";
 import { LetterTemplatePicker } from "@/components/letter/LetterTemplatePicker";
 import { useTemplateQaTemplateSwitch } from "@/lib/template-qa-switch";
 import { resolveLetterPalette, resolveLetterPaperColor } from "@/components/letter/letter-paper";
@@ -62,6 +63,7 @@ import {
   DEFAULT_DOSSIER_CHROME_STATE,
   applyPortableDossierChromeState,
   getDossierChromeState,
+  patchDossierChrome,
   subscribeDossierChrome,
 } from "@/lib/dossier-chrome";
 import {
@@ -80,10 +82,10 @@ import {
   defaultLetterColors,
   emptyLetterDesign,
   letterAttachmentValues,
-  letterFontSelection,
   normalizeLetterSpacingMm,
   normalizeLetterDesign,
-  withLetterFontSelection,
+  withLetterRoleFont,
+  withLetterRoleFontSize,
   type LetterData,
   type LetterDesign,
   type LetterFlowImage,
@@ -278,7 +280,6 @@ function Anschreiben() {
     beilagen: false,
     vorlage: false,
     farben: false,
-    typo: false,
   });
 
   const chromeContact = useMemo(
@@ -1113,6 +1114,98 @@ function Anschreiben() {
 
             <Section title="Briefinhalt" open={open.brief} onToggle={() => toggle("brief")}>
               <div className="grid gap-3">
+                <div
+                  data-letter-context-font-sizes="brief"
+                  className="grid gap-2 rounded-md border bg-muted/20 p-2.5"
+                >
+                  <div>
+                    <div className="text-xs font-semibold">Typografie</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      Schriftart und Grösse lassen sich für jede Textrolle separat einstellen.
+                    </div>
+                  </div>
+                  <LetterFontSizeControl
+                    label="Ort & Datum"
+                    value={design.dateFontSizePt}
+                    font={design.dateFont}
+                    fallbackSize={9.5}
+                    onChange={(dateFontSizePt) =>
+                      setDesign((current) => ({ ...current, dateFontSizePt }))
+                    }
+                    onFontChange={(dateFont) =>
+                      setDesign((current) => ({ ...current, dateFont }))
+                    }
+                  />
+                  <LetterFontSizeControl
+                    label="Titel / Betreff"
+                    value={design.subjectTypography?.fontSizePt}
+                    font={design.subjectTypography?.font}
+                    fallbackSize={12}
+                    onChange={(fontSizePt) =>
+                      setDesign((current) => ({
+                        ...current,
+                        subjectTypography: withLetterRoleFontSize(
+                          current.subjectTypography,
+                          fontSizePt,
+                        ),
+                      }))
+                    }
+                    onFontChange={(font) =>
+                      setDesign((current) => ({
+                        ...current,
+                        subjectTypography: withLetterRoleFont(current.subjectTypography, font),
+                      }))
+                    }
+                  />
+                  <LetterFontSizeControl
+                    label="Anrede"
+                    value={design.salutationFontSizePt}
+                    font={design.salutationFont}
+                    fallbackSize={10.5}
+                    onChange={(salutationFontSizePt) =>
+                      setDesign((current) => ({ ...current, salutationFontSizePt }))
+                    }
+                    onFontChange={(salutationFont) =>
+                      setDesign((current) => ({ ...current, salutationFont }))
+                    }
+                  />
+                  <LetterFontSizeControl
+                    label="Fliesstext"
+                    value={design.bodyFontSizePt}
+                    font={design.bodyFont}
+                    fallbackSize={10.5}
+                    onChange={(bodyFontSizePt) =>
+                      setDesign((current) => ({ ...current, bodyFontSizePt }))
+                    }
+                    onFontChange={(bodyFont) =>
+                      setDesign((current) => ({ ...current, bodyFont }))
+                    }
+                  />
+                  <LetterFontSizeControl
+                    label="Grussformel"
+                    value={design.closingFontSizePt}
+                    font={design.closingFont}
+                    fallbackSize={10.5}
+                    onChange={(closingFontSizePt) =>
+                      setDesign((current) => ({ ...current, closingFontSizePt }))
+                    }
+                    onFontChange={(closingFont) =>
+                      setDesign((current) => ({ ...current, closingFont }))
+                    }
+                  />
+                  <LetterFontSizeControl
+                    label="Unterschrift / Name"
+                    value={design.signatureFontSizePt}
+                    font={design.signatureFont}
+                    fallbackSize={10.5}
+                    onChange={(signatureFontSizePt) =>
+                      setDesign((current) => ({ ...current, signatureFontSizePt }))
+                    }
+                    onFontChange={(signatureFont) =>
+                      setDesign((current) => ({ ...current, signatureFont }))
+                    }
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="Ort" value={data.ort} onChange={(value) => patch({ ort: value })} />
                   <Field
@@ -1189,6 +1282,44 @@ function Anschreiben() {
               onToggle={() => toggle("absender")}
             >
               <div className="grid gap-3">
+                <LetterFontSizeControl
+                  label="Kontaktdaten"
+                  value={
+                    chromeOptions.headerMode === "contact"
+                      ? (chromeOptions.headerFontSizePt ?? undefined)
+                      : design.senderTypography?.fontSizePt
+                  }
+                  font={design.senderTypography?.font}
+                  fallbackSize={chromeOptions.headerMode === "contact" ? 14 : 9.5}
+                  min={chromeOptions.headerMode === "contact" ? 6 : undefined}
+                  max={chromeOptions.headerMode === "contact" ? 30 : undefined}
+                  hint={
+                    chromeOptions.headerMode === "contact"
+                      ? chromeState.sync
+                        ? "Kontakt-Header · mit CV synchron"
+                        : "Kontakt-Header"
+                      : undefined
+                  }
+                  onChange={(fontSizePt) => {
+                    if (chromeOptions.headerMode === "contact") {
+                      patchDossierChrome("letter", { headerFontSizePt: fontSizePt ?? null });
+                      return;
+                    }
+                    setDesign((current) => ({
+                      ...current,
+                      senderTypography: withLetterRoleFontSize(
+                        current.senderTypography,
+                        fontSizePt,
+                      ),
+                    }));
+                  }}
+                  onFontChange={(font) =>
+                    setDesign((current) => ({
+                      ...current,
+                      senderTypography: withLetterRoleFont(current.senderTypography, font),
+                    }))
+                  }
+                />
                 <Field
                   label="Vorname und Nachname"
                   value={data.absenderName}
@@ -1225,6 +1356,27 @@ function Anschreiben() {
               onToggle={() => toggle("empfaenger")}
             >
               <div className="grid gap-3">
+                <LetterFontSizeControl
+                  label="Empfängeranschrift"
+                  value={design.recipientTypography?.fontSizePt}
+                  font={design.recipientTypography?.font}
+                  fallbackSize={10}
+                  onChange={(fontSizePt) =>
+                    setDesign((current) => ({
+                      ...current,
+                      recipientTypography: withLetterRoleFontSize(
+                        current.recipientTypography,
+                        fontSizePt,
+                      ),
+                    }))
+                  }
+                  onFontChange={(font) =>
+                    setDesign((current) => ({
+                      ...current,
+                      recipientTypography: withLetterRoleFont(current.recipientTypography, font),
+                    }))
+                  }
+                />
                 <Field
                   label="Lehrbetrieb"
                   value={data.empfaengerFirma}
@@ -1256,6 +1408,38 @@ function Anschreiben() {
               hint={data.showBeilagen !== false ? "angezeigt" : "ausgeblendet"}
             >
               <div className="flex flex-col gap-3">
+                <LetterFontSizeControl
+                  label="Beilagen"
+                  value={
+                    chromeOptions.footerMode === "details"
+                      ? (chromeOptions.footerFontSizePt ?? undefined)
+                      : design.attachmentsFontSizePt
+                  }
+                  font={design.attachmentsFont}
+                  fallbackSize={chromeOptions.footerMode === "details" ? 8.5 : 10}
+                  min={chromeOptions.footerMode === "details" ? 6 : undefined}
+                  max={chromeOptions.footerMode === "details" ? 30 : undefined}
+                  hint={
+                    chromeOptions.footerMode === "details"
+                      ? chromeState.sync
+                        ? "Beilagen im Footer · mit CV synchron"
+                        : "Beilagen im Footer"
+                      : undefined
+                  }
+                  onChange={(fontSizePt) => {
+                    if (chromeOptions.footerMode === "details") {
+                      patchDossierChrome("letter", { footerFontSizePt: fontSizePt ?? null });
+                      return;
+                    }
+                    setDesign((current) => ({
+                      ...current,
+                      attachmentsFontSizePt: fontSizePt,
+                    }));
+                  }}
+                  onFontChange={(attachmentsFont) =>
+                    setDesign((current) => ({ ...current, attachmentsFont }))
+                  }
+                />
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -1377,33 +1561,6 @@ function Anschreiben() {
               </div>
             </Section>
 
-            <Section title="Schrift" open={open.typo} onToggle={() => toggle("typo")}>
-              <label className="block text-xs font-medium">
-                Schriftart
-                <select
-                  value={letterFontSelection(design)}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setDesign((current) =>
-                      withLetterFontSelection(
-                        current,
-                        value === "template" ? "template" : (value as FontKey),
-                      ),
-                    );
-                  }}
-                  className={inputClass}
-                >
-                  {design.template !== "brief" ? (
-                    <option value="template">Passend zur Vorlage</option>
-                  ) : null}
-                  {Object.entries(FONT_LABELS).map(([key, label]) => (
-                    <option key={key} value={key}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </Section>
           </div>
         </ResizableEditorPanel>
 

@@ -234,6 +234,37 @@ function FontSizeControl({
   );
 }
 
+function openCvPageSpacing() {
+  if (typeof document === "undefined") return;
+
+  const reveal = () => {
+    const margins = document.querySelector<HTMLDetailsElement>(
+      '[data-dossier-page-margins-control="cv"]',
+    );
+    if (!margins) return false;
+    margins.open = true;
+    margins.scrollIntoView({ behavior: "smooth", block: "center" });
+    requestAnimationFrame(() => {
+      margins
+        .querySelector<HTMLInputElement>("[data-dossier-header-gap-control]")
+        ?.focus({ preventScroll: true });
+    });
+    return true;
+  };
+
+  if (reveal()) return;
+
+  const layoutSection = document.querySelector<HTMLElement>(
+    '[data-editor-section][data-editor-section-title="Layout"]',
+  );
+  const layoutBody = layoutSection?.querySelector<HTMLElement>("[data-editor-section-body]");
+  if (!layoutBody) {
+    layoutSection?.querySelector<HTMLButtonElement>("[data-editor-section-toggle]")?.click();
+  }
+
+  requestAnimationFrame(() => requestAnimationFrame(reveal));
+}
+
 export function DossierChromeControls({
   scope,
   onOptionsChange,
@@ -261,9 +292,6 @@ export function DossierChromeControls({
     ["headerShowEmail", "E-Mail", options.headerShowEmail],
   ] as const;
 
-  // Keep the persisted model compact while making both contact presentations
-  // first-class choices in the form. "contact" + headerTextLayout remains the
-  // storage contract, so existing project files stay fully compatible.
   const headerControlValue =
     options.headerMode === "contact"
       ? options.headerTextLayout === "inline"
@@ -277,10 +305,6 @@ export function DossierChromeControls({
     options.headerMode === "contact" ||
     (options.headerDifferentFirstPage !== false && options.headerContinuationMode === "contact");
   const hasChromeSurface = options.headerMode !== "none" || options.footerMode !== "none";
-
-  // The shared model calls the rich footer "details". The letter UI historically
-  // exposed the same behavior as "attachments"; keeping that form value avoids
-  // breaking persisted browser automation and makes the migration additive.
   const footerControlValue =
     scope === "letter" && options.footerMode === "details" ? "attachments" : options.footerMode;
 
@@ -289,8 +313,6 @@ export function DossierChromeControls({
     onOptionsChange?.(patch);
   };
 
-  // The retired icon separator remains readable in old JSON/localStorage but is
-  // migrated immediately to the supported midpoint variant when the editor opens.
   useEffect(() => {
     if (options.headerInlineSeparator !== "icons") return;
     const patch = { headerInlineSeparator: "dot" as DossierChromeInlineSeparator };
@@ -303,9 +325,6 @@ export function DossierChromeControls({
   const headerMin =
     options.headerMode === "contact" ? (options.headerTextLayout === "stacked" ? 18 : 10) : 1;
   const headerMax = 80;
-  // Display exactly the geometry the renderer can use. Older saved projects can
-  // contain a 10 mm value from compact mode even after switching to a stacked
-  // contact header; showing that stale raw value made the Warm slider look dead.
   const headerHeight = Math.min(
     headerMax,
     Math.max(headerMin, options.headerHeightMm ?? headerDefaultHeight),
@@ -482,34 +501,50 @@ export function DossierChromeControls({
                 ) : null}
               </label>
 
-              <label className="grid gap-1 text-xs">
-                <span className="flex items-center justify-between gap-2 text-muted-foreground">
-                  <span>Freiraum unter dem Header</span>
-                  <span>{headerGap.toFixed(headerGap % 1 ? 1 : 0)} mm</span>
-                </span>
-                <input
-                  data-dossier-header-gap-control
-                  type="range"
-                  min={0}
-                  max={40}
-                  step={1}
-                  value={Math.min(40, Math.max(0, headerGap))}
-                  onChange={(event) => patchOptions({ headerGapMm: Number(event.target.value) })}
-                  className="w-full accent-primary"
-                />
-                <span className="text-[11px] leading-relaxed text-muted-foreground">
-                  Abstand zwischen Header-Ende und dem ersten Inhalt.
-                </span>
-                {headerGap !== 12 ? (
+              {scope === "cv" ? (
+                <div
+                  data-cv-header-gap-link
+                  className="flex items-center justify-between gap-3 rounded-md border bg-muted/20 px-2.5 py-2 text-xs"
+                >
+                  <span className="min-w-0 text-muted-foreground">Abstand zum Seiteninhalt</span>
                   <button
                     type="button"
-                    className={`${smallButtonClass} justify-self-start`}
-                    onClick={() => patchOptions({ headerGapMm: 12 })}
+                    onClick={openCvPageSpacing}
+                    className="shrink-0 font-medium text-foreground underline underline-offset-2 hover:text-primary"
                   >
-                    Standardabstand (12 mm)
+                    Seitenränder &amp; Abstände →
                   </button>
-                ) : null}
-              </label>
+                </div>
+              ) : (
+                <label className="grid gap-1 text-xs">
+                  <span className="flex items-center justify-between gap-2 text-muted-foreground">
+                    <span>Freiraum unter dem Header</span>
+                    <span>{headerGap.toFixed(headerGap % 1 ? 1 : 0)} mm</span>
+                  </span>
+                  <input
+                    data-dossier-header-gap-control
+                    type="range"
+                    min={0}
+                    max={40}
+                    step={1}
+                    value={Math.min(40, Math.max(0, headerGap))}
+                    onChange={(event) => patchOptions({ headerGapMm: Number(event.target.value) })}
+                    className="w-full accent-primary"
+                  />
+                  <span className="text-[11px] leading-relaxed text-muted-foreground">
+                    Abstand zwischen Header-Ende und dem ersten Inhalt.
+                  </span>
+                  {headerGap !== 12 ? (
+                    <button
+                      type="button"
+                      className={`${smallButtonClass} justify-self-start`}
+                      onClick={() => patchOptions({ headerGapMm: 12 })}
+                    >
+                      Standardabstand (12 mm)
+                    </button>
+                  ) : null}
+                </label>
+              )}
 
               {contactHeaderVisible ? (
                 <>

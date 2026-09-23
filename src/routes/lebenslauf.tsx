@@ -1860,6 +1860,26 @@ function Lebenslauf() {
                 hint={`${data.referenzen.length}`}
               >
                 {opts("referenzen")}
+                <label
+                  data-cv-reference-columns-control
+                  className="mb-3 flex items-start gap-2 rounded-md border bg-muted/20 px-2.5 py-2 text-xs"
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={data.referencesSideBySide !== false}
+                    onChange={(event) =>
+                      patchData({ referencesSideBySide: event.target.checked })
+                    }
+                  />
+                  <span>
+                    <span className="block font-medium">Referenzen nebeneinander</span>
+                    <span className="mt-0.5 block leading-relaxed text-muted-foreground">
+                      Bei voller Breite stehen jeweils 2 Referenzen nebeneinander. Bei halber Breite
+                      werden sie automatisch untereinander dargestellt.
+                    </span>
+                  </span>
+                </label>
                 <FormCvReferenzen
                   list={data.referenzen}
                   onChange={(referenzen) => patchData({ referenzen })}
