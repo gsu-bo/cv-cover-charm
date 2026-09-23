@@ -166,7 +166,7 @@ function nodePath(root: Node, node: Node): number[] | null {
   const path: number[] = [];
   let current: Node | null = node;
   while (current && current !== root) {
-    const parent = current.parentNode;
+    const parent: ParentNode | null = current.parentNode;
     if (!parent) return null;
     const index = Array.from(parent.childNodes).indexOf(current as ChildNode);
     if (index < 0) return null;
