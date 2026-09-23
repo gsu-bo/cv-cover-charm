@@ -108,18 +108,30 @@ export type LetterDesign = {
   senderTypography?: LetterRoleTypography;
   /** Eigene Typografie für die Empfängeranschrift; fehlt = wie Vorlage. */
   recipientTypography?: LetterRoleTypography;
+  /** Schriftart für Ort & Datum; fehlt = wie Vorlage. */
+  dateFont?: FontKey;
   /** Schriftgrösse für Ort & Datum; fehlt = Vorlagengrösse. */
   dateFontSizePt?: number;
   /** Eigene Typografie für den Betreff; fehlt = wie Vorlage. */
   subjectTypography?: LetterRoleTypography;
+  /** Schriftart für die Anrede; fehlt = wie Vorlage. */
+  salutationFont?: FontKey;
   /** Schriftgrösse für die Anrede; fehlt = Vorlagengrösse. */
   salutationFontSizePt?: number;
+  /** Schriftart des eigentlichen Brief-Fliesstexts; fehlt = wie Vorlage. */
+  bodyFont?: FontKey;
   /** Globale Schriftgrösse des eigentlichen Brief-Fliesstexts; fehlt = Vorlagengrösse. */
   bodyFontSizePt?: number;
+  /** Schriftart für die Grussformel; fehlt = wie Vorlage. */
+  closingFont?: FontKey;
   /** Schriftgrösse für die Grussformel; fehlt = Vorlagengrösse. */
   closingFontSizePt?: number;
+  /** Schriftart für den gedruckten Namen / die Unterschrift; fehlt = wie Vorlage. */
+  signatureFont?: FontKey;
   /** Schriftgrösse für den gedruckten Namen / die Unterschrift; fehlt = Vorlagengrösse. */
   signatureFontSizePt?: number;
+  /** Schriftart für Beilagen; fehlt = wie Vorlage. */
+  attachmentsFont?: FontKey;
   /** Schriftgrösse für Beilagen im Briefinhalt; fehlt = Vorlagengrösse. */
   attachmentsFontSizePt?: number;
   /** @deprecated Legacy-/SSR-Kompatibilität. Live ist DossierChromeState kanonisch. */
@@ -298,6 +310,16 @@ export function normalizeLetterBodyFontSizePt(value: unknown): number | undefine
   return Math.min(LETTER_BODY_FONT_SIZE_MAX, Math.max(LETTER_BODY_FONT_SIZE_MIN, stepped));
 }
 
+export function withLetterRoleFont(
+  value: LetterRoleTypography | undefined,
+  font: FontKey | undefined,
+): LetterRoleTypography | undefined {
+  const next: LetterRoleTypography = { ...(value ?? {}) };
+  if (font === undefined) delete next.font;
+  else next.font = font;
+  return Object.keys(next).length ? next : undefined;
+}
+
 export function withLetterRoleFontSize(
   value: LetterRoleTypography | undefined,
   fontSizePt: number | undefined,
@@ -429,12 +451,36 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
     ruleAfterSubject: incoming.ruleAfterSubject === true,
     senderTypography: normalizeLetterRoleTypography(incoming.senderTypography),
     recipientTypography: normalizeLetterRoleTypography(incoming.recipientTypography),
+    dateFont:
+      typeof incoming.dateFont === "string" && incoming.dateFont in FONT_LABELS
+        ? (incoming.dateFont as FontKey)
+        : undefined,
     dateFontSizePt: normalizeLetterBodyFontSizePt(incoming.dateFontSizePt),
     subjectTypography: normalizeLetterRoleTypography(incoming.subjectTypography),
+    salutationFont:
+      typeof incoming.salutationFont === "string" && incoming.salutationFont in FONT_LABELS
+        ? (incoming.salutationFont as FontKey)
+        : undefined,
     salutationFontSizePt: normalizeLetterBodyFontSizePt(incoming.salutationFontSizePt),
+    bodyFont:
+      typeof incoming.bodyFont === "string" && incoming.bodyFont in FONT_LABELS
+        ? (incoming.bodyFont as FontKey)
+        : undefined,
     bodyFontSizePt: normalizeLetterBodyFontSizePt(incoming.bodyFontSizePt),
+    closingFont:
+      typeof incoming.closingFont === "string" && incoming.closingFont in FONT_LABELS
+        ? (incoming.closingFont as FontKey)
+        : undefined,
     closingFontSizePt: normalizeLetterBodyFontSizePt(incoming.closingFontSizePt),
+    signatureFont:
+      typeof incoming.signatureFont === "string" && incoming.signatureFont in FONT_LABELS
+        ? (incoming.signatureFont as FontKey)
+        : undefined,
     signatureFontSizePt: normalizeLetterBodyFontSizePt(incoming.signatureFontSizePt),
+    attachmentsFont:
+      typeof incoming.attachmentsFont === "string" && incoming.attachmentsFont in FONT_LABELS
+        ? (incoming.attachmentsFont as FontKey)
+        : undefined,
     attachmentsFontSizePt: normalizeLetterBodyFontSizePt(incoming.attachmentsFontSizePt),
     headerMode,
     headerShowName: incoming.headerShowName !== false,

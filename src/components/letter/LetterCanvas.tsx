@@ -316,6 +316,7 @@ export function LetterCanvas({
       data-letter-user-subject-decoration={
         subjectTypography?.underline === undefined ? undefined : "true"
       }
+      data-letter-user-body-font={design.bodyFont ? "true" : undefined}
       data-letter-user-body-size={bodySize !== undefined ? "true" : undefined}
       className="relative h-[1123px] w-[794px] overflow-hidden bg-white shadow-xl"
       style={
@@ -394,6 +395,7 @@ export function LetterCanvas({
               : subjectTypography.underline
                 ? "underline"
                 : "none",
+          "--letter-user-body-font": design.bodyFont ? FONT_STACKS[design.bodyFont] : undefined,
           "--letter-user-body-size": bodySize !== undefined ? `${bodySize}pt` : undefined,
         } as React.CSSProperties
       }
@@ -426,6 +428,8 @@ export function LetterCanvas({
         footerHeightMm={geometry.footer.height}
         footerLabel="Beilagen"
         footerDetails={geometry.footer.showAttachments ? beilagen : []}
+        headerFontOverride={senderTypography?.font}
+        footerFontOverride={design.attachmentsFont}
       />
 
       {warmCompactHeader ? (
@@ -528,6 +532,7 @@ export function LetterCanvas({
           style={{
             color: palette.muted,
             textAlign: dateAlign,
+            fontFamily: design.dateFont ? FONT_STACKS[design.dateFont] : undefined,
             fontSize:
               design.dateFontSizePt !== undefined ? `${design.dateFontSizePt}pt` : undefined,
           }}
@@ -555,6 +560,7 @@ export function LetterCanvas({
               data-letter-pdf-text="salutation"
               className="mb-[5mm]"
               style={{
+                fontFamily: design.salutationFont ? FONT_STACKS[design.salutationFont] : undefined,
                 fontSize:
                   design.salutationFontSizePt !== undefined
                     ? `${design.salutationFontSizePt}pt`
@@ -585,6 +591,7 @@ export function LetterCanvas({
               <div
                 data-letter-pdf-text="closing"
                 style={{
+                  fontFamily: design.closingFont ? FONT_STACKS[design.closingFont] : undefined,
                   fontSize:
                     design.closingFontSizePt !== undefined
                       ? `${design.closingFontSizePt}pt`
@@ -599,6 +606,7 @@ export function LetterCanvas({
                 className="font-medium"
                 style={{
                   marginTop: `${signatureGapMm}mm`,
+                  fontFamily: design.signatureFont ? FONT_STACKS[design.signatureFont] : undefined,
                   fontSize:
                     design.signatureFontSizePt !== undefined
                       ? `${design.signatureFontSizePt}pt`
@@ -613,6 +621,7 @@ export function LetterCanvas({
               <div
                 className="mt-[9mm] text-[10pt] leading-[1.45]"
                 style={{
+                  fontFamily: design.attachmentsFont ? FONT_STACKS[design.attachmentsFont] : undefined,
                   fontSize:
                     design.attachmentsFontSizePt !== undefined
                       ? `${design.attachmentsFontSizePt}pt`

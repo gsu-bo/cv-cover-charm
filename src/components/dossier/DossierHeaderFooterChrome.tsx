@@ -1,6 +1,6 @@
 import { Mail, Smartphone } from "lucide-react";
 import type { CSSProperties } from "react";
-import { FONT_STACKS } from "@/components/cover/types";
+import { FONT_STACKS, type FontKey } from "@/components/cover/types";
 import { cvPalette, onColorRoles } from "@/components/cv/palette";
 import {
   effectiveDossierHeaderModeForOptions,
@@ -139,6 +139,8 @@ export function DossierHeaderFooterChrome({
   footerLeft,
   footerRight,
   documentContent,
+  headerFontOverride,
+  footerFontOverride,
 }: {
   scope: DossierChromeScope;
   template: string;
@@ -152,6 +154,8 @@ export function DossierHeaderFooterChrome({
   footerLeft?: string;
   footerRight?: string;
   documentContent?: DossierChromeDocumentContent;
+  headerFontOverride?: FontKey;
+  footerFontOverride?: FontKey;
 }) {
   const resolvedContact = contact;
   const headerMode = effectiveDossierHeaderModeForOptions(options, pageIndex);
@@ -219,6 +223,8 @@ export function DossierHeaderFooterChrome({
     ? `${visualOptions.borderWidthMm}mm solid ${borderColor}`
     : undefined;
   const textFontFamily = visualOptions.textFont ? FONT_STACKS[visualOptions.textFont] : undefined;
+  const headerTextFontFamily = headerFontOverride ? FONT_STACKS[headerFontOverride] : textFontFamily;
+  const footerTextFontFamily = footerFontOverride ? FONT_STACKS[footerFontOverride] : textFontFamily;
   const headerVisualHeight = dossierHeaderVisualHeightMmForOptions(options, pageIndex);
   const compactFooterHeight = dossierFooterVisualHeightMmForOptions(options);
   const detailsHeight = options.footerHeightMm ?? footerHeightMm ?? 10;
@@ -366,6 +372,7 @@ export function DossierHeaderFooterChrome({
               background: headerSurface,
               borderBottom: borderStyle,
               color: headerTextColor,
+              fontFamily: headerTextFontFamily,
               fontSize: `${headerFontSizePt ?? 7.6}pt`,
               lineHeight: 1.1,
             }}
@@ -446,6 +453,7 @@ export function DossierHeaderFooterChrome({
                   : `${2 + headerDocumentContentMm}mm ${chromeContentRightMm}mm 2mm ${chromeContentLeftMm}mm`,
                 boxSizing: "border-box",
                 color: headerTextColor,
+                fontFamily: headerTextFontFamily,
                 fontSize: `${headerFontSizePt ?? (stackedHeader ? 8 : 8.5)}pt`,
                 lineHeight: stackedHeader ? 1.08 : 1.18,
                 overflow: "hidden",
@@ -526,6 +534,7 @@ export function DossierHeaderFooterChrome({
             padding: `1.1mm ${chromeContentRightMm}mm 0 ${chromeContentLeftMm}mm`,
             boxSizing: "border-box",
             color: headerTextColor,
+            fontFamily: headerTextFontFamily,
             lineHeight: 1.05,
             overflow: "hidden",
             transform: headerContentTransform,
@@ -579,6 +588,7 @@ export function DossierHeaderFooterChrome({
             padding: `0 ${chromeContentRightMm}mm 0 ${chromeContentLeftMm}mm`,
             boxSizing: "border-box",
             color: footerTextColor,
+            fontFamily: footerTextFontFamily,
             fontSize: `${footerFontSizePt ?? 6.6}pt`,
             overflow: "hidden",
             transform: footerContentTransform,
@@ -604,6 +614,7 @@ export function DossierHeaderFooterChrome({
             background: footerSurface,
             borderTop: borderStyle,
             color: footerTextColor,
+            fontFamily: footerTextFontFamily,
             fontSize: `${footerFontSizePt ?? 8.5}pt`,
             overflow: "hidden",
           }}

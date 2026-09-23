@@ -25,7 +25,7 @@ import {
   readHistory,
   type Snapshot,
 } from "@/lib/history";
-import { FONT_LABELS, TEMPLATES, type FontKey } from "@/components/cover/types";
+import { TEMPLATES } from "@/components/cover/types";
 import { DEFAULTS } from "@/default-config";
 import { ResizableEditorPanel } from "@/components/dossier/ResizableEditorPanel";
 import { AttachmentListEditor } from "@/components/dossier/AttachmentListEditor";
@@ -82,10 +82,9 @@ import {
   defaultLetterColors,
   emptyLetterDesign,
   letterAttachmentValues,
-  letterFontSelection,
   normalizeLetterSpacingMm,
   normalizeLetterDesign,
-  withLetterFontSelection,
+  withLetterRoleFont,
   withLetterRoleFontSize,
   type LetterData,
   type LetterDesign,
@@ -281,7 +280,6 @@ function Anschreiben() {
     beilagen: false,
     vorlage: false,
     farben: false,
-    typo: false,
   });
 
   const chromeContact = useMemo(
@@ -1121,22 +1119,27 @@ function Anschreiben() {
                   className="grid gap-2 rounded-md border bg-muted/20 p-2.5"
                 >
                   <div>
-                    <div className="text-xs font-semibold">Schriftgrössen</div>
+                    <div className="text-xs font-semibold">Typografie</div>
                     <div className="text-[11px] text-muted-foreground">
-                      Jede Textrolle bleibt standardmässig bei der Vorlagengrösse.
+                      Schriftart und Grösse lassen sich für jede Textrolle separat einstellen.
                     </div>
                   </div>
                   <LetterFontSizeControl
                     label="Ort & Datum"
                     value={design.dateFontSizePt}
+                    font={design.dateFont}
                     fallbackSize={9.5}
                     onChange={(dateFontSizePt) =>
                       setDesign((current) => ({ ...current, dateFontSizePt }))
+                    }
+                    onFontChange={(dateFont) =>
+                      setDesign((current) => ({ ...current, dateFont }))
                     }
                   />
                   <LetterFontSizeControl
                     label="Titel / Betreff"
                     value={design.subjectTypography?.fontSizePt}
+                    font={design.subjectTypography?.font}
                     fallbackSize={12}
                     onChange={(fontSizePt) =>
                       setDesign((current) => ({
@@ -1147,37 +1150,59 @@ function Anschreiben() {
                         ),
                       }))
                     }
+                    onFontChange={(font) =>
+                      setDesign((current) => ({
+                        ...current,
+                        subjectTypography: withLetterRoleFont(current.subjectTypography, font),
+                      }))
+                    }
                   />
                   <LetterFontSizeControl
                     label="Anrede"
                     value={design.salutationFontSizePt}
+                    font={design.salutationFont}
                     fallbackSize={10.5}
                     onChange={(salutationFontSizePt) =>
                       setDesign((current) => ({ ...current, salutationFontSizePt }))
+                    }
+                    onFontChange={(salutationFont) =>
+                      setDesign((current) => ({ ...current, salutationFont }))
                     }
                   />
                   <LetterFontSizeControl
                     label="Fliesstext"
                     value={design.bodyFontSizePt}
+                    font={design.bodyFont}
                     fallbackSize={10.5}
                     onChange={(bodyFontSizePt) =>
                       setDesign((current) => ({ ...current, bodyFontSizePt }))
+                    }
+                    onFontChange={(bodyFont) =>
+                      setDesign((current) => ({ ...current, bodyFont }))
                     }
                   />
                   <LetterFontSizeControl
                     label="Grussformel"
                     value={design.closingFontSizePt}
+                    font={design.closingFont}
                     fallbackSize={10.5}
                     onChange={(closingFontSizePt) =>
                       setDesign((current) => ({ ...current, closingFontSizePt }))
+                    }
+                    onFontChange={(closingFont) =>
+                      setDesign((current) => ({ ...current, closingFont }))
                     }
                   />
                   <LetterFontSizeControl
                     label="Unterschrift / Name"
                     value={design.signatureFontSizePt}
+                    font={design.signatureFont}
                     fallbackSize={10.5}
                     onChange={(signatureFontSizePt) =>
                       setDesign((current) => ({ ...current, signatureFontSizePt }))
+                    }
+                    onFontChange={(signatureFont) =>
+                      setDesign((current) => ({ ...current, signatureFont }))
                     }
                   />
                 </div>
@@ -1264,6 +1289,7 @@ function Anschreiben() {
                       ? (chromeOptions.headerFontSizePt ?? undefined)
                       : design.senderTypography?.fontSizePt
                   }
+                  font={design.senderTypography?.font}
                   fallbackSize={chromeOptions.headerMode === "contact" ? 14 : 9.5}
                   min={chromeOptions.headerMode === "contact" ? 6 : undefined}
                   max={chromeOptions.headerMode === "contact" ? 30 : undefined}
@@ -1287,6 +1313,12 @@ function Anschreiben() {
                       ),
                     }));
                   }}
+                  onFontChange={(font) =>
+                    setDesign((current) => ({
+                      ...current,
+                      senderTypography: withLetterRoleFont(current.senderTypography, font),
+                    }))
+                  }
                 />
                 <Field
                   label="Vorname und Nachname"
@@ -1327,6 +1359,7 @@ function Anschreiben() {
                 <LetterFontSizeControl
                   label="Empfängeranschrift"
                   value={design.recipientTypography?.fontSizePt}
+                  font={design.recipientTypography?.font}
                   fallbackSize={10}
                   onChange={(fontSizePt) =>
                     setDesign((current) => ({
@@ -1335,6 +1368,12 @@ function Anschreiben() {
                         current.recipientTypography,
                         fontSizePt,
                       ),
+                    }))
+                  }
+                  onFontChange={(font) =>
+                    setDesign((current) => ({
+                      ...current,
+                      recipientTypography: withLetterRoleFont(current.recipientTypography, font),
                     }))
                   }
                 />
@@ -1376,6 +1415,7 @@ function Anschreiben() {
                       ? (chromeOptions.footerFontSizePt ?? undefined)
                       : design.attachmentsFontSizePt
                   }
+                  font={design.attachmentsFont}
                   fallbackSize={chromeOptions.footerMode === "details" ? 8.5 : 10}
                   min={chromeOptions.footerMode === "details" ? 6 : undefined}
                   max={chromeOptions.footerMode === "details" ? 30 : undefined}
@@ -1396,6 +1436,9 @@ function Anschreiben() {
                       attachmentsFontSizePt: fontSizePt,
                     }));
                   }}
+                  onFontChange={(attachmentsFont) =>
+                    setDesign((current) => ({ ...current, attachmentsFont }))
+                  }
                 />
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -1518,33 +1561,6 @@ function Anschreiben() {
               </div>
             </Section>
 
-            <Section title="Schrift" open={open.typo} onToggle={() => toggle("typo")}>
-              <label className="block text-xs font-medium">
-                Schriftart
-                <select
-                  value={letterFontSelection(design)}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setDesign((current) =>
-                      withLetterFontSelection(
-                        current,
-                        value === "template" ? "template" : (value as FontKey),
-                      ),
-                    );
-                  }}
-                  className={inputClass}
-                >
-                  {design.template !== "brief" ? (
-                    <option value="template">Passend zur Vorlage</option>
-                  ) : null}
-                  {Object.entries(FONT_LABELS).map(([key, label]) => (
-                    <option key={key} value={key}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </Section>
           </div>
         </ResizableEditorPanel>
 

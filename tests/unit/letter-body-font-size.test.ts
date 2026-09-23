@@ -44,7 +44,7 @@ describe("letter body font size", () => {
     expect(control).toContain("LETTER_BODY_FONT_SIZE_MIN");
     expect(control).toContain("LETTER_BODY_FONT_SIZE_MAX");
     expect(control).toContain("step={0.5}");
-    expect(control).toContain("Vorlagengrösse");
+    expect(control).toContain("Wie Vorlage");
   });
 
   test("applies an explicit body-size override to preview, measurement and PDF markup", () => {

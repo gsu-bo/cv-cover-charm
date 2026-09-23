@@ -12,10 +12,13 @@ const canvas = readFileSync(
   "utf8",
 );
 
-describe("contextual letter font sizes", () => {
-  test("keeps all new role sizes optional and normalizes explicit values", () => {
+describe("contextual letter typography", () => {
+  test("keeps all new role typography optional and normalizes explicit values", () => {
     const defaults = emptyLetterDesign();
+    expect(defaults.dateFont).toBeUndefined();
     expect(defaults.dateFontSizePt).toBeUndefined();
+    expect(defaults.bodyFont).toBeUndefined();
+    expect(defaults.attachmentsFont).toBeUndefined();
     expect(defaults.salutationFontSizePt).toBeUndefined();
     expect(defaults.closingFontSizePt).toBeUndefined();
     expect(defaults.signatureFontSizePt).toBeUndefined();
@@ -23,12 +26,18 @@ describe("contextual letter font sizes", () => {
 
     const normalized = normalizeLetterDesign({
       ...defaults,
+      dateFont: "sans",
+      bodyFont: "serif",
+      attachmentsFont: "freundlich",
       dateFontSizePt: 7,
       salutationFontSizePt: 9.24,
       closingFontSizePt: 11.26,
       signatureFontSizePt: 20,
       attachmentsFontSizePt: 10.5,
     });
+    expect(normalized.dateFont).toBe("sans");
+    expect(normalized.bodyFont).toBe("serif");
+    expect(normalized.attachmentsFont).toBe("freundlich");
     expect(normalized.dateFontSizePt).toBe(8);
     expect(normalized.salutationFontSizePt).toBe(9);
     expect(normalized.closingFontSizePt).toBe(11.5);
@@ -36,8 +45,15 @@ describe("contextual letter font sizes", () => {
     expect(normalized.attachmentsFontSizePt).toBe(10.5);
   });
 
-  test("places size controls in the matching form accordions", () => {
+  test("places font family and size controls in the matching form accordions", () => {
     expect(route).toContain('data-letter-context-font-sizes="brief"');
+    expect(route).not.toContain('<Section title="Schrift"');
+    expect(route).not.toContain('open={open.typo}');
+    expect(route).toContain('font={design.dateFont}');
+    expect(route).toContain('font={design.bodyFont}');
+    expect(route).toContain('font={design.senderTypography?.font}');
+    expect(route).toContain('font={design.recipientTypography?.font}');
+    expect(route).toContain('font={design.attachmentsFont}');
     for (const label of [
       "Ort & Datum",
       "Titel / Betreff",
@@ -55,10 +71,12 @@ describe("contextual letter font sizes", () => {
     expect(route).toContain('patchDossierChrome("letter", { footerFontSizePt: fontSizePt ?? null })');
   });
 
-  test("removes duplicate size sliders from Layout", () => {
+  test("removes duplicate font family and size controls from Layout", () => {
     expect(layout).not.toContain("BodyFontSizeControl");
+    expect(layout).not.toContain("FONT_LABELS");
+    expect(layout).not.toContain("Schriftart</span>");
     expect(layout).not.toContain("aria-label={`${label} Schriftgrösse`}");
-    expect(layout).toContain("Schriftgrössen stellst du");
+    expect(layout).toContain("Schriftart und Schriftgrösse stellst du");
   });
 
   test("renders the new role sizes in the shared canvas used by preview, pagination and PDF", () => {
@@ -67,5 +85,8 @@ describe("contextual letter font sizes", () => {
     expect(canvas).toContain("design.closingFontSizePt");
     expect(canvas).toContain("design.signatureFontSizePt");
     expect(canvas).toContain("design.attachmentsFontSizePt");
+    expect(canvas).toContain("design.dateFont");
+    expect(canvas).toContain("design.bodyFont");
+    expect(canvas).toContain("design.attachmentsFont");
   });
 });

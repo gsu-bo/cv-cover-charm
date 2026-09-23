@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from "react";
-import { FONT_LABELS, type FontKey } from "@/components/cover/types";
 import { DossierPageMarginsControl } from "@/components/dossier/DossierPageMarginsControl";
 import {
   letterDefaultPageMargins,
@@ -23,8 +22,6 @@ const buttonClass =
   "rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const smallButtonClass =
   "rounded border border-input bg-background px-2 py-1 text-[11px] font-medium hover:bg-accent";
-const selectClass =
-  "w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-ring";
 
 export function legacyLetterChromePatch(
   patch: Partial<DossierChromeOptions>,
@@ -179,28 +176,6 @@ function TypographyRoleControl({
         ) : null}
       </div>
 
-      <label className="grid gap-1 text-xs">
-        <span className="text-muted-foreground">Schriftart</span>
-        <select
-          className={selectClass}
-          value={current.font ?? "template"}
-          onChange={(event) =>
-            patch({
-              font: event.target.value === "template" ? undefined : (event.target.value as FontKey),
-            })
-          }
-          aria-label={`${label} Schriftart`}
-        >
-          <option value="template">Wie Vorlage</option>
-          {(Object.entries(FONT_LABELS) as Array<[FontKey, string]>).map(([key, fontLabel]) => (
-            <option key={key} value={key}>
-              {fontLabel}
-            </option>
-          ))}
-        </select>
-      </label>
-
-
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="text-muted-foreground">Schriftfarbe</span>
         <input
@@ -281,10 +256,10 @@ export function LetterLayoutControls({
         className="grid gap-2.5 rounded-lg border bg-background p-3 shadow-sm"
       >
         <div>
-          <div className="text-xs font-semibold">Briefspezifische Positionen &amp; Typografie</div>
+          <div className="text-xs font-semibold">Briefspezifische Positionen &amp; Formatierung</div>
           <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-            Diese Einstellungen gelten nur fürs Motivationsschreiben. Schriftgrössen stellst du
-            direkt bei den passenden Formularbereichen ein; Header und Footer bleiben im eigenen Bereich.
+            Schriftart und Schriftgrösse stellst du direkt beim jeweiligen Inhalt ein. Hier bleiben
+            Position, Ausrichtung und zusätzliche Textformatierung.
           </p>
         </div>
 
