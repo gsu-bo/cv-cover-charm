@@ -3,10 +3,10 @@ import { ContextualFieldTypography } from "./ContextualFieldTypography";
 import "./EditorPanelIntro.css";
 
 const STORAGE_KEY = "bewerbungsdossier:editor-panel-width";
-const MIN_WIDTH = 260;
-const MAX_WIDTH = 560;
+const MIN_WIDTH = 300;
+const MAX_WIDTH = 720;
 const DEFAULT_WIDTH = 380;
-const PREVIEW_MIN_WIDTH = 280;
+const PREVIEW_MIN_WIDTH = 320;
 
 function clampWidth(width: number): number {
   const viewportMaximum =
@@ -25,7 +25,7 @@ function storeWidth(width: number | null) {
   }
 }
 
-/** Gemeinsames, desktopweit verstellbares Formularpanel für alle Dossier-Editoren. */
+/** Gemeinsames, per Maus, Touch und Tastatur verstellbares Formularpanel. */
 export function ResizableEditorPanel({ open, children }: { open: boolean; children: ReactNode }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ pointerId: number; startX: number; startWidth: number } | null>(null);
@@ -46,6 +46,15 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
     } catch {
       // Gespeicherte UI-Einstellungen sind optional.
     }
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (widthRef.current === null) return;
+      setCustomWidth(clampWidth(widthRef.current));
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const applyWidth = (width: number, persist = false) => {
@@ -69,23 +78,23 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
   } as CSSProperties;
   const openWidthClass =
     customWidth === null
-      ? "sm:w-[260px] md:w-[320px] lg:w-[380px] xl:w-[420px]"
-      : "sm:w-[var(--editor-panel-width)]";
+      ? "md:w-[320px] lg:w-[380px] xl:w-[420px] 2xl:w-[460px]"
+      : "md:w-[var(--editor-panel-width)]";
 
   return (
     <div
       ref={panelRef}
       data-editor-panel
       style={style}
-      className={`absolute inset-y-0 left-0 z-20 w-full shrink-0 border-r bg-background transition-transform duration-300 ease-out sm:static sm:h-auto sm:bg-muted sm:transition-[width,transform] ${
-        // An identity transform still creates a containing block for fixed descendants.
-        // Keep the open panel transform-free so floating editor toolbars remain viewport-fixed.
-        open ? `transform-none ${openWidthClass}` : "-translate-x-full sm:w-0 sm:border-r-0"
+      className={`absolute inset-y-0 left-0 z-20 w-full shrink-0 border-r bg-background transition-transform duration-300 ease-out md:static md:h-auto md:bg-muted md:transition-[width,transform] ${
+        // Unter 768 px ist das Formular bewusst ein Overlay statt eines gequetschten Splits.
+        // Ab Tablet/Desktop entscheidet der User selbst über das Verhältnis zur Vorschau.
+        open ? `transform-none ${openWidthClass}` : "-translate-x-full md:w-0 md:border-r-0"
       }`}
     >
       <aside
         data-editor-form-scroll
-        className={`h-full overscroll-contain overflow-y-auto overflow-x-hidden ${open ? "" : "sm:overflow-hidden"}`}
+        className={`h-full overscroll-contain overflow-y-auto overflow-x-hidden ${open ? "" : "md:overflow-hidden"}`}
         aria-hidden={!open}
         inert={!open}
       >
@@ -101,17 +110,18 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
       {open ? (
         <div
           role="separator"
+          data-editor-panel-resize-handle
           aria-label="Formularbreite ändern"
           aria-orientation="vertical"
           aria-valuemin={MIN_WIDTH}
           aria-valuemax={MAX_WIDTH}
           aria-valuenow={customWidth ?? DEFAULT_WIDTH}
           tabIndex={0}
-          title="Ziehen zum Verbreitern · Doppelklick zum Zurücksetzen"
-          className="group absolute inset-y-0 right-0 z-30 hidden w-3 translate-x-1/2 cursor-col-resize touch-none items-center justify-center outline-none sm:flex"
+          title="Mit Maus oder Touch ziehen · Doppelklick zum Zurücksetzen"
+          className="group absolute inset-y-0 right-0 z-30 hidden w-6 translate-x-1/2 cursor-col-resize touch-none items-center justify-center outline-none md:flex"
           onDoubleClick={resetWidth}
           onPointerDown={(event) => {
-            if (event.button !== 0) return;
+            if (event.pointerType === "mouse" && event.button !== 0) return;
             const startWidth = panelRef.current?.getBoundingClientRect().width ?? DEFAULT_WIDTH;
             dragRef.current = {
               pointerId: event.pointerId,
@@ -153,7 +163,7 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
             applyWidth(current + (event.key === "ArrowRight" ? 20 : -20), true);
           }}
         >
-          <span className="h-14 w-1 rounded-full bg-border transition-colors group-hover:bg-primary group-focus:bg-primary" />
+          <span className="h-16 w-1.5 rounded-full bg-border transition-colors group-hover:bg-primary group-focus:bg-primary group-active:bg-primary" />
           {resizing && customWidth !== null ? (
             <span className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-[10px] font-medium text-background shadow-lg">
               Formular: {customWidth} px
