@@ -4,6 +4,7 @@ import {
   cvContentBox,
   cvDefaultContentBox,
   cvFrameFor,
+  cvPageReserves,
   cvSafePageMarginMinimums,
 } from "@/components/cv/archetype";
 import {
@@ -14,6 +15,7 @@ import { DEMO_LETTER, emptyLetterDesign } from "@/components/letter/types";
 import { DEFAULT_DOSSIER_CHROME_OPTIONS } from "@/lib/dossier-chrome";
 import { patchDossierDocxPageMarginsXml } from "@/lib/dossier-docx-page-margins";
 import {
+  CV_PAGE_MARGIN_BOTTOM_MM,
   DOSSIER_PAGE_MARGIN_HARD_MAX_MM,
   DOSSIER_PAGE_MARGIN_MAX_MM,
   DOSSIER_PAGE_MARGIN_MIN_MM,
@@ -59,10 +61,14 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(normalizeDossierPageMarginsState({})).toEqual({});
   });
 
-  test("CV keeps the exact template geometry while no custom margin exists", () => {
+  test("CV keeps template top/side geometry while the global bottom margin stays at 1 mm", () => {
     const frame = cvFrameFor("klassisch");
     const expected = cvDefaultContentBox(frame, 0, "classic");
-    expect(cvContentBox(frame, 0, "classic")).toEqual(expected);
+    const footerReserveMm = cvPageReserves().footerReserveMm;
+    expect(cvContentBox(frame, 0, "classic")).toEqual({
+      ...expected,
+      bottom: CV_PAGE_MARGIN_BOTTOM_MM + footerReserveMm,
+    });
   });
 
   test("CV renderer owns the resolved page-margin edges while variants stay internal", () => {
@@ -133,22 +139,22 @@ describe("configurable CV and motivation-letter page margins", () => {
       undefined,
       DEFAULT_DOSSIER_CHROME_OPTIONS,
     );
-    expect(minimums).toEqual({ top: 5, right: 5, bottom: 5, left: 80 });
+    expect(minimums).toEqual({ top: 5, right: 5, bottom: 1, left: 80 });
     expect(
       clampDossierPageMarginsToMinimums({ top: 5, right: 5, bottom: 5, left: 5 }, minimums),
-    ).toEqual(minimums);
+    ).toEqual({ top: 5, right: 5, bottom: 5, left: 80 });
 
     setDossierPageMargins("cv", { top: 5, right: 5, bottom: 5, left: 5 });
     expect(cvContentBox(frame, 0, "classic", undefined, DEFAULT_DOSSIER_CHROME_OPTIONS)).toEqual({
       top: 21,
       right: 5,
-      bottom: 9,
+      bottom: 5,
       left: 80,
     });
     clearDossierPageMargins();
   });
 
-  test("card and framed CV templates retain structural margin minimums", () => {
+  test("card and framed CV templates retain side/top structure but share the 1 mm bottom rule", () => {
     expect(
       cvSafePageMarginMinimums(
         cvFrameFor("citrus"),
@@ -157,7 +163,7 @@ describe("configurable CV and motivation-letter page margins", () => {
         undefined,
         DEFAULT_DOSSIER_CHROME_OPTIONS,
       ),
-    ).toEqual({ top: 5, right: 19, bottom: 15, left: 19 });
+    ).toEqual({ top: 5, right: 19, bottom: 1, left: 19 });
     expect(
       cvSafePageMarginMinimums(
         cvFrameFor("klassisch"),
@@ -166,7 +172,7 @@ describe("configurable CV and motivation-letter page margins", () => {
         undefined,
         DEFAULT_DOSSIER_CHROME_OPTIONS,
       ),
-    ).toEqual({ top: 5, right: 15, bottom: 11, left: 15 });
+    ).toEqual({ top: 5, right: 15, bottom: 1, left: 15 });
   });
 
   test("Neon first-page headroom stays shared by default and custom-margin geometry", () => {
@@ -248,6 +254,8 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(control).toContain("Vorlage wiederherstellen");
     for (const label of ["Oben", "Rechts", "Unten", "Links"]) expect(control).toContain(label);
     expect(control).toContain("borderLeftColor: accentColor");
+    expect(control).toContain('scope === "cv" && key === "bottom"');
+    expect(control).toContain("fest auf 1 mm gesetzt");
     expect(cvMargins).toContain("<DossierPageMarginsControl");
     expect(cvMargins).toContain('scope="cv"');
     expect(cvMargins).toContain("minimumMargins={minimumMargins}");
@@ -322,7 +330,7 @@ describe("configurable CV and motivation-letter page margins", () => {
     expect(cvContentBox(frame, 0, "classic", 0.3, chrome)).toEqual({
       top: 134,
       right: 23,
-      bottom: 21,
+      bottom: 5,
       left: 24,
     });
     clearDossierPageMargins();

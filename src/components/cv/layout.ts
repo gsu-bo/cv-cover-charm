@@ -89,6 +89,7 @@ const STORAGE_KEY = "lebenslauf:layout:v1";
 const MIRROR_STORAGE_KEY = "lebenslauf:layout-mirror:v1";
 export const CV_INFO_POSITION_STORAGE_KEY = "lebenslauf:info-position:v1";
 const SECTION_GAP_STORAGE_KEY = "lebenslauf:section-gap:v1";
+export const CV_CONTINUATION_GAP_STORAGE_KEY = "lebenslauf:continuation-gap:v1";
 export const CV_LAYOUT_EVENT = "lebenslauf-layout-change";
 const DEFAULT_LAYOUT: CvLayoutId = CANONICAL_DOSSIER_PRESENTATION.cv.layout;
 
@@ -100,6 +101,14 @@ const DEFAULT_LAYOUT: CvLayoutId = CANONICAL_DOSSIER_PRESENTATION.cv.layout;
 export const CV_SECTION_GAP_MIN_MM = 0;
 export const CV_SECTION_GAP_MAX_MM = 12;
 export const CV_SECTION_GAP_CUSTOM_DEFAULT_MM = 4;
+
+/**
+ * CV-only whitespace between a continuation header and content from page 2 on.
+ * Page 1 continues to use the shared dossier header gap.
+ */
+export const CV_CONTINUATION_GAP_MIN_MM = 0;
+export const CV_CONTINUATION_GAP_MAX_MM = 20;
+export const CV_CONTINUATION_GAP_DEFAULT_MM = 4;
 
 function valid(value: string | null): value is CvLayoutId {
   return (
@@ -181,6 +190,15 @@ export function normalizeCvSectionGapMm(value: unknown): number | null {
   return Math.max(CV_SECTION_GAP_MIN_MM, Math.min(CV_SECTION_GAP_MAX_MM, numeric));
 }
 
+export function normalizeCvContinuationGapMm(value: unknown): number {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) return CV_CONTINUATION_GAP_DEFAULT_MM;
+  return Math.max(
+    CV_CONTINUATION_GAP_MIN_MM,
+    Math.min(CV_CONTINUATION_GAP_MAX_MM, Math.round(numeric * 2) / 2),
+  );
+}
+
 function readSectionGap(): number | null {
   if (typeof window === "undefined") return null;
   try {
@@ -189,6 +207,16 @@ function readSectionGap(): number | null {
     return normalizeCvSectionGapMm(raw);
   } catch {
     return null;
+  }
+}
+
+function readContinuationGap(): number {
+  if (typeof window === "undefined") return CV_CONTINUATION_GAP_DEFAULT_MM;
+  try {
+    const raw = window.localStorage.getItem(CV_CONTINUATION_GAP_STORAGE_KEY);
+    return raw === null ? CV_CONTINUATION_GAP_DEFAULT_MM : normalizeCvContinuationGapMm(raw);
+  } catch {
+    return CV_CONTINUATION_GAP_DEFAULT_MM;
   }
 }
 
@@ -257,6 +285,11 @@ export function getCvSectionGapMm(): number | null {
   return value;
 }
 
+/** CV-only continuation whitespace from page 2 onward. */
+export function getCvContinuationGapMm(): number {
+  return readContinuationGap();
+}
+
 export function setCvLayout(layout: CvLayoutId) {
   if (typeof window === "undefined") return;
   try {
@@ -314,6 +347,17 @@ export function setCvSectionGapMm(value: number | null) {
   window.dispatchEvent(new CustomEvent(CV_LAYOUT_EVENT));
 }
 
+export function setCvContinuationGapMm(value: number) {
+  if (typeof window === "undefined") return;
+  const normalized = normalizeCvContinuationGapMm(value);
+  try {
+    window.localStorage.setItem(CV_CONTINUATION_GAP_STORAGE_KEY, String(normalized));
+  } catch {
+    // Die laufende Seite reagiert trotzdem über das Event.
+  }
+  window.dispatchEvent(new CustomEvent(CV_LAYOUT_EVENT));
+}
+
 export function subscribeCvLayout(onChange: () => void) {
   if (typeof window === "undefined") return () => {};
 
@@ -323,7 +367,8 @@ export function subscribeCvLayout(onChange: () => void) {
       event.key === STORAGE_KEY ||
       event.key === MIRROR_STORAGE_KEY ||
       event.key === CV_INFO_POSITION_STORAGE_KEY ||
-      event.key === SECTION_GAP_STORAGE_KEY
+      event.key === SECTION_GAP_STORAGE_KEY ||
+      event.key === CV_CONTINUATION_GAP_STORAGE_KEY
     ) {
       applyVariant(readChoice());
       onChange();
@@ -343,3 +388,5 @@ export const subscribeCvLayoutChoice = subscribeCvLayout;
 export const subscribeCvInfoPosition = subscribeCvLayout;
 /** Globaler Rubrik-Abstand teilt denselben Event-Stream wie die übrigen Aufbauoptionen. */
 export const subscribeCvSectionGap = subscribeCvLayout;
+/** Fortsetzungsabstand teilt denselben Event-Stream wie die übrige CV-Geometrie. */
+export const subscribeCvContinuationGap = subscribeCvLayout;

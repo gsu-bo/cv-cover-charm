@@ -1060,6 +1060,13 @@ export function SectionLayoutControls({
   );
   const customSectionGap = sectionGapMm !== null;
   const placementKey: CvPlacementKey = section === "person" ? "kontakt" : section;
+  const masonryAvailable = cvLayout === "classic" && section !== "person";
+  const positioningMode =
+    layout.positioning === "free"
+      ? "free"
+      : masonryAvailable && layout.packing === "masonry"
+        ? "masonry"
+        : "flow";
 
   return (
     <div className="rounded-md border bg-muted/20">
@@ -1093,9 +1100,10 @@ export function SectionLayoutControls({
           <select
             className={layoutSelectCls}
             value={layout.width}
-            onChange={(event) =>
-              onLayout({ width: event.target.value === "half" ? "half" : "full" })
-            }
+            onChange={(event) => {
+              const width = event.target.value === "half" ? "half" : "full";
+              onLayout(width === "full" ? { width, packing: "rows" } : { width });
+            }}
             aria-label={`${section}: Breite`}
           >
             <option value="full">Volle Breite</option>
@@ -1106,22 +1114,41 @@ export function SectionLayoutControls({
           <span className="text-[11px] font-medium">Positionierung</span>
           <select
             className={layoutSelectCls}
-            value={layout.positioning}
-            onChange={(event) =>
-              onLayout({ positioning: event.target.value === "free" ? "free" : "flow" })
-            }
+            value={positioningMode}
+            onChange={(event) => {
+              if (event.target.value === "free") {
+                onLayout({ positioning: "free", packing: "rows" });
+              } else if (event.target.value === "masonry" && masonryAvailable) {
+                onLayout({
+                  positioning: "flow",
+                  packing: "masonry",
+                  width: "half",
+                  x: null,
+                  y: null,
+                  widthMm: null,
+                  heightMm: null,
+                });
+              } else {
+                onLayout({ positioning: "flow", packing: "rows" });
+              }
+            }}
             aria-label={`${section}: Positionierung`}
           >
             <option value="flow">Automatisch</option>
+            <option value="masonry" disabled={!masonryAvailable}>
+              Masonry
+            </option>
             <option value="free">Frei platzieren</option>
           </select>
         </label>
         <p className="text-[11px] leading-relaxed text-muted-foreground sm:col-span-3">
           {layout.positioning === "free"
             ? "Diese Rubrik kannst du direkt auf der Seite verschieben und am Rahmen vergrössern."
-            : layout.width === "half"
-              ? "Zwei Rubriken mit halber Breite können nebeneinander stehen."
-              : "Die Rubrik bleibt sicher im automatischen Dokumentfluss."}
+            : positioningMode === "masonry"
+              ? "Masonry stapelt kurze Rubriken in zwei unabhängigen Spalten und nutzt freie Lücken besser aus."
+              : layout.width === "half"
+                ? "Zwei Rubriken mit halber Breite können nebeneinander stehen."
+                : "Die Rubrik bleibt sicher im automatischen Dokumentfluss."}
         </p>
         {layout.positioning === "free" && (layout.widthMm || layout.heightMm) ? (
           <button

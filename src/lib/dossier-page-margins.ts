@@ -12,6 +12,8 @@ export type DossierPageMarginsState = Partial<Record<DossierPageMarginScope, Dos
 export const DOSSIER_PAGE_MARGINS_STORAGE_KEY = "bewerbungsdossier:page-margins:v1";
 export const DOSSIER_PAGE_MARGINS_EVENT = "bewerbungsdossier-page-margins-change";
 export const DOSSIER_PAGE_MARGIN_MIN_MM = 5;
+/** CVs deliberately keep the physical bottom margin tiny so the final rubric can still print. */
+export const CV_PAGE_MARGIN_BOTTOM_MM = 1;
 export const DOSSIER_PAGE_MARGIN_MAX_MM = 80;
 export const DOSSIER_PAGE_MARGIN_HARD_MAX_MM = 120;
 
@@ -22,21 +24,20 @@ const roundHalfMm = (value: number) => Math.round(value * 2) / 2;
 const normalizedSide = (
   value: unknown,
   max = DOSSIER_PAGE_MARGIN_MAX_MM,
+  min = DOSSIER_PAGE_MARGIN_MIN_MM,
 ): number | null => {
   const numeric = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(numeric)) return null;
-  return roundHalfMm(Math.max(DOSSIER_PAGE_MARGIN_MIN_MM, Math.min(max, numeric)));
+  return roundHalfMm(Math.max(min, Math.min(max, numeric)));
 };
 
-const normalizedMinimumSide = (value: unknown): number => {
+const normalizedMinimumSide = (
+  value: unknown,
+  min = DOSSIER_PAGE_MARGIN_MIN_MM,
+): number => {
   const numeric = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(numeric)) return DOSSIER_PAGE_MARGIN_MIN_MM;
-  return roundHalfMm(
-    Math.max(
-      DOSSIER_PAGE_MARGIN_MIN_MM,
-      Math.min(DOSSIER_PAGE_MARGIN_HARD_MAX_MM, numeric),
-    ),
-  );
+  if (!Number.isFinite(numeric)) return min;
+  return roundHalfMm(Math.max(min, Math.min(DOSSIER_PAGE_MARGIN_HARD_MAX_MM, numeric)));
 };
 
 function normalizeDossierPageMarginsWithMax(
@@ -61,6 +62,11 @@ function normalizeStoredDossierPageMargins(value: unknown): DossierPageMargins |
   return normalizeDossierPageMarginsWithMax(value, DOSSIER_PAGE_MARGIN_HARD_MAX_MM);
 }
 
+function normalizeStoredCvPageMargins(value: unknown): DossierPageMargins | null {
+  const normalized = normalizeStoredDossierPageMargins(value);
+  return normalized ? { ...normalized, bottom: CV_PAGE_MARGIN_BOTTOM_MM } : null;
+}
+
 export function clampDossierPageMarginsToMinimums(
   value: unknown,
   minimums: Partial<DossierPageMargins>,
@@ -68,8 +74,13 @@ export function clampDossierPageMarginsToMinimums(
   if (!value || typeof value !== "object") return null;
   const incoming = value as Partial<DossierPageMargins>;
   const clampSide = (side: keyof DossierPageMargins): number | null => {
-    const minimum = normalizedMinimumSide(minimums[side]);
-    const normalized = normalizedSide(incoming[side], DOSSIER_PAGE_MARGIN_HARD_MAX_MM);
+    const minimumRaw = minimums[side];
+    const lowerBound =
+      side === "bottom" && Number(minimumRaw) < DOSSIER_PAGE_MARGIN_MIN_MM
+        ? CV_PAGE_MARGIN_BOTTOM_MM
+        : DOSSIER_PAGE_MARGIN_MIN_MM;
+    const minimum = normalizedMinimumSide(minimumRaw, lowerBound);
+    const normalized = normalizedSide(incoming[side], DOSSIER_PAGE_MARGIN_HARD_MAX_MM, lowerBound);
     return normalized === null ? null : roundHalfMm(Math.max(normalized, minimum));
   };
   const top = clampSide("top");
@@ -83,7 +94,9 @@ export function clampDossierPageMarginsToMinimums(
 export function normalizeDossierPageMarginsState(value: unknown): DossierPageMarginsState {
   if (!value || typeof value !== "object") return {};
   const incoming = value as DossierPageMarginsState;
-  const cv = normalizeStoredDossierPageMargins(incoming.cv);
+  // Existing CV saves are intentionally migrated as well: a previously large
+  // bottom margin must not keep hiding the final References rubric in PDF output.
+  const cv = normalizeStoredCvPageMargins(incoming.cv);
   const letter = normalizeStoredDossierPageMargins(incoming.letter);
   return {
     ...(cv ? { cv } : {}),

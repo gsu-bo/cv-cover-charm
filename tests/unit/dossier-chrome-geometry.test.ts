@@ -30,10 +30,10 @@ describe("pure dossier chrome geometry", () => {
     expect(dossierFooterContentBottomMmForOptions(none)).toBe(10);
   });
 
-  test("CV geometry follows the explicit chrome snapshot", () => {
+  test("CV geometry follows the explicit chrome snapshot with the global 1 mm bottom margin", () => {
     const frame = cvFrameFor("modern");
-    expect(cvContentBox(frame, 0, "classic", 0.3, contact)).toMatchObject({ top: 53, bottom: 20 });
-    expect(cvContentBox(frame, 0, "classic", 0.3, none)).toMatchObject({ top: 18, bottom: 10 });
+    expect(cvContentBox(frame, 0, "classic", 0.3, contact)).toMatchObject({ top: 53, bottom: 11 });
+    expect(cvContentBox(frame, 0, "classic", 0.3, none)).toMatchObject({ top: 18, bottom: 1 });
     expect(cvSurface(frame, 0, "classic", 0.3, contact)).toMatchObject({ top: 32, bottom: 10 });
     expect(cvSurface(frame, 0, "classic", 0.3, none)).toMatchObject({ top: 0, bottom: 0 });
   });
