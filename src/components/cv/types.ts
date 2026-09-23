@@ -335,6 +335,8 @@ export type CvData = {
   hobbys: string[];
   staerken: string[];
   referenzen: CvReferenz[];
+  /** Zwei Referenzen pro Zeile bei voller Rubrikbreite; fehlend in alten Saves = an. */
+  referencesSideBySide?: boolean;
   /** Frei benannte Rubriken wie Kurse, Projekte oder Auszeichnungen. */
   customSections?: CvCustomSection[];
   /** Reihenfolge aller kompletten Rubriken; fehlende Schlüssel werden sicher ergänzt. */
@@ -592,6 +594,7 @@ export const emptyCv: CvData = {
   hobbys: [],
   staerken: [],
   referenzen: [],
+  referencesSideBySide: true,
   customSections: [fixedFamilySection()],
   sectionOrder: defaultCvSectionOrder([FIXED_FAMILY_SECTION_KEY]),
   labels: {},

@@ -11,6 +11,10 @@ const controls = readFileSync(
   new URL("../../src/components/dossier/DossierChromeControls.tsx", import.meta.url),
   "utf8",
 );
+const cvMargins = readFileSync(
+  new URL("../../src/components/cv/CvPageMarginsControl.tsx", import.meta.url),
+  "utf8",
+);
 const letterCanvas = readFileSync(
   new URL("../../src/components/letter/LetterCanvas.tsx", import.meta.url),
   "utf8",
@@ -90,11 +94,23 @@ describe("dossier header spacing", () => {
     }
   });
 
-  test("exposes a 0–40 mm range control in the shared chrome UI", () => {
+  test("keeps CV header spacing with page margins and links there from Header & Footer", () => {
+    expect(cvMargins).toContain("data-dossier-header-gap-control");
+    expect(cvMargins).toContain("Zusätzlicher Abstand nach Header");
+    expect(cvMargins).toContain("Wird zusätzlich zum oberen Seitenrand gerechnet.");
+    expect(cvMargins).toContain("min={0}");
+    expect(cvMargins).toContain("max={40}");
+
+    expect(controls).toContain("data-cv-header-gap-link");
+    expect(controls).toContain("Seitenränder &amp; Abstände →");
+    expect(controls).toContain("openCvPageSpacing");
+    expect(controls).toContain('[data-dossier-page-margins-control=\"cv\"]');
+  });
+
+  test("retains the 0–40 mm control in the shared chrome UI for the letter", () => {
+    expect(controls).toContain("scope === \"cv\" ?");
     expect(controls).toContain("data-dossier-header-gap-control");
     expect(controls).toContain("<span>Freiraum unter dem Header</span>");
-    expect(controls).toContain("min={0}");
-    expect(controls).toContain("max={40}");
     expect(controls).toContain("headerGapMm: 12");
   });
 

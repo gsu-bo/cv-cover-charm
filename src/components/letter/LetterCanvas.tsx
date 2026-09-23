@@ -17,6 +17,8 @@ import { letterPageGeometry, visibleLetterAttachments } from "./layout-system";
 import {
   DEFAULT_LETTER_CLOSING_GAP_MM,
   DEFAULT_LETTER_SIGNATURE_GAP_MM,
+  LETTER_BODY_FONT_SIZE_MAX,
+  LETTER_BODY_FONT_SIZE_MIN,
   LETTER_ROLE_FONT_SIZE_MAX,
   LETTER_ROLE_FONT_SIZE_MIN,
   normalizeLetterMotifOpacity,
@@ -240,6 +242,13 @@ export function LetterCanvas({
   const senderSize = roleSize(senderTypography);
   const recipientSize = roleSize(recipientTypography);
   const subjectSize = roleSize(subjectTypography);
+  const bodySize =
+    typeof design.bodyFontSizePt === "number" && Number.isFinite(design.bodyFontSizePt)
+      ? Math.max(
+          LETTER_BODY_FONT_SIZE_MIN,
+          Math.min(LETTER_BODY_FONT_SIZE_MAX, design.bodyFontSizePt),
+        )
+      : undefined;
   const senderColor = roleColor(senderTypography);
   const recipientColor = roleColor(recipientTypography);
   const subjectColor = roleColor(subjectTypography);
@@ -307,6 +316,8 @@ export function LetterCanvas({
       data-letter-user-subject-decoration={
         subjectTypography?.underline === undefined ? undefined : "true"
       }
+      data-letter-user-body-font={design.bodyFont ? "true" : undefined}
+      data-letter-user-body-size={bodySize !== undefined ? "true" : undefined}
       className="relative h-[1123px] w-[794px] overflow-hidden bg-white shadow-xl"
       style={
         {
@@ -384,6 +395,8 @@ export function LetterCanvas({
               : subjectTypography.underline
                 ? "underline"
                 : "none",
+          "--letter-user-body-font": design.bodyFont ? FONT_STACKS[design.bodyFont] : undefined,
+          "--letter-user-body-size": bodySize !== undefined ? `${bodySize}pt` : undefined,
         } as React.CSSProperties
       }
       aria-label={ariaLabel}
@@ -415,6 +428,8 @@ export function LetterCanvas({
         footerHeightMm={geometry.footer.height}
         footerLabel="Beilagen"
         footerDetails={geometry.footer.showAttachments ? beilagen : []}
+        headerFontOverride={senderTypography?.font}
+        footerFontOverride={design.attachmentsFont}
       />
 
       {warmCompactHeader ? (
@@ -514,7 +529,13 @@ export function LetterCanvas({
           data-letter-section="date"
           data-letter-pdf-text="date"
           className="mt-[4mm] text-[9.5pt] leading-[1.45]"
-          style={{ color: palette.muted, textAlign: dateAlign }}
+          style={{
+            color: palette.muted,
+            textAlign: dateAlign,
+            fontFamily: design.dateFont ? FONT_STACKS[design.dateFont] : undefined,
+            fontSize:
+              design.dateFontSizePt !== undefined ? `${design.dateFontSizePt}pt` : undefined,
+          }}
         >
           <Lines
             values={[
@@ -535,7 +556,17 @@ export function LetterCanvas({
           )}
 
           <div data-letter-flow-zone>
-            <p data-letter-pdf-text="salutation" className="mb-[5mm]">
+            <p
+              data-letter-pdf-text="salutation"
+              className="mb-[5mm]"
+              style={{
+                fontFamily: design.salutationFont ? FONT_STACKS[design.salutationFont] : undefined,
+                fontSize:
+                  design.salutationFontSizePt !== undefined
+                    ? `${design.salutationFontSizePt}pt`
+                    : undefined,
+              }}
+            >
               {data.anrede || (exportMode ? "" : "Guten Tag")}
             </p>
 
@@ -557,21 +588,46 @@ export function LetterCanvas({
               data-letter-closing-gap-mm={closingGapMm}
               style={{ marginTop: `${closingGapMm}mm` }}
             >
-              <div data-letter-pdf-text="closing">
+              <div
+                data-letter-pdf-text="closing"
+                style={{
+                  fontFamily: design.closingFont ? FONT_STACKS[design.closingFont] : undefined,
+                  fontSize:
+                    design.closingFontSizePt !== undefined
+                      ? `${design.closingFontSizePt}pt`
+                      : undefined,
+                }}
+              >
                 {data.gruss || (exportMode ? "" : "Freundliche Grüsse")}
               </div>
               <div
                 data-letter-pdf-text="signature"
                 data-letter-signature-gap-mm={signatureGapMm}
                 className="font-medium"
-                style={{ marginTop: `${signatureGapMm}mm` }}
+                style={{
+                  marginTop: `${signatureGapMm}mm`,
+                  fontFamily: design.signatureFont ? FONT_STACKS[design.signatureFont] : undefined,
+                  fontSize:
+                    design.signatureFontSizePt !== undefined
+                      ? `${design.signatureFontSizePt}pt`
+                      : undefined,
+                }}
               >
                 {data.unterschrift || data.absenderName}
               </div>
             </div>
 
             {showBeilagenInBody ? (
-              <div className="mt-[9mm] text-[10pt] leading-[1.45]">
+              <div
+                className="mt-[9mm] text-[10pt] leading-[1.45]"
+                style={{
+                  fontFamily: design.attachmentsFont ? FONT_STACKS[design.attachmentsFont] : undefined,
+                  fontSize:
+                    design.attachmentsFontSizePt !== undefined
+                      ? `${design.attachmentsFontSizePt}pt`
+                      : undefined,
+                }}
+              >
                 <div data-letter-pdf-text="attachments-heading" className="font-semibold">
                   Beilagen
                 </div>

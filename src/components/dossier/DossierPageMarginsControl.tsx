@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
   DOSSIER_PAGE_MARGIN_HARD_MAX_MM,
   DOSSIER_PAGE_MARGIN_MAX_MM,
@@ -43,12 +43,15 @@ export function DossierPageMarginsControl({
   minimumMargins,
   accentColor,
   onApplied,
+  extraControls,
 }: {
   scope: DossierPageMarginScope;
   defaultMargins: DossierPageMargins;
   minimumMargins?: DossierPageMargins;
   accentColor?: string;
   onApplied?: () => void;
+  /** Dokument-spezifische Abstände, die geometrisch direkt zu den Seitenrändern gehören. */
+  extraControls?: ReactNode;
 }) {
   useSyncExternalStore(
     subscribeDossierPageMargins,
@@ -126,9 +129,11 @@ export function DossierPageMarginsControl({
     >
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs select-none [&::-webkit-details-marker]:hidden">
         <span className="min-w-0 flex-1">
-          <span className="block font-semibold">Seitenränder</span>
+          <span className="block font-semibold">
+            {extraControls ? "Seitenränder & Abstände" : "Seitenränder"}
+          </span>
           <span className="block text-[11px] leading-relaxed text-muted-foreground">
-            Oben · unten · links · rechts
+            {extraControls ? "Ränder · Abstand zum Seiteninhalt" : "Oben · unten · links · rechts"}
           </span>
         </span>
         <span className="shrink-0 rounded-full border bg-background px-2 py-0.5 text-[10px] text-muted-foreground">
@@ -176,6 +181,8 @@ export function DossierPageMarginsControl({
             </label>
           ))}
         </div>
+
+        {extraControls ? <div className="grid gap-2 border-t pt-3">{extraControls}</div> : null}
 
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           Ohne eigene Werte bleibt die bewährte Geometrie der gewählten Vorlage unverändert.
