@@ -31,6 +31,14 @@ describe("CV page-fit one-shot action", () => {
     const route = read("src/routes/lebenslauf.tsx");
     expect(canvas).toContain("props.onPageFitDesign?.({");
     expect(canvas).toContain("consumeCvPageFitMode(pageFitPlan.mode)");
+    expect(canvas).toContain("[pageFitLayout, pageFitMode, props.data, props.exportMode]");
     expect(route).toContain("onPageFitDesign={applyPageFitDesign}");
+  });
+
+  test("keeps page-fit as button semantics and never writes the legacy mode", () => {
+    const pageFit = read("src/components/cv/page-fit.ts");
+    const portal = read("src/components/cv/CvPageFitMenuPortal.tsx");
+    expect(pageFit).not.toContain("localStorage.setItem(CV_PAGE_FIT_STORAGE_KEY");
+    expect(portal).not.toContain("aria-pressed");
   });
 });
