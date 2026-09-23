@@ -1,3 +1,4 @@
+# Triggered once after the workflow exists on dev; the job deletes this file again.
 name: One-off Masonry Renderer Repair
 
 on:
