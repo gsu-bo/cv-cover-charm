@@ -75,6 +75,7 @@ describe("CV rubric layout", () => {
       page: 2,
       width: "half",
       positioning: "free",
+      packing: "rows",
       x: 21,
       y: 35,
       widthMm: 190,
