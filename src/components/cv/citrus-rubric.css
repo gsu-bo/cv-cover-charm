@@ -4,6 +4,49 @@
  * Defaults deliberately do not touch template geometry. Horizontal position and
  * content indent only become authoritative after the student moves a slider.
  */
+
+/*
+ * The rendered main column intentionally clips overflow so content cannot bleed
+ * into header/footer zones. A translated rubric row used to hit that clip edge:
+ * negative values could therefore cut off the first glyph, while positive values
+ * could lose the right end of the rule. Reserve exactly the moved distance inside
+ * the page margin, while keeping the original text width and content origin.
+ * The physical A4 page remains the final clip boundary.
+ */
+[data-cv-rubric-offset="custom"] [data-dossier-document="cv"] {
+  --cv-rubric-left-bleed: max(0mm, calc(0mm - var(--cv-rubric-x, 0mm)));
+  --cv-rubric-right-bleed: max(0mm, var(--cv-rubric-x, 0mm));
+}
+
+[data-cv-rubric-offset="custom"]
+  [data-dossier-document="cv"][data-cv-layout="classic"] {
+  --cv-rubric-main-left: var(--cv-classic-main-left);
+  --cv-rubric-main-right: var(--cv-classic-main-right);
+}
+
+[data-cv-rubric-offset="custom"]
+  [data-dossier-document="cv"][data-cv-layout="modern"] {
+  --cv-rubric-main-left: var(--cv-modern-main-left);
+  --cv-rubric-main-right: var(--cv-modern-main-right);
+}
+
+[data-cv-rubric-offset="custom"]
+  [data-dossier-document="cv"][data-cv-layout="modern"][data-cv-info-position="mirrored"] {
+  --cv-rubric-main-left: var(--cv-modern-main-right);
+  --cv-rubric-main-right: var(--cv-modern-main-left);
+}
+
+[data-cv-rubric-offset="custom"]
+  [data-dossier-document="cv"]
+  :is([data-cv-page], [data-cv-measure-page])
+  > [data-cv-main] {
+  left: calc(var(--cv-rubric-main-left) - var(--cv-rubric-left-bleed)) !important;
+  right: calc(var(--cv-rubric-main-right) - var(--cv-rubric-right-bleed)) !important;
+  padding-left: var(--cv-rubric-left-bleed) !important;
+  padding-right: var(--cv-rubric-right-bleed) !important;
+  box-sizing: border-box !important;
+}
+
 [data-cv-rubric-offset="custom"]
   [data-dossier-document="cv"]
   [data-cv-main]
