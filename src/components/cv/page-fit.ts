@@ -6,6 +6,7 @@ import {
   type CvData,
   type CvLayoutSectionKey,
   type CvSectionPage,
+  type CvSectionWidth,
 } from "./types";
 
 export type CvPageFitMode = "one" | "two";
@@ -170,11 +171,19 @@ export function cvPageFitSectionWeight(data: CvData, key: CvLayoutSectionKey): n
 export type CvPageFitPlan = {
   mode: CvPageFitMode;
   totalWeight: number;
+  /** Estimated vertical demand after safe half-width pairs are packed. */
+  effectiveWeight: number;
   pageBySection: Partial<Record<CvLayoutSectionKey, CvSectionPage>>;
+  widthBySection: Partial<Record<CvLayoutSectionKey, CvSectionWidth>>;
   assignmentSignature: string;
   titleScaleFactor: number;
   headingScaleFactor: number;
   bodyScaleFactor: number;
+};
+
+export type CvPageFitOptions = {
+  /** Sidebar columns are already space-efficient and must not be split again. */
+  allowHalfWidth?: boolean;
 };
 
 function onePageScale(weight: number) {
@@ -194,20 +203,93 @@ function twoPageScale(weight: number) {
 }
 
 /**
- * Build a predictable pupil-facing plan:
- * - one page: everything returns to page 1 / normal flow;
- * - two pages: keep section order, put personal data on page 1, and choose the
- *   split whose estimated content weights are closest to balanced.
+ * Only short, list-like rubrics are safe automatic half-width candidates.
+ * Chronological sections need their date/title rail, while references already
+ * have their own two-up layout when they have the full section width.
  */
-export function buildCvPageFitPlan(data: CvData, mode: CvPageFitMode): CvPageFitPlan {
+function canCompactToHalf(
+  data: CvData,
+  key: CvLayoutSectionKey,
+  weight: number,
+): boolean {
+  if (weight <= 0 || key === "person" || key === "schule" || key === "erfahrung") return false;
+  if (key === "referenzen") return false;
+
+  if (isCustomSectionKey(key)) {
+    const section = customSectionForKey(data, key);
+    if (!section) return false;
+    const filled = section.entries.filter(entryFilled);
+    if (section.preset === "familie") return filled.length > 0 && filled.length <= 5;
+    return filled.length > 0 && filled.length <= 2 && weight <= 5.8;
+  }
+
+  return (key === "sprachen" || key === "hobbys" || key === "staerken") && weight <= 5.8;
+}
+
+function onePageWidths(
+  data: CvData,
+  order: CvLayoutSectionKey[],
+  weights: Map<CvLayoutSectionKey, number>,
+  allowHalfWidth: boolean,
+) {
+  const widthBySection: Partial<Record<CvLayoutSectionKey, CvSectionWidth>> = {};
+  for (const key of order) widthBySection[key] = "full";
+
+  let effectiveWeight = order.reduce((sum, key) => sum + (weights.get(key) ?? 0), 0);
+  if (!allowHalfWidth) return { widthBySection, effectiveWeight };
+
+  // Empty/hidden sections do not create renderer units, so ignore them when
+  // deciding which visible neighbours can actually share one row.
+  const active = order.filter((key) => (weights.get(key) ?? 0) > 0);
+  for (let index = 0; index < active.length - 1; ) {
+    const left = active[index];
+    const right = active[index + 1];
+    const leftWeight = weights.get(left) ?? 0;
+    const rightWeight = weights.get(right) ?? 0;
+    if (
+      canCompactToHalf(data, left, leftWeight) &&
+      canCompactToHalf(data, right, rightWeight)
+    ) {
+      widthBySection[left] = "half";
+      widthBySection[right] = "half";
+      // Two half-width sections occupy roughly the height of the taller one.
+      effectiveWeight -= Math.min(leftWeight, rightWeight);
+      index += 2;
+    } else {
+      index += 1;
+    }
+  }
+
+  return { widthBySection, effectiveWeight };
+}
+
+/**
+ * Build a predictable pupil-facing plan:
+ * - one page: everything returns to page 1 / normal flow, short neighbouring
+ *   list rubrics may share a row, and typography only tightens afterwards;
+ * - two pages: keep section order, restore full widths, put personal data on
+ *   page 1, and choose the split whose estimated content weights are closest
+ *   to balanced.
+ */
+export function buildCvPageFitPlan(
+  data: CvData,
+  mode: CvPageFitMode,
+  options: CvPageFitOptions = {},
+): CvPageFitPlan {
   const order = cvSectionOrder(data);
   const weights = new Map(order.map((key) => [key, cvPageFitSectionWeight(data, key)]));
   const totalWeight = order.reduce((sum, key) => sum + (weights.get(key) ?? 0), 0);
   const pageBySection: Partial<Record<CvLayoutSectionKey, CvSectionPage>> = {};
+  let widthBySection: Partial<Record<CvLayoutSectionKey, CvSectionWidth>> = {};
+  let effectiveWeight = totalWeight;
 
   if (mode === "one") {
     for (const key of order) pageBySection[key] = 1;
+    const compact = onePageWidths(data, order, weights, options.allowHalfWidth !== false);
+    widthBySection = compact.widthBySection;
+    effectiveWeight = compact.effectiveWeight;
   } else {
+    for (const key of order) widthBySection[key] = "full";
     const active = order.filter((key) => key !== "person" && (weights.get(key) ?? 0) > 0);
     if (!active.length) {
       for (const key of order) pageBySection[key] = 1;
@@ -242,18 +324,24 @@ export function buildCvPageFitPlan(data: CvData, mode: CvPageFitMode): CvPageFit
     }
   }
 
-  const baseScale = mode === "one" ? onePageScale(totalWeight) : twoPageScale(totalWeight);
+  const scaleWeight = mode === "one" ? effectiveWeight : totalWeight;
+  const baseScale = mode === "one" ? onePageScale(scaleWeight) : twoPageScale(scaleWeight);
   const titleScaleFactor = mode === "one" ? Math.max(0.9, baseScale) : Math.min(1.04, baseScale);
   const headingScaleFactor = mode === "one" ? Math.max(0.86, baseScale) : baseScale;
   const bodyScaleFactor = baseScale;
   const assignmentSignature = `${mode}|${order
-    .map((key) => `${key}:${pageBySection[key] ?? 1}`)
+    .map(
+      (key) =>
+        `${key}:${pageBySection[key] ?? 1}:${widthBySection[key] ?? "full"}`,
+    )
     .join("|")}`;
 
   return {
     mode,
     totalWeight,
+    effectiveWeight,
     pageBySection,
+    widthBySection,
     assignmentSignature,
     titleScaleFactor,
     headingScaleFactor,
