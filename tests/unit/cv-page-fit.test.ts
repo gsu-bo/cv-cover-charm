@@ -15,6 +15,25 @@ describe("CV pupil page fit", () => {
     }
   });
 
+  test("uses safe half-width pairs before shrinking one-page content", () => {
+    const plan = buildCvPageFitPlan(DEMO_CV, "one", { allowHalfWidth: true });
+
+    expect(plan.widthBySection.schule).toBe("full");
+    expect(plan.widthBySection.erfahrung).toBe("full");
+    expect(plan.widthBySection.referenzen).toBe("full");
+    expect(plan.widthBySection.sprachen).toBe("half");
+    expect(plan.widthBySection.hobbys).toBe("half");
+    expect(plan.effectiveWeight).toBeLessThan(plan.totalWeight);
+  });
+
+  test("does not split an already narrow sidebar into half-width rubrics", () => {
+    const plan = buildCvPageFitPlan(DEMO_CV, "one", { allowHalfWidth: false });
+    for (const key of cvSectionOrder(DEMO_CV)) {
+      expect(plan.widthBySection[key]).toBe("full");
+    }
+    expect(plan.effectiveWeight).toBe(plan.totalWeight);
+  });
+
   test("keeps personal data on page 1 and gives real content to page 2", () => {
     const plan = buildCvPageFitPlan(DEMO_CV, "two");
     expect(plan.pageBySection.person).toBe(1);
@@ -23,6 +42,9 @@ describe("CV pupil page fit", () => {
       (key) => plan.pageBySection[key] === 2 && cvPageFitSectionWeight(DEMO_CV, key) > 0,
     );
     expect(pageTwoContent.length).toBeGreaterThan(0);
+    for (const key of cvSectionOrder(DEMO_CV)) {
+      expect(plan.widthBySection[key]).toBe("full");
+    }
   });
 
   test("tightens dense one-page content without crossing the safe scale floor", () => {
