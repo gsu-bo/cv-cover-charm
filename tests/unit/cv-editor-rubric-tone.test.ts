@@ -5,18 +5,26 @@ const section = readFileSync(
   new URL("../../src/components/cover/Section.tsx", import.meta.url),
   "utf8",
 );
+const sectionCss = readFileSync(
+  new URL("../../src/components/cover/Section.css", import.meta.url),
+  "utf8",
+);
 const cv = readFileSync(new URL("../../src/routes/lebenslauf.tsx", import.meta.url), "utf8");
 
 describe("CV editor rubric orientation tones", () => {
-  test("uses alternating subtle tones for rubric headers and open bodies", () => {
-    expect(section).toContain("rubricTone?: number");
-    expect(section).toContain("const headerTone");
-    expect(section).toContain("const bodyTone");
-    expect(section).toContain("bg-sky-50/80");
-    expect(section).toContain("bg-violet-50/75");
+  test("uses actual form order for alternating subtle rubric tones", () => {
+    expect(section).toContain('data-editor-rubric-tone={isRubric ? "auto" : undefined}');
+    expect(section).not.toContain("Math.abs(rubricTone)");
+    expect(sectionCss).toContain(":nth-child(odd of [data-editor-rubric-tone])");
+    expect(sectionCss).toContain(":nth-child(even of [data-editor-rubric-tone])");
+    expect(sectionCss).toContain("rgb(240 249 255 / 0.8)");
+    expect(sectionCss).toContain("rgb(245 243 255 / 0.75)");
   });
 
-  test("applies the tone to fixed, personal and custom CV rubrics", () => {
+  test("document rubric order cannot reorder the editor form", () => {
+    expect(section).toContain("order?: number");
+    expect(section).not.toContain("style={order");
+    expect(section).not.toContain("{ order }");
     expect(cv.match(/rubricTone=\{editorSectionOrder\(/g)).toHaveLength(8);
     expect(cv).toContain("rubricTone={editorSectionOrder(key)}");
   });

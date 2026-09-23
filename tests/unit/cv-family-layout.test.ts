@@ -30,23 +30,32 @@ test("family rows render flush with the rubric instead of reserving a date rail"
   expect(familyRenderer).not.toContain("data-cv-rail");
 });
 
-test("family uses reusable inline or stacked structured-row controls", () => {
+test("family uses one compact control block for labels and spacing", () => {
   expect(form).toContain("export function StructuredRowLayoutControls");
-  expect(form).toContain("Name daneben");
-  expect(form).toContain("Name darunter");
+  expect(form).toContain("Doppelpunkte anzeigen");
+  expect(form).toContain("Gemeinsamer Abstand");
   expect(form).toContain("Abstand zwischen Bezug und Name");
+  expect(form).toContain("Abstand zwischen Personen");
+  expect(form).not.toContain("Name darunter");
   expect(route).toContain("<StructuredRowLayoutControls");
-  expect(canvas).toContain("data-cv-structured-row={rowLayout.direction}");
-  expect(canvas).toContain('"max-content minmax(0, 1fr)"');
+  expect(canvas).toContain('data-cv-structured-row="inline"');
 });
 
-test("structured rows default to a compact inline layout and normalize saved values", () => {
+test("structured family rows default and migrate to the compact one-line contract", () => {
   expect(normalizeCvStructuredRowLayout()).toEqual(DEFAULT_CV_STRUCTURED_ROW_LAYOUT);
   expect(
     normalizeCvStructuredRowLayout({
       direction: "stacked",
+      showColons: false,
+      aligned: false,
       columnGapMm: 99,
       rowGapMm: -5,
     }),
-  ).toEqual({ direction: "stacked", columnGapMm: 8, rowGapMm: 0 });
+  ).toEqual({
+    direction: "inline",
+    showColons: false,
+    aligned: false,
+    columnGapMm: 8,
+    rowGapMm: 0,
+  });
 });

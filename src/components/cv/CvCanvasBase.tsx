@@ -687,61 +687,67 @@ export function CvCanvas({
     ),
   });
 
-  /** Familie ist keine zeitbasierte Station und bekommt deshalb bewusst keine Datums-Rail. */
+  /** Familie ist eine kompakte Bezeichnung-Wert-Liste ohne Datums-Rail. */
   const familyEntryRow = (
     id: string,
     relation: string,
     nameAndJob: string,
     extra: string,
     rowLayout: CvStructuredRowLayout,
-  ): Row => ({
-    id,
-    node: (
-      <div
-        data-cv-entry
-        data-cv-family-entry
-        data-cv-structured-row={rowLayout.direction}
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            rowLayout.direction === "inline" ? "max-content minmax(0, 1fr)" : "minmax(0, 1fr)",
-          columnGap: rowLayout.direction === "inline" ? `${rowLayout.columnGapMm}mm` : undefined,
-          rowGap: rowLayout.direction === "stacked" ? "0.4mm" : undefined,
-          marginBottom: `${rowLayout.rowGapMm}mm`,
-          fontSize: pt(9.9),
-          lineHeight: 1.35,
-          color: pal.ink,
-          overflowWrap: "anywhere",
-        }}
-      >
-        {relation && (
-          <div data-cv-entry-title style={{ minWidth: 0, fontWeight: 700, color: pal.ink }}>
-            {relation}
-            {nameAndJob ? ":" : ""}
-          </div>
-        )}
-        {nameAndJob && (
-          <div style={{ minWidth: 0, gridColumn: relation ? undefined : "1 / -1" }}>
-            {nameAndJob}
-          </div>
-        )}
-        {extra && (
-          <div
-            data-cv-muted
-            style={{
-              gridColumn: "1 / -1",
-              marginTop: "0.3mm",
-              fontSize: pt(9.4),
-              color: pal.muted,
-              lineHeight: 1.3,
-            }}
-          >
-            {extra}
-          </div>
-        )}
-      </div>
-    ),
-  });
+  ): Row => {
+    const aligned = rowLayout.aligned !== false;
+    const showColons = rowLayout.showColons !== false;
+    return {
+      id,
+      node: (
+        <div
+          data-cv-entry
+          data-cv-family-entry
+          data-cv-structured-row="inline"
+          data-cv-family-aligned={aligned ? "true" : "false"}
+          data-cv-family-colons={showColons ? "true" : "false"}
+          style={{
+            display: "grid",
+            gridTemplateColumns: aligned
+              ? "20mm minmax(0, 1fr)"
+              : "max-content minmax(0, 1fr)",
+            columnGap: `${rowLayout.columnGapMm}mm`,
+            marginBottom: `${rowLayout.rowGapMm}mm`,
+            fontSize: pt(9.9),
+            lineHeight: 1.35,
+            color: pal.ink,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {relation && (
+            <div data-cv-entry-title style={{ minWidth: 0, fontWeight: 700, color: pal.ink }}>
+              {relation}
+              {nameAndJob && showColons ? ":" : ""}
+            </div>
+          )}
+          {nameAndJob && (
+            <div style={{ minWidth: 0, gridColumn: relation ? undefined : "1 / -1" }}>
+              {nameAndJob}
+            </div>
+          )}
+          {extra && (
+            <div
+              data-cv-muted
+              style={{
+                gridColumn: "1 / -1",
+                marginTop: "0.3mm",
+                fontSize: pt(9.4),
+                color: pal.muted,
+                lineHeight: 1.3,
+              }}
+            >
+              {extra}
+            </div>
+          )}
+        </div>
+      ),
+    };
+  };
 
   const referenceRows = (): Row[] => {
     const list = data.referenzen.filter(
@@ -1953,13 +1959,82 @@ export function CvCanvas({
   const sideCustomEntries = (key: CvLayoutSectionKey) => {
     const custom = customSectionForKey(data, key);
     if (!custom) return null;
+
+    if (custom.preset === "familie") {
+      const rowLayout = normalizeCvStructuredRowLayout(custom.rowLayout);
+      const aligned = rowLayout.aligned !== false;
+      const showColons = rowLayout.showColons !== false;
+      return custom.entries.filter(entryFilled).map((entry) => (
+        <div
+          data-cv-entry
+          data-cv-family-entry
+          data-cv-structured-row="inline"
+          data-cv-family-aligned={aligned ? "true" : "false"}
+          data-cv-family-colons={showColons ? "true" : "false"}
+          key={`side-${entry.id}`}
+          style={{
+            display: "grid",
+            gridTemplateColumns: aligned
+              ? "20mm minmax(0, 1fr)"
+              : "max-content minmax(0, 1fr)",
+            columnGap: `${rowLayout.columnGapMm}mm`,
+            marginBottom: `${rowLayout.rowGapMm}mm`,
+            minWidth: 0,
+            color: side.ink,
+            lineHeight: 1.3,
+          }}
+        >
+          {entry.titel ? (
+            <div
+              data-cv-entry-title
+              style={{
+                minWidth: 0,
+                fontSize: `${sideBody}pt`,
+                fontWeight: 700,
+                color: side.ink,
+              }}
+            >
+              {entry.titel}
+              {entry.ort && showColons ? ":" : ""}
+            </div>
+          ) : null}
+          {entry.ort ? (
+            <div
+              style={{
+                minWidth: 0,
+                gridColumn: entry.titel ? undefined : "1 / -1",
+                fontSize: `${sideSmall}pt`,
+                color: side.ink,
+              }}
+            >
+              {entry.ort}
+            </div>
+          ) : null}
+          {entry.beschreibung ? (
+            <div
+              data-cv-muted
+              style={{
+                gridColumn: "1 / -1",
+                marginTop: "0.3mm",
+                fontSize: `${sideSmall}pt`,
+                color: side.muted,
+                lineHeight: 1.3,
+              }}
+            >
+              {entry.beschreibung}
+            </div>
+          ) : null}
+        </div>
+      ));
+    }
+
     return custom.entries.filter(entryFilled).map((entry) => (
       <div
         data-cv-entry
         key={`side-${entry.id}`}
         style={{ marginBottom: sidePlan.compact ? "1.7mm" : "2.2mm" }}
       >
-        {custom.preset !== "familie" && entry.zeit ? (
+        {entry.zeit ? (
           <div
             data-cv-date
             data-cv-muted
