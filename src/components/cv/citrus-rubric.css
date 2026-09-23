@@ -6,45 +6,21 @@
  */
 
 /*
- * The rendered main column intentionally clips overflow so content cannot bleed
- * into header/footer zones. A translated rubric row used to hit that clip edge:
- * negative values could therefore cut off the first glyph, while positive values
- * could lose the right end of the rule. Reserve exactly the moved distance inside
- * the page margin, while keeping the original text width and content origin.
- * The physical A4 page remains the final clip boundary.
+ * The visible CV page clips at the physical A4 edge, while the main content box
+ * normally clips overflow to protect header/footer zones. A translated rubric
+ * row must be allowed to cross the main box horizontally without changing its
+ * width (which would alter wrapping/pagination). Keep vertical clipping intact,
+ * but let the page itself be the final horizontal clip boundary.
+ *
+ * Measurement pages already render their main flow with overflow: visible, so
+ * they intentionally stay untouched here. That keeps pagination geometry stable.
  */
-[data-cv-rubric-offset="custom"] [data-dossier-document="cv"] {
-  --cv-rubric-left-bleed: max(0mm, calc(0mm - var(--cv-rubric-x, 0mm)));
-  --cv-rubric-right-bleed: max(0mm, var(--cv-rubric-x, 0mm));
-}
-
-[data-cv-rubric-offset="custom"]
-  [data-dossier-document="cv"][data-cv-layout="classic"] {
-  --cv-rubric-main-left: var(--cv-classic-main-left);
-  --cv-rubric-main-right: var(--cv-classic-main-right);
-}
-
-[data-cv-rubric-offset="custom"]
-  [data-dossier-document="cv"][data-cv-layout="modern"] {
-  --cv-rubric-main-left: var(--cv-modern-main-left);
-  --cv-rubric-main-right: var(--cv-modern-main-right);
-}
-
-[data-cv-rubric-offset="custom"]
-  [data-dossier-document="cv"][data-cv-layout="modern"][data-cv-info-position="mirrored"] {
-  --cv-rubric-main-left: var(--cv-modern-main-right);
-  --cv-rubric-main-right: var(--cv-modern-main-left);
-}
-
 [data-cv-rubric-offset="custom"]
   [data-dossier-document="cv"]
-  :is([data-cv-page], [data-cv-measure-page])
+  [data-cv-page]
   > [data-cv-main] {
-  left: calc(var(--cv-rubric-main-left) - var(--cv-rubric-left-bleed)) !important;
-  right: calc(var(--cv-rubric-main-right) - var(--cv-rubric-right-bleed)) !important;
-  padding-left: var(--cv-rubric-left-bleed) !important;
-  padding-right: var(--cv-rubric-right-bleed) !important;
-  box-sizing: border-box !important;
+  overflow-x: visible !important;
+  overflow-y: clip !important;
 }
 
 [data-cv-rubric-offset="custom"]
