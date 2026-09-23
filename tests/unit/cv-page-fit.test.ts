@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { buildCvPageFitPlan, cvPageFitSectionWeight } from "../../src/components/cv/page-fit";
-import { DEMO_CV, cvSectionOrder, type CvData } from "../../src/components/cv/types";
+import {
+  DEMO_CV,
+  cvSectionOrder,
+  normalizeCvSectionLayout,
+  type CvData,
+} from "../../src/components/cv/types";
 import { DEFAULT_DOSSIER_CHROME_OPTIONS } from "../../src/lib/dossier-chrome";
 import {
   defaultHeaderFontSizePtForTemplate,
@@ -15,21 +20,28 @@ describe("CV pupil page fit", () => {
     }
   });
 
-  test("uses safe half-width pairs before shrinking one-page content", () => {
+  test("uses Masonry for safe compact rubrics before shrinking one-page content", () => {
     const plan = buildCvPageFitPlan(DEMO_CV, "one", { allowHalfWidth: true });
 
     expect(plan.widthBySection.schule).toBe("full");
     expect(plan.widthBySection.erfahrung).toBe("full");
     expect(plan.widthBySection.referenzen).toBe("full");
-    expect(plan.widthBySection.sprachen).toBe("half");
-    expect(plan.widthBySection.hobbys).toBe("half");
+    expect(plan.packingBySection.schule).toBe("rows");
+    expect(plan.packingBySection.erfahrung).toBe("rows");
+    expect(plan.packingBySection.referenzen).toBe("rows");
+
+    for (const key of ["sprachen", "hobbys", "staerken"] as const) {
+      expect(plan.widthBySection[key]).toBe("half");
+      expect(plan.packingBySection[key]).toBe("masonry");
+    }
     expect(plan.effectiveWeight).toBeLessThan(plan.totalWeight);
   });
 
-  test("does not split an already narrow sidebar into half-width rubrics", () => {
+  test("does not split an already narrow sidebar into Masonry columns", () => {
     const plan = buildCvPageFitPlan(DEMO_CV, "one", { allowHalfWidth: false });
     for (const key of cvSectionOrder(DEMO_CV)) {
       expect(plan.widthBySection[key]).toBe("full");
+      expect(plan.packingBySection[key]).toBe("rows");
     }
     expect(plan.effectiveWeight).toBe(plan.totalWeight);
   });
@@ -44,7 +56,15 @@ describe("CV pupil page fit", () => {
     expect(pageTwoContent.length).toBeGreaterThan(0);
     for (const key of cvSectionOrder(DEMO_CV)) {
       expect(plan.widthBySection[key]).toBe("full");
+      expect(plan.packingBySection[key]).toBe("rows");
     }
+  });
+
+  test("keeps legacy section layouts on normal rows and preserves explicit Masonry", () => {
+    expect(normalizeCvSectionLayout({ positioning: "flow", width: "half" }).packing).toBe("rows");
+    expect(
+      normalizeCvSectionLayout({ positioning: "flow", width: "half", packing: "masonry" }).packing,
+    ).toBe("masonry");
   });
 
   test("tightens dense one-page content without crossing the safe scale floor", () => {
