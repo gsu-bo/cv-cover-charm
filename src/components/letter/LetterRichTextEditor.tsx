@@ -155,6 +155,67 @@ function selectionColor(node: Node | null): string {
   );
 }
 
+type RangeBookmark = {
+  startPath: number[];
+  startOffset: number;
+  endPath: number[];
+  endOffset: number;
+};
+
+function nodePath(root: Node, node: Node): number[] | null {
+  const path: number[] = [];
+  let current: Node | null = node;
+  while (current && current !== root) {
+    const parent: ParentNode | null = current.parentNode;
+    if (!parent) return null;
+    const index = Array.from(parent.childNodes).indexOf(current as ChildNode);
+    if (index < 0) return null;
+    path.unshift(index);
+    current = parent;
+  }
+  return current === root ? path : null;
+}
+
+function nodeAtPath(root: Node, path: number[]): Node | null {
+  let current: Node = root;
+  for (const index of path) {
+    const next = current.childNodes.item(index);
+    if (!next) return null;
+    current = next;
+  }
+  return current;
+}
+
+function bookmarkRange(root: HTMLElement, range: Range | null): RangeBookmark | null {
+  if (!range) return null;
+  const startPath = nodePath(root, range.startContainer);
+  const endPath = nodePath(root, range.endContainer);
+  if (!startPath || !endPath) return null;
+  return {
+    startPath,
+    startOffset: range.startOffset,
+    endPath,
+    endOffset: range.endOffset,
+  };
+}
+
+function restoreBookmarkedRange(root: HTMLElement, bookmark: RangeBookmark | null): Range | null {
+  if (!bookmark) return null;
+  const start = nodeAtPath(root, bookmark.startPath);
+  const end = nodeAtPath(root, bookmark.endPath);
+  if (!start || !end) return null;
+  const maxOffset = (node: Node) =>
+    node.nodeType === Node.TEXT_NODE ? (node.textContent?.length ?? 0) : node.childNodes.length;
+  try {
+    const range = document.createRange();
+    range.setStart(start, Math.min(bookmark.startOffset, maxOffset(start)));
+    range.setEnd(end, Math.min(bookmark.endOffset, maxOffset(end)));
+    return range;
+  } catch {
+    return null;
+  }
+}
+
 function makeTable(rows: number, columns: number): HTMLTableElement {
   const table = document.createElement("table");
   table.dataset.letterTable = "true";
@@ -184,6 +245,8 @@ export function LetterRichTextEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef("");
   const savedRangeRef = useRef<Range | null>(null);
+  const colorRangeRef = useRef<Range | null>(null);
+  const activeColorSpanRef = useRef<HTMLSpanElement | null>(null);
   const colorPickerActiveRef = useRef(false);
   const [empty, setEmpty] = useState(!text.trim() && !richTextHtml?.trim());
   const [listOpen, setListOpen] = useState(false);
@@ -362,11 +425,60 @@ export function LetterRichTextEditor({
   };
 
   const setTextColor = (value: string) => {
+    const editor = editorRef.current;
     const color = normalizeLetterInlineColor(value);
-    if (!color || !restoreRange()) return;
-    document.execCommand("styleWithCSS", false, "true");
-    document.execCommand("foreColor", false, color);
-    document.execCommand("styleWithCSS", false, "false");
+    if (!editor || !color) return;
+
+    const activeSpan = activeColorSpanRef.current;
+    if (activeSpan?.isConnected && editor.contains(activeSpan)) {
+      activeSpan.dataset.letterTextColor = color;
+      activeSpan.style.color = color;
+      const selected = document.createRange();
+      selected.selectNodeContents(activeSpan);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(selected);
+      colorRangeRef.current = selected.cloneRange();
+      savedRangeRef.current = selected.cloneRange();
+      emit();
+      setToolbar((current) => ({ ...current, color }));
+      return;
+    }
+
+    const range = colorRangeRef.current?.cloneRange() ?? savedRangeRef.current?.cloneRange();
+    if (!range || range.collapsed) return;
+
+    const selection = window.getSelection();
+    if (!selection) return;
+    editor.focus({ preventScroll: true });
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    const startBlock = topLevelChild(editor, range.startContainer);
+    const endBlock = topLevelChild(editor, range.endContainer);
+
+    if (startBlock && startBlock === endBlock) {
+      const colorSpan = document.createElement("span");
+      colorSpan.dataset.letterTextColor = color;
+      colorSpan.style.color = color;
+      colorSpan.appendChild(range.extractContents());
+      range.insertNode(colorSpan);
+      activeColorSpanRef.current = colorSpan;
+
+      const selected = document.createRange();
+      selected.selectNodeContents(colorSpan);
+      selection.removeAllRanges();
+      selection.addRange(selected);
+      colorRangeRef.current = selected.cloneRange();
+      savedRangeRef.current = selected.cloneRange();
+    } else {
+      document.execCommand("styleWithCSS", false, "true");
+      document.execCommand("foreColor", false, color);
+      document.execCommand("styleWithCSS", false, "false");
+      const remembered = rememberRange();
+      colorRangeRef.current = remembered?.cloneRange() ?? range.cloneRange();
+    }
+
     emit();
     setToolbar((current) => ({ ...current, color }));
   };
@@ -545,12 +657,16 @@ export function LetterRichTextEditor({
               aria-label="Schriftfarbe"
               value={toolbar.color}
               onPointerDown={() => {
-                rememberRange();
+                const range = rememberRange();
+                colorRangeRef.current = range?.cloneRange() ?? null;
+                activeColorSpanRef.current = null;
                 colorPickerActiveRef.current = true;
               }}
-              onChange={(event) => setTextColor(event.currentTarget.value)}
+              onInput={(event) => setTextColor(event.currentTarget.value)}
               onBlur={() => {
                 colorPickerActiveRef.current = false;
+                colorRangeRef.current = null;
+                activeColorSpanRef.current = null;
               }}
               className="absolute inset-0 cursor-pointer opacity-0"
             />
@@ -613,7 +729,9 @@ export function LetterRichTextEditor({
                     className="flex w-full items-center gap-3 rounded px-2 py-1.5 text-left text-xs hover:bg-muted"
                     aria-label={option.label}
                     aria-pressed={
-                      option.value === "none" ? toolbar.list === null : toolbar.list === option.value
+                      option.value === "none"
+                        ? toolbar.list === null
+                        : toolbar.list === option.value
                     }
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => setListStyle(option.value)}
@@ -715,7 +833,18 @@ export function LetterRichTextEditor({
             const editor = editorRef.current;
             if (!editor) return;
             const sanitized = sanitizeLetterRichHtml(editor.innerHTML);
-            if (editor.innerHTML !== sanitized) editor.innerHTML = sanitized;
+            if (editor.innerHTML === sanitized) return;
+
+            // Canonicalising execCommand markup (b/i -> strong/em, safe color
+            // spans, etc.) replaces DOM nodes. Rebase the editor-owned ranges
+            // onto the equivalent nodes so the next toolbar action still
+            // targets the user's original selection after focus has moved.
+            const savedBookmark = bookmarkRange(editor, savedRangeRef.current);
+            const colorBookmark = bookmarkRange(editor, colorRangeRef.current);
+            editor.innerHTML = sanitized;
+            savedRangeRef.current = restoreBookmarkedRange(editor, savedBookmark);
+            colorRangeRef.current = restoreBookmarkedRange(editor, colorBookmark);
+            activeColorSpanRef.current = null;
           }}
           className="min-h-56 rounded-b-md border border-input bg-background px-3 py-2 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-ring [&_hr]:my-4 [&_hr]:border-0 [&_hr]:border-t [&_hr]:border-border"
         />

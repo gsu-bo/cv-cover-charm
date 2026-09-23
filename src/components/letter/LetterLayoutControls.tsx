@@ -256,7 +256,9 @@ export function LetterLayoutControls({
         className="grid gap-2.5 rounded-lg border bg-background p-3 shadow-sm"
       >
         <div>
-          <div className="text-xs font-semibold">Briefspezifische Positionen &amp; Formatierung</div>
+          <div className="text-xs font-semibold">
+            Briefspezifische Positionen &amp; Formatierung
+          </div>
           <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
             Schriftart und Schriftgrösse stellst du direkt beim jeweiligen Inhalt ein. Hier bleiben
             Position, Ausrichtung und zusätzliche Textformatierung.

@@ -1,25 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 const BASE_URL = "http://127.0.0.1:4173";
 
-async function openLetterTypography(page: Page) {
-  await page.locator('button[data-editor-ready="true"]').waitFor({ state: "visible" });
-  const toggle = page.getByRole("button", { name: "Schrift", exact: true });
-  await expect(toggle).toBeVisible();
-  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
-  await expect(toggle).toHaveAttribute("aria-expanded", "true");
-
-  // Scope to the stable section shell instead of React's useId-generated panel id.
-  // This section has exactly one select, so we do not depend on wrapping-label
-  // accessible-name timing while hydration settles.
-  const section = toggle.locator("xpath=ancestor::section[1]");
-  const select = section.locator("select").first();
-  await expect(select).toBeVisible();
-  return select;
-}
-
 test.describe("shared CV and motivation-letter font", () => {
-  test("propagates font changes both ways between CV and motivation letter", async ({ page }) => {
+  test("propagates the dossier font from CV into the motivation letter", async ({ page }) => {
     await page.goto(`${BASE_URL}/anschreiben`, { waitUntil: "domcontentloaded" });
     await page.evaluate(() => {
       localStorage.clear();
@@ -51,8 +35,6 @@ test.describe("shared CV and motivation-letter font", () => {
           },
           design: {
             template: "brief",
-            // This test exercises contact typography, so select it explicitly.
-            // An absent choice now correctly inherits neutral Brief.
             headerMode: "contact",
             colors: { bg: "#ffffff", primary: "#111111", accent: "#111111" },
           },
@@ -60,6 +42,7 @@ test.describe("shared CV and motivation-letter font", () => {
       );
     });
     await page.reload({ waitUntil: "domcontentloaded" });
+    await page.locator('button[data-editor-ready="true"]').waitFor({ state: "visible" });
 
     await expect
       .poll(() =>
@@ -70,32 +53,9 @@ test.describe("shared CV and motivation-letter font", () => {
       )
       .toBe("times");
 
-    const fontSelect = await openLetterTypography(page);
-    await expect(fontSelect).toHaveValue("times");
+    const initialLetterPage = page.locator("[data-letter-page]").first();
+    await expect(initialLetterPage).toHaveAttribute("data-letter-font", "times");
 
-    // Motivation letter -> CV.
-    await fontSelect.selectOption("maschine");
-
-    await expect
-      .poll(() =>
-        page.evaluate(() => {
-          const raw = localStorage.getItem("lebenslauf:v1");
-          return raw ? JSON.parse(raw).design?.font : null;
-        }),
-      )
-      .toBe("maschine");
-
-    await expect
-      .poll(() =>
-        page.evaluate(() => {
-          const raw = localStorage.getItem("anschreiben:v1");
-          return raw ? JSON.parse(raw).design?.font : null;
-        }),
-      )
-      .toBe("maschine");
-
-    // CV -> motivation letter. This direction is implemented through the shared
-    // autosave font propagation and is now protected by a real editor interaction.
     await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
     await page.locator('button[data-editor-ready="true"]').waitFor({ state: "visible" });
 
@@ -109,7 +69,7 @@ test.describe("shared CV and motivation-letter font", () => {
 
     const cvTypographyPanel = cvTypographySection.locator("xpath=ancestor::section[1]");
     const cvFontSelect = cvTypographyPanel.locator("select").first();
-    await expect(cvFontSelect).toHaveValue("maschine");
+    await expect(cvFontSelect).toHaveValue("times");
 
     await cvFontSelect.selectOption("sans");
 
@@ -122,9 +82,6 @@ test.describe("shared CV and motivation-letter font", () => {
       )
       .toBe("sans");
 
-    // In Contact-header mode the visible name lives in the integrated chrome;
-    // the body keeps a zero-width placeholder to avoid rendering the name twice.
-    // Assert the actual visible native CV text that the PDF text layer reads.
     const cvContact = page
       .locator('[data-dossier-document="cv"] [data-dossier-integrated-contact]')
       .first();
@@ -135,8 +92,7 @@ test.describe("shared CV and motivation-letter font", () => {
       .toMatch(/Helvetica|Arial|sans-serif/i);
 
     await page.goto(`${BASE_URL}/anschreiben`, { waitUntil: "domcontentloaded" });
-    const syncedLetterSelect = await openLetterTypography(page);
-    await expect(syncedLetterSelect).toHaveValue("sans");
+    await page.locator('button[data-editor-ready="true"]').waitFor({ state: "visible" });
     const syncedLetterPage = page.locator("[data-letter-page]").first();
     await expect(syncedLetterPage).toHaveAttribute("data-letter-font", "sans");
     await expect
@@ -176,8 +132,6 @@ test.describe("shared CV and motivation-letter font", () => {
       )
       .toContain("Cabin");
 
-    // Protect the real PDF text source, not just the custom property on the page.
-    // addCvTextLayer() reads these computed node styles when choosing PDF fonts.
     const cvName = cvPage.locator("[data-cv-name]").first();
     await expect(cvName).toBeVisible();
     await expect

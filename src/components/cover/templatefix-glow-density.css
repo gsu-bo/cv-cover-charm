@@ -1,11 +1,11 @@
 /*
  * Glow's refreshed one-page CV sits very close to the A4 content limit once
- * the shared 6 mm post-header gap is active. Keep the airy hierarchy, but
- * tighten only the default section-to-section rhythm by 0.4 mm. This removes
- * the final few pixels of clipping without changing user-customized margins.
+ * the shared 12 mm post-header gap is active. Keep the airy hierarchy, but
+ * tighten only the default section-to-section rhythm enough to absorb that
+ * shared spacing without changing user-customized section margins.
  */
 html[data-dossier-template="glow"]
   [data-dossier-document="cv"][data-cv-layout="classic"]
   [data-cv-section]:not([data-cv-user-section-margin="true"]) {
-  margin-top: 3.6mm !important;
+  margin-top: 2.8mm !important;
 }
