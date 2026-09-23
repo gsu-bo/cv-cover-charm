@@ -576,6 +576,7 @@ export function LetterRichTextEditor({
                 colorPickerActiveRef.current = true;
               }}
               onInput={(event) => setTextColor(event.currentTarget.value)}
+              onChange={(event) => setTextColor(event.currentTarget.value)}
               onBlur={() => {
                 colorPickerActiveRef.current = false;
               }}
