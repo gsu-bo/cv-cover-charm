@@ -1,5 +1,6 @@
 import {
   DEFAULT_CV_PLACEMENTS,
+  isCustomSectionKey,
   type CvPlacement,
   type CvPlacementKey,
   type CvPlacements,
@@ -16,10 +17,25 @@ function read(): CvPlacements {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_CV_PLACEMENTS };
     const parsed = JSON.parse(raw) as Partial<Record<CvPlacementKey, CvPlacement>>;
-    return { ...DEFAULT_CV_PLACEMENTS, ...parsed };
+    const placements: CvPlacements = { ...DEFAULT_CV_PLACEMENTS };
+    for (const [key, value] of Object.entries(parsed)) {
+      if (
+        (Object.prototype.hasOwnProperty.call(DEFAULT_CV_PLACEMENTS, key) ||
+          isCustomSectionKey(key)) &&
+        (value === "side" || value === "main")
+      ) {
+        placements[key as CvPlacementKey] = value;
+      }
+    }
+    return placements;
   } catch {
     return { ...DEFAULT_CV_PLACEMENTS };
   }
+}
+
+/** Eigene Rubriken starten wie bisher im Hauptbereich, können danach aber gleich umgestellt werden. */
+export function resolveCvPlacement(placements: CvPlacements, key: CvPlacementKey): CvPlacement {
+  return placements[key] ?? "main";
 }
 
 export function getCvPlacements(): CvPlacements {

@@ -46,6 +46,7 @@ describe("portable CV dossier state", () => {
         hobbys: "side",
         staerken: "side",
         referenzen: "main",
+        "custom:projects": "side",
       }),
       "lebenslauf:photo:v2": JSON.stringify({
         shape: "circle",
@@ -79,6 +80,7 @@ describe("portable CV dossier state", () => {
         hobbys: "side",
         staerken: "side",
         referenzen: "main",
+        "custom:projects": "side",
       },
       photoStyle: {
         shape: "circle",

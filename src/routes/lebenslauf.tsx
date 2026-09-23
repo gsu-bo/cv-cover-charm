@@ -85,9 +85,9 @@ import {
   type CvData,
   type CvCustomSectionPresetKey,
   type CvDesign,
+  type CvFixedPlacementKey,
   type CvLayoutSectionKey,
   type CvPerson,
-  type CvPlacementKey,
   type CvSectionLayout,
   type CvSectionKey,
 } from "@/components/cv/types";
@@ -965,7 +965,7 @@ function Lebenslauf() {
   };
 
   const sectionLabel = (key: CvSectionKey) => data.labels[key]?.trim() || CV_SECTION_LABELS[key];
-  const setLabel = (key: CvPlacementKey, v: string) =>
+  const setLabel = (key: CvFixedPlacementKey, v: string) =>
     patchData({ labels: { ...data.labels, [key]: v } });
   const setHidden = (key: CvSectionKey, v: boolean) =>
     patchData({ hidden: { ...data.hidden, [key]: v } });
@@ -1583,6 +1583,7 @@ function Lebenslauf() {
                 open={open.person}
                 onToggle={() => toggle("person")}
                 order={editorSectionOrder("person")}
+                rubricTone={editorSectionOrder("person")}
                 hint={data.person.vorname || data.person.nachname ? "gesetzt" : "leer"}
               >
                 <div className="flex flex-col gap-3">
@@ -1772,6 +1773,7 @@ function Lebenslauf() {
                 open={open.schule}
                 onToggle={() => toggle("schule")}
                 order={editorSectionOrder("schule")}
+                rubricTone={editorSectionOrder("schule")}
                 hint={`${data.schule.length}`}
               >
                 {opts("schule")}
@@ -1788,6 +1790,7 @@ function Lebenslauf() {
                 open={open.erfahrung}
                 onToggle={() => toggle("erfahrung")}
                 order={editorSectionOrder("erfahrung")}
+                rubricTone={editorSectionOrder("erfahrung")}
                 hint={`${data.erfahrung.length}`}
               >
                 {opts("erfahrung")}
@@ -1804,6 +1807,7 @@ function Lebenslauf() {
                 open={open.sprachen}
                 onToggle={() => toggle("sprachen")}
                 order={editorSectionOrder("sprachen")}
+                rubricTone={editorSectionOrder("sprachen")}
                 hint={`${data.sprachen.length}`}
               >
                 {opts("sprachen")}
@@ -1818,6 +1822,7 @@ function Lebenslauf() {
                 open={open.staerken}
                 onToggle={() => toggle("staerken")}
                 order={editorSectionOrder("staerken")}
+                rubricTone={editorSectionOrder("staerken")}
                 hint={`${data.staerken.length}`}
               >
                 {opts("staerken")}
@@ -1834,6 +1839,7 @@ function Lebenslauf() {
                 open={open.hobbys}
                 onToggle={() => toggle("hobbys")}
                 order={editorSectionOrder("hobbys")}
+                rubricTone={editorSectionOrder("hobbys")}
                 hint={`${data.hobbys.length}`}
               >
                 {opts("hobbys")}
@@ -1850,6 +1856,7 @@ function Lebenslauf() {
                 open={open.referenzen}
                 onToggle={() => toggle("referenzen")}
                 order={editorSectionOrder("referenzen")}
+                rubricTone={editorSectionOrder("referenzen")}
                 hint={`${data.referenzen.length}`}
               >
                 {opts("referenzen")}
@@ -1868,6 +1875,7 @@ function Lebenslauf() {
                     open={!!open[key]}
                     onToggle={() => toggle(key)}
                     order={editorSectionOrder(key)}
+                    rubricTone={editorSectionOrder(key)}
                     hint={`${section.entries.length}`}
                     action={
                       section.preset === "familie" ? undefined : (

@@ -277,7 +277,8 @@ export function hasCustomizedCvSectionLayout(
 
 /** Im Modern-Layout kann jeder Inhaltsblock bewusst links oder im Hauptteil liegen. */
 export type CvPlacement = "side" | "main";
-export type CvPlacementKey = "kontakt" | CvSectionKey;
+export type CvFixedPlacementKey = "kontakt" | CvSectionKey;
+export type CvPlacementKey = CvFixedPlacementKey | CvCustomSectionKey;
 
 /**
  * Überschriften aller Blöcke, Kontakt eingeschlossen.
@@ -285,11 +286,12 @@ export type CvPlacementKey = "kontakt" | CvSectionKey;
  * Kontakt war der einzige Block ohne änderbaren Titel – dabei will vielleicht
  * jemand dort den eigenen Namen stehen haben statt des Worts "Kontakt".
  */
-export const CV_BLOCK_LABELS: Record<CvPlacementKey, string> = {
+export const CV_BLOCK_LABELS: Record<CvFixedPlacementKey, string> = {
   kontakt: "Kontakt",
   ...CV_SECTION_LABELS,
 };
-export type CvPlacements = Record<CvPlacementKey, CvPlacement>;
+export type CvPlacements = Record<CvFixedPlacementKey, CvPlacement> &
+  Partial<Record<CvCustomSectionKey, CvPlacement>>;
 
 /** Sinnvolle Startwerte; danach entscheidet die Schülerin / der Schüler selbst. */
 export const DEFAULT_CV_PLACEMENTS: CvPlacements = {
@@ -321,7 +323,7 @@ export type CvData = {
    */
   titel?: string;
   /** Eigene Überschriften. Leer = Vorgabe aus CV_BLOCK_LABELS. */
-  labels: Partial<Record<CvPlacementKey, string>>;
+  labels: Partial<Record<CvFixedPlacementKey, string>>;
   /** Ausgeblendete Abschnitte. */
   hidden: Partial<Record<CvSectionKey, boolean>>;
   /** Unabhängige Layouteinstellungen pro kompletter Rubrik. */

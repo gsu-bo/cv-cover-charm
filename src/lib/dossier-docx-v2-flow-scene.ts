@@ -903,7 +903,7 @@ function identityBlocks(cv: CvPdfDocument, font: string, ink: string, accent: st
 }
 
 function standardPlacement(key: CvLayoutSectionKey, placements: CvPlacements): "side" | "main" {
-  if (key === "person" || isCustomSectionKey(key)) return "main";
+  if (key === "person") return "main";
   return placements[key as CvPlacementKey] ?? "main";
 }
 

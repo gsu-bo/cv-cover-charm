@@ -23,7 +23,12 @@ import {
   subscribeCvLayout,
   subscribeCvSectionGap,
 } from "./layout";
-import { getCvPlacements, setCvPlacement, subscribeCvPlacements } from "./placement";
+import {
+  getCvPlacements,
+  resolveCvPlacement,
+  setCvPlacement,
+  subscribeCvPlacements,
+} from "./placement";
 import { getCvPhotoStyle, setCvPhotoStyle, subscribeCvPhotoStyle } from "./photo";
 import {
   CV_PHOTO_MAX_MM,
@@ -1053,22 +1058,17 @@ export function SectionLayoutControls({
     () => DEFAULT_CV_PLACEMENTS,
   );
   const customSectionGap = sectionGapMm !== null;
-  const placementKey: CvPlacementKey | null =
-    section === "person"
-      ? "kontakt"
-      : Object.prototype.hasOwnProperty.call(DEFAULT_CV_PLACEMENTS, section)
-        ? (section as CvPlacementKey)
-        : null;
+  const placementKey: CvPlacementKey = section === "person" ? "kontakt" : section;
 
   return (
     <div className="rounded-md border bg-muted/20">
       <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-2">
         <span className="text-xs font-semibold">Position &amp; Layout</span>
-        {cvLayout === "modern" && placementKey ? (
+        {cvLayout === "modern" ? (
           <div className="flex items-center gap-2">
             <span className="text-[11px] text-muted-foreground">Bereich</span>
             <PlacementToggle
-              value={placements[placementKey]}
+              value={resolveCvPlacement(placements, placementKey)}
               onChange={(value) => setCvPlacement(placementKey, value)}
             />
           </div>

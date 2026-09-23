@@ -8,11 +8,7 @@ import {
   type CvInfoPosition,
   type CvLayoutId,
 } from "./layout";
-import {
-  CV_PAGE_FIT_STORAGE_KEY,
-  setCvPageFitMode,
-  type CvPageFitMode,
-} from "./page-fit";
+import { CV_PAGE_FIT_STORAGE_KEY, setCvPageFitMode, type CvPageFitMode } from "./page-fit";
 import { setCvPlacement } from "./placement";
 import { setCvPhotoStyle } from "./photo";
 import {
@@ -26,13 +22,11 @@ import {
   readPersistedCvTextAlignment,
   setCvTextAlignment,
 } from "./text-alignment";
-import {
-  normalizeDossierPhotoStyle,
-  type DossierPhotoStyle,
-} from "@/lib/dossier-photo";
+import { normalizeDossierPhotoStyle, type DossierPhotoStyle } from "@/lib/dossier-photo";
 import type { BodyTextAlignment } from "@/lib/text-alignment";
 import {
   DEFAULT_CV_PLACEMENTS,
+  isCustomSectionKey,
   type CvPlacementKey,
   type CvPlacements,
 } from "./types";
@@ -103,7 +97,9 @@ export function readPortableCvState(): PortableCvState | undefined {
     const mirroredRaw = storage.getItem(MIRROR_KEY);
     const infoPositionRaw = storage.getItem(INFO_POSITION_KEY);
     const infoPosition =
-      infoPositionRaw === "standard" || infoPositionRaw === "mirrored" ? infoPositionRaw : undefined;
+      infoPositionRaw === "standard" || infoPositionRaw === "mirrored"
+        ? infoPositionRaw
+        : undefined;
     const sectionGapRaw = storage.getItem(SECTION_GAP_KEY);
     const pageFitRaw = storage.getItem(PAGE_FIT_KEY);
     const pageFitMode = pageFitRaw === "one" || pageFitRaw === "two" ? pageFitRaw : undefined;
@@ -111,17 +107,21 @@ export function readPortableCvState(): PortableCvState | undefined {
     const photoRaw = storage.getItem(PHOTO_KEY);
     const photoPlacementRaw = storage.getItem(PHOTO_PLACEMENT_KEY);
     const textAlign = readPersistedCvTextAlignment();
-    const sectionGapMm =
-      sectionGapRaw === null ? null : normalizeCvSectionGapMm(sectionGapRaw);
+    const sectionGapMm = sectionGapRaw === null ? null : normalizeCvSectionGapMm(sectionGapRaw);
 
     let placements: CvPlacements | undefined;
     if (placementsRaw) {
       try {
         const parsed = JSON.parse(placementsRaw) as Partial<CvPlacements>;
         placements = { ...DEFAULT_CV_PLACEMENTS };
-        for (const key of Object.keys(DEFAULT_CV_PLACEMENTS) as CvPlacementKey[]) {
-          const value = parsed[key];
-          if (value === "side" || value === "main") placements[key] = value;
+        for (const [key, value] of Object.entries(parsed)) {
+          if (
+            (Object.prototype.hasOwnProperty.call(DEFAULT_CV_PLACEMENTS, key) ||
+              isCustomSectionKey(key)) &&
+            (value === "side" || value === "main")
+          ) {
+            placements[key as CvPlacementKey] = value;
+          }
         }
       } catch {
         placements = undefined;
@@ -196,9 +196,14 @@ export function applyPortableCvState(state?: PortableCvState | null) {
   }
 
   if (state.placements && typeof state.placements === "object") {
-    for (const key of Object.keys(DEFAULT_CV_PLACEMENTS) as CvPlacementKey[]) {
-      const value = state.placements[key];
-      if (value === "side" || value === "main") setCvPlacement(key, value);
+    for (const [key, value] of Object.entries(state.placements)) {
+      if (
+        (Object.prototype.hasOwnProperty.call(DEFAULT_CV_PLACEMENTS, key) ||
+          isCustomSectionKey(key)) &&
+        (value === "side" || value === "main")
+      ) {
+        setCvPlacement(key as CvPlacementKey, value);
+      }
     }
   }
 

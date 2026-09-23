@@ -1,5 +1,6 @@
 import { cvFrameFor, sidebarWidthMm } from "@/components/cv/archetype";
-import { CV_SECTION_LABELS, type CvPlacements } from "@/components/cv/types";
+import { CV_SECTION_LABELS, customSectionKey, type CvPlacements } from "@/components/cv/types";
+import { resolveCvPlacement } from "@/components/cv/placement";
 import type { CvPdfDocument } from "@/lib/dossier-pdf-document";
 import { transformStoredDocxDocumentXml } from "@/lib/dossier-docx-package";
 import { cvPersonalInfoLines } from "@/lib/cv-personal-info";
@@ -85,7 +86,10 @@ export function applyDocxSidebarXml(
       placements[key],
     );
   for (const custom of document.data.customSections ?? [])
-    headings.set(escape((custom.title || "Weitere Angaben").toLocaleUpperCase("de-CH")), "main");
+    headings.set(
+      escape((custom.title || "Weitere Angaben").toLocaleUpperCase("de-CH")),
+      resolveCvPlacement(placements, customSectionKey(custom.id)),
+    );
   const person = document.data.person;
   const contact = new Set(
     [

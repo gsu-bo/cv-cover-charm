@@ -8,6 +8,8 @@ type Props = {
   order?: number;
   /** Kurzinfo rechts im Kopf, z. B. "5 / 7 ausgefüllt". */
   hint?: string;
+  /** Feine wechselnde Orientierungstönung für inhaltliche CV-Rubriken. */
+  rubricTone?: number;
   action?: ReactNode;
   children: ReactNode;
 };
@@ -39,27 +41,50 @@ function groupMarker(title: string): string | null {
 }
 
 /** Aufklappbarer Abschnitt für die gemeinsame Dossier-Seitenleiste. */
-export function Section({ title, open, onToggle, order, hint, action, children }: Props) {
+export function Section({
+  title,
+  open,
+  onToggle,
+  order,
+  hint,
+  rubricTone,
+  action,
+  children,
+}: Props) {
   const id = useId();
   const group = formGroup(title);
   const marker = groupMarker(title);
+  const tone = rubricTone === undefined ? null : Math.abs(rubricTone) % 2;
+  const headerTone =
+    tone === 0
+      ? "bg-sky-50/80 dark:bg-sky-950/25"
+      : tone === 1
+        ? "bg-violet-50/75 dark:bg-violet-950/20"
+        : "";
+  const bodyTone =
+    tone === 0
+      ? "bg-sky-50/30 dark:bg-sky-950/10"
+      : tone === 1
+        ? "bg-violet-50/25 dark:bg-violet-950/10"
+        : "";
 
   return (
     <section
       data-editor-section
       data-editor-section-title={title}
       data-form-group={group}
+      data-editor-rubric-tone={tone === null ? undefined : tone}
       className="overflow-hidden rounded-lg border bg-background"
       style={order === undefined ? undefined : { order }}
     >
-      <div className="flex items-center gap-2 pr-2 sm:pr-3">
+      <div className={`flex items-center gap-2 pr-2 sm:pr-3 ${headerTone}`}>
         <button
           type="button"
           data-editor-section-toggle
           onClick={onToggle}
           aria-expanded={open}
           aria-controls={id}
-          className="flex min-h-11 min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left hover:bg-accent/50 sm:px-4 sm:py-3"
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left hover:bg-accent/35 sm:px-4 sm:py-3"
         >
           {marker ? (
             <span
@@ -98,7 +123,11 @@ export function Section({ title, open, onToggle, order, hint, action, children }
         {action}
       </div>
       {open && (
-        <div id={id} data-editor-section-body className="border-t px-3 py-3 sm:px-4 sm:py-4">
+        <div
+          id={id}
+          data-editor-section-body
+          className={`border-t px-3 py-3 sm:px-4 sm:py-4 ${bodyTone}`}
+        >
           {children}
         </div>
       )}
