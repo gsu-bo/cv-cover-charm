@@ -79,3 +79,9 @@
   text-decoration: var(--letter-user-subject-decoration) !important;
   text-decoration-line: var(--letter-user-subject-decoration) !important;
 }
+
+/* Global body size is deliberately narrower than the role controls and user-owned. */
+[data-letter-page][data-letter-user-body-size="true"] [data-letter-pdf-richtext="body"],
+[data-letter-page][data-letter-user-body-size="true"] [data-letter-pdf-richtext="body"] * {
+  font-size: var(--letter-user-body-size) !important;
+}

@@ -17,6 +17,8 @@ import { letterPageGeometry, visibleLetterAttachments } from "./layout-system";
 import {
   DEFAULT_LETTER_CLOSING_GAP_MM,
   DEFAULT_LETTER_SIGNATURE_GAP_MM,
+  LETTER_BODY_FONT_SIZE_MAX,
+  LETTER_BODY_FONT_SIZE_MIN,
   LETTER_ROLE_FONT_SIZE_MAX,
   LETTER_ROLE_FONT_SIZE_MIN,
   normalizeLetterMotifOpacity,
@@ -240,6 +242,13 @@ export function LetterCanvas({
   const senderSize = roleSize(senderTypography);
   const recipientSize = roleSize(recipientTypography);
   const subjectSize = roleSize(subjectTypography);
+  const bodySize =
+    typeof design.bodyFontSizePt === "number" && Number.isFinite(design.bodyFontSizePt)
+      ? Math.max(
+          LETTER_BODY_FONT_SIZE_MIN,
+          Math.min(LETTER_BODY_FONT_SIZE_MAX, design.bodyFontSizePt),
+        )
+      : undefined;
   const senderColor = roleColor(senderTypography);
   const recipientColor = roleColor(recipientTypography);
   const subjectColor = roleColor(subjectTypography);
@@ -307,6 +316,7 @@ export function LetterCanvas({
       data-letter-user-subject-decoration={
         subjectTypography?.underline === undefined ? undefined : "true"
       }
+      data-letter-user-body-size={bodySize !== undefined ? "true" : undefined}
       className="relative h-[1123px] w-[794px] overflow-hidden bg-white shadow-xl"
       style={
         {
@@ -384,6 +394,7 @@ export function LetterCanvas({
               : subjectTypography.underline
                 ? "underline"
                 : "none",
+          "--letter-user-body-size": bodySize !== undefined ? `${bodySize}pt` : undefined,
         } as React.CSSProperties
       }
       aria-label={ariaLabel}

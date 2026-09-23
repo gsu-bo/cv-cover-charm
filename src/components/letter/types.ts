@@ -33,6 +33,9 @@ export type LetterRoleTypography = {
 
 export const LETTER_ROLE_FONT_SIZE_MIN = 7;
 export const LETTER_ROLE_FONT_SIZE_MAX = 30;
+export const LETTER_BODY_FONT_SIZE_MIN = 8;
+export const LETTER_BODY_FONT_SIZE_MAX = 16;
+export const DEFAULT_LETTER_BODY_FONT_SIZE_PT = 10.5;
 
 /** Frei platzierbares Bild im Anschreiben mit proportionaler Skalierung und automatischem Textfluss. */
 export type LetterFlowImage = {
@@ -107,6 +110,8 @@ export type LetterDesign = {
   recipientTypography?: LetterRoleTypography;
   /** Eigene Typografie für den Betreff; fehlt = wie Vorlage. */
   subjectTypography?: LetterRoleTypography;
+  /** Globale Schriftgrösse des eigentlichen Brief-Fliesstexts; fehlt = Vorlagengrösse. */
+  bodyFontSizePt?: number;
   /** @deprecated Legacy-/SSR-Kompatibilität. Live ist DossierChromeState kanonisch. */
   headerMode?: LetterHeaderMode;
   headerShowName?: boolean;
@@ -277,6 +282,12 @@ function normalizedColor(value: unknown): string | null {
     : null;
 }
 
+export function normalizeLetterBodyFontSizePt(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  const stepped = Math.round(value * 2) / 2;
+  return Math.min(LETTER_BODY_FONT_SIZE_MAX, Math.max(LETTER_BODY_FONT_SIZE_MIN, stepped));
+}
+
 export function normalizeLetterRoleTypography(value: unknown): LetterRoleTypography | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const incoming = value as Partial<LetterRoleTypography>;
@@ -399,6 +410,7 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
     senderTypography: normalizeLetterRoleTypography(incoming.senderTypography),
     recipientTypography: normalizeLetterRoleTypography(incoming.recipientTypography),
     subjectTypography: normalizeLetterRoleTypography(incoming.subjectTypography),
+    bodyFontSizePt: normalizeLetterBodyFontSizePt(incoming.bodyFontSizePt),
     headerMode,
     headerShowName: incoming.headerShowName !== false,
     headerShowAddress: incoming.headerShowAddress !== false,

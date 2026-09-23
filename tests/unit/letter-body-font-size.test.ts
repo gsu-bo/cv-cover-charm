@@ -1,0 +1,52 @@
+import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import {
+  DEFAULT_LETTER_BODY_FONT_SIZE_PT,
+  LETTER_BODY_FONT_SIZE_MAX,
+  LETTER_BODY_FONT_SIZE_MIN,
+  emptyLetterDesign,
+  normalizeLetterDesign,
+} from "../../src/components/letter/types";
+
+const controls = readFileSync(
+  new URL("../../src/components/letter/LetterLayoutControls.tsx", import.meta.url),
+  "utf8",
+);
+const canvas = readFileSync(
+  new URL("../../src/components/letter/LetterCanvas.tsx", import.meta.url),
+  "utf8",
+);
+const css = readFileSync(
+  new URL("../../src/components/letter/letter-user-typography.css", import.meta.url),
+  "utf8",
+);
+
+describe("letter body font size", () => {
+  test("keeps template size as the default and normalizes explicit overrides", () => {
+    expect(emptyLetterDesign().bodyFontSizePt).toBeUndefined();
+    expect(DEFAULT_LETTER_BODY_FONT_SIZE_PT).toBe(10.5);
+    expect(LETTER_BODY_FONT_SIZE_MIN).toBe(8);
+    expect(LETTER_BODY_FONT_SIZE_MAX).toBe(16);
+
+    expect(normalizeLetterDesign({ ...emptyLetterDesign(), bodyFontSizePt: 7 }).bodyFontSizePt).toBe(8);
+    expect(normalizeLetterDesign({ ...emptyLetterDesign(), bodyFontSizePt: 17 }).bodyFontSizePt).toBe(16);
+    expect(normalizeLetterDesign({ ...emptyLetterDesign(), bodyFontSizePt: 11.24 }).bodyFontSizePt).toBe(11);
+    expect(normalizeLetterDesign({ ...emptyLetterDesign(), bodyFontSizePt: 11.26 }).bodyFontSizePt).toBe(11.5);
+  });
+
+  test("offers the requested compact 8–16 pt control with half-point steps", () => {
+    expect(controls).toContain("data-letter-body-font-size-control");
+    expect(controls).toContain("Fliesstext – Schriftgrösse");
+    expect(controls).toContain("min={LETTER_BODY_FONT_SIZE_MIN}");
+    expect(controls).toContain("max={LETTER_BODY_FONT_SIZE_MAX}");
+    expect(controls).toContain("step={0.5}");
+    expect(controls).toContain("Vorlagengrösse");
+  });
+
+  test("applies an explicit body-size override to preview, measurement and PDF markup", () => {
+    expect(canvas).toContain("data-letter-user-body-size");
+    expect(canvas).toContain('"--letter-user-body-size"');
+    expect(css).toContain('[data-letter-user-body-size="true"] [data-letter-pdf-richtext="body"]');
+    expect(css).toContain("font-size: var(--letter-user-body-size) !important;");
+  });
+});
