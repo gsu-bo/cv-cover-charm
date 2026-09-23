@@ -155,6 +155,67 @@ function selectionColor(node: Node | null): string {
   );
 }
 
+type RangeBookmark = {
+  startPath: number[];
+  startOffset: number;
+  endPath: number[];
+  endOffset: number;
+};
+
+function nodePath(root: Node, node: Node): number[] | null {
+  const path: number[] = [];
+  let current: Node | null = node;
+  while (current && current !== root) {
+    const parent = current.parentNode;
+    if (!parent) return null;
+    const index = Array.from(parent.childNodes).indexOf(current as ChildNode);
+    if (index < 0) return null;
+    path.unshift(index);
+    current = parent;
+  }
+  return current === root ? path : null;
+}
+
+function nodeAtPath(root: Node, path: number[]): Node | null {
+  let current: Node = root;
+  for (const index of path) {
+    const next = current.childNodes.item(index);
+    if (!next) return null;
+    current = next;
+  }
+  return current;
+}
+
+function bookmarkRange(root: HTMLElement, range: Range | null): RangeBookmark | null {
+  if (!range) return null;
+  const startPath = nodePath(root, range.startContainer);
+  const endPath = nodePath(root, range.endContainer);
+  if (!startPath || !endPath) return null;
+  return {
+    startPath,
+    startOffset: range.startOffset,
+    endPath,
+    endOffset: range.endOffset,
+  };
+}
+
+function restoreBookmarkedRange(root: HTMLElement, bookmark: RangeBookmark | null): Range | null {
+  if (!bookmark) return null;
+  const start = nodeAtPath(root, bookmark.startPath);
+  const end = nodeAtPath(root, bookmark.endPath);
+  if (!start || !end) return null;
+  const maxOffset = (node: Node) =>
+    node.nodeType === Node.TEXT_NODE ? (node.textContent?.length ?? 0) : node.childNodes.length;
+  try {
+    const range = document.createRange();
+    range.setStart(start, Math.min(bookmark.startOffset, maxOffset(start)));
+    range.setEnd(end, Math.min(bookmark.endOffset, maxOffset(end)));
+    return range;
+  } catch {
+    return null;
+  }
+}
+
 function makeTable(rows: number, columns: number): HTMLTableElement {
   const table = document.createElement("table");
   table.dataset.letterTable = "true";
@@ -772,7 +833,18 @@ export function LetterRichTextEditor({
             const editor = editorRef.current;
             if (!editor) return;
             const sanitized = sanitizeLetterRichHtml(editor.innerHTML);
-            if (editor.innerHTML !== sanitized) editor.innerHTML = sanitized;
+            if (editor.innerHTML === sanitized) return;
+
+            // Canonicalising execCommand markup (b/i -> strong/em, safe color
+            // spans, etc.) replaces DOM nodes. Rebase the editor-owned ranges
+            // onto the equivalent nodes so the next toolbar action still
+            // targets the user's original selection after focus has moved.
+            const savedBookmark = bookmarkRange(editor, savedRangeRef.current);
+            const colorBookmark = bookmarkRange(editor, colorRangeRef.current);
+            editor.innerHTML = sanitized;
+            savedRangeRef.current = restoreBookmarkedRange(editor, savedBookmark);
+            colorRangeRef.current = restoreBookmarkedRange(editor, colorBookmark);
+            activeColorSpanRef.current = null;
           }}
           className="min-h-56 rounded-b-md border border-input bg-background px-3 py-2 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-ring [&_hr]:my-4 [&_hr]:border-0 [&_hr]:border-t [&_hr]:border-border"
         />
