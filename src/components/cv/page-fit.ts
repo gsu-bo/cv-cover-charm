@@ -5,6 +5,7 @@ import {
   isCustomSectionKey,
   type CvData,
   type CvLayoutSectionKey,
+  type CvSectionPacking,
   type CvSectionPage,
   type CvSectionWidth,
 } from "./types";
@@ -171,10 +172,11 @@ export function cvPageFitSectionWeight(data: CvData, key: CvLayoutSectionKey): n
 export type CvPageFitPlan = {
   mode: CvPageFitMode;
   totalWeight: number;
-  /** Estimated vertical demand after safe half-width pairs are packed. */
+  /** Estimated vertical demand after safe compact sections are packed. */
   effectiveWeight: number;
   pageBySection: Partial<Record<CvLayoutSectionKey, CvSectionPage>>;
   widthBySection: Partial<Record<CvLayoutSectionKey, CvSectionWidth>>;
+  packingBySection: Partial<Record<CvLayoutSectionKey, CvSectionPacking>>;
   assignmentSignature: string;
   titleScaleFactor: number;
   headingScaleFactor: number;
@@ -226,50 +228,66 @@ function canCompactToHalf(
   return (key === "sprachen" || key === "hobbys" || key === "staerken") && weight <= 5.8;
 }
 
-function onePageWidths(
+function onePageCompactLayout(
   data: CvData,
   order: CvLayoutSectionKey[],
   weights: Map<CvLayoutSectionKey, number>,
   allowHalfWidth: boolean,
 ) {
   const widthBySection: Partial<Record<CvLayoutSectionKey, CvSectionWidth>> = {};
-  for (const key of order) widthBySection[key] = "full";
-
-  let effectiveWeight = order.reduce((sum, key) => sum + (weights.get(key) ?? 0), 0);
-  if (!allowHalfWidth) return { widthBySection, effectiveWeight };
-
-  // Empty/hidden sections do not create renderer units, so ignore them when
-  // deciding which visible neighbours can actually share one row.
-  const active = order.filter((key) => (weights.get(key) ?? 0) > 0);
-  for (let index = 0; index < active.length - 1; ) {
-    const left = active[index];
-    const right = active[index + 1];
-    const leftWeight = weights.get(left) ?? 0;
-    const rightWeight = weights.get(right) ?? 0;
-    if (
-      canCompactToHalf(data, left, leftWeight) &&
-      canCompactToHalf(data, right, rightWeight)
-    ) {
-      widthBySection[left] = "half";
-      widthBySection[right] = "half";
-      // Two half-width sections occupy roughly the height of the taller one.
-      effectiveWeight -= Math.min(leftWeight, rightWeight);
-      index += 2;
-    } else {
-      index += 1;
-    }
+  const packingBySection: Partial<Record<CvLayoutSectionKey, CvSectionPacking>> = {};
+  for (const key of order) {
+    widthBySection[key] = "full";
+    packingBySection[key] = "rows";
   }
 
-  return { widthBySection, effectiveWeight };
+  let effectiveWeight = order.reduce((sum, key) => sum + (weights.get(key) ?? 0), 0);
+  if (!allowHalfWidth) return { widthBySection, packingBySection, effectiveWeight };
+
+  // Masonry is only useful for a contiguous run of at least two safe short
+  // sections. A single half-width block would merely create an empty column.
+  const active = order.filter((key) => (weights.get(key) ?? 0) > 0);
+  let run: CvLayoutSectionKey[] = [];
+
+  const flush = () => {
+    if (run.length < 2) {
+      run = [];
+      return;
+    }
+
+    const columnWeights: [number, number] = [0, 0];
+    let runWeight = 0;
+    for (const key of run) {
+      const weight = weights.get(key) ?? 0;
+      const target: 0 | 1 = columnWeights[0] <= columnWeights[1] ? 0 : 1;
+      columnWeights[target] += weight;
+      runWeight += weight;
+      widthBySection[key] = "half";
+      packingBySection[key] = "masonry";
+    }
+    // Two independent columns occupy approximately the height of the heavier
+    // column rather than the sum of every short section.
+    effectiveWeight -= runWeight - Math.max(...columnWeights);
+    run = [];
+  };
+
+  for (const key of active) {
+    const weight = weights.get(key) ?? 0;
+    if (canCompactToHalf(data, key, weight)) run.push(key);
+    else flush();
+  }
+  flush();
+
+  return { widthBySection, packingBySection, effectiveWeight };
 }
 
 /**
  * Build a predictable pupil-facing plan:
- * - one page: everything returns to page 1 / normal flow, short neighbouring
- *   list rubrics may share a row, and typography only tightens afterwards;
- * - two pages: keep section order, restore full widths, put personal data on
- *   page 1, and choose the split whose estimated content weights are closest
- *   to balanced.
+ * - one page: everything returns to page 1 / normal flow, contiguous short
+ *   rubrics may form a Masonry group, and typography only tightens afterwards;
+ * - two pages: keep section order, restore full widths + normal row packing,
+ *   put personal data on page 1, and choose the split whose estimated content
+ *   weights are closest to balanced.
  */
 export function buildCvPageFitPlan(
   data: CvData,
@@ -281,15 +299,20 @@ export function buildCvPageFitPlan(
   const totalWeight = order.reduce((sum, key) => sum + (weights.get(key) ?? 0), 0);
   const pageBySection: Partial<Record<CvLayoutSectionKey, CvSectionPage>> = {};
   let widthBySection: Partial<Record<CvLayoutSectionKey, CvSectionWidth>> = {};
+  let packingBySection: Partial<Record<CvLayoutSectionKey, CvSectionPacking>> = {};
   let effectiveWeight = totalWeight;
 
   if (mode === "one") {
     for (const key of order) pageBySection[key] = 1;
-    const compact = onePageWidths(data, order, weights, options.allowHalfWidth !== false);
+    const compact = onePageCompactLayout(data, order, weights, options.allowHalfWidth !== false);
     widthBySection = compact.widthBySection;
+    packingBySection = compact.packingBySection;
     effectiveWeight = compact.effectiveWeight;
   } else {
-    for (const key of order) widthBySection[key] = "full";
+    for (const key of order) {
+      widthBySection[key] = "full";
+      packingBySection[key] = "rows";
+    }
     const active = order.filter((key) => key !== "person" && (weights.get(key) ?? 0) > 0);
     if (!active.length) {
       for (const key of order) pageBySection[key] = 1;
@@ -332,7 +355,7 @@ export function buildCvPageFitPlan(
   const assignmentSignature = `${mode}|${order
     .map(
       (key) =>
-        `${key}:${pageBySection[key] ?? 1}:${widthBySection[key] ?? "full"}`,
+        `${key}:${pageBySection[key] ?? 1}:${widthBySection[key] ?? "full"}:${packingBySection[key] ?? "rows"}`,
     )
     .join("|")}`;
 
@@ -342,6 +365,7 @@ export function buildCvPageFitPlan(
     effectiveWeight,
     pageBySection,
     widthBySection,
+    packingBySection,
     assignmentSignature,
     titleScaleFactor,
     headingScaleFactor,
