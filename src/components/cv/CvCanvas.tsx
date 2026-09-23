@@ -151,7 +151,7 @@ export function CvCanvas({
             allowHalfWidth: pageFitLayout === "classic",
           })
         : null,
-    [pageFitLayout, pageFitMode, props.data],
+    [pageFitLayout, pageFitMode, props.data, props.exportMode],
   );
   const baseDesign = useMemo(() => cvDesignWithFullSectionRules(props.design), [props.design]);
   const design = useMemo<CvDesign>(() => {
