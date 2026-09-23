@@ -81,6 +81,7 @@ describe("template-owned dossier chrome", () => {
       );
       expect(resolved.headerBackgroundColor).toBe("#123456");
       expect(resolved.headerGradientColor).toBe("#abcdef");
+      expect(resolved.headerFontSizePt).toBe(14);
     }
   });
 
@@ -91,9 +92,15 @@ describe("template-owned dossier chrome", () => {
       headerBackgroundColor: "#111111",
       headerGradientColor: null,
     };
-    expect(
-      resolveTemplateChromeOptions("verlauf", { primary: "#123456", secondary: "#abcdef" }, source),
-    ).toBe(source);
+    const resolved = resolveTemplateChromeOptions(
+      "verlauf",
+      { primary: "#123456", secondary: "#abcdef" },
+      source,
+    );
+    expect(resolved.headerBackgroundColor).toBe(source.headerBackgroundColor);
+    expect(resolved.headerGradientColor).toBe(source.headerGradientColor);
+    expect(resolved.headerFontSizePt).toBe(14);
+    expect(source.headerFontSizePt).toBeNull();
   });
 
   test("Modern mirrors compact header and footer without changing their geometry", () => {
@@ -114,6 +121,7 @@ describe("template-owned dossier chrome", () => {
     expect(resolved.footerHeightMm).toBe(source.footerHeightMm);
     expect(resolved.headerBackgroundColor).toBe("#111827");
     expect(resolved.footerBackgroundColor).toBe("#111827");
+    expect(resolved.headerFontSizePt).toBe(14);
     expect(resolved.borderEnabled).toBe(true);
     expect(resolved.borderColor).toBe("#f43f5e");
     expect(resolved.borderWidthMm).toBe(0.6);
@@ -161,13 +169,18 @@ describe("template-owned dossier chrome", () => {
     ];
 
     for (const source of variants) {
-      expect(
-        resolveTemplateChromeOptions("modern", { primary: "#111827", accent: "#f43f5e" }, source),
-      ).toBe(source);
+      const resolved = resolveTemplateChromeOptions(
+        "modern",
+        { primary: "#111827", accent: "#f43f5e" },
+        source,
+      );
+      expect(resolved.headerMode).toBe(source.headerMode);
+      expect(resolved.footerMode).toBe(source.footerMode);
+      expect(resolved.headerFontSizePt).toBe(14);
     }
   });
 
-  test("ordinary templates keep the shared chrome contract unchanged", () => {
+  test("ordinary templates keep the shared chrome contract except for the dossier-wide header default", () => {
     const source = { ...DEFAULT_DOSSIER_CHROME_OPTIONS, headerMode: "contact" as const };
     const resolved = resolveTemplateChromeOptions(
       "colorful",
@@ -175,6 +188,7 @@ describe("template-owned dossier chrome", () => {
       source,
     );
 
-    expect(resolved).toBe(source);
+    expect(resolved).toEqual({ ...source, headerFontSizePt: 14 });
+    expect(source.headerFontSizePt).toBeNull();
   });
 });
