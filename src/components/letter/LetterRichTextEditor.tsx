@@ -548,7 +548,7 @@ export function LetterRichTextEditor({
                 rememberRange();
                 colorPickerActiveRef.current = true;
               }}
-              onChange={(event) => setTextColor(event.currentTarget.value)}
+              onInput={(event) => setTextColor(event.currentTarget.value)}
               onBlur={() => {
                 colorPickerActiveRef.current = false;
               }}
@@ -613,7 +613,9 @@ export function LetterRichTextEditor({
                     className="flex w-full items-center gap-3 rounded px-2 py-1.5 text-left text-xs hover:bg-muted"
                     aria-label={option.label}
                     aria-pressed={
-                      option.value === "none" ? toolbar.list === null : toolbar.list === option.value
+                      option.value === "none"
+                        ? toolbar.list === null
+                        : toolbar.list === option.value
                     }
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => setListStyle(option.value)}

@@ -91,6 +91,10 @@ async function setStoredTemplate(page: Page, template: string) {
   );
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();
+  await expect(page.locator("main [data-letter-page]").first()).toHaveAttribute(
+    "data-letter-template",
+    template,
+  );
 }
 
 test.describe("M1/M2 compact letter header", () => {
