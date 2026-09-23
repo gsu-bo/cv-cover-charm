@@ -6,11 +6,6 @@ import {
   letterSafePageMarginMinimums,
 } from "@/components/letter/layout-system";
 import {
-  DEFAULT_LETTER_BODY_FONT_SIZE_PT,
-  LETTER_BODY_FONT_SIZE_MAX,
-  LETTER_BODY_FONT_SIZE_MIN,
-  LETTER_ROLE_FONT_SIZE_MAX,
-  LETTER_ROLE_FONT_SIZE_MIN,
   type LetterAlignment,
   type LetterData,
   type LetterDesign,
@@ -154,22 +149,16 @@ function VerticalOffsetControl({
 function TypographyRoleControl({
   label,
   value,
-  fallbackSize,
   fallbackBold,
   onChange,
 }: {
   label: string;
   value?: LetterRoleTypography;
-  fallbackSize: number;
   fallbackBold: boolean;
   onChange: (value: LetterRoleTypography | undefined) => void;
 }) {
   const current = value ?? {};
   const patch = (next: Partial<LetterRoleTypography>) => onChange({ ...current, ...next });
-  const size = Math.max(
-    LETTER_ROLE_FONT_SIZE_MIN,
-    Math.min(LETTER_ROLE_FONT_SIZE_MAX, current.fontSizePt ?? fallbackSize),
-  );
 
   return (
     <div
@@ -211,31 +200,6 @@ function TypographyRoleControl({
         </select>
       </label>
 
-      <label className="grid gap-1 text-xs">
-        <span className="flex items-center justify-between gap-2 text-muted-foreground">
-          <span>Schriftgrösse</span>
-          <span>{size.toFixed(size % 1 ? 1 : 0)} pt</span>
-        </span>
-        <input
-          type="range"
-          min={LETTER_ROLE_FONT_SIZE_MIN}
-          max={LETTER_ROLE_FONT_SIZE_MAX}
-          step={0.5}
-          value={size}
-          onChange={(event) => patch({ fontSizePt: Number(event.target.value) })}
-          className="w-full accent-primary"
-          aria-label={`${label} Schriftgrösse`}
-        />
-        {current.fontSizePt !== undefined ? (
-          <button
-            type="button"
-            className={`${smallButtonClass} justify-self-start`}
-            onClick={() => patch({ fontSizePt: undefined })}
-          >
-            Vorlagengrösse
-          </button>
-        ) : null}
-      </label>
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="text-muted-foreground">Schriftfarbe</span>
@@ -289,60 +253,6 @@ function TypographyRoleControl({
   );
 }
 
-function BodyFontSizeControl({
-  value,
-  onChange,
-}: {
-  value?: number;
-  onChange: (value: number | undefined) => void;
-}) {
-  const size = Math.max(
-    LETTER_BODY_FONT_SIZE_MIN,
-    Math.min(LETTER_BODY_FONT_SIZE_MAX, value ?? DEFAULT_LETTER_BODY_FONT_SIZE_PT),
-  );
-
-  return (
-    <div
-      data-letter-body-font-size-control
-      className="grid gap-2 rounded-md border bg-muted/20 p-2.5"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <div className="text-xs font-semibold">Fliesstext – Schriftgrösse</div>
-          <div className="text-[11px] text-muted-foreground">
-            Gilt für den eigentlichen Text des Motivationsschreibens.
-          </div>
-        </div>
-        {value !== undefined ? (
-          <button type="button" className={smallButtonClass} onClick={() => onChange(undefined)}>
-            Vorlage
-          </button>
-        ) : null}
-      </div>
-
-      <label className="grid gap-1 text-xs">
-        <span className="flex items-center justify-between gap-2 text-muted-foreground">
-          <span>Schriftgrösse</span>
-          <span>{size.toFixed(size % 1 ? 1 : 0)} pt</span>
-        </span>
-        <input
-          type="range"
-          min={LETTER_BODY_FONT_SIZE_MIN}
-          max={LETTER_BODY_FONT_SIZE_MAX}
-          step={0.5}
-          value={size}
-          onChange={(event) => onChange(Number(event.target.value))}
-          className="w-full accent-primary"
-          aria-label="Fliesstext Schriftgrösse"
-        />
-        {value === undefined ? (
-          <span className="text-[11px] text-muted-foreground">Vorlagengrösse</span>
-        ) : null}
-      </label>
-    </div>
-  );
-}
-
 export function LetterLayoutControls({
   data,
   design,
@@ -373,8 +283,8 @@ export function LetterLayoutControls({
         <div>
           <div className="text-xs font-semibold">Briefspezifische Positionen &amp; Typografie</div>
           <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-            Diese Einstellungen gelten nur fürs Motivationsschreiben. Header und Footer findest du
-            im eigenen Bereich „Header & Footer“.
+            Diese Einstellungen gelten nur fürs Motivationsschreiben. Schriftgrössen stellst du
+            direkt bei den passenden Formularbereichen ein; Header und Footer bleiben im eigenen Bereich.
           </p>
         </div>
 
@@ -405,7 +315,6 @@ export function LetterLayoutControls({
         <TypographyRoleControl
           label="Eigene Anschrift"
           value={design.senderTypography}
-          fallbackSize={9.5}
           fallbackBold={false}
           onChange={(senderTypography) => onChange({ senderTypography })}
         />
@@ -418,20 +327,14 @@ export function LetterLayoutControls({
         <TypographyRoleControl
           label="Empfängeranschrift"
           value={design.recipientTypography}
-          fallbackSize={10}
           fallbackBold={false}
           onChange={(recipientTypography) => onChange({ recipientTypography })}
         />
         <TypographyRoleControl
           label="Betreff"
           value={design.subjectTypography}
-          fallbackSize={12}
           fallbackBold={true}
           onChange={(subjectTypography) => onChange({ subjectTypography })}
-        />
-        <BodyFontSizeControl
-          value={design.bodyFontSizePt}
-          onChange={(bodyFontSizePt) => onChange({ bodyFontSizePt })}
         />
 
         <div className="grid gap-2 rounded-md border p-2.5">

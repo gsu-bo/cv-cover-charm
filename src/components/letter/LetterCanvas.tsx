@@ -525,7 +525,12 @@ export function LetterCanvas({
           data-letter-section="date"
           data-letter-pdf-text="date"
           className="mt-[4mm] text-[9.5pt] leading-[1.45]"
-          style={{ color: palette.muted, textAlign: dateAlign }}
+          style={{
+            color: palette.muted,
+            textAlign: dateAlign,
+            fontSize:
+              design.dateFontSizePt !== undefined ? `${design.dateFontSizePt}pt` : undefined,
+          }}
         >
           <Lines
             values={[
@@ -546,7 +551,16 @@ export function LetterCanvas({
           )}
 
           <div data-letter-flow-zone>
-            <p data-letter-pdf-text="salutation" className="mb-[5mm]">
+            <p
+              data-letter-pdf-text="salutation"
+              className="mb-[5mm]"
+              style={{
+                fontSize:
+                  design.salutationFontSizePt !== undefined
+                    ? `${design.salutationFontSizePt}pt`
+                    : undefined,
+              }}
+            >
               {data.anrede || (exportMode ? "" : "Guten Tag")}
             </p>
 
@@ -568,21 +582,43 @@ export function LetterCanvas({
               data-letter-closing-gap-mm={closingGapMm}
               style={{ marginTop: `${closingGapMm}mm` }}
             >
-              <div data-letter-pdf-text="closing">
+              <div
+                data-letter-pdf-text="closing"
+                style={{
+                  fontSize:
+                    design.closingFontSizePt !== undefined
+                      ? `${design.closingFontSizePt}pt`
+                      : undefined,
+                }}
+              >
                 {data.gruss || (exportMode ? "" : "Freundliche Grüsse")}
               </div>
               <div
                 data-letter-pdf-text="signature"
                 data-letter-signature-gap-mm={signatureGapMm}
                 className="font-medium"
-                style={{ marginTop: `${signatureGapMm}mm` }}
+                style={{
+                  marginTop: `${signatureGapMm}mm`,
+                  fontSize:
+                    design.signatureFontSizePt !== undefined
+                      ? `${design.signatureFontSizePt}pt`
+                      : undefined,
+                }}
               >
                 {data.unterschrift || data.absenderName}
               </div>
             </div>
 
             {showBeilagenInBody ? (
-              <div className="mt-[9mm] text-[10pt] leading-[1.45]">
+              <div
+                className="mt-[9mm] text-[10pt] leading-[1.45]"
+                style={{
+                  fontSize:
+                    design.attachmentsFontSizePt !== undefined
+                      ? `${design.attachmentsFontSizePt}pt`
+                      : undefined,
+                }}
+              >
                 <div data-letter-pdf-text="attachments-heading" className="font-semibold">
                   Beilagen
                 </div>

@@ -108,10 +108,20 @@ export type LetterDesign = {
   senderTypography?: LetterRoleTypography;
   /** Eigene Typografie für die Empfängeranschrift; fehlt = wie Vorlage. */
   recipientTypography?: LetterRoleTypography;
+  /** Schriftgrösse für Ort & Datum; fehlt = Vorlagengrösse. */
+  dateFontSizePt?: number;
   /** Eigene Typografie für den Betreff; fehlt = wie Vorlage. */
   subjectTypography?: LetterRoleTypography;
+  /** Schriftgrösse für die Anrede; fehlt = Vorlagengrösse. */
+  salutationFontSizePt?: number;
   /** Globale Schriftgrösse des eigentlichen Brief-Fliesstexts; fehlt = Vorlagengrösse. */
   bodyFontSizePt?: number;
+  /** Schriftgrösse für die Grussformel; fehlt = Vorlagengrösse. */
+  closingFontSizePt?: number;
+  /** Schriftgrösse für den gedruckten Namen / die Unterschrift; fehlt = Vorlagengrösse. */
+  signatureFontSizePt?: number;
+  /** Schriftgrösse für Beilagen im Briefinhalt; fehlt = Vorlagengrösse. */
+  attachmentsFontSizePt?: number;
   /** @deprecated Legacy-/SSR-Kompatibilität. Live ist DossierChromeState kanonisch. */
   headerMode?: LetterHeaderMode;
   headerShowName?: boolean;
@@ -288,6 +298,16 @@ export function normalizeLetterBodyFontSizePt(value: unknown): number | undefine
   return Math.min(LETTER_BODY_FONT_SIZE_MAX, Math.max(LETTER_BODY_FONT_SIZE_MIN, stepped));
 }
 
+export function withLetterRoleFontSize(
+  value: LetterRoleTypography | undefined,
+  fontSizePt: number | undefined,
+): LetterRoleTypography | undefined {
+  const next: LetterRoleTypography = { ...(value ?? {}) };
+  if (fontSizePt === undefined) delete next.fontSizePt;
+  else next.fontSizePt = normalizeLetterBodyFontSizePt(fontSizePt);
+  return Object.keys(next).length ? next : undefined;
+}
+
 export function normalizeLetterRoleTypography(value: unknown): LetterRoleTypography | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const incoming = value as Partial<LetterRoleTypography>;
@@ -409,8 +429,13 @@ export function normalizeLetterDesign(value: unknown): LetterDesign {
     ruleAfterSubject: incoming.ruleAfterSubject === true,
     senderTypography: normalizeLetterRoleTypography(incoming.senderTypography),
     recipientTypography: normalizeLetterRoleTypography(incoming.recipientTypography),
+    dateFontSizePt: normalizeLetterBodyFontSizePt(incoming.dateFontSizePt),
     subjectTypography: normalizeLetterRoleTypography(incoming.subjectTypography),
+    salutationFontSizePt: normalizeLetterBodyFontSizePt(incoming.salutationFontSizePt),
     bodyFontSizePt: normalizeLetterBodyFontSizePt(incoming.bodyFontSizePt),
+    closingFontSizePt: normalizeLetterBodyFontSizePt(incoming.closingFontSizePt),
+    signatureFontSizePt: normalizeLetterBodyFontSizePt(incoming.signatureFontSizePt),
+    attachmentsFontSizePt: normalizeLetterBodyFontSizePt(incoming.attachmentsFontSizePt),
     headerMode,
     headerShowName: incoming.headerShowName !== false,
     headerShowAddress: incoming.headerShowAddress !== false,

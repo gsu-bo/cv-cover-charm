@@ -8,8 +8,12 @@ import {
   normalizeLetterDesign,
 } from "../../src/components/letter/types";
 
-const controls = readFileSync(
-  new URL("../../src/components/letter/LetterLayoutControls.tsx", import.meta.url),
+const control = readFileSync(
+  new URL("../../src/components/letter/LetterFontSizeControl.tsx", import.meta.url),
+  "utf8",
+);
+const route = readFileSync(
+  new URL("../../src/routes/anschreiben.tsx", import.meta.url),
   "utf8",
 );
 const canvas = readFileSync(
@@ -35,12 +39,12 @@ describe("letter body font size", () => {
   });
 
   test("offers the requested compact 8–16 pt control with half-point steps", () => {
-    expect(controls).toContain("data-letter-body-font-size-control");
-    expect(controls).toContain("Fliesstext – Schriftgrösse");
-    expect(controls).toContain("min={LETTER_BODY_FONT_SIZE_MIN}");
-    expect(controls).toContain("max={LETTER_BODY_FONT_SIZE_MAX}");
-    expect(controls).toContain("step={0.5}");
-    expect(controls).toContain("Vorlagengrösse");
+    expect(route).toContain('label="Fliesstext"');
+    expect(route).toContain("value={design.bodyFontSizePt}");
+    expect(control).toContain("LETTER_BODY_FONT_SIZE_MIN");
+    expect(control).toContain("LETTER_BODY_FONT_SIZE_MAX");
+    expect(control).toContain("step={0.5}");
+    expect(control).toContain("Vorlagengrösse");
   });
 
   test("applies an explicit body-size override to preview, measurement and PDF markup", () => {
