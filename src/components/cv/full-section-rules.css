@@ -1,13 +1,16 @@
 /*
- * Visible main-column CV rubric separators fill the remaining heading row.
+ * Visible CV rubric separators fill the remaining heading row.
  *
  * Older structural/template variants still contain fixed-width rules and a few
  * template-specific `display: none !important` overrides from the period when
  * headings were allowed to replace the shared separator treatment. The editor
  * now has one explicit source of truth: `headingRule="none"` omits the element;
- * every rendered main-column separator therefore stays visible and consumes
- * the complete remaining heading row in preview, pagination measurement and
- * PDF export.
+ * every rendered separator therefore stays visible and consumes the complete
+ * remaining heading row in preview, pagination measurement and PDF export.
+ *
+ * This applies to BOTH the main column and sidebars. A template may still hide
+ * decorative header dashes, but it must never override a user's rubric-rule
+ * choice. The rule element is only rendered when the shared setting asks for it.
  *
  * Keep a small guaranteed rule width. Display-heavy template typography (for
  * example Aurora) can otherwise consume the row's entire flex budget and
@@ -18,6 +21,8 @@
  * Some headings historically set `flexShrink: 0` inline. Override that legacy
  * detail so titles may wrap when space is tight.
  */
+[data-dossier-document="cv"][data-dossier-document="cv"][data-dossier-document="cv"]
+  [data-cv-section-title],
 html[data-cv-variant][data-cv-variant][data-cv-variant]
   [data-dossier-document="cv"]
   [data-cv-section-title] {
@@ -25,6 +30,8 @@ html[data-cv-variant][data-cv-variant][data-cv-variant]
   min-width: 0 !important;
 }
 
+[data-dossier-document="cv"][data-dossier-document="cv"][data-dossier-document="cv"]
+  [data-cv-accent="section"],
 html[data-cv-variant][data-cv-variant][data-cv-variant]
   [data-dossier-document="cv"]
   [data-cv-accent="section"] {
@@ -49,13 +56,9 @@ html[data-cv-variant][data-cv-variant][data-cv-variant]
 
 /*
  * Neon PDF export does not always carry the route-only data-cv-variant marker.
- * Keep the modern cleanup template-scoped as well so sidebar/header micro-rules
- * cannot reappear in exported dossiers.
+ * Keep only the decorative header dash hidden template-wide. Rubric separators
+ * are controlled exclusively by the shared headingRule setting.
  */
-html[data-dossier-template="neon"]
-  [data-dossier-document="cv"][data-cv-layout="modern"]
-  [data-cv-section="sidebar"]
-  [data-cv-accent="section"],
 html[data-dossier-template="neon"]
   [data-dossier-document="cv"][data-cv-layout="modern"]
   [data-cv-accent="header"] {
@@ -90,13 +93,9 @@ html[data-dossier-template="neon"]
 }
 
 /*
- * Glow is intentionally the calm light/gradient template. Long rules after
- * every heading and the short header dash turned that calm idea into a page of
- * repeated strokes. Let typography + whitespace carry the hierarchy instead.
+ * Glow keeps its decorative header dash hidden, but rubric separators follow
+ * the same user setting as every other CV template.
  */
-html[data-dossier-template="glow"][data-dossier-template="glow"][data-dossier-template="glow"]
-  [data-dossier-document="cv"]
-  [data-cv-accent="section"],
 html[data-dossier-template="glow"][data-dossier-template="glow"][data-dossier-template="glow"]
   [data-dossier-document="cv"]
   [data-cv-accent="header"] {
