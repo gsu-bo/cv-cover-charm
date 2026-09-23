@@ -56,3 +56,19 @@
   > [data-editor-section-body] {
   background: rgb(46 16 101 / 0.1);
 }
+
+/*
+ * Familie: alle Werte starten am selben Tabstopp.
+ *
+ * Die einzelnen Familienmitglieder sind eigenständige Rasterzeilen. Mit
+ * `max-content` hatte deshalb jede Zeile eine andere erste Spaltenbreite
+ * ("Mutter", "Vater", "Schwester" ...), wodurch die Namen optisch sprangen.
+ * 20 mm reichen für die üblichen Bezeichnungen und halten den Block kompakt;
+ * der bereits vorhandene `columnGapMm`-Wert bleibt als Abstand danach wirksam.
+ *
+ * Der Renderer setzt die Spaltenbreite inline, deshalb ist hier bewusst nur
+ * diese eine, eng begrenzte Override-Regel stärker.
+ */
+[data-cv-family-entry][data-cv-structured-row="inline"] {
+  grid-template-columns: 20mm minmax(0, 1fr) !important;
+}
