@@ -15,9 +15,21 @@ type Props = {
   onChange: (key: string, value: string) => void;
   onApplyPalette: (colors: Record<string, string>) => void;
   onReset: () => void;
+  cvSectionTitleColor?: {
+    value: string;
+    onChange: (value: string) => void;
+    onAuto: () => void;
+  };
 };
 
-export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset }: Props) {
+export function ColorChooser({
+  slots,
+  colors,
+  onChange,
+  onApplyPalette,
+  onReset,
+  cvSectionTitleColor,
+}: Props) {
   const palettes = useMemo(() => palettesFor(slots), [slots]);
   const previewSlots = useMemo(() => {
     const background = slots.find((slot) => slot.key === "bg");
@@ -246,6 +258,7 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
               onClick={() => {
                 setDocumentColor("cvMuted", "");
                 setDocumentColor("cvHeading", "");
+                cvSectionTitleColor?.onAuto();
               }}
               className="text-xs text-muted-foreground underline hover:text-foreground"
             >
@@ -267,6 +280,18 @@ export function ColorChooser({ slots, colors, onChange, onApplyPalette, onReset 
                 <span className="truncate text-xs">{slot.label}</span>
               </label>
             ))}
+            {cvSectionTitleColor ? (
+              <label className="flex items-center gap-2 rounded-md border border-input p-2">
+                <input
+                  type="color"
+                  aria-label="Schriftfarbe der Rubriktitel"
+                  value={cvSectionTitleColor.value}
+                  onChange={(event) => cvSectionTitleColor.onChange(event.target.value)}
+                  className="h-8 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
+                />
+                <span className="truncate text-xs">Rubriktitel</span>
+              </label>
+            ) : null}
           </div>
           <span className="text-[11px] leading-snug text-muted-foreground">
             Gilt für helle CV-Flächen. Auf dunklen Farbbändern und Sidebars bleibt die Schriftfarbe

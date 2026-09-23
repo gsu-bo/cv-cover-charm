@@ -11,7 +11,7 @@ const EVENT = "lebenslauf-photo-place-change";
 
 export type CvPhotoPosition = "left" | "right" | "free";
 export type CvPhotoPlacement = {
-  /** `auto` ist nur noch Legacy-Fallback. Neue Auswahl speichert left/right/frei. */
+  /** `auto`, `left` und `right` bleiben für bestehende Dossiers lesbar. */
   mode: "auto" | "left" | "right" | "frei";
   /** Abstand von der linken oberen Blattecke in mm (nur bei "frei"). */
   xMm: number;
@@ -41,9 +41,9 @@ export const CV_PHOTO_MIN_MM = 15;
 export const CV_PHOTO_MAX_MM = 90;
 
 export const DEFAULT_CV_PHOTO_PLACEMENT: CvPhotoPlacement = {
-  // Fresh CVs start with the photo on the right. "auto" remains accepted below
-  // only so older saved dossiers keep their historical template-aware layout.
-  mode: "right",
+  // Neue CVs starten frei positionierbar. Die alten Modi bleiben lesbar, damit
+  // bestehende Dossiers nicht ungefragt springen.
+  mode: "frei",
   xMm: 150,
   yMm: 20,
   widthMm: 34,

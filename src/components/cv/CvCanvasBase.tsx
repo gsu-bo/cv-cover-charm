@@ -2481,6 +2481,7 @@ export function CvCanvas({
           width: `${sidebarWidth}mm`,
           ["--cv-sidebar-edge" as string]: `${sidebarRightMm}mm`,
           ["--cv-sidebar-mirrored-bg" as string]: side.bg,
+          ["--cv-sidebar-section-color" as string]: side.accent,
           padding: onColumn
             ? `${sidebarPhoto ? "16mm" : "13mm"} 9mm ${Math.max(12, frame.footMm + 8)}mm 10mm`
             : `${sidebarPhoto ? "12.5mm" : "9.5mm"} 7.5mm 12mm 8mm`,

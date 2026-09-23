@@ -33,7 +33,6 @@ import {
   resetCvPhotoPlacement,
   resolveCvPhotoPosition,
   setCvPhotoPlacement,
-  setCvPhotoPosition,
   subscribeCvPhotoPlacement,
 } from "./photo-place";
 import {
@@ -327,30 +326,21 @@ function CvPhotoPlaceControls({ borderWidth }: { borderWidth: number }) {
   });
   const free = photoPosition === "free";
 
+  useEffect(() => {
+    if (free) return;
+    // Alte Links/Rechts-Modi werden ohne Nutzeraktion an derselben sichtbaren
+    // Blattseite in die frei verschiebbare Geometrie überführt. Bereits freie
+    // Fotos behalten ihre gespeicherten x/y-Werte unverändert.
+    const xMm = photoPosition === "left" ? 20 : Math.max(20, 190 - place.widthMm);
+    setCvPhotoPlacement({ mode: "frei", xMm, yMm: place.yMm });
+  }, [free, photoPosition, place.widthMm, place.yMm]);
+
   return (
     <div className="mt-3 flex flex-col gap-2 border-t pt-3">
       <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         Foto-Position
       </span>
-      <div className="flex gap-1" role="group" aria-label="Foto-Position">
-        {(
-          [
-            ["left", "Links"],
-            ["right", "Rechts"],
-            ["free", "Frei positionierbar"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            className={photoPosition === value ? placeBtnOn : placeBtn}
-            aria-pressed={photoPosition === value}
-            onClick={() => setCvPhotoPosition(value)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <div className={`${placeBtnOn} text-center`}>Frei positionierbar</div>
 
       <span className="mt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         Seitenaufbau
@@ -374,35 +364,31 @@ function CvPhotoPlaceControls({ borderWidth }: { borderWidth: number }) {
         </button>
       </div>
 
-      {free ? (
-        <>
-          <label className="flex flex-col gap-1">
-            <span className="text-[11px] text-muted-foreground">
-              Breite {Math.round(place.widthMm)} mm
-            </span>
-            <input
-              type="range"
-              min={CV_PHOTO_MIN_MM}
-              max={CV_PHOTO_MAX_MM}
-              step={1}
-              value={place.widthMm}
-              onChange={(e) => setCvPhotoPlacement({ widthMm: Number(e.target.value) })}
-              className="w-full accent-primary"
-            />
-          </label>
-          <p className="text-[11px] leading-snug text-muted-foreground">
-            In der Vorschau lässt sich das Foto mit der Maus ziehen; am Punkt unten rechts wird es
-            grösser oder kleiner. Mit den Pfeiltasten geht es millimeterweise.
-          </p>
-          <button
-            type="button"
-            className="self-start text-[11px] text-muted-foreground underline hover:text-foreground"
-            onClick={resetCvPhotoPlacement}
-          >
-            Platz zurücksetzen
-          </button>
-        </>
-      ) : null}
+      <label className="flex flex-col gap-1">
+        <span className="text-[11px] text-muted-foreground">
+          Breite {Math.round(place.widthMm)} mm
+        </span>
+        <input
+          type="range"
+          min={CV_PHOTO_MIN_MM}
+          max={CV_PHOTO_MAX_MM}
+          step={1}
+          value={place.widthMm}
+          onChange={(e) => setCvPhotoPlacement({ widthMm: Number(e.target.value) })}
+          className="w-full accent-primary"
+        />
+      </label>
+      <p className="text-[11px] leading-snug text-muted-foreground">
+        In der Vorschau lässt sich das Foto mit der Maus ziehen; am Punkt unten rechts wird es
+        grösser oder kleiner. Mit den Pfeiltasten geht es millimeterweise.
+      </p>
+      <button
+        type="button"
+        className="self-start text-[11px] text-muted-foreground underline hover:text-foreground"
+        onClick={resetCvPhotoPlacement}
+      >
+        Platz zurücksetzen
+      </button>
 
       {borderWidth > 0 && (
         <label className="flex items-center gap-2">

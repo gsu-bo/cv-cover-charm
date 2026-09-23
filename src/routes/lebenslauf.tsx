@@ -2237,6 +2237,19 @@ function Lebenslauf() {
                       onReset={() =>
                         setDesign((d) => ({ ...d, colors: defaultColors(d.template) }))
                       }
+                      cvSectionTitleColor={{
+                        value:
+                          design.sectionTitleColor ??
+                          design.colors.cvHeading ??
+                          resolveCvPalette(design).accent,
+                        onChange: (sectionTitleColor) =>
+                          setDesign((current) => ({ ...current, sectionTitleColor })),
+                        onAuto: () =>
+                          setDesign((current) => ({
+                            ...current,
+                            sectionTitleColor: undefined,
+                          })),
+                      }}
                     />
                   </div>
                 </div>

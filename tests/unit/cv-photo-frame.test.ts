@@ -9,12 +9,17 @@ const layoutCss = readFileSync(
   new URL("../../src/components/cv/layout-options.css", import.meta.url),
   "utf8",
 );
+const form = readFileSync(new URL("../../src/components/cv/CvForm.tsx", import.meta.url), "utf8");
 
 describe("CV photo defaults and frame", () => {
-  test("fresh CV photo placement defaults to the right while legacy auto stays valid", () => {
-    expect(DEFAULT_CV_PHOTO_PLACEMENT.mode).toBe("right");
-    expect(normalizeCvPhotoPlacement().mode).toBe("right");
+  test("fresh CV photo placement is freely adjustable while legacy auto stays valid", () => {
+    expect(DEFAULT_CV_PHOTO_PLACEMENT.mode).toBe("frei");
+    expect(normalizeCvPhotoPlacement().mode).toBe("frei");
     expect(normalizeCvPhotoPlacement({ mode: "auto" }).mode).toBe("auto");
+    expect(form).toContain('setCvPhotoPlacement({ mode: "frei", xMm, yMm: place.yMm })');
+    expect(form).not.toContain("Frei platzieren aktivieren");
+    expect(form).not.toContain('["left", "Links"]');
+    expect(form).not.toContain('["right", "Rechts"]');
   });
 
   test("photo frame is drawn inside the crop so clipped edges stay even", () => {
