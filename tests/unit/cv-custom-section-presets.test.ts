@@ -46,6 +46,51 @@ describe("CV custom section presets", () => {
     expect(migrated.sectionOrder?.slice(0, 3)).toEqual(["person", "custom:familie", "schule"]);
   });
 
+  test("inserts a missing legacy family directly after personal info without resetting custom order", () => {
+    const migrated = ensureFixedFamilySection({
+      ...DEMO_CV,
+      sectionOrder: [
+        "schule",
+        "person",
+        "erfahrung",
+        "sprachen",
+        "hobbys",
+        "staerken",
+        "referenzen",
+      ],
+    });
+
+    expect(migrated.sectionOrder).toEqual([
+      "schule",
+      "person",
+      "custom:familie",
+      "erfahrung",
+      "sprachen",
+      "hobbys",
+      "staerken",
+      "referenzen",
+    ]);
+  });
+
+  test("keeps an explicitly positioned family where the user put it", () => {
+    const sectionOrder = [
+      "person",
+      "schule",
+      "erfahrung",
+      "custom:familie",
+      "sprachen",
+      "hobbys",
+      "staerken",
+      "referenzen",
+    ] as const;
+    const migrated = ensureFixedFamilySection({
+      ...DEMO_CV,
+      sectionOrder: [...sectionOrder],
+    });
+
+    expect(migrated.sectionOrder).toEqual(sectionOrder);
+  });
+
   test("uses family as the second default rubric", () => {
     expect(DEMO_CV.sectionOrder?.slice(0, 3)).toEqual(["person", "custom:familie", "schule"]);
   });

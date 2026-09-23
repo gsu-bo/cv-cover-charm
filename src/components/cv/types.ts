@@ -192,6 +192,17 @@ function sameSectionOrder(a: CvLayoutSectionKey[], b: CvLayoutSectionKey[]): boo
   return a.length === b.length && a.every((key, index) => key === b[index]);
 }
 
+function familyAfterPerson(order: CvLayoutSectionKey[]): CvLayoutSectionKey[] {
+  const withoutFamily = order.filter((key) => key !== FIXED_FAMILY_SECTION_KEY);
+  const personIndex = withoutFamily.indexOf("person");
+  const insertAt = personIndex >= 0 ? personIndex + 1 : 0;
+  return [
+    ...withoutFamily.slice(0, insertAt),
+    FIXED_FAMILY_SECTION_KEY,
+    ...withoutFamily.slice(insertAt),
+  ];
+}
+
 export type CvSectionPage = 1 | 2;
 export type CvSectionWidth = "full" | "half";
 export type CvSectionPositioning = "flow" | "free";
@@ -534,6 +545,7 @@ export function ensureFixedFamilySection(data: CvData): CvData {
   const legacyCanonicalOrder: CvLayoutSectionKey[] = [...CV_LAYOUT_SECTION_ORDER, ...customKeys];
   const currentSavedOrder = data.sectionOrder ?? legacyCanonicalOrder;
   const usesLegacyDefaultOrder = sameSectionOrder(currentSavedOrder, legacyCanonicalOrder);
+  const savedOrderIncludesFamily = currentSavedOrder.includes(FIXED_FAMILY_SECTION_KEY);
   const existing = sections.find((section) => section.id === FIXED_FAMILY_SECTION_ID);
 
   if (existing) {
@@ -545,9 +557,12 @@ export function ensureFixedFamilySection(data: CvData): CvData {
               ? { ...section, preset: "familie" as const }
               : section,
           );
+    const normalizedOrder = cvSectionOrder(data);
     const nextOrder = usesLegacyDefaultOrder
       ? defaultCvSectionOrder(customKeys)
-      : cvSectionOrder(data);
+      : savedOrderIncludesFamily
+        ? normalizedOrder
+        : familyAfterPerson(normalizedOrder);
     if (normalizedSections === sections && sameSectionOrder(nextOrder, currentSavedOrder))
       return data;
     return {
@@ -564,7 +579,7 @@ export function ensureFixedFamilySection(data: CvData): CvData {
     customSections: nextSections,
     sectionOrder: usesLegacyDefaultOrder
       ? defaultCvSectionOrder(nextCustomKeys)
-      : [...cvSectionOrder(data), FIXED_FAMILY_SECTION_KEY],
+      : familyAfterPerson([...cvSectionOrder(data), FIXED_FAMILY_SECTION_KEY]),
   };
 }
 
