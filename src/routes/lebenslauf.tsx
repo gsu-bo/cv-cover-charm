@@ -2556,7 +2556,7 @@ function Lebenslauf() {
           <div
             aria-hidden
             onClick={() => setPanelOpen(false)}
-            className="absolute inset-0 z-10 bg-foreground/20 sm:hidden"
+            className="absolute inset-0 z-10 bg-foreground/20 md:hidden"
           />
         )}
 
