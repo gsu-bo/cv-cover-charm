@@ -206,12 +206,15 @@ function familyAfterPerson(order: CvLayoutSectionKey[]): CvLayoutSectionKey[] {
 export type CvSectionPage = 1 | 2;
 export type CvSectionWidth = "full" | "half";
 export type CvSectionPositioning = "flow" | "free";
+export type CvSectionPacking = "rows" | "masonry";
 
-/** Eine einzige, persistente Quelle für Seite, Breite und freie Position. */
+/** Eine einzige, persistente Quelle für Seite, Breite, Flow-Packing und freie Position. */
 export type CvSectionLayout = {
   page: CvSectionPage;
   width: CvSectionWidth;
   positioning: CvSectionPositioning;
+  /** Innerhalb des sicheren Dokumentflusses: starre Reihen oder zwei unabhängige Spalten. */
+  packing: CvSectionPacking;
   /** Absolute Position auf dem A4-Blatt in Millimetern; nur bei `free` benutzt. */
   x: number | null;
   y: number | null;
@@ -226,6 +229,7 @@ export const DEFAULT_CV_SECTION_LAYOUT: CvSectionLayout = {
   page: 1,
   width: "full",
   positioning: "flow",
+  packing: "rows",
   x: null,
   y: null,
   widthMm: null,
@@ -246,6 +250,7 @@ export function normalizeCvSectionLayout(value?: Partial<CvSectionLayout> | null
     page: value?.page === 2 ? 2 : 1,
     width: value?.width === "half" ? "half" : "full",
     positioning: value?.positioning === "free" ? "free" : "flow",
+    packing: value?.packing === "masonry" ? "masonry" : "rows",
     x: finiteCoordinate(value?.x),
     y: finiteCoordinate(value?.y),
     widthMm: finiteSize(value?.widthMm, 20, 190),
@@ -293,7 +298,12 @@ export function hasCustomizedCvSectionLayout(
   if (order.some((key, index) => key !== canonicalOrder[index])) return true;
   return order.some((key) => {
     const value = cvSectionLayout(data, key);
-    return value.page !== 1 || value.width !== "full" || value.positioning !== "flow";
+    return (
+      value.page !== 1 ||
+      value.width !== "full" ||
+      value.positioning !== "flow" ||
+      value.packing !== "rows"
+    );
   });
 }
 
