@@ -27,7 +27,7 @@ import {
 import { CvTextAlignmentPortal } from "./CvTextAlignmentPortal";
 import { getCvTextAlignment, subscribeCvTextAlignment } from "./text-alignment";
 import { cvContentBox, cvFrameFor } from "./archetype";
-import { CV_LAYOUT_EVENT } from "./layout";
+import { CV_LAYOUT_EVENT, getCvLayout, subscribeCvLayout } from "./layout";
 import { CvCanvas as BaseCvCanvas } from "./CvCanvasBase";
 import { resolveCvRubricOptions } from "./citrus-rubric";
 import {
@@ -131,6 +131,7 @@ export function CvCanvas({
   );
   const pageFitMode = useSyncExternalStore(subscribeCvPageFit, getCvPageFitMode, () => null);
   const pageFitRevision = useSyncExternalStore(subscribeCvPageFit, getCvPageFitRevision, () => 0);
+  const pageFitLayout = useSyncExternalStore(subscribeCvLayout, getCvLayout, () => "classic");
   // Page margins are stored outside the legacy CV JSON. Subscribing here keeps
   // preview, pagination and hidden PDF canvases on one geometry path.
   useSyncExternalStore(subscribeDossierPageMargins, getDossierPageMarginsSnapshot, () => "{}");
@@ -140,8 +141,13 @@ export function CvCanvas({
     [chromeContact, localContact],
   );
   const pageFitPlan = useMemo(
-    () => (pageFitMode ? buildCvPageFitPlan(props.data, pageFitMode) : null),
-    [pageFitMode, props.data],
+    () =>
+      pageFitMode
+        ? buildCvPageFitPlan(props.data, pageFitMode, {
+            allowHalfWidth: pageFitLayout === "classic",
+          })
+        : null,
+    [pageFitLayout, pageFitMode, props.data],
   );
   const baseDesign = useMemo(() => cvDesignWithFullSectionRules(props.design), [props.design]);
   const design = useMemo<CvDesign>(() => {
@@ -202,9 +208,11 @@ export function CvCanvas({
   // so every typography/color/spacing toggle is reflected immediately.
   const paginationData = useMemo(() => ({ ...data }), [data, design]);
 
-  // The two pupil-facing buttons reuse the existing section-layout callback.
-  // Re-applying the same button is intentional; a monotonically increasing
-  // revision lets it reset manual page moves without inventing a third button.
+  // The pupil-facing page-fit actions reuse the existing section-layout callback.
+  // One-page mode first packs safe short rubrics into real half-width pairs and
+  // only then tightens typography. Two-page mode restores full section widths.
+  // Re-applying the same action is intentional; a monotonically increasing
+  // revision lets it reset manual page/width edits without a separate reset.
   const appliedPageFit = useRef<string | null>(null);
   useEffect(() => {
     if (!pageFitPlan || props.exportMode || !props.onSectionLayout) {
@@ -220,6 +228,7 @@ export function CvCanvas({
       if (!page) continue;
       props.onSectionLayout(key, {
         page,
+        width: pageFitPlan.widthBySection[key] ?? "full",
         positioning: "flow",
         x: null,
         y: null,
