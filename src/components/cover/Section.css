@@ -63,12 +63,10 @@
  * Die einzelnen Familienmitglieder sind eigenständige Rasterzeilen. Mit
  * `max-content` hatte deshalb jede Zeile eine andere erste Spaltenbreite
  * ("Mutter", "Vater", "Schwester" ...), wodurch die Namen optisch sprangen.
- * 20 mm reichen für die üblichen Bezeichnungen und halten den Block kompakt;
- * der bereits vorhandene `columnGapMm`-Wert bleibt als Abstand danach wirksam.
- *
- * Der Renderer setzt die Spaltenbreite inline, deshalb ist hier bewusst nur
- * diese eine, eng begrenzte Override-Regel stärker.
+ * Eine gemeinsame 20-mm-Breite der Bezeichnung hält das vorhandene Grid und
+ * den einstellbaren `columnGapMm`-Abstand intakt, ohne dessen Inline-Geometrie
+ * zu überschreiben.
  */
-[data-cv-family-entry][data-cv-structured-row="inline"] {
-  grid-template-columns: 20mm minmax(0, 1fr) !important;
+[data-cv-family-entry][data-cv-structured-row="inline"] > [data-cv-entry-title] {
+  width: 20mm;
 }
