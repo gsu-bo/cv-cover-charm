@@ -8,6 +8,7 @@ const css = readFileSync(
 
 describe("CV rubric horizontal offset clipping", () => {
   test("reserves directional bleed so moved rubric titles are clipped only by the page", () => {
+    // Guard both offset directions and the shared preview/measurement geometry.
     expect(css).toContain(
       "--cv-rubric-left-bleed: max(0mm, calc(0mm - var(--cv-rubric-x, 0mm)));",
     );
