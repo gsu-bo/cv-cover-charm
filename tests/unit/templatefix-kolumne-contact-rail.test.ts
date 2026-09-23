@@ -17,6 +17,10 @@ const canvas = readFileSync(
   new URL("../../src/components/cv/CvCanvasBase.tsx", import.meta.url),
   "utf8",
 );
+const canvasWrapper = readFileSync(
+  new URL("../../src/components/cv/CvCanvas.tsx", import.meta.url),
+  "utf8",
+);
 
 describe("Kolumne contact rail cleanup", () => {
   test("suppresses the legacy Terracotta contact rail in the CV", () => {
@@ -40,23 +44,30 @@ describe("Kolumne contact rail cleanup", () => {
     );
   });
 
-  test("keeps rubric separator lines visible in every configurable sidebar", () => {
+  test("lets an explicit full rubric rule override template suppression without changing colour", () => {
     expect(canvas).toContain('data-cv-section="sidebar"');
     expect(canvas).toContain('data-cv-accent="section"');
+    expect(canvas).toContain("background: sectionTitleColor || side.accent");
 
-    // The central rule must also work in PDF/export contexts where route-level
-    // html markers such as data-cv-variant may be absent.
+    // The wrapper distinguishes an explicit user choice from an inherited/default
+    // full-width rule. Untouched Neon/Glow styling may therefore stay quiet.
+    expect(canvasWrapper).toContain(
+      'data-cv-user-heading-rule={props.design.headingRule === "full" ? "full" : undefined}',
+    );
+
+    // The explicit-user override is route-independent, so preview and hidden PDF
+    // canvases use the same rule even when html[data-cv-variant] is unavailable.
     expect(cvCss).toContain(
-      '[data-dossier-document="cv"][data-dossier-document="cv"][data-dossier-document="cv"]\n  [data-cv-accent="section"]',
+      '[data-cv-user-heading-rule="full"][data-cv-heading-rule="full"][data-dossier-template]',
     );
     expect(cvCss).toContain("display: block !important;");
     expect(cvCss).toContain("flex: 1 0 4mm !important;");
 
-    // Templates may hide decorative header dashes, never actual rubric rules.
-    expect(cvCss).not.toContain(
+    // Template defaults remain intact until the user explicitly asks for the rule.
+    expect(cvCss).toContain(
       '[data-cv-section="sidebar"]\n  [data-cv-accent="section"],',
     );
-    expect(cvCss).not.toContain(
+    expect(cvCss).toContain(
       'html[data-dossier-template="glow"][data-dossier-template="glow"][data-dossier-template="glow"]\n  [data-dossier-document="cv"]\n  [data-cv-accent="section"]',
     );
   });
