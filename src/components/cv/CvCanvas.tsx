@@ -210,10 +210,10 @@ export function CvCanvas({
   const paginationData = useMemo(() => ({ ...data }), [data, design]);
 
   // The pupil-facing page-fit actions reuse the existing section-layout callback.
-  // One-page mode first packs safe short rubrics into real half-width pairs and
-  // only then tightens typography. Two-page mode restores full section widths.
-  // Re-applying the same action is intentional; a monotonically increasing
-  // revision lets it reset manual page/width edits without a separate reset.
+  // One-page mode first packs safe short rubrics into two independent Masonry
+  // columns and only then tightens typography. Two-page mode restores normal
+  // full-width row packing. Re-applying the same action is intentional; a
+  // monotonically increasing revision resets manual page/width/packing edits.
   const appliedPageFit = useRef<string | null>(null);
   useEffect(() => {
     if (!pageFitPlan || props.exportMode || !props.onSectionLayout) {
@@ -231,6 +231,7 @@ export function CvCanvas({
         page,
         width: pageFitPlan.widthBySection[key] ?? "full",
         positioning: "flow",
+        packing: pageFitPlan.packingBySection[key] ?? "rows",
         x: null,
         y: null,
         widthMm: null,
