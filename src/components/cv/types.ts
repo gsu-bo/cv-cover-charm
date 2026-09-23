@@ -107,7 +107,12 @@ export type CvCustomSection = {
 export type CvStructuredRowDirection = "inline" | "stacked";
 
 export type CvStructuredRowLayout = {
+  /** Legacy-Feld: Familie wird heute immer einzeilig dargestellt. */
   direction: CvStructuredRowDirection;
+  /** Doppelpunkt zwischen Bezeichnung und Wert; fehlend in alten Saves = an. */
+  showColons?: boolean;
+  /** Gemeinsamer Tabstopp für alle Werte; fehlend in alten Saves = an. */
+  aligned?: boolean;
   /** Horizontaler Abstand zwischen Bezeichnung und Wert. */
   columnGapMm: number;
   /** Vertikaler Abstand zwischen zwei vollständigen Zeilen. */
@@ -116,6 +121,8 @@ export type CvStructuredRowLayout = {
 
 export const DEFAULT_CV_STRUCTURED_ROW_LAYOUT: CvStructuredRowLayout = {
   direction: "inline",
+  showColons: true,
+  aligned: true,
   columnGapMm: 2,
   rowGapMm: 2,
 };
@@ -127,7 +134,11 @@ export function normalizeCvStructuredRowLayout(
   value?: Partial<CvStructuredRowLayout> | null,
 ): CvStructuredRowLayout {
   return {
-    direction: value?.direction === "stacked" ? "stacked" : "inline",
+    // Familie ist bewusst eine kompakte Short-Info-Liste. Alte "stacked"-Saves
+    // werden ohne Migrationsknopf in die heutige einzeilige Darstellung übernommen.
+    direction: "inline",
+    showColons: value?.showColons !== false,
+    aligned: value?.aligned !== false,
     columnGapMm: finiteStructuredGap(
       value?.columnGapMm,
       DEFAULT_CV_STRUCTURED_ROW_LAYOUT.columnGapMm,
