@@ -7,7 +7,16 @@ import {
   cvSafePageMarginMinimums,
   type CvRenderLayout,
 } from "./archetype";
-import { getCvLayout, subscribeCvLayout } from "./layout";
+import {
+  CV_CONTINUATION_GAP_DEFAULT_MM,
+  CV_CONTINUATION_GAP_MAX_MM,
+  CV_CONTINUATION_GAP_MIN_MM,
+  getCvContinuationGapMm,
+  getCvLayout,
+  setCvContinuationGapMm,
+  subscribeCvContinuationGap,
+  subscribeCvLayout,
+} from "./layout";
 import {
   getCvPageFitMode,
   getCvPageFitPageCount,
@@ -48,6 +57,11 @@ export function CvPageMarginsControl({
     subscribeCvLayout,
     getCvLayout,
     () => "classic",
+  );
+  const continuationGap = useSyncExternalStore(
+    subscribeCvContinuationGap,
+    getCvContinuationGapMm,
+    () => CV_CONTINUATION_GAP_DEFAULT_MM,
   );
   const pageFitMode = useSyncExternalStore(subscribeCvPageFit, getCvPageFitMode, () => null);
   const pageCount = useSyncExternalStore(subscribeCvPageFit, getCvPageFitPageCount, () => 0);
@@ -124,6 +138,39 @@ export function CvPageMarginsControl({
           <>
             <label className="grid gap-1 text-xs">
               <span className="flex items-center justify-between gap-2 text-muted-foreground">
+                <span>Abstand oben ab Seite 2</span>
+                <span>
+                  {continuationGap.toFixed(continuationGap % 1 ? 1 : 0)} mm
+                </span>
+              </span>
+              <input
+                data-cv-continuation-gap-control
+                type="range"
+                min={CV_CONTINUATION_GAP_MIN_MM}
+                max={CV_CONTINUATION_GAP_MAX_MM}
+                step={1}
+                value={continuationGap}
+                onChange={(event) => setCvContinuationGapMm(Number(event.target.value))}
+                className="w-full accent-primary"
+                aria-label="Abstand oben ab Seite 2"
+              />
+              <span className="text-[11px] leading-relaxed text-muted-foreground">
+                Gilt nur für den Lebenslauf ab Seite 2. Ein vorhandener Fortsetzungs-Header bleibt
+                geschützt.
+              </span>
+              {continuationGap !== CV_CONTINUATION_GAP_DEFAULT_MM ? (
+                <button
+                  type="button"
+                  className="justify-self-start rounded border border-input bg-background px-2 py-1 text-[11px] font-medium hover:bg-accent"
+                  onClick={() => setCvContinuationGapMm(CV_CONTINUATION_GAP_DEFAULT_MM)}
+                >
+                  Standardabstand (4 mm)
+                </button>
+              ) : null}
+            </label>
+
+            <label className="grid gap-1 text-xs">
+              <span className="flex items-center justify-between gap-2 text-muted-foreground">
                 <span>Zusätzlicher Abstand nach Header</span>
                 <span>{headerGap.toFixed(headerGap % 1 ? 1 : 0)} mm</span>
               </span>
@@ -141,7 +188,8 @@ export function CvPageMarginsControl({
                 aria-label="Zusätzlicher Abstand nach Header"
               />
               <span className="text-[11px] leading-relaxed text-muted-foreground">
-                Wird zusätzlich zum oberen Seitenrand gerechnet.
+                Wird im Lebenslauf auf Seite 1 zusätzlich zum oberen Seitenrand gerechnet. Ab Seite
+                2 gilt der separate Regler oben.
               </span>
               {headerGap !== 12 ? (
                 <button

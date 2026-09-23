@@ -20,6 +20,7 @@ import {
   getDossierPageMargins,
   type DossierPageMargins,
 } from "@/lib/dossier-page-margins";
+import { getCvContinuationGapMm } from "./layout";
 
 /**
  * Bauformen des Lebenslaufs.
@@ -156,16 +157,25 @@ export function sidebarWidthMm(frame: CvFrame, layout: CvRenderLayout, sidebarPc
 const SURFACE_PAD = 5;
 const roundHalfMm = (value: number) => Math.round(value * 2) / 2;
 
+/**
+ * Page 1 keeps the shared dossier gap. Continuation pages use the CV-only
+ * control so they can start higher without changing the motivation letter.
+ */
+function cvChromeForPage(chrome: DossierChromeOptions, pageIndex: number): DossierChromeOptions {
+  return pageIndex > 0 ? { ...chrome, headerGapMm: getCvContinuationGapMm() } : chrome;
+}
+
 export function cvPageReserves(
   chrome: DossierChromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
   pageIndex = 0,
 ): DossierPageReserves {
-  const headerReserveMm = dossierHeaderVisualHeightMmForOptions(chrome, pageIndex);
+  const pageChrome = cvChromeForPage(chrome, pageIndex);
+  const headerReserveMm = dossierHeaderVisualHeightMmForOptions(pageChrome, pageIndex);
   return {
     headerReserveMm,
     headerGapMm:
-      headerReserveMm > 0 ? Math.min(40, Math.max(0, chrome.headerGapMm ?? 12)) : 0,
-    footerReserveMm: dossierFooterVisualHeightMmForOptions(chrome),
+      headerReserveMm > 0 ? Math.min(40, Math.max(0, pageChrome.headerGapMm ?? 12)) : 0,
+    footerReserveMm: dossierFooterVisualHeightMmForOptions(pageChrome),
   };
 }
 
@@ -235,15 +245,16 @@ export function cvDefaultContentBox(
   sidebarPct?: number,
   chrome: DossierChromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
 ): CvContentBox {
-  const top = dossierHeaderContentTopMmForOptions(chrome, pageIndex);
-  const bottom = dossierFooterContentBottomMmForOptions(chrome);
+  const pageChrome = cvChromeForPage(chrome, pageIndex);
+  const top = dossierHeaderContentTopMmForOptions(pageChrome, pageIndex);
+  const bottom = dossierFooterContentBottomMmForOptions(pageChrome);
 
   if (frame.id === "card") {
     const inset = frame.cardInsetMm + 11;
     const contentTop =
       pageIndex === 0 &&
       frame.firstPageContentTopMm !== null &&
-      effectiveDossierHeaderModeForOptions(chrome, pageIndex) === "none"
+      effectiveDossierHeaderModeForOptions(pageChrome, pageIndex) === "none"
         ? frame.firstPageContentTopMm
         : Math.max(top, inset);
     const side = sidebarWidthMm(frame, layout, sidebarPct);
