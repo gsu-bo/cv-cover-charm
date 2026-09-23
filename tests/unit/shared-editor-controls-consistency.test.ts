@@ -44,18 +44,17 @@ describe("shared CV / letter editor control ownership", () => {
     expect(letter).not.toContain("<DossierPageMarginsControl");
   });
 
-  test("keeps CV-only document-title spacing under CV Schrift and out of Letter", () => {
+  test("keeps CV-only document-title spacing under CV Schrift while Letter has no global Schrift section", () => {
     const cvTypography = section(cv, "Schrift");
-    const letterTypography = section(letter, "Schrift");
 
     expect(cvTypography).toContain("<DossierHyphenationControl />");
     expect(count(cv, /<DossierHyphenationControl\b/g)).toBe(1);
     expect(typographyControl).toContain("data-cv-doc-title-margin-top-control");
     expect(typographyControl).toContain("Dokumenttitel – Abstand nach oben");
 
-    expect(letterTypography).not.toContain("DossierHyphenationControl");
-    expect(letterTypography).toContain("letterFontSelection(design)");
-    expect(letterTypography).toContain("Schriftart");
+    expect(count(letter, /title="Schrift"/g)).toBe(0);
+    expect(letter).toContain('data-letter-context-font-sizes="brief"');
+    expect(letter).toContain("<LetterFontSizeControl");
     expect(count(letter, /<DossierHyphenationControl\b/g)).toBe(0);
     expect(letter).not.toContain("data-cv-doc-title-margin-top-control");
     expect(letterLayout).not.toContain("DossierHyphenationControl");
