@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from "react";
+import { Fragment, useId, type ReactNode } from "react";
 import "./Section.css";
 
 type Props = {
@@ -21,6 +21,7 @@ type Props = {
 };
 
 type FormGroup = "content" | "design" | "advanced";
+type HintKind = "empty" | "ready" | "neutral";
 
 const DESIGN_SECTIONS = new Set([
   "Vorlage",
@@ -46,6 +47,14 @@ function groupMarker(title: string): string | null {
   return null;
 }
 
+function hintKind(hint: string | undefined): HintKind | undefined {
+  if (!hint) return undefined;
+  const normalized = hint.trim().toLocaleLowerCase("de-CH");
+  if (/^(leer|fehlt|nicht gesetzt|keine daten)$/.test(normalized)) return "empty";
+  if (/^(gesetzt|bereit|aktiv|vorhanden|gespeichert)$/.test(normalized)) return "ready";
+  return "neutral";
+}
+
 /** Aufklappbarer Abschnitt für die gemeinsame Dossier-Seitenleiste. */
 export function Section({
   title,
@@ -60,70 +69,81 @@ export function Section({
   const group = formGroup(title);
   const marker = groupMarker(title);
   const isRubric = rubricTone !== undefined;
+  const resolvedHintKind = hintKind(hint);
 
   return (
-    <section
-      data-editor-section
-      data-editor-section-title={title}
-      data-editor-section-open={open ? "true" : "false"}
-      data-form-group={group}
-      data-editor-rubric-tone={isRubric ? "auto" : undefined}
-      className="relative overflow-hidden rounded-xl border bg-background transition-[border-color,box-shadow,background-color] duration-200"
-    >
-      <div data-editor-section-header className="flex items-center gap-2 pr-2 sm:pr-3">
-        <button
-          type="button"
-          data-editor-section-toggle
-          onClick={onToggle}
-          aria-expanded={open}
-          aria-controls={id}
-          className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-accent/35 sm:px-4 sm:py-3"
-        >
-          {marker ? (
-            <span
-              data-form-group-marker
-              aria-hidden="true"
-              className="shrink-0 rounded-full border border-border/70 bg-muted/70 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground"
-            >
-              {marker}
-            </span>
-          ) : null}
-          <svg
-            width="11"
-            height="11"
-            viewBox="0 0 12 12"
-            aria-hidden="true"
-            className={`shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-90" : ""}`}
+    <Fragment>
+      {marker ? (
+        <div data-form-group-divider={group} className="flex items-center gap-2 px-1 pt-1">
+          <span
+            data-form-group-marker
+            className="shrink-0 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground"
           >
-            <path
-              d="M4 2.5l4 3.5-4 3.5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <span className="min-w-0 whitespace-normal break-words text-sm font-semibold leading-tight tracking-tight text-foreground/90">
-            {title}
+            {marker}
           </span>
-          {hint && (
-            <span className="ml-auto shrink-0 rounded-full border border-border/60 bg-muted/55 px-2 py-0.5 text-[10px] font-medium normal-case text-muted-foreground sm:text-[11px]">
-              {hint}
-            </span>
-          )}
-        </button>
-        {action}
-      </div>
-      {open && (
-        <div
-          id={id}
-          data-editor-section-body
-          className="border-t border-border/70 px-3 py-3 sm:px-4 sm:py-4"
-        >
-          {children}
+          <span data-form-group-divider-line className="h-px min-w-4 flex-1 bg-border/70" />
         </div>
-      )}
-    </section>
+      ) : null}
+
+      <section
+        data-editor-section
+        data-editor-section-title={title}
+        data-editor-section-open={open ? "true" : "false"}
+        data-form-group={group}
+        data-editor-rubric-tone={isRubric ? "auto" : undefined}
+        className="relative overflow-hidden rounded-xl border bg-background transition-[border-color,box-shadow,background-color] duration-200"
+      >
+        <div data-editor-section-header className="flex items-center gap-2 pr-2 sm:pr-3">
+          <button
+            type="button"
+            data-editor-section-toggle
+            onClick={onToggle}
+            aria-expanded={open}
+            aria-controls={id}
+            className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-accent/35 sm:px-4 sm:py-3"
+          >
+            <svg
+              data-editor-section-chevron
+              width="11"
+              height="11"
+              viewBox="0 0 12 12"
+              aria-hidden="true"
+              className={`shrink-0 text-muted-foreground transition-[transform,color] duration-200 ${open ? "rotate-90" : ""}`}
+            >
+              <path
+                d="M4 2.5l4 3.5-4 3.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span className="min-w-0 whitespace-normal break-words text-sm font-semibold leading-tight tracking-tight text-foreground/90">
+              {title}
+            </span>
+            {hint && (
+              <span
+                data-editor-section-hint
+                data-hint-kind={resolvedHintKind}
+                className="ml-auto shrink-0 rounded-full border border-border/60 bg-muted/55 px-2 py-0.5 text-[10px] font-medium normal-case text-muted-foreground sm:text-[11px]"
+              >
+                {hint}
+              </span>
+            )}
+          </button>
+          {action}
+        </div>
+        {open && (
+          <div
+            id={id}
+            data-editor-section-body
+            className="border-t border-border/70 px-3 py-3 sm:px-4 sm:py-4"
+          >
+            {children}
+          </div>
+        )}
+      </section>
+    </Fragment>
   );
 }
