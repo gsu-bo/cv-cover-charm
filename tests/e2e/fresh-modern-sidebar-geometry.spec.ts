@@ -211,6 +211,30 @@ test.describe("CV sidebar content clearance", () => {
     }
   });
 
+  test("stale global template CSS cannot reclaim the Sidebar main x-origin", async ({ page }) => {
+    await applyTemplate(page, "terracotta", 0.22, "standard");
+    const before = await sidebarGeometry(page, "terracotta", "standard");
+    expectSidebarClear(before, "terracotta before stale global template scope");
+
+    // Reproduce the failure mode behind the real overlap screenshot: the local
+    // CV is still Kolumne/terracotta, but a stale global template selector with
+    // historic !important main geometry (Gallery uses 20mm) wins the CSS cascade.
+    await page.evaluate(() => {
+      document.documentElement.dataset.dossierTemplate = "gallery";
+    });
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+
+    const after = await sidebarGeometry(page, "terracotta", "standard");
+    expectSidebarClear(after, "terracotta with stale gallery global template scope");
+    expect(after?.mainLeft).toBeCloseTo(before?.mainLeft ?? 0, 1);
+    expect(after?.mainRight).toBeCloseTo(before?.mainRight ?? 0, 1);
+  });
+
   test("imported Tim-Gauss page margins cannot pull main content back under a sidebar", async ({
     page,
   }) => {
