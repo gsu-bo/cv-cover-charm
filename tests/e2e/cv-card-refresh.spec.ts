@@ -636,3 +636,103 @@ test.describe("Neon / Verlauf / Citrus CV refresh", () => {
     });
   });
 });
+
+test("hard refresh renders persisted CV before any layout nudge", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(
+    ({ payload }) => {
+      localStorage.clear();
+      localStorage.setItem("lebenslauf:v1", JSON.stringify(payload));
+      localStorage.setItem("lebenslauf:layout:v1", "modern");
+      localStorage.setItem("lebenslauf:layout-mirror:v1", "false");
+      localStorage.setItem("lebenslauf:info-position:v1", "standard");
+    },
+    {
+      payload: {
+        version: 6,
+        data: data(),
+        design: {
+          template: "terracotta",
+          colors: {
+            bg: "#fffaf5",
+            primary: "#9a4b34",
+            secondary: "#d8a48f",
+            accent: "#9a4b34",
+            ink: "#2a211d",
+          },
+          bgOpacity: 0.2,
+          useElements: false,
+          sidebarPct: 0.3,
+        },
+        elements: [],
+        elementStyles: {},
+      },
+    },
+  );
+
+  await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: "Download", exact: true })).toHaveAttribute(
+    "data-editor-ready",
+    "true",
+  );
+  await page.waitForFunction(
+    () => document.documentElement.dataset.dossierTemplate === "terracotta",
+  );
+  await page.evaluate(() => document.fonts.ready);
+
+  const preview = page
+    .locator('main [data-dossier-document="cv"][data-export-mode="false"]')
+    .first();
+  await expect(preview).toHaveAttribute("data-cv-template", "terracotta");
+  await expect(preview).toHaveAttribute("data-cv-layout", "modern");
+
+  const geometry = async () =>
+    preview.evaluate((root) => {
+      const pageNode = root.querySelector<HTMLElement>('[data-cv-page="0"]');
+      const sidebar = pageNode?.querySelector<HTMLElement>(":scope > [data-cv-sidebar]");
+      const main = pageNode?.querySelector<HTMLElement>(":scope > [data-cv-main]");
+      if (!pageNode || !sidebar || !main) return null;
+      const side = sidebar.getBoundingClientRect();
+      const body = main.getBoundingClientRect();
+      return {
+        sidebarRight: side.right,
+        mainLeft: body.left,
+        overlap: Math.max(0, side.right - body.left),
+        gap: body.left - side.right,
+        pageCount: root.querySelectorAll("[data-cv-page]").length,
+      };
+    });
+
+  const initialGeometry = await geometry();
+  expect(initialGeometry).not.toBeNull();
+  expect(initialGeometry?.overlap ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(1);
+  expect(initialGeometry?.gap ?? Number.NEGATIVE_INFINITY).toBeGreaterThan(1);
+  const initialHash = hash(await preview.screenshot({ animations: "disabled" }));
+
+  await page.evaluate(() => {
+    localStorage.setItem("lebenslauf:layout:v1", "classic");
+    window.dispatchEvent(new CustomEvent("lebenslauf-layout-change"));
+  });
+  await expect(preview).toHaveAttribute("data-cv-layout", "classic");
+  await page.evaluate(() => {
+    localStorage.setItem("lebenslauf:layout:v1", "modern");
+    window.dispatchEvent(new CustomEvent("lebenslauf-layout-change"));
+  });
+  await expect(preview).toHaveAttribute("data-cv-layout", "modern");
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+
+  const nudgedGeometry = await geometry();
+  expect(nudgedGeometry).not.toBeNull();
+  expect(nudgedGeometry?.overlap ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(1);
+  expect(nudgedGeometry?.mainLeft).toBeCloseTo(initialGeometry?.mainLeft ?? 0, 1);
+  expect(nudgedGeometry?.sidebarRight).toBeCloseTo(initialGeometry?.sidebarRight ?? 0, 1);
+  expect(nudgedGeometry?.pageCount).toBe(initialGeometry?.pageCount);
+  const nudgedHash = hash(await preview.screenshot({ animations: "disabled" }));
+  expect(nudgedHash).toBe(initialHash);
+});

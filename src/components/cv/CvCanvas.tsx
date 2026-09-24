@@ -2,6 +2,7 @@ import { cvBodyData } from "@/lib/dossier-body-contact";
 import {
   useCallback,
   useEffect,
+  useInsertionEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -19,6 +20,7 @@ import {
   getDossierPageMarginsSnapshot,
   subscribeDossierPageMargins,
 } from "@/lib/dossier-page-margins";
+import { applyDossierTheme } from "@/lib/dossier-theme";
 import { resolveTemplateChromeOptions } from "@/lib/template-chrome";
 import {
   resolveDossierChromeDocumentContent,
@@ -161,9 +163,7 @@ export function CvCanvas({
     return {
       ...baseDesign,
       titleScale: clampCvScale(CV_TYPE_DEFAULTS.titleScale * pageFitPlan.titleScaleFactor),
-      headingScale: clampCvScale(
-        CV_TYPE_DEFAULTS.headingScale * pageFitPlan.headingScaleFactor,
-      ),
+      headingScale: clampCvScale(CV_TYPE_DEFAULTS.headingScale * pageFitPlan.headingScaleFactor),
       bodyScale: clampCvScale(CV_TYPE_DEFAULTS.bodyScale * pageFitPlan.bodyScaleFactor),
     };
   }, [baseDesign, pageFitPlan]);
@@ -241,9 +241,7 @@ export function CvCanvas({
 
     props.onPageFitDesign?.({
       titleScale: clampCvScale(CV_TYPE_DEFAULTS.titleScale * pageFitPlan.titleScaleFactor),
-      headingScale: clampCvScale(
-        CV_TYPE_DEFAULTS.headingScale * pageFitPlan.headingScaleFactor,
-      ),
+      headingScale: clampCvScale(CV_TYPE_DEFAULTS.headingScale * pageFitPlan.headingScaleFactor),
       bodyScale: clampCvScale(CV_TYPE_DEFAULTS.bodyScale * pageFitPlan.bodyScaleFactor),
     });
     consumeCvPageFitMode(pageFitPlan.mode);
@@ -262,6 +260,15 @@ export function CvCanvas({
     },
     [props.exportMode, props.onPageCount],
   );
+
+  // Template-scoped CSS and dossier theme variables must exist before
+  // CvCanvasBase runs its layout/pagination measurement. On a hard refresh
+  // persisted design state arrives after hydration; waiting until a layout
+  // effect lets the child measure once against the previous/default template.
+  useInsertionEffect(() => {
+    if (!manageGlobalTemplateScope) return;
+    applyDossierTheme(design.template);
+  }, [design.template, manageGlobalTemplateScope]);
 
   // The visible CV editor still owns the legacy html[data-dossier-template]
   // route scope. Hidden mixed-template PDF renderers opt out; their local
