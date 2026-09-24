@@ -44,6 +44,9 @@ jobs:
       - name: Install application dependencies
         run: bun install --frozen-lockfile
 
+      - name: Format new regression tests only
+        run: bunx prettier --write tests/unit/cv-contact-tabulator.test.ts tests/e2e/dossier-alignment-regression.spec.ts
+
       - name: Check targeted formatting
         run: bunx prettier --check src/components/cv/CvCanvasBase.tsx tests/unit/cv-contact-tabulator.test.ts tests/e2e/dossier-alignment-regression.spec.ts
 
