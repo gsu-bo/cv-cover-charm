@@ -107,7 +107,7 @@ export function ThemeToggle() {
       data-editor-theme-toggle
       data-theme-mode={mode}
       onClick={cycleTheme}
-      aria-label={`${THEME_LABELS[mode]}er Modus. Zu ${THEME_LABELS[next]} wechseln`}
+      aria-label={`Darstellung ${THEME_LABELS[mode]}. Zu ${THEME_LABELS[next]} wechseln`}
       title={`Darstellung: ${THEME_LABELS[mode]} · nächster Klick: ${THEME_LABELS[next]}`}
       className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-input text-foreground transition-[background-color,border-color,color,box-shadow] hover:border-foreground/20 hover:bg-accent hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-9 sm:w-9"
     >
