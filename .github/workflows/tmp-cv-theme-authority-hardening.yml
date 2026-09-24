@@ -1,0 +1,128 @@
+name: Verify CV theme authority hardening
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - .github/workflows/tmp-cv-theme-authority-hardening.yml
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Make CvCanvas the single live CV theme authority
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          route_path = Path("src/routes/lebenslauf.tsx")
+          route = route_path.read_text()
+
+          theme_import = 'import { applyDossierTheme } from "@/lib/dossier-theme";\n'
+          if route.count(theme_import) != 1:
+              raise SystemExit(f"theme import: expected 1 match, found {route.count(theme_import)}")
+          route = route.replace(theme_import, "", 1)
+
+          late_effect = '''  useEffect(() => {
+            applyDossierTheme(design.template);
+          }, [design.template]);
+
+          '''
+          if route.count(late_effect) != 1:
+              raise SystemExit(f"late route theme effect: expected 1 match, found {route.count(late_effect)}")
+          route = route.replace(late_effect, "", 1)
+          route_path.write_text(route)
+
+          test_path = Path("tests/unit/cv-refresh-template-scope.test.ts")
+          test_path.write_text('''import { expect, test } from "bun:test";
+          import { readFileSync } from "node:fs";
+
+          const canvasSource = readFileSync("src/components/cv/CvCanvas.tsx", "utf8");
+          const routeSource = readFileSync("src/routes/lebenslauf.tsx", "utf8");
+
+          test("CvCanvas is the single live CV template-theme authority before pagination", () => {
+            expect(canvasSource).toContain("useInsertionEffect(() => {");
+            expect(canvasSource).toContain("applyDossierTheme(design.template);");
+            expect(canvasSource.indexOf("useInsertionEffect(() => {")).toBeLessThan(
+              canvasSource.indexOf("useLayoutEffect(() => {")
+            );
+            expect(routeSource).not.toContain('import { applyDossierTheme } from "@/lib/dossier-theme";');
+            expect(routeSource).not.toContain("applyDossierTheme(design.template);");
+          });
+          ''')
+          PY
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Format changed files
+        run: bunx prettier --write src/routes/lebenslauf.tsx tests/unit/cv-refresh-template-scope.test.ts
+
+      - name: Focused unit regression
+        run: bun test tests/unit/cv-refresh-template-scope.test.ts tests/unit/cv-contact-tabulator.test.ts
+
+      - name: TypeScript
+        run: bun run typecheck
+
+      - name: Targeted lint
+        run: bunx eslint src/routes/lebenslauf.tsx src/components/cv/CvCanvas.tsx tests/unit/cv-refresh-template-scope.test.ts tests/e2e/cv-card-refresh.spec.ts
+
+      - name: Install browser test runner
+        run: npm install --no-save --no-package-lock @playwright/test@1.55.0
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start application
+        shell: bash
+        run: |
+          bun run dev -- --host 127.0.0.1 --port 4173 > /tmp/cv-theme-authority.log 2>&1 &
+          echo $! > /tmp/cv-theme-authority.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/lebenslauf > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/cv-theme-authority.log
+          exit 1
+
+      - name: Hard-refresh browser regression
+        run: npx playwright test tests/e2e/cv-card-refresh.spec.ts --grep "hard refresh renders persisted CV before any layout nudge" --reporter=line --workers=1
+
+      - name: Stop application
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/cv-theme-authority.pid ]; then
+            kill "$(cat /tmp/cv-theme-authority.pid)" || true
+          fi
+
+      - name: Commit hardened final tree
+        shell: bash
+        run: |
+          rm .github/workflows/tmp-cv-theme-authority-hardening.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/routes/lebenslauf.tsx tests/unit/cv-refresh-template-scope.test.ts .github/workflows/tmp-cv-theme-authority-hardening.yml
+          git commit -m "refactor(cv): centralize live template theme scope"
+          git push origin HEAD:dev
