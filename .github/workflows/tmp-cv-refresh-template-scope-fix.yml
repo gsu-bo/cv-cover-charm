@@ -1,0 +1,260 @@
+name: Verify CV refresh template scope fix
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - .github/workflows/tmp-cv-refresh-template-scope-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apply pre-layout template scope fix and regression
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          canvas_path = Path("src/components/cv/CvCanvas.tsx")
+          source = canvas_path.read_text()
+
+          old_hooks = '''  useCallback,
+            useEffect,
+            useLayoutEffect,
+            useMemo,
+          '''
+          new_hooks = '''  useCallback,
+            useEffect,
+            useInsertionEffect,
+            useLayoutEffect,
+            useMemo,
+          '''
+          if source.count(old_hooks) != 1:
+              raise SystemExit(f"React hook import: expected 1 match, found {source.count(old_hooks)}")
+          source = source.replace(old_hooks, new_hooks, 1)
+
+          old_import = 'import { resolveTemplateChromeOptions } from "@/lib/template-chrome";\n'
+          new_import = 'import { applyDossierTheme } from "@/lib/dossier-theme";\n' + old_import
+          if source.count(old_import) != 1:
+              raise SystemExit(f"template chrome import: expected 1 match, found {source.count(old_import)}")
+          source = source.replace(old_import, new_import, 1)
+
+          marker = '''  // The visible CV editor still owns the legacy html[data-dossier-template]
+          // route scope. Hidden mixed-template PDF renderers opt out; their local
+          // marker is mirrored into html only inside html2canvas' throw-away clone.
+          useLayoutEffect(() => {
+          '''
+          insertion = '''  // Template-scoped CSS and dossier theme variables must exist before
+            // CvCanvasBase runs its layout/pagination measurement. On a hard refresh
+            // persisted design state arrives after hydration; waiting until a layout
+            // effect lets the child measure once against the previous/default template.
+            useInsertionEffect(() => {
+              if (!manageGlobalTemplateScope) return;
+              applyDossierTheme(design.template);
+            }, [design.template, manageGlobalTemplateScope]);
+
+          ''' + marker
+          if source.count(marker) != 1:
+              raise SystemExit(f"global template scope effect: expected 1 match, found {source.count(marker)}")
+          source = source.replace(marker, insertion, 1)
+          canvas_path.write_text(source)
+
+          unit_path = Path("tests/unit/cv-refresh-template-scope.test.ts")
+          unit_path.write_text('''import { expect, test } from "bun:test";
+          import { readFileSync } from "node:fs";
+
+          const source = readFileSync("src/components/cv/CvCanvas.tsx", "utf8");
+
+          test("CV template scope is installed before pagination layout effects", () => {
+            expect(source).toContain("useInsertionEffect(() => {");
+            expect(source).toContain("applyDossierTheme(design.template);");
+            expect(source.indexOf("useInsertionEffect(() => {")).toBeLessThan(
+              source.indexOf("useLayoutEffect(() => {")
+            );
+          });
+          ''')
+
+          e2e_path = Path("tests/e2e/cv-card-refresh.spec.ts")
+          e2e = e2e_path.read_text()
+          test_marker = 'test("hard refresh renders persisted CV before any layout nudge"'
+          if test_marker not in e2e:
+              e2e += '''\n\ntest("hard refresh renders persisted CV before any layout nudge", async ({ page }) => {
+            test.setTimeout(120_000);
+            await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+            await page.evaluate(
+              ({ payload }) => {
+                localStorage.clear();
+                localStorage.setItem("lebenslauf:v1", JSON.stringify(payload));
+                localStorage.setItem("lebenslauf:layout:v1", "modern");
+                localStorage.setItem("lebenslauf:layout-mirror:v1", "false");
+                localStorage.setItem("lebenslauf:info-position:v1", "standard");
+              },
+              {
+                payload: {
+                  version: 6,
+                  data: data(),
+                  design: {
+                    template: "terracotta",
+                    colors: {
+                      bg: "#fffaf5",
+                      primary: "#9a4b34",
+                      secondary: "#d8a48f",
+                      accent: "#9a4b34",
+                      ink: "#2a211d",
+                    },
+                    bgOpacity: 0.2,
+                    useElements: false,
+                    sidebarPct: 0.3,
+                  },
+                  elements: [],
+                  elementStyles: {},
+                },
+              },
+            );
+
+            await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
+            await expect(page.getByRole("button", { name: "Download", exact: true })).toHaveAttribute(
+              "data-editor-ready",
+              "true",
+            );
+            await page.waitForFunction(
+              () => document.documentElement.dataset.dossierTemplate === "terracotta",
+            );
+            await page.evaluate(() => document.fonts.ready);
+
+            const preview = page
+              .locator('main [data-dossier-document="cv"][data-export-mode="false"]')
+              .first();
+            await expect(preview).toHaveAttribute("data-cv-template", "terracotta");
+            await expect(preview).toHaveAttribute("data-cv-layout", "modern");
+
+            const geometry = async () =>
+              preview.evaluate((root) => {
+                const pageNode = root.querySelector<HTMLElement>('[data-cv-page="0"]');
+                const sidebar = pageNode?.querySelector<HTMLElement>(":scope > [data-cv-sidebar]");
+                const main = pageNode?.querySelector<HTMLElement>(":scope > [data-cv-main]");
+                if (!pageNode || !sidebar || !main) return null;
+                const side = sidebar.getBoundingClientRect();
+                const body = main.getBoundingClientRect();
+                return {
+                  sidebarRight: side.right,
+                  mainLeft: body.left,
+                  overlap: Math.max(0, side.right - body.left),
+                  gap: body.left - side.right,
+                  pageCount: root.querySelectorAll("[data-cv-page]").length,
+                };
+              });
+
+            const initialGeometry = await geometry();
+            expect(initialGeometry).not.toBeNull();
+            expect(initialGeometry?.overlap ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(1);
+            expect(initialGeometry?.gap ?? Number.NEGATIVE_INFINITY).toBeGreaterThan(1);
+            const initialHash = hash(await preview.screenshot({ animations: "disabled" }));
+
+            await page.evaluate(() => {
+              localStorage.setItem("lebenslauf:layout:v1", "classic");
+              window.dispatchEvent(new CustomEvent("lebenslauf-layout-change"));
+            });
+            await expect(preview).toHaveAttribute("data-cv-layout", "classic");
+            await page.evaluate(() => {
+              localStorage.setItem("lebenslauf:layout:v1", "modern");
+              window.dispatchEvent(new CustomEvent("lebenslauf-layout-change"));
+            });
+            await expect(preview).toHaveAttribute("data-cv-layout", "modern");
+            await page.evaluate(
+              () =>
+                new Promise<void>((resolve) =>
+                  requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+                ),
+            );
+
+            const nudgedGeometry = await geometry();
+            expect(nudgedGeometry).not.toBeNull();
+            expect(nudgedGeometry?.overlap ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(1);
+            expect(nudgedGeometry?.mainLeft).toBeCloseTo(initialGeometry?.mainLeft ?? 0, 1);
+            expect(nudgedGeometry?.sidebarRight).toBeCloseTo(initialGeometry?.sidebarRight ?? 0, 1);
+            expect(nudgedGeometry?.pageCount).toBe(initialGeometry?.pageCount);
+            const nudgedHash = hash(await preview.screenshot({ animations: "disabled" }));
+            expect(nudgedHash).toBe(initialHash);
+          });
+          '''
+              e2e_path.write_text(e2e)
+          PY
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Format changed files
+        run: bunx prettier --write src/components/cv/CvCanvas.tsx tests/unit/cv-refresh-template-scope.test.ts tests/e2e/cv-card-refresh.spec.ts
+
+      - name: Check focused formatting
+        run: bunx prettier --check src/components/cv/CvCanvas.tsx tests/unit/cv-refresh-template-scope.test.ts tests/e2e/cv-card-refresh.spec.ts
+
+      - name: Focused unit regressions
+        run: bun test tests/unit/cv-refresh-template-scope.test.ts tests/unit/cv-pagination-shape-invalidation.test.ts tests/unit/cv-pagination-design-invalidation.test.ts
+
+      - name: TypeScript
+        run: bun run typecheck
+
+      - name: Targeted lint
+        run: bunx eslint src/components/cv/CvCanvas.tsx tests/unit/cv-refresh-template-scope.test.ts tests/e2e/cv-card-refresh.spec.ts
+
+      - name: Install browser test runner
+        run: npm install --no-save --no-package-lock @playwright/test@1.55.0
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start application
+        shell: bash
+        run: |
+          bun run dev -- --host 127.0.0.1 --port 4173 > /tmp/cv-refresh.log 2>&1 &
+          echo $! > /tmp/cv-refresh.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/lebenslauf > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/cv-refresh.log
+          exit 1
+
+      - name: Hard-refresh browser regression
+        run: npx playwright test tests/e2e/cv-card-refresh.spec.ts --grep "hard refresh renders persisted CV before any layout nudge" --reporter=line --workers=1
+
+      - name: Stop application
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/cv-refresh.pid ]; then
+            kill "$(cat /tmp/cv-refresh.pid)" || true
+          fi
+
+      - name: Commit verified fix and remove temporary workflow
+        shell: bash
+        run: |
+          rm .github/workflows/tmp-cv-refresh-template-scope-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/cv/CvCanvas.tsx tests/unit/cv-refresh-template-scope.test.ts tests/e2e/cv-card-refresh.spec.ts .github/workflows/tmp-cv-refresh-template-scope-fix.yml
+          git commit -m "fix(cv): settle template scope before pagination"
+          git push origin HEAD:dev
