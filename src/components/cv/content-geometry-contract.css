@@ -1,26 +1,25 @@
 /*
- * CV text-area geometry has exactly one owner: CvCanvasBase / CvCanvas.
+ * CV text-area geometry has exactly one owner for the dimensions that must be
+ * globally invariant.
  *
- * The renderer resolves template defaults, shared header/footer chrome and the
- * user's explicit page margins. CvCanvas publishes the reviewed horizontal
- * content bounds for Classic/Sidebar, while CvCanvasBase publishes the final
- * per-page vertical bounds as --cv-main-top / --cv-main-bottom.
+ * CvCanvasBase publishes the final per-page vertical bounds as
+ * --cv-main-top / --cv-main-bottom. Those values always win so pagination,
+ * preview and PDF use the same vertical writing area.
  *
- * Template styles may still shape surfaces, motifs and internal decoration,
- * but they must never move the document text area itself. Older template CSS
- * still contains historic left/right !important values; without this contract
- * those rules can pull a correct Sidebar main column back underneath the rail.
- * Keeping the same rule on the hidden measurement page and every rendered page
- * guarantees pagination, preview and PDF use identical geometry.
+ * Sidebar layouts have one additional invariant: the main text column must be
+ * reserved strictly outside the physical sidebar. CvCanvas publishes that
+ * reviewed horizontal box as --cv-modern-main-left/right. Older template CSS
+ * still contains historic [data-cv-main] left/right !important rules; when a
+ * template scope is stale during hydration/import those rules can otherwise
+ * pull a correct main column back underneath the sidebar.
  *
- * The deliberately complete root selector makes this contract stronger than
- * legacy template selectors regardless of stylesheet chunk order.
+ * Classic/non-sidebar layouts deliberately keep their existing template-owned
+ * horizontal geometry. This contract only takes horizontal ownership while a
+ * real Sidebar layout is active.
  */
-[data-dossier-document="cv"][data-cv-template][data-cv-layout="classic"][data-cv-archetype][data-cv-photo-position][data-cv-info-position]
+[data-dossier-document="cv"][data-cv-template][data-cv-layout][data-cv-archetype][data-cv-photo-position][data-cv-info-position]
   :is([data-cv-page], [data-cv-measure-page])
   > [data-cv-main] {
-  left: var(--cv-classic-main-left) !important;
-  right: var(--cv-classic-main-right) !important;
   top: var(--cv-main-top) !important;
   bottom: var(--cv-main-bottom) !important;
 }
@@ -30,8 +29,6 @@
   > [data-cv-main] {
   left: var(--cv-modern-main-left) !important;
   right: var(--cv-modern-main-right) !important;
-  top: var(--cv-main-top) !important;
-  bottom: var(--cv-main-bottom) !important;
 }
 
 /* Sidebar rechts mirrors only the physical horizontal bounds. The logical
@@ -42,6 +39,4 @@
   > [data-cv-main] {
   left: var(--cv-modern-main-right) !important;
   right: var(--cv-modern-main-left) !important;
-  top: var(--cv-main-top) !important;
-  bottom: var(--cv-main-bottom) !important;
 }
