@@ -33,6 +33,8 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
+          import textwrap
 
           route_path = Path("src/routes/lebenslauf.tsx")
           route = route_path.read_text()
@@ -42,33 +44,30 @@ jobs:
               raise SystemExit(f"theme import: expected 1 match, found {route.count(theme_import)}")
           route = route.replace(theme_import, "", 1)
 
-          late_effect = '''  useEffect(() => {
-            applyDossierTheme(design.template);
-          }, [design.template]);
-
-          '''
-          if route.count(late_effect) != 1:
-              raise SystemExit(f"late route theme effect: expected 1 match, found {route.count(late_effect)}")
-          route = route.replace(late_effect, "", 1)
+          pattern = r'\n  useEffect\(\(\) => \{\n\s+applyDossierTheme\(design\.template\);\n\s+\}, \[design\.template\]\);\n'
+          route, count = re.subn(pattern, "\n", route, count=1)
+          if count != 1:
+              raise SystemExit(f"late route theme effect: expected 1 match, found {count}")
           route_path.write_text(route)
 
           test_path = Path("tests/unit/cv-refresh-template-scope.test.ts")
-          test_path.write_text('''import { expect, test } from "bun:test";
-          import { readFileSync } from "node:fs";
+          test_path.write_text(textwrap.dedent('''\
+              import { expect, test } from "bun:test";
+              import { readFileSync } from "node:fs";
 
-          const canvasSource = readFileSync("src/components/cv/CvCanvas.tsx", "utf8");
-          const routeSource = readFileSync("src/routes/lebenslauf.tsx", "utf8");
+              const canvasSource = readFileSync("src/components/cv/CvCanvas.tsx", "utf8");
+              const routeSource = readFileSync("src/routes/lebenslauf.tsx", "utf8");
 
-          test("CvCanvas is the single live CV template-theme authority before pagination", () => {
-            expect(canvasSource).toContain("useInsertionEffect(() => {");
-            expect(canvasSource).toContain("applyDossierTheme(design.template);");
-            expect(canvasSource.indexOf("useInsertionEffect(() => {")).toBeLessThan(
-              canvasSource.indexOf("useLayoutEffect(() => {")
-            );
-            expect(routeSource).not.toContain('import { applyDossierTheme } from "@/lib/dossier-theme";');
-            expect(routeSource).not.toContain("applyDossierTheme(design.template);");
-          });
-          ''')
+              test("CvCanvas is the single live CV template-theme authority before pagination", () => {
+                expect(canvasSource).toContain("useInsertionEffect(() => {");
+                expect(canvasSource).toContain("applyDossierTheme(design.template);");
+                expect(canvasSource.indexOf("useInsertionEffect(() => {")).toBeLessThan(
+                  canvasSource.indexOf("useLayoutEffect(() => {")
+                );
+                expect(routeSource).not.toContain('import { applyDossierTheme } from "@/lib/dossier-theme";');
+                expect(routeSource).not.toContain("applyDossierTheme(design.template);");
+              });
+          '''))
           PY
 
       - name: Install dependencies
