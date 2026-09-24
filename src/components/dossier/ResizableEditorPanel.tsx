@@ -3,10 +3,10 @@ import { ContextualFieldTypography } from "./ContextualFieldTypography";
 import "./EditorPanelIntro.css";
 
 const STORAGE_KEY = "bewerbungsdossier:editor-panel-width";
-const MIN_WIDTH = 300;
-const MAX_WIDTH = 720;
+const MIN_WIDTH = 220;
+const MAX_WIDTH = 1100;
 const DEFAULT_WIDTH = 380;
-const PREVIEW_MIN_WIDTH = 320;
+const PREVIEW_MIN_WIDTH = 220;
 
 function clampWidth(width: number): number {
   const viewportMaximum =
