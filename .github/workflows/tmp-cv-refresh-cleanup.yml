@@ -1,0 +1,64 @@
+name: Clean CV refresh dependency guard
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - .github/workflows/tmp-cv-refresh-cleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Remove duplicate dependency and redundant guard
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("src/components/cv/CvCanvasBase.tsx")
+          text = path.read_text()
+          old = '''    pal.muted,
+            measuredAt,
+            shape,
+          ]);
+          '''
+          new = '''    pal.muted,
+            measuredAt,
+          ]);
+          '''
+          if text.count(old) != 1:
+              raise SystemExit(f"duplicate trailing shape block: expected 1 match, found {text.count(old)}")
+          text = text.replace(old, new, 1)
+          if text.count("    shape,\n    data,") != 1:
+              raise SystemExit("expected the canonical leading shape dependency to remain exactly once")
+          path.write_text(text)
+          PY
+          rm tests/unit/cv-pagination-shape-invalidation.test.ts
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Focused unit regressions
+        run: bun test tests/unit/cv-refresh-template-scope.test.ts tests/unit/cv-pagination-design-invalidation.test.ts
+      - name: TypeScript
+        run: bun run typecheck
+      - name: Targeted lint
+        run: bunx eslint src/components/cv/CvCanvasBase.tsx src/components/cv/CvCanvas.tsx tests/unit/cv-refresh-template-scope.test.ts
+      - name: Commit clean final tree
+        shell: bash
+        run: |
+          rm .github/workflows/tmp-cv-refresh-cleanup.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/cv/CvCanvasBase.tsx tests/unit/cv-pagination-shape-invalidation.test.ts .github/workflows/tmp-cv-refresh-cleanup.yml
+          git commit -m "chore(cv): remove duplicate refresh dependency"
+          git push origin HEAD:dev
