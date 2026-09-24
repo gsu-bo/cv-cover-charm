@@ -34,6 +34,7 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
   const [customWidth, setCustomWidth] = useState<number | null>(null);
   const [resizing, setResizing] = useState(false);
   const [clientReady, setClientReady] = useState(false);
+  const [formScrolled, setFormScrolled] = useState(false);
 
   useEffect(() => {
     setClientReady(true);
@@ -118,10 +119,12 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
         className={`h-full overscroll-contain overflow-y-auto overflow-x-hidden ${open ? "" : "md:overflow-hidden"}`}
         aria-hidden={!open}
         inert={!open}
+        onScroll={(event) => setFormScrolled(event.currentTarget.scrollTop > 6)}
       >
         <div
           data-editor-panel-toolbar
-          className="sticky top-0 z-40 flex h-10 items-center justify-between border-b border-border/70 bg-background/95 px-3 shadow-[0_1px_0_rgb(15_23_42/0.03)] backdrop-blur supports-[backdrop-filter]:bg-background/85"
+          data-scrolled={formScrolled ? "true" : "false"}
+          className="sticky top-0 z-40 flex h-10 items-center justify-between border-b border-border/70 bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/85"
         >
           <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Formular
