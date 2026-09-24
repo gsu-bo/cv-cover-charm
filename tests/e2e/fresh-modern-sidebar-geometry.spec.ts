@@ -46,6 +46,18 @@ async function applyTemplate(
   await waitEditorReady(page);
 }
 
+async function applyImportedTimGaussMargins(page: Page) {
+  await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "bewerbungsdossier:page-margins:v1",
+      JSON.stringify({ cv: { top: 20, right: 20, bottom: 15.5, left: 54 } }),
+    );
+  });
+  await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
+  await waitEditorReady(page);
+}
+
 async function makeContentRich(page: Page) {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => {
@@ -95,9 +107,7 @@ async function sidebarGeometry(
   exportMode = false,
 ) {
   const cv = page
-    .locator(
-      `main [data-dossier-document='cv'][data-export-mode='${exportMode ? "true" : "false"}']`,
-    )
+    .locator(`[data-dossier-document='cv'][data-export-mode='${exportMode ? "true" : "false"}']`)
     .first();
   await expect(cv).toHaveAttribute("data-cv-template", template);
   await expect(cv).toHaveAttribute("data-cv-layout", "modern");
@@ -123,6 +133,17 @@ async function sidebarGeometry(
     const overlap = mirrored
       ? Math.max(0, mainRect.right - sidebarRect.left)
       : Math.max(0, sidebarRect.right - mainRect.left);
+    const contentRects = Array.from(
+      main.querySelectorAll<HTMLElement>("[data-cv-header], [data-cv-section], [data-cv-entry]"),
+    )
+      .map((element) => element.getBoundingClientRect())
+      .filter((rect) => rect.width > 0 && rect.height > 0);
+    const contentOverlap = contentRects.reduce((worst, rect) => {
+      const candidate = mirrored
+        ? Math.max(0, rect.right - sidebarRect.left)
+        : Math.max(0, sidebarRect.right - rect.left);
+      return Math.max(worst, candidate);
+    }, 0);
 
     return {
       sidebarLeft: sidebarRect.left,
@@ -131,6 +152,7 @@ async function sidebarGeometry(
       mainRight: mainRect.right,
       gap,
       overlap,
+      contentOverlap,
       computedLeft: mainStyle.left,
       computedRight: mainStyle.right,
       rendererLeft: mainStyle.getPropertyValue("--cv-modern-main-left").trim(),
@@ -149,6 +171,10 @@ function expectSidebarClear(
   expect(
     geometry?.overlap ?? Number.POSITIVE_INFINITY,
     `${label}: main column overlaps sidebar: ${JSON.stringify(geometry)}`,
+  ).toBeLessThanOrEqual(2);
+  expect(
+    geometry?.contentOverlap ?? Number.POSITIVE_INFINITY,
+    `${label}: rendered main content crosses into sidebar: ${JSON.stringify(geometry)}`,
   ).toBeLessThanOrEqual(2);
   expect(
     geometry?.gap ?? Number.NEGATIVE_INFINITY,
@@ -185,17 +211,38 @@ test.describe("CV sidebar content clearance", () => {
     }
   });
 
+  test("imported Tim-Gauss page margins cannot pull main content back under a sidebar", async ({
+    page,
+  }) => {
+    for (const template of ["terracotta", "warm2"] as const) {
+      await applyTemplate(page, template, 0.22, "standard");
+      await applyImportedTimGaussMargins(page);
+      expectSidebarClear(
+        await sidebarGeometry(page, template, "standard"),
+        `${template} imported 54mm margin before refresh`,
+      );
+
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await waitEditorReady(page);
+      expectSidebarClear(
+        await sidebarGeometry(page, template, "standard"),
+        `${template} imported 54mm margin after refresh`,
+      );
+    }
+  });
+
   test("content-rich Kolumne keeps the sidebar reservation on page 2+ in preview and export canvas", async ({
     page,
   }) => {
     await applyTemplate(page, "terracotta", 0.3, "standard");
+    await applyImportedTimGaussMargins(page);
     await makeContentRich(page);
 
     const preview = page.locator(
-      "main [data-dossier-document='cv'][data-export-mode='false'] [data-cv-page]",
+      "[data-dossier-document='cv'][data-export-mode='false'] [data-cv-page]",
     );
     const exported = page.locator(
-      "main [data-dossier-document='cv'][data-export-mode='true'] [data-cv-page]",
+      "[data-dossier-document='cv'][data-export-mode='true'] [data-cv-page]",
     );
     expect(await preview.count()).toBeGreaterThan(1);
     expect(await exported.count()).toBeGreaterThan(1);
@@ -237,7 +284,7 @@ test.describe("CV sidebar content clearance", () => {
     await page.goto(`${BASE_URL}/lebenslauf`, { waitUntil: "domcontentloaded" });
     await waitEditorReady(page);
 
-    const cv = page.locator("main [data-dossier-document='cv'][data-export-mode='false']").first();
+    const cv = page.locator("[data-dossier-document='cv'][data-export-mode='false']").first();
     await expect(cv).toHaveAttribute("data-cv-layout", "classic");
     const firstPage = cv.locator('[data-cv-page="0"]');
     await expect(firstPage.locator(":scope > [data-cv-sidebar]")).toHaveCount(0);
