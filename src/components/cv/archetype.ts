@@ -20,7 +20,7 @@ import {
   getDossierPageMargins,
   type DossierPageMargins,
 } from "@/lib/dossier-page-margins";
-import { getCvContinuationGapMm } from "./layout";
+import { getCvContinuationTopMarginMm } from "./layout";
 
 /**
  * Bauformen des Lebenslaufs.
@@ -158,11 +158,11 @@ const SURFACE_PAD = 5;
 const roundHalfMm = (value: number) => Math.round(value * 2) / 2;
 
 /**
- * Page 1 keeps the shared dossier gap. Continuation pages use the CV-only
- * control so they can start higher without changing the motivation letter.
+ * Page 1 keeps the shared dossier gap. From page 2 onward the CV owns one
+ * independent top margin, so no second hidden header-gap value is added.
  */
 function cvChromeForPage(chrome: DossierChromeOptions, pageIndex: number): DossierChromeOptions {
-  return pageIndex > 0 ? { ...chrome, headerGapMm: getCvContinuationGapMm() } : chrome;
+  return pageIndex > 0 ? { ...chrome, headerGapMm: 0 } : chrome;
 }
 
 export function cvPageReserves(
@@ -173,8 +173,7 @@ export function cvPageReserves(
   const headerReserveMm = dossierHeaderVisualHeightMmForOptions(pageChrome, pageIndex);
   return {
     headerReserveMm,
-    headerGapMm:
-      headerReserveMm > 0 ? Math.min(40, Math.max(0, pageChrome.headerGapMm ?? 12)) : 0,
+    headerGapMm: headerReserveMm > 0 ? Math.min(40, Math.max(0, pageChrome.headerGapMm ?? 12)) : 0,
     footerReserveMm: dossierFooterVisualHeightMmForOptions(pageChrome),
   };
 }
@@ -185,6 +184,28 @@ export function cvPageReserves(
  * template-spezifischen Kopf-/Fussbänder ab, sobald deren gemeinsame Zone endet.
  * Seitenspalte, Karte und Rahmen bleiben als eigentliche Bauform erhalten.
  */
+/**
+ * Final readable top edge for CV continuation pages. The user-owned page-2
+ * margin replaces the normal page-1 physical top margin, while visible chrome
+ * and structural card/frame interiors remain hard safety floors.
+ */
+export function cvContinuationContentTopMm(
+  frame: CvFrame,
+  requestedTopMm: number,
+  chrome: DossierChromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
+  pageIndex = 1,
+): number {
+  const pageChrome = cvChromeForPage(chrome, pageIndex);
+  const headerFloor = dossierHeaderVisualHeightMmForOptions(pageChrome, pageIndex);
+  const structuralFloor =
+    frame.id === "card"
+      ? frame.cardInsetMm + 11
+      : frame.id === "quiet" && frame.borderInsetMm > 0
+        ? frame.borderInsetMm + 7
+        : 0;
+  return roundHalfMm(Math.max(0, requestedTopMm, headerFloor, structuralFloor));
+}
+
 export function cvSurface(
   frame: CvFrame,
   pageIndex: number,
@@ -380,13 +401,19 @@ export function cvContentBox(
   const fallback = cvDefaultContentBox(frame, pageIndex, layout, sidebarPct, chrome);
   const custom = getDossierPageMargins("cv");
   const pageMargins = custom ?? cvDefaultPageMargins(frame, pageIndex, layout, sidebarPct, chrome);
-  return (
+  const resolved =
     resolveDossierContentMargins(
       { ...pageMargins, bottom: CV_PAGE_MARGIN_BOTTOM_MM },
       cvSafePageMarginMinimums(frame, pageIndex, layout, sidebarPct, chrome),
       cvPageReserves(chrome, pageIndex),
-    ) ?? fallback
-  );
+    ) ?? fallback;
+
+  if (pageIndex === 0) return resolved;
+
+  return {
+    ...resolved,
+    top: cvContinuationContentTopMm(frame, getCvContinuationTopMarginMm(), chrome, pageIndex),
+  };
 }
 
 /**
