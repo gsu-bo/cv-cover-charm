@@ -766,7 +766,7 @@ function Anschreiben() {
         <button
           type="button"
           onClick={() => setPanelOpen((value) => !value)}
-          className="rounded-md border px-2.5 py-1.5 text-xs font-medium sm:hidden"
+          className="rounded-md border px-2.5 py-1.5 text-xs font-medium md:hidden"
           aria-pressed={panelOpen}
         >
           Formular

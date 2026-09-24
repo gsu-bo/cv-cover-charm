@@ -12,23 +12,20 @@ import {
 
 export type CvPageFitMode = "one" | "two";
 
+/** Legacy key retained only so upgraded clients can remove stale persisted modes. */
 export const CV_PAGE_FIT_STORAGE_KEY = "lebenslauf:page-fit:v1";
 const CV_PAGE_FIT_EVENT = "lebenslauf-page-fit-change";
 
 let runtimePageCount = 0;
 let revision = 0;
+let pendingMode: CvPageFitMode | null = null;
 
-function validMode(value: unknown): value is CvPageFitMode {
-  return value === "one" || value === "two";
-}
-
-function readMode(): CvPageFitMode | null {
-  if (typeof window === "undefined") return null;
+function clearLegacyPageFitStorage() {
+  if (typeof window === "undefined") return;
   try {
-    const value = window.localStorage.getItem(CV_PAGE_FIT_STORAGE_KEY);
-    return validMode(value) ? value : null;
+    window.localStorage.removeItem(CV_PAGE_FIT_STORAGE_KEY);
   } catch {
-    return null;
+    // A blocked storage API must not prevent the in-memory action.
   }
 }
 
@@ -38,24 +35,26 @@ function dispatchChange() {
 }
 
 export function getCvPageFitMode(): CvPageFitMode | null {
-  return readMode();
+  clearLegacyPageFitStorage();
+  return pendingMode;
 }
 
 /**
- * Selecting the active mode again deliberately counts as a new request. This
- * lets a pupil press "1 Seite" or "2 Seiten" once more after manually moving a
- * rubric and get a clean automatic redistribution without a third reset button.
+ * Page-fit is an action, not a saved preference. The requested mode exists
+ * only until the live CV canvas has written the resulting section layout and
+ * typography back into the real CV state.
  */
 export function setCvPageFitMode(mode: CvPageFitMode | null) {
-  if (typeof window !== "undefined") {
-    try {
-      if (mode === null) window.localStorage.removeItem(CV_PAGE_FIT_STORAGE_KEY);
-      else window.localStorage.setItem(CV_PAGE_FIT_STORAGE_KEY, mode);
-    } catch {
-      // The current editor still reacts through the in-memory revision/event.
-    }
-  }
+  clearLegacyPageFitStorage();
+  pendingMode = mode;
   revision += 1;
+  dispatchChange();
+}
+
+/** Consume exactly the request that was applied; newer clicks stay pending. */
+export function consumeCvPageFitMode(mode: CvPageFitMode) {
+  if (pendingMode !== mode) return;
+  pendingMode = null;
   dispatchChange();
 }
 
@@ -77,17 +76,8 @@ export function getCvPageFitPageCount(): number {
 export function subscribeCvPageFit(onChange: () => void) {
   if (typeof window === "undefined") return () => {};
   const local = () => onChange();
-  const storage = (event: StorageEvent) => {
-    if (event.key !== CV_PAGE_FIT_STORAGE_KEY) return;
-    revision += 1;
-    onChange();
-  };
   window.addEventListener(CV_PAGE_FIT_EVENT, local);
-  window.addEventListener("storage", storage);
-  return () => {
-    window.removeEventListener(CV_PAGE_FIT_EVENT, local);
-    window.removeEventListener("storage", storage);
-  };
+  return () => window.removeEventListener(CV_PAGE_FIT_EVENT, local);
 }
 
 const textWeight = (...values: unknown[]) =>

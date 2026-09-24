@@ -1,7 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
-  getCvPageFitMode,
   getCvPageFitPageCount,
   setCvPageFitMode,
   subscribeCvPageFit,
@@ -30,12 +29,11 @@ function findOrCreateHost(): HTMLElement | null {
 }
 
 /**
- * The page-fit actions belong with the other whole-layout actions in the editor
- * menu, not with fine page geometry. The menu itself is route-owned and only
- * exists while open, so this small portal attaches to its current DOM instance.
+ * Whole-document page-fit actions live beside the other global layout actions.
+ * They are buttons, not toggles: the result is written into the CV and the
+ * transient request is forgotten immediately afterwards.
  */
 export function CvPageFitMenuPortal() {
-  const mode = useSyncExternalStore(subscribeCvPageFit, getCvPageFitMode, () => null);
   const pageCount = useSyncExternalStore(subscribeCvPageFit, getCvPageFitPageCount, () => 0);
   const [host, setHost] = useState<HTMLElement | null>(null);
 
@@ -49,24 +47,16 @@ export function CvPageFitMenuPortal() {
 
   if (!host) return null;
 
-  const action = (next: CvPageFitMode, label: string) => {
-    const active = mode === next;
-    return (
-      <button
-        type="button"
-        data-cv-page-fit-mode-control={next}
-        aria-pressed={active}
-        onClick={() => setCvPageFitMode(next)}
-        className={`rounded-md border px-2 py-2 text-xs font-semibold transition ${
-          active
-            ? "border-primary bg-primary text-primary-foreground"
-            : "border-input bg-background hover:bg-accent"
-        }`}
-      >
-        {label}
-      </button>
-    );
-  };
+  const action = (next: CvPageFitMode, label: string) => (
+    <button
+      type="button"
+      data-cv-page-fit-mode-control={next}
+      onClick={() => setCvPageFitMode(next)}
+      className="rounded-md border border-input bg-background px-2 py-2 text-xs font-semibold transition hover:bg-accent"
+    >
+      {label}
+    </button>
+  );
 
   return createPortal(
     <div data-cv-page-fit-control className="border-t bg-muted/20 p-2">
