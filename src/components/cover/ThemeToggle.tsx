@@ -1,23 +1,13 @@
-import { useEffect, useState } from "react";
-import "./ThemeToggle.css";
-
-type ThemeMode = "light" | "grey" | "dark";
-
-const THEME_ORDER: ThemeMode[] = ["light", "grey", "dark"];
-const THEME_LABELS: Record<ThemeMode, string> = {
-  light: "Hell",
-  grey: "Grau",
-  dark: "Dunkel",
-};
-
-function isThemeMode(value: string | null): value is ThemeMode {
-  return value === "light" || value === "grey" || value === "dark";
-}
-
-function nextTheme(mode: ThemeMode): ThemeMode {
-  const index = THEME_ORDER.indexOf(mode);
-  return THEME_ORDER[(index + 1) % THEME_ORDER.length];
-}
+import { useSyncExternalStore } from "react";
+import {
+  THEME_LABELS,
+  getServerThemeSnapshot,
+  getThemeSnapshot,
+  nextTheme,
+  setThemeMode,
+  subscribeTheme,
+  type ThemeMode,
+} from "@/lib/app-theme";
 
 function ThemeIcon({ mode }: { mode: ThemeMode }) {
   if (mode === "light") {
@@ -75,38 +65,17 @@ function ThemeIcon({ mode }: { mode: ThemeMode }) {
 }
 
 export function ThemeToggle() {
-  const [mode, setMode] = useState<ThemeMode>("light");
-
-  useEffect(() => {
-    const stored = localStorage.getItem("theme");
-    const preferred: ThemeMode = isThemeMode(stored)
-      ? stored
-      : window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-    setMode(preferred);
-  }, []);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle("dark", mode === "dark");
-    root.classList.toggle("grey", mode === "grey");
-    root.dataset.themeMode = mode;
-  }, [mode]);
-
+  const mode = useSyncExternalStore(subscribeTheme, getThemeSnapshot, getServerThemeSnapshot);
   const next = nextTheme(mode);
-  const cycleTheme = () => {
-    setMode(next);
-    localStorage.setItem("theme", next);
-  };
 
   // Ein Button, drei Darstellungen: Hell → Grau → Dunkel → Hell.
+  // Initialisierung und DOM-Klassen gehören bewusst in die zentrale Theme-Schicht.
   return (
     <button
       type="button"
       data-editor-theme-toggle
       data-theme-mode={mode}
-      onClick={cycleTheme}
+      onClick={() => setThemeMode(next)}
       aria-label={`Darstellung ${THEME_LABELS[mode]}. Zu ${THEME_LABELS[next]} wechseln`}
       title={`Darstellung: ${THEME_LABELS[mode]} · nächster Klick: ${THEME_LABELS[next]}`}
       className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-input text-foreground transition-[background-color,border-color,color,box-shadow] hover:border-foreground/20 hover:bg-accent hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-9 sm:w-9"
