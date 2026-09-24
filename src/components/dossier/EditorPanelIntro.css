@@ -8,6 +8,33 @@
   scrollbar-gutter: stable;
 }
 
+[data-editor-panel-toolbar] {
+  box-shadow:
+    0 1px 0 rgb(15 23 42 / 0.045),
+    0 5px 14px rgb(15 23 42 / 0.045);
+}
+
+[data-editor-panel-toolbar] button {
+  border-color: color-mix(in srgb, var(--color-border) 72%, transparent);
+  background: color-mix(in srgb, var(--color-background) 92%, var(--color-muted));
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+[data-editor-panel-toolbar] button:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 26%, var(--color-border));
+  box-shadow: 0 2px 7px rgb(15 23 42 / 0.075);
+}
+
+.dark [data-editor-panel-toolbar] {
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.035),
+    0 6px 16px rgb(0 0 0 / 0.16);
+}
+
+.dark [data-editor-panel-toolbar] button {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.22);
+}
+
 /* The three routes historically used slightly different wrapper widths,
  * desktop padding and bottom spacing. The shared panel now owns those values.
  */
