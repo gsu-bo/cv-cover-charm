@@ -29,54 +29,58 @@ jobs:
           path = Path('src/components/cv/CvCanvasBase.tsx')
           text = path.read_text()
 
-          old = '''  const adresse = [p.adresse, p.plzOrt].filter(Boolean).join(" · ");
-          const kontakt = [p.telefon, p.email].filter(Boolean).join(" · ");
-          const kontaktZeilen = [adresse, kontakt].filter(Boolean);
-          '''
-          new = '''  const contactPairs = [
-            { key: "address", left: p.adresse, right: p.plzOrt },
-            { key: "contact", left: p.telefon, right: p.email },
-          ].filter(({ left, right }) => Boolean(left || right));
-          '''
+          old = '\n'.join([
+              '  const adresse = [p.adresse, p.plzOrt].filter(Boolean).join(" · ");',
+              '  const kontakt = [p.telefon, p.email].filter(Boolean).join(" · ");',
+              '  const kontaktZeilen = [adresse, kontakt].filter(Boolean);',
+          ]) + '\n'
+          new = '\n'.join([
+              '  const contactPairs = [',
+              '    { key: "address", left: p.adresse, right: p.plzOrt },',
+              '    { key: "contact", left: p.telefon, right: p.email },',
+              '  ].filter(({ left, right }) => Boolean(left || right));',
+          ]) + '\n'
           if old not in text:
               raise SystemExit('contact source block not found')
           text = text.replace(old, new, 1)
 
-          anchor = '''  const personalInfoGridStyle = personalInfoAligned
-            ? { display: "grid", gridTemplateColumns: "max-content minmax(0, 1fr)", columnGap: "2.5mm" }
-            : undefined;
-          '''
-          helper = '''  const personalInfoGridStyle = personalInfoAligned
-            ? { display: "grid", gridTemplateColumns: "max-content minmax(0, 1fr)", columnGap: "2.5mm" }
-            : undefined;
-          const contactRows = () =>
-            contactPairs.map(({ key, left, right }) => {
-              if (personalInfoAligned) {
-                if (left && right) {
-                  return (
-                    <Fragment key={key}>
-                      <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{left}</span>
-                      <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{right}</span>
-                    </Fragment>
-                  );
-                }
-                return (
-                  <div
-                    key={key}
-                    style={{ gridColumn: "1 / -1", minWidth: 0, overflowWrap: "anywhere" }}
-                  >
-                    {left || right}
-                  </div>
-                );
-              }
-              return (
-                <div key={key} style={{ display: "flex", flexWrap: "wrap", columnGap: "2.5mm" }}>
-                  {left && <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{left}</span>}
-                  {right && <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{right}</span>}
-                </div>
-              );
-            });
-          '''
+          anchor = '\n'.join([
+              '  const personalInfoGridStyle = personalInfoAligned',
+              '    ? { display: "grid", gridTemplateColumns: "max-content minmax(0, 1fr)", columnGap: "2.5mm" }',
+              '    : undefined;',
+          ]) + '\n'
+          helper = '\n'.join([
+              '  const personalInfoGridStyle = personalInfoAligned',
+              '    ? { display: "grid", gridTemplateColumns: "max-content minmax(0, 1fr)", columnGap: "2.5mm" }',
+              '    : undefined;',
+              '  const contactRows = () =>',
+              '    contactPairs.map(({ key, left, right }) => {',
+              '      if (personalInfoAligned) {',
+              '        if (left && right) {',
+              '          return (',
+              '            <Fragment key={key}>',
+              '              <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{left}</span>',
+              '              <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{right}</span>',
+              '            </Fragment>',
+              '          );',
+              '        }',
+              '        return (',
+              '          <div',
+              '            key={key}',
+              '            style={{ gridColumn: "1 / -1", minWidth: 0, overflowWrap: "anywhere" }}',
+              '          >',
+              '            {left || right}',
+              '          </div>',
+              '        );',
+              '      }',
+              '      return (',
+              '        <div key={key} style={{ display: "flex", flexWrap: "wrap", columnGap: "2.5mm" }}>',
+              '          {left && <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{left}</span>}',
+              '          {right && <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{right}</span>}',
+              '        </div>',
+              '      );',
+              '    });',
+          ]) + '\n'
           if anchor not in text:
               raise SystemExit('personal info grid anchor not found')
           text = text.replace(anchor, helper, 1)
@@ -84,19 +88,15 @@ jobs:
           text = text.replace('kontaktZeilen.length', 'contactPairs.length')
 
           old_map_line = '{kontaktZeilen.map((line) => <div key={line} style={{ overflowWrap: "anywhere" }}>{line}</div>)}'
-          count_line = text.count(old_map_line)
-          if count_line != 2:
-              raise SystemExit(f'expected 2 line-map occurrences, found {count_line}')
+          if text.count(old_map_line) != 2:
+              raise SystemExit(f'expected 2 line-map occurrences, found {text.count(old_map_line)}')
           text = text.replace(old_map_line, '{contactRows()}')
 
           old_map_k = '{kontaktZeilen.map((k) => <div key={k} style={{ overflowWrap: "anywhere" }}>{k}</div>)}'
-          count_k = text.count(old_map_k)
-          if count_k != 1:
-              raise SystemExit(f'expected 1 k-map occurrence, found {count_k}')
+          if text.count(old_map_k) != 1:
+              raise SystemExit(f'expected 1 k-map occurrence, found {text.count(old_map_k)}')
           text = text.replace(old_map_k, '{contactRows()}')
 
-          # The standalone Kontakt rubric needs its own grid wrapper; the two header
-          # variants already have a dedicated contact div we can turn into the grid.
           standalone = '{contactRows()}\n            {angaben.length > 0 && <div data-cv-muted style={{ marginTop: "1mm", color: pal.muted, ...personalInfoGridStyle }}>{personalInfoRows()}</div>}'
           standalone_new = '{contactPairs.length > 0 && <div style={personalInfoGridStyle}>{contactRows()}</div>}\n            {angaben.length > 0 && <div data-cv-muted style={{ marginTop: "1mm", color: pal.muted, ...personalInfoGridStyle }}>{personalInfoRows()}</div>}'
           if standalone not in text:
