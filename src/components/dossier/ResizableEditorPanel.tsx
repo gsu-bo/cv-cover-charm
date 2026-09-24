@@ -57,6 +57,18 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  useEffect(() => {
+    if (!resizing) return;
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    return () => {
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+    };
+  }, [resizing]);
+
   const applyWidth = (width: number, persist = false) => {
     const next = clampWidth(width);
     widthRef.current = next;
@@ -80,6 +92,7 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
     customWidth === null
       ? "md:w-[320px] lg:w-[380px] xl:w-[420px] 2xl:w-[460px]"
       : "md:w-[var(--editor-panel-width)]";
+  const currentWidth = customWidth ?? DEFAULT_WIDTH;
 
   return (
     <div
@@ -111,14 +124,18 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
         <div
           role="separator"
           data-editor-panel-resize-handle
+          data-resizing={resizing ? "true" : "false"}
           aria-label="Formularbreite ändern"
           aria-orientation="vertical"
           aria-valuemin={MIN_WIDTH}
           aria-valuemax={MAX_WIDTH}
-          aria-valuenow={customWidth ?? DEFAULT_WIDTH}
+          aria-valuenow={currentWidth}
+          aria-valuetext={`Formularbreite ${currentWidth} Pixel`}
           tabIndex={0}
-          title="Mit Maus oder Touch ziehen · Doppelklick zum Zurücksetzen"
-          className="group absolute inset-y-0 right-0 z-30 hidden w-6 translate-x-1/2 cursor-col-resize touch-none items-center justify-center outline-none md:flex"
+          title="Ziehen zum Anpassen · Doppelklick: Standard · Pfeile: fein · Shift + Pfeile: grob"
+          className={`group absolute inset-y-0 right-0 z-30 hidden w-8 translate-x-1/2 cursor-col-resize touch-none items-center justify-center outline-none transition-colors md:flex ${
+            resizing ? "bg-primary/10" : "hover:bg-primary/5 focus-visible:bg-primary/5"
+          }`}
           onDoubleClick={resetWidth}
           onPointerDown={(event) => {
             if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -160,13 +177,33 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
             event.preventDefault();
             const current =
               customWidth ?? panelRef.current?.getBoundingClientRect().width ?? DEFAULT_WIDTH;
-            applyWidth(current + (event.key === "ArrowRight" ? 20 : -20), true);
+            const step = event.shiftKey ? 50 : 20;
+            applyWidth(current + (event.key === "ArrowRight" ? step : -step), true);
           }}
         >
-          <span className="h-16 w-1.5 rounded-full bg-border transition-colors group-hover:bg-primary group-focus:bg-primary group-active:bg-primary" />
+          <span
+            aria-hidden
+            className={`absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors ${
+              resizing ? "bg-primary/60" : "bg-border/70 group-hover:bg-primary/35 group-focus-visible:bg-primary/35"
+            }`}
+          />
+          <span
+            aria-hidden
+            className={`relative flex h-16 w-3 items-center justify-center rounded-full border bg-background shadow-sm transition-all ${
+              resizing
+                ? "scale-110 border-primary shadow-md"
+                : "border-border group-hover:border-primary/70 group-hover:shadow-md group-focus-visible:border-primary/70"
+            }`}
+          >
+            <span className="flex h-7 flex-col justify-between">
+              <span className="h-1 w-1 rounded-full bg-muted-foreground/70" />
+              <span className="h-1 w-1 rounded-full bg-muted-foreground/70" />
+              <span className="h-1 w-1 rounded-full bg-muted-foreground/70" />
+            </span>
+          </span>
           {resizing && customWidth !== null ? (
-            <span className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-2 py-1 text-[10px] font-medium text-background shadow-lg">
-              Formular: {customWidth} px
+            <span className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 whitespace-nowrap rounded-md border bg-background px-2.5 py-1 text-[11px] font-semibold text-foreground shadow-lg">
+              Formular {customWidth} px
             </span>
           ) : null}
         </div>
