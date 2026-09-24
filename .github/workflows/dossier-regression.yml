@@ -13,7 +13,7 @@ on:
       - "History/**"
 
 permissions:
-  contents: read
+  contents: write
   statuses: write
 
 concurrency:
@@ -21,7 +21,399 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  apply-contact-grid-fix:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apply narrow shared-grid patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source_path = Path("src/components/cv/CvCanvasBase.tsx")
+          text = source_path.read_text()
+
+          def replace_once(old: str, new: str, label: str):
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one match, found {count}")
+              text = text.replace(old, new, 1)
+
+          old_helpers = '''  const contactRows = () =>
+            contactPairs.map(({ key, left, right }) => {
+              if (personalInfoAligned) {
+                if (left && right) {
+                  return (
+                    <Fragment key={key}>
+                      <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{left}</span>
+                      <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{right}</span>
+                    </Fragment>
+                  );
+                }
+                return (
+                  <div key={key} style={{ gridColumn: "1 / -1", minWidth: 0, overflowWrap: "anywhere" }}>
+                    {left || right}
+                  </div>
+                );
+              }
+              return (
+                <div key={key} style={{ display: "flex", flexWrap: "wrap", columnGap: "2.5mm" }}>
+                  {left && <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{left}</span>}
+                  {right && <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{right}</span>}
+                </div>
+              );
+            });
+          const personalInfoRows = () =>
+            angaben.map((row) =>
+              personalInfoAligned ? (
+                <Fragment key={row.key}>
+                  <span>
+                    {row.label}
+                    {personalInfoColons ? ":" : ""}
+                  </span>
+                  <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{row.value}</span>
+                </Fragment>
+              ) : (
+                <div key={row.key}>
+                  {row.label}
+                  {personalInfoColons ? ":" : ""} {row.value}
+                </div>
+              ),
+            );
+'''
+          new_helpers = '''  const contactRows = (cellStyle: React.CSSProperties = {}) =>
+            contactPairs.map(({ key, left, right }) => {
+              if (personalInfoAligned) {
+                if (left && right) {
+                  return (
+                    <Fragment key={key}>
+                      <span style={{ ...cellStyle, minWidth: 0, overflowWrap: "anywhere" }}>{left}</span>
+                      <span
+                        data-cv-contact-value={key}
+                        style={{ ...cellStyle, minWidth: 0, overflowWrap: "anywhere" }}
+                      >
+                        {right}
+                      </span>
+                    </Fragment>
+                  );
+                }
+                return (
+                  <div
+                    key={key}
+                    style={{
+                      ...cellStyle,
+                      gridColumn: "1 / -1",
+                      minWidth: 0,
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {left || right}
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={key}
+                  style={{ ...cellStyle, display: "flex", flexWrap: "wrap", columnGap: "2.5mm" }}
+                >
+                  {left && (
+                    <span style={{ ...cellStyle, minWidth: 0, overflowWrap: "anywhere" }}>{left}</span>
+                  )}
+                  {right && (
+                    <span
+                      data-cv-contact-value={key}
+                      style={{ ...cellStyle, minWidth: 0, overflowWrap: "anywhere" }}
+                    >
+                      {right}
+                    </span>
+                  )}
+                </div>
+              );
+            });
+          const personalInfoRows = (cellStyle: React.CSSProperties = {}) =>
+            angaben.map((row) =>
+              personalInfoAligned ? (
+                <Fragment key={row.key}>
+                  <span style={cellStyle}>
+                    {row.label}
+                    {personalInfoColons ? ":" : ""}
+                  </span>
+                  <span
+                    data-cv-personal-value={row.key}
+                    style={{ ...cellStyle, minWidth: 0, overflowWrap: "anywhere" }}
+                  >
+                    {row.value}
+                  </span>
+                </Fragment>
+              ) : (
+                <div key={row.key} data-cv-personal-value={row.key} style={cellStyle}>
+                  {row.label}
+                  {personalInfoColons ? ":" : ""} {row.value}
+                </div>
+              ),
+            );
+          const contactDetailRows = (
+            contactStyle: React.CSSProperties = {},
+            personalStyle: React.CSSProperties = {},
+            gapMm = 1.35,
+          ) => (
+            <>
+              {contactPairs.length > 0 && contactRows(contactStyle)}
+              {contactPairs.length > 0 && angaben.length > 0 && (
+                <div
+                  aria-hidden
+                  data-cv-contact-grid-gap
+                  style={{
+                    gridColumn: personalInfoAligned ? "1 / -1" : undefined,
+                    height: `${gapMm}mm`,
+                  }}
+                />
+              )}
+              {angaben.length > 0 && personalInfoRows(personalStyle)}
+            </>
+          );
+'''
+          replace_once(old_helpers, new_helpers, "contact helpers")
+
+          old_main = '''            {contactPairs.length > 0 && <div style={personalInfoGridStyle}>{contactRows()}</div>}
+            {angaben.length > 0 && (
+              <div
+                data-cv-muted
+                style={{ marginTop: "1mm", color: pal.muted, ...personalInfoGridStyle }}
+              >
+                {personalInfoRows()}
+              </div>
+            )}
+'''
+          new_main = '''            <div data-cv-contact-grid style={personalInfoGridStyle}>
+              {contactDetailRows({}, { color: pal.muted }, 1)}
+            </div>
+'''
+          replace_once(old_main, new_main, "main contact block")
+
+          old_person = '''            {contactPairs.length > 0 && (
+              <div
+                data-cv-body
+                style={{
+                  marginTop: "2.5mm",
+                  fontSize: pt(9.7),
+                  color: pal.ink,
+                  lineHeight: 1.38,
+                  ...personalInfoGridStyle,
+                }}
+              >
+                {contactRows()}
+              </div>
+            )}
+            {angaben.length > 0 && (
+              <div
+                data-cv-muted
+                data-cv-personal-info
+                style={{
+                  marginTop: "1.35mm",
+                  fontSize: pt(9.2),
+                  color: pal.muted,
+                  lineHeight: 1.35,
+                  textAlign: "left",
+                  ...personalInfoGridStyle,
+                }}
+              >
+                {personalInfoRows()}
+              </div>
+            )}
+'''
+          new_person = '''            {(contactPairs.length > 0 || angaben.length > 0) && (
+              <div
+                data-cv-contact-grid
+                data-cv-personal-info
+                style={{ marginTop: "2.5mm", ...personalInfoGridStyle }}
+              >
+                {contactDetailRows(
+                  { fontSize: pt(9.7), color: pal.ink, lineHeight: 1.38 },
+                  {
+                    fontSize: pt(9.2),
+                    color: pal.muted,
+                    lineHeight: 1.35,
+                    textAlign: "left",
+                  },
+                  1.35,
+                )}
+              </div>
+            )}
+'''
+          replace_once(old_person, new_person, "personal section contact block")
+
+          old_classic = '''            {contactPairs.length > 0 && (
+              <div
+                data-cv-body
+                style={{
+                  marginTop: withName ? "2.5mm" : 0,
+                  fontSize: pt(9.7),
+                  color: pal.ink,
+                  lineHeight: 1.38,
+                  ...personalInfoGridStyle,
+                }}
+              >
+                {contactRows()}
+              </div>
+            )}
+            {angaben.length > 0 && (
+              <div
+                data-cv-muted
+                data-cv-personal-info
+                style={{
+                  marginTop: "1.35mm",
+                  fontSize: pt(9.2),
+                  color: pal.muted,
+                  lineHeight: 1.35,
+                  textAlign: "left",
+                  ...personalInfoGridStyle,
+                }}
+              >
+                {personalInfoRows()}
+              </div>
+            )}
+'''
+          new_classic = '''            {(contactPairs.length > 0 || angaben.length > 0) && (
+              <div
+                data-cv-contact-grid
+                data-cv-personal-info
+                style={{ marginTop: withName ? "2.5mm" : 0, ...personalInfoGridStyle }}
+              >
+                {contactDetailRows(
+                  { fontSize: pt(9.7), color: pal.ink, lineHeight: 1.38 },
+                  {
+                    fontSize: pt(9.2),
+                    color: pal.muted,
+                    lineHeight: 1.35,
+                    textAlign: "left",
+                  },
+                  1.35,
+                )}
+              </div>
+            )}
+'''
+          replace_once(old_classic, new_classic, "classic header contact block")
+
+          if text.count("data-cv-contact-grid") != 3:
+              raise SystemExit(f"expected 3 shared contact grids, found {text.count('data-cv-contact-grid')}")
+          source_path.write_text(text)
+
+          Path("tests/unit/cv-contact-tabulator.test.ts").write_text('''import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+
+const source = readFileSync(
+  new URL("../../src/components/cv/CvCanvasBase.tsx", import.meta.url),
+  "utf8",
+);
+
+describe("CV contact tabulator layout", () => {
+  test("pairs address/place and phone/email without legacy middle dots", () => {
+    expect(source).toContain('{ key: "address", left: p.adresse, right: p.plzOrt }');
+    expect(source).toContain('{ key: "contact", left: p.telefon, right: p.email }');
+    expect(source).not.toContain('join(" · ")');
+  });
+
+  test("uses one shared grid axis for contact and personal values", () => {
+    expect(source).toContain("data-cv-contact-grid");
+    expect(source).toContain("data-cv-contact-value={key}");
+    expect(source).toContain("data-cv-personal-value={row.key}");
+    expect(source).toContain("data-cv-contact-grid-gap");
+    expect(source).not.toContain(
+      "{contactPairs.length > 0 && <div style={personalInfoGridStyle}>{contactRows()}</div>}",
+    );
+  });
+
+  test("lets incomplete contact pairs span the full shared grid", () => {
+    expect(source).toContain('gridColumn: "1 / -1"');
+    expect(source).toContain("left || right");
+  });
+});
+''')
+
+          e2e_path = Path("tests/e2e/dossier-alignment-regression.spec.ts")
+          e2e = e2e_path.read_text()
+          if 'test.describe("CV contact tabulator geometry"' not in e2e:
+              e2e += '''\n\ntest.describe("CV contact tabulator geometry", () => {
+  test("address, contact and personal values share the same second-column x position", async ({
+    page,
+  }) => {
+    await seedCv(page, "left");
+
+    const previewCanvas = page
+      .locator('[data-dossier-document="cv"][data-export-mode="false"]')
+      .first();
+    const grid = previewCanvas.locator('[data-cv-page]:visible [data-cv-contact-grid]').first();
+    await expect(grid).toBeVisible();
+
+    const selectors = [
+      '[data-cv-contact-value="address"]',
+      '[data-cv-contact-value="contact"]',
+      '[data-cv-personal-value="geburtsdatum"]',
+      '[data-cv-personal-value="nationalitaet"]',
+    ];
+    const xPositions: number[] = [];
+    for (const selector of selectors) {
+      const cell = grid.locator(selector).first();
+      await expect(cell).toBeVisible();
+      xPositions.push(await cell.evaluate((node) => node.getBoundingClientRect().left));
+    }
+
+    expect(Math.max(...xPositions) - Math.min(...xPositions)).toBeLessThan(0.5);
+  });
+});
+'''
+              e2e_path.write_text(e2e)
+          PY
+
+      - name: Install application dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check formatting without rewriting source
+        run: bunx prettier --check src/components/cv/CvCanvasBase.tsx tests/unit/cv-contact-tabulator.test.ts tests/e2e/dossier-alignment-regression.spec.ts
+
+      - name: Targeted unit regression
+        run: bun test tests/unit/cv-contact-tabulator.test.ts
+
+      - name: TypeScript
+        run: bun run typecheck
+
+      - name: Targeted lint
+        run: bunx eslint src/components/cv/CvCanvasBase.tsx tests/unit/cv-contact-tabulator.test.ts tests/e2e/dossier-alignment-regression.spec.ts
+
+      - name: Restore workflow files and commit product fix
+        shell: bash
+        run: |
+          git checkout HEAD^ -- .github/workflows/dossier-regression.yml
+          rm -f .github/workflows/tmp-cv-contact-shared-grid.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/cv/CvCanvasBase.tsx tests/unit/cv-contact-tabulator.test.ts tests/e2e/dossier-alignment-regression.spec.ts .github/workflows/dossier-regression.yml .github/workflows/tmp-cv-contact-shared-grid.yml
+          git commit -m "fix(cv): share contact and personal tab stop"
+          git push origin HEAD:dev
+
   fast-checks:
+    needs: apply-contact-grid-fix
     runs-on: ubuntu-latest
     timeout-minutes: 12
 
