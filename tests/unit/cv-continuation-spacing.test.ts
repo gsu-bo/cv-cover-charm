@@ -36,6 +36,18 @@ describe("CV continuation page top margin", () => {
     );
   });
 
+  test("allows a true 0 mm start when no continuation header or frame needs protection", () => {
+    const chrome = {
+      ...DEFAULT_DOSSIER_CHROME_OPTIONS,
+      headerMode: "none" as const,
+      headerDifferentFirstPage: true,
+      headerGapMm: 0,
+    };
+
+    expect(cvContinuationContentTopMm(cvFrameFor("brief"), 0, chrome, 1)).toBe(0);
+    expect(cvContinuationContentTopMm(cvFrameFor("brief"), 40, chrome, 1)).toBe(40);
+  });
+
   test("allows 0–40 mm while keeping visible continuation chrome protected", () => {
     expect(CV_CONTINUATION_TOP_MARGIN_MIN_MM).toBe(0);
     expect(CV_CONTINUATION_TOP_MARGIN_MAX_MM).toBe(40);
