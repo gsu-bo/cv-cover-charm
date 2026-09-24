@@ -65,9 +65,10 @@ export function Section({
     <section
       data-editor-section
       data-editor-section-title={title}
+      data-editor-section-open={open ? "true" : "false"}
       data-form-group={group}
       data-editor-rubric-tone={isRubric ? "auto" : undefined}
-      className="overflow-hidden rounded-lg border bg-background"
+      className="relative overflow-hidden rounded-xl border bg-background transition-[border-color,box-shadow,background-color] duration-200"
     >
       <div data-editor-section-header className="flex items-center gap-2 pr-2 sm:pr-3">
         <button
@@ -76,38 +77,38 @@ export function Section({
           onClick={onToggle}
           aria-expanded={open}
           aria-controls={id}
-          className="flex min-h-11 min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left hover:bg-accent/35 sm:px-4 sm:py-3"
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-accent/35 sm:px-4 sm:py-3"
         >
           {marker ? (
             <span
               data-form-group-marker
               aria-hidden="true"
-              className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground"
+              className="shrink-0 rounded-full border border-border/70 bg-muted/70 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground"
             >
               {marker}
             </span>
           ) : null}
           <svg
-            width="10"
-            height="10"
+            width="11"
+            height="11"
             viewBox="0 0 12 12"
             aria-hidden="true"
-            className={`shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`}
+            className={`shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-90" : ""}`}
           >
             <path
               d="M4 2.5l4 3.5-4 3.5"
               fill="none"
               stroke="currentColor"
-              strokeWidth="1.6"
+              strokeWidth="1.7"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           </svg>
-          <span className="min-w-0 whitespace-normal break-words text-xs font-semibold uppercase leading-tight tracking-wider text-muted-foreground sm:text-sm">
+          <span className="min-w-0 whitespace-normal break-words text-sm font-semibold leading-tight tracking-tight text-foreground/90">
             {title}
           </span>
           {hint && (
-            <span className="ml-auto shrink-0 text-[11px] font-normal normal-case text-muted-foreground/70 sm:text-xs">
+            <span className="ml-auto shrink-0 rounded-full border border-border/60 bg-muted/55 px-2 py-0.5 text-[10px] font-medium normal-case text-muted-foreground sm:text-[11px]">
               {hint}
             </span>
           )}
@@ -115,7 +116,11 @@ export function Section({
         {action}
       </div>
       {open && (
-        <div id={id} data-editor-section-body className="border-t px-3 py-3 sm:px-4 sm:py-4">
+        <div
+          id={id}
+          data-editor-section-body
+          className="border-t border-border/70 px-3 py-3 sm:px-4 sm:py-4"
+        >
           {children}
         </div>
       )}
