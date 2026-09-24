@@ -1,9 +1,10 @@
 import {
   CV_CONTINUATION_GAP_STORAGE_KEY,
+  CV_CONTINUATION_TOP_MARGIN_STORAGE_KEY,
   CV_INFO_POSITION_STORAGE_KEY,
-  normalizeCvContinuationGapMm,
+  normalizeCvContinuationTopMarginMm,
   normalizeCvSectionGapMm,
-  setCvContinuationGapMm,
+  setCvContinuationTopMarginMm,
   setCvInfoPosition,
   setCvLayout,
   setCvLayoutMirror,
@@ -38,7 +39,8 @@ const LAYOUT_KEY = "lebenslauf:layout:v1";
 const MIRROR_KEY = "lebenslauf:layout-mirror:v1";
 const INFO_POSITION_KEY = CV_INFO_POSITION_STORAGE_KEY;
 const SECTION_GAP_KEY = "lebenslauf:section-gap:v1";
-const CONTINUATION_GAP_KEY = CV_CONTINUATION_GAP_STORAGE_KEY;
+const CONTINUATION_TOP_MARGIN_KEY = CV_CONTINUATION_TOP_MARGIN_STORAGE_KEY;
+const LEGACY_CONTINUATION_GAP_KEY = CV_CONTINUATION_GAP_STORAGE_KEY;
 const PLACEMENT_KEY = "lebenslauf:placement:v1";
 const PHOTO_KEY = "lebenslauf:photo:v2";
 const PHOTO_PLACEMENT_KEY = "lebenslauf:photo-place:v1";
@@ -48,7 +50,8 @@ const PORTABLE_CV_STORAGE_KEYS = [
   MIRROR_KEY,
   INFO_POSITION_KEY,
   SECTION_GAP_KEY,
-  CONTINUATION_GAP_KEY,
+  CONTINUATION_TOP_MARGIN_KEY,
+  LEGACY_CONTINUATION_GAP_KEY,
   PLACEMENT_KEY,
   PHOTO_KEY,
   PHOTO_PLACEMENT_KEY,
@@ -65,6 +68,8 @@ export type PortableCvState = {
   mirrored?: boolean;
   infoPosition?: CvInfoPosition;
   sectionGapMm?: number;
+  continuationTopMarginMm?: number;
+  /** Legacy field accepted when opening project files created before this control was renamed. */
   continuationGapMm?: number;
   placements?: Partial<CvPlacements>;
   photoStyle?: Partial<DossierPhotoStyle>;
@@ -104,14 +109,17 @@ export function readPortableCvState(): PortableCvState | undefined {
         ? infoPositionRaw
         : undefined;
     const sectionGapRaw = storage.getItem(SECTION_GAP_KEY);
-    const continuationGapRaw = storage.getItem(CONTINUATION_GAP_KEY);
+    const continuationTopMarginRaw =
+      storage.getItem(CONTINUATION_TOP_MARGIN_KEY) ?? storage.getItem(LEGACY_CONTINUATION_GAP_KEY);
     const placementsRaw = storage.getItem(PLACEMENT_KEY);
     const photoRaw = storage.getItem(PHOTO_KEY);
     const photoPlacementRaw = storage.getItem(PHOTO_PLACEMENT_KEY);
     const textAlign = readPersistedCvTextAlignment();
     const sectionGapMm = sectionGapRaw === null ? null : normalizeCvSectionGapMm(sectionGapRaw);
-    const continuationGapMm =
-      continuationGapRaw === null ? undefined : normalizeCvContinuationGapMm(continuationGapRaw);
+    const continuationTopMarginMm =
+      continuationTopMarginRaw === null
+        ? undefined
+        : normalizeCvContinuationTopMarginMm(continuationTopMarginRaw);
 
     let placements: CvPlacements | undefined;
     if (placementsRaw) {
@@ -157,7 +165,7 @@ export function readPortableCvState(): PortableCvState | undefined {
       ...(mirroredRaw !== null ? { mirrored: mirroredRaw === "true" } : {}),
       ...(infoPosition ? { infoPosition } : {}),
       ...(sectionGapMm !== null ? { sectionGapMm } : {}),
-      ...(continuationGapMm !== undefined ? { continuationGapMm } : {}),
+      ...(continuationTopMarginMm !== undefined ? { continuationTopMarginMm } : {}),
       ...(placements ? { placements } : {}),
       ...(photoStyle ? { photoStyle } : {}),
       ...(photoPlacement ? { photoPlacement } : {}),
@@ -195,8 +203,10 @@ export function applyPortableCvState(state?: PortableCvState | null) {
     setCvInfoPosition(state.infoPosition);
   }
   if (typeof state.sectionGapMm === "number") setCvSectionGapMm(state.sectionGapMm);
-  if (typeof state.continuationGapMm === "number") {
-    setCvContinuationGapMm(state.continuationGapMm);
+  if (typeof state.continuationTopMarginMm === "number") {
+    setCvContinuationTopMarginMm(state.continuationTopMarginMm);
+  } else if (typeof state.continuationGapMm === "number") {
+    setCvContinuationTopMarginMm(state.continuationGapMm);
   }
   if (state.placements && typeof state.placements === "object") {
     for (const [key, value] of Object.entries(state.placements)) {

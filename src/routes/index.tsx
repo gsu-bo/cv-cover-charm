@@ -113,13 +113,18 @@ function Card({
   const content = (
     <>
       {/* Kleine Vorschau statt eines Symbols – man sieht, was einen erwartet. */}
-      <div className="flex h-44 items-center justify-center border-b bg-muted/40 p-4">{art}</div>
-      <div className="flex flex-1 flex-col gap-1 p-5">
-        <span className="text-lg font-semibold">{title}</span>
-        <span className="text-sm text-muted-foreground">{text}</span>
+      <div className="relative flex h-44 items-center justify-center overflow-hidden border-b border-border/70 bg-gradient-to-br from-primary/[0.06] via-muted/25 to-background p-4">
+        <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent opacity-70" />
+        <div className="relative h-full transition-transform duration-300 ease-out group-hover:-translate-y-1 group-hover:scale-[1.035]">
+          {art}
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col gap-1.5 p-5">
+        <span className="text-lg font-semibold tracking-tight">{title}</span>
+        <span className="text-sm leading-relaxed text-muted-foreground">{text}</span>
         <span
-          className={`mt-3 text-sm font-medium ${
-            disabled ? "text-muted-foreground" : "text-primary group-hover:underline"
+          className={`mt-auto w-fit pt-4 text-sm font-semibold transition-[transform,color] duration-200 ${
+            disabled ? "text-muted-foreground" : "text-primary group-hover:translate-x-0.5"
           }`}
         >
           {hint}
@@ -129,12 +134,12 @@ function Card({
   );
 
   const className =
-    "group flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-card text-left shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+    "group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card text-left shadow-sm transition-[transform,box-shadow,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
   if (disabled || (!to && !onClick)) {
     return (
       <div
-        className="flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-card text-left opacity-75 shadow-sm"
+        className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card text-left opacity-75 shadow-sm"
         aria-disabled="true"
       >
         {content}
@@ -160,8 +165,14 @@ function Card({
 /** Miniatur eines Titelblatts: grosse Fläche, wenig Text. */
 function CoverArt() {
   return (
-    <svg viewBox="0 0 74 105" className="h-full w-auto drop-shadow" aria-hidden="true">
-      <rect width="74" height="105" rx="2" fill="var(--color-background)" />
+    <svg viewBox="0 0 74 105" className="h-full w-auto drop-shadow-md" aria-hidden="true">
+      <rect
+        width="74"
+        height="105"
+        rx="2"
+        fill="var(--color-background)"
+        stroke="var(--color-border)"
+      />
       <circle cx="52" cy="24" r="14" fill="var(--color-primary)" opacity="0.15" />
       <circle cx="52" cy="24" r="9" fill="var(--color-primary)" opacity="0.55" />
       <rect x="10" y="52" width="12" height="2.4" rx="1.2" fill="var(--color-primary)" />
@@ -218,8 +229,14 @@ function CoverArt() {
 /** Miniatur eines Lebenslaufs: viel Text, blasser Hintergrund. */
 function CvArt() {
   return (
-    <svg viewBox="0 0 74 105" className="h-full w-auto drop-shadow" aria-hidden="true">
-      <rect width="74" height="105" rx="2" fill="var(--color-background)" />
+    <svg viewBox="0 0 74 105" className="h-full w-auto drop-shadow-md" aria-hidden="true">
+      <rect
+        width="74"
+        height="105"
+        rx="2"
+        fill="var(--color-background)"
+        stroke="var(--color-border)"
+      />
       <circle cx="60" cy="16" r="10" fill="var(--color-primary)" opacity="0.12" />
       <circle cx="13" cy="15" r="7" fill="var(--color-primary)" opacity="0.5" />
       <rect x="24" y="11" width="26" height="4" rx="1" fill="var(--color-foreground)" />
@@ -256,8 +273,14 @@ function CvArt() {
 /** Miniatur eines Motivationsschreibens: klare Briefstruktur und viel Fliesstext. */
 function LetterArt() {
   return (
-    <svg viewBox="0 0 74 105" className="h-full w-auto drop-shadow" aria-hidden="true">
-      <rect width="74" height="105" rx="2" fill="var(--color-background)" />
+    <svg viewBox="0 0 74 105" className="h-full w-auto drop-shadow-md" aria-hidden="true">
+      <rect
+        width="74"
+        height="105"
+        rx="2"
+        fill="var(--color-background)"
+        stroke="var(--color-border)"
+      />
       <rect x="8" y="8" width="58" height="6" rx="1" fill="var(--color-primary)" opacity="0.18" />
       <rect x="10" y="10" width="22" height="2" rx="1" fill="var(--color-primary)" />
       <rect
@@ -316,9 +339,25 @@ function LetterArt() {
 /** Miniatur des Gesamtdossiers: mehrere zusammengehörige A4-Seiten. */
 function DossierArt() {
   return (
-    <svg viewBox="0 0 92 105" className="h-full w-auto drop-shadow" aria-hidden="true">
-      <rect x="28" y="7" width="56" height="88" rx="2" fill="var(--color-muted)" />
-      <rect x="18" y="11" width="56" height="88" rx="2" fill="var(--color-background)" />
+    <svg viewBox="0 0 92 105" className="h-full w-auto drop-shadow-md" aria-hidden="true">
+      <rect
+        x="28"
+        y="7"
+        width="56"
+        height="88"
+        rx="2"
+        fill="var(--color-muted)"
+        stroke="var(--color-border)"
+      />
+      <rect
+        x="18"
+        y="11"
+        width="56"
+        height="88"
+        rx="2"
+        fill="var(--color-background)"
+        stroke="var(--color-border)"
+      />
       <rect
         x="8"
         y="15"
@@ -442,9 +481,7 @@ function Start() {
       : "";
     const author = coverName || cvName || "Bewerbungsdossier";
     const fileName =
-      author === "Bewerbungsdossier"
-        ? "Bewerbungsdossier.pdf"
-        : `Bewerbungsdossier-${author}.pdf`;
+      author === "Bewerbungsdossier" ? "Bewerbungsdossier.pdf" : `Bewerbungsdossier-${author}.pdf`;
 
     setDownloading(true);
     try {
@@ -535,8 +572,8 @@ function Start() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="flex items-center gap-3 border-b px-4 py-3 sm:px-6">
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-background via-background to-muted/20">
+      <header className="flex items-center gap-3 border-b border-border/70 bg-background/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6">
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-sm font-semibold sm:text-base">Bewerbungsdossier</h1>
           <p className="hidden truncate text-xs text-muted-foreground sm:block">
@@ -549,14 +586,16 @@ function Start() {
 
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center gap-6 px-4 py-10 sm:px-6">
         <div>
-          <h2 className="text-2xl font-semibold sm:text-3xl">Was möchtest du machen?</h2>
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            Was möchtest du machen?
+          </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Titelblatt, Motivationsschreiben und Lebenslauf gehören zusammen und verwenden dieselbe
             Designsprache.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Card
             to="/titelblatt"
             title="Titelblatt"
@@ -597,8 +636,8 @@ function Start() {
         ) : !readiness.complete ? (
           <p className="text-xs text-muted-foreground">
             PDF und DOCX sind verfügbar, sobald {missingParts.join(", ")} ausgefüllt
-            {missingParts.length === 1 ? " ist" : " sind"}. Die JSON-Projektdatei kannst du jederzeit
-            sichern.
+            {missingParts.length === 1 ? " ist" : " sind"}. Die JSON-Projektdatei kannst du
+            jederzeit sichern.
           </p>
         ) : null}
 

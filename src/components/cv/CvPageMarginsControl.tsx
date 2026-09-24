@@ -8,13 +8,13 @@ import {
   type CvRenderLayout,
 } from "./archetype";
 import {
-  CV_CONTINUATION_GAP_DEFAULT_MM,
-  CV_CONTINUATION_GAP_MAX_MM,
-  CV_CONTINUATION_GAP_MIN_MM,
-  getCvContinuationGapMm,
+  CV_CONTINUATION_TOP_MARGIN_DEFAULT_MM,
+  CV_CONTINUATION_TOP_MARGIN_MAX_MM,
+  CV_CONTINUATION_TOP_MARGIN_MIN_MM,
+  getCvContinuationTopMarginMm,
   getCvLayout,
-  setCvContinuationGapMm,
-  subscribeCvContinuationGap,
+  setCvContinuationTopMarginMm,
+  subscribeCvContinuationTopMargin,
   subscribeCvLayout,
 } from "./layout";
 import type { CvDesign } from "./types";
@@ -36,10 +36,10 @@ export function CvPageMarginsControl({
     getCvLayout,
     () => "classic",
   );
-  const continuationGap = useSyncExternalStore(
-    subscribeCvContinuationGap,
-    getCvContinuationGapMm,
-    () => CV_CONTINUATION_GAP_DEFAULT_MM,
+  const continuationTopMargin = useSyncExternalStore(
+    subscribeCvContinuationTopMargin,
+    getCvContinuationTopMarginMm,
+    () => CV_CONTINUATION_TOP_MARGIN_DEFAULT_MM,
   );
   const frame = cvFrameFor(design.template);
   const defaultMargins = cvDefaultContentBox(frame, 0, layout, design.sidebarPct, chromeOptions);
@@ -64,33 +64,34 @@ export function CvPageMarginsControl({
           <>
             <label className="grid gap-1 text-xs">
               <span className="flex items-center justify-between gap-2 text-muted-foreground">
-                <span>Abstand oben ab Seite 2</span>
-                <span>
-                  {continuationGap.toFixed(continuationGap % 1 ? 1 : 0)} mm
-                </span>
+                <span>Oberer Rand ab Seite 2</span>
+                <span>{continuationTopMargin.toFixed(continuationTopMargin % 1 ? 1 : 0)} mm</span>
               </span>
               <input
+                data-cv-continuation-top-margin-control
                 data-cv-continuation-gap-control
                 type="range"
-                min={CV_CONTINUATION_GAP_MIN_MM}
-                max={CV_CONTINUATION_GAP_MAX_MM}
+                min={CV_CONTINUATION_TOP_MARGIN_MIN_MM}
+                max={CV_CONTINUATION_TOP_MARGIN_MAX_MM}
                 step={1}
-                value={continuationGap}
-                onChange={(event) => setCvContinuationGapMm(Number(event.target.value))}
+                value={continuationTopMargin}
+                onChange={(event) => setCvContinuationTopMarginMm(Number(event.target.value))}
                 className="w-full accent-primary"
-                aria-label="Abstand oben ab Seite 2"
+                aria-label="Oberer Rand ab Seite 2"
               />
               <span className="text-[11px] leading-relaxed text-muted-foreground">
-                Gilt nur für den Lebenslauf ab Seite 2. Ein vorhandener Fortsetzungs-Header bleibt
-                geschützt.
+                Ersetzt im Lebenslauf ab Seite 2 den normalen oberen Seitenrand. Ein vorhandener
+                Fortsetzungs-Header bleibt automatisch geschützt.
               </span>
-              {continuationGap !== CV_CONTINUATION_GAP_DEFAULT_MM ? (
+              {continuationTopMargin !== CV_CONTINUATION_TOP_MARGIN_DEFAULT_MM ? (
                 <button
                   type="button"
                   className="justify-self-start rounded border border-input bg-background px-2 py-1 text-[11px] font-medium hover:bg-accent"
-                  onClick={() => setCvContinuationGapMm(CV_CONTINUATION_GAP_DEFAULT_MM)}
+                  onClick={() =>
+                    setCvContinuationTopMarginMm(CV_CONTINUATION_TOP_MARGIN_DEFAULT_MM)
+                  }
                 >
-                  Standardabstand (4 mm)
+                  Standardrand (10 mm)
                 </button>
               ) : null}
             </label>
