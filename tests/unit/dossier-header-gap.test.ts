@@ -76,14 +76,7 @@ describe("dossier header spacing", () => {
       headerGapMm: 0,
     };
 
-    for (const template of [
-      "cove",
-      "prism",
-      "orbit",
-      "ledger",
-      "studio",
-      "warm2",
-    ] as const) {
+    for (const template of ["cove", "prism", "orbit", "ledger", "studio", "warm2"] as const) {
       const frame = cvFrameFor(template);
       const withoutGap = cvDefaultContentBox(frame, 0, "classic", 0.3, base);
       const withGap = cvDefaultContentBox(frame, 0, "classic", 0.3, {
@@ -100,8 +93,8 @@ describe("dossier header spacing", () => {
     expect(cvMargins).toContain(
       "Wird im Lebenslauf auf Seite 1 zusätzlich zum oberen Seitenrand gerechnet.",
     );
-    expect(cvMargins).toContain("data-cv-continuation-gap-control");
-    expect(cvMargins).toContain("Abstand oben ab Seite 2");
+    expect(cvMargins).toContain("data-cv-continuation-top-margin-control");
+    expect(cvMargins).toContain("Oberer Rand ab Seite 2");
     expect(cvMargins).toContain("min={0}");
     expect(cvMargins).toContain("max={40}");
 
@@ -112,7 +105,7 @@ describe("dossier header spacing", () => {
   });
 
   test("retains the 0–40 mm control in the shared chrome UI for the letter", () => {
-    expect(controls).toContain("scope === \"cv\" ?");
+    expect(controls).toContain('scope === "cv" ?');
     expect(controls).toContain("data-dossier-header-gap-control");
     expect(controls).toContain("<span>Freiraum unter dem Header</span>");
     expect(controls).toContain("headerGapMm: 12");
@@ -123,7 +116,9 @@ describe("dossier header spacing", () => {
       "const geometry = letterPageGeometry(data, effectiveDesign, { chromeOptions: chrome });",
     );
     expect(letterCanvas).not.toContain("const baseGeometry = letterPageGeometry");
-    expect(letterLayout).toContain("context.chromeOptions?.headerGapMm ?? context.headerGapMm ?? 0");
+    expect(letterLayout).toContain(
+      "context.chromeOptions?.headerGapMm ?? context.headerGapMm ?? 0",
+    );
     expect(letterLayout).toContain("resolveDossierContentMargins(");
   });
 

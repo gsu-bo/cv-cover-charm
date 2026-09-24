@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { ChevronsUp } from "lucide-react";
 import { ContextualFieldTypography } from "./ContextualFieldTypography";
 import "./EditorPanelIntro.css";
 
@@ -33,6 +34,7 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
   const [customWidth, setCustomWidth] = useState<number | null>(null);
   const [resizing, setResizing] = useState(false);
   const [clientReady, setClientReady] = useState(false);
+  const [formScrolled, setFormScrolled] = useState(false);
 
   useEffect(() => {
     setClientReady(true);
@@ -84,6 +86,13 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
     storeWidth(null);
   };
 
+  const collapseAllSections = () => {
+    const buttons = panelRef.current?.querySelectorAll<HTMLButtonElement>(
+      '[data-editor-section-toggle][aria-expanded="true"]',
+    );
+    buttons?.forEach((button) => button.click());
+  };
+
   const style = {
     ...(customWidth === null ? {} : { "--editor-panel-width": `${customWidth}px` }),
     ...(resizing ? { transition: "none" } : {}),
@@ -110,7 +119,27 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
         className={`h-full overscroll-contain overflow-y-auto overflow-x-hidden ${open ? "" : "md:overflow-hidden"}`}
         aria-hidden={!open}
         inert={!open}
+        onScroll={(event) => setFormScrolled(event.currentTarget.scrollTop > 6)}
       >
+        <div
+          data-editor-panel-toolbar
+          data-scrolled={formScrolled ? "true" : "false"}
+          className="sticky top-0 z-40 flex h-10 items-center justify-between border-b border-border/70 bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/85"
+        >
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Formular
+          </span>
+          <button
+            type="button"
+            onClick={collapseAllSections}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Alle Bereiche zuklappen"
+            title="Alle Bereiche zuklappen"
+          >
+            <ChevronsUp className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+
         {children}
       </aside>
 
@@ -184,7 +213,9 @@ export function ResizableEditorPanel({ open, children }: { open: boolean; childr
           <span
             aria-hidden
             className={`absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors ${
-              resizing ? "bg-primary/60" : "bg-border/70 group-hover:bg-primary/35 group-focus-visible:bg-primary/35"
+              resizing
+                ? "bg-primary/60"
+                : "bg-border/70 group-hover:bg-primary/35 group-focus-visible:bg-primary/35"
             }`}
           />
           <span

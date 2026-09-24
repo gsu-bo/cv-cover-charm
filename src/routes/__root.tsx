@@ -11,6 +11,7 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import themeToggleCss from "../components/cover/ThemeToggle.css?url";
 import editorActionMenuCss from "../components/dossier/editor-action-menu.css?url";
 import humanPolishCss from "../components/dossier/human-polish.css?url";
 import letterAlignmentCss from "../components/letter/letter-alignment.css?url";
@@ -19,6 +20,7 @@ import motifVisibilityCss from "../components/dossier/motif-visibility.css?url";
 import mobileEditorContentGuardCss from "../components/dossier/mobile-editor-content-guard.css?url";
 import { DossierHyphenationBridge } from "../components/dossier/DossierHyphenationControl";
 import { TemplateQaKeyboardSwitch } from "../components/dossier/TemplateQaKeyboardSwitch";
+import { THEME_BOOTSTRAP_SCRIPT } from "../lib/app-theme";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -126,6 +128,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         rel: "stylesheet",
+        href: themeToggleCss,
+      },
+      {
+        rel: "stylesheet",
         href: editorActionMenuCss,
       },
       {
@@ -159,9 +165,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="de-CH">
+    <html lang="de-CH" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
       </head>
       <body>
         {children}

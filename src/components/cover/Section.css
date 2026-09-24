@@ -1,14 +1,214 @@
 /*
- * CV editor rubric orientation.
+ * Shared editor-section polish.
+ *
+ * Sections stay structurally identical across title page, letter and CV. The
+ * visual accents only improve scanning; document layout and form order remain
+ * untouched.
+ */
+[data-editor-section] {
+  --editor-section-accent: rgb(14 165 233 / 0.42);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.035);
+}
+
+[data-editor-section][data-form-group="design"] {
+  --editor-section-accent: rgb(124 58 237 / 0.4);
+}
+
+[data-editor-section][data-form-group="advanced"] {
+  --editor-section-accent: rgb(100 116 139 / 0.5);
+}
+
+/* Group hierarchy lives outside the accordion cards: only three calm anchors,
+ * never a divider between every individual form section. */
+[data-form-group-divider] {
+  min-height: 1.25rem;
+  margin-top: 0.125rem;
+}
+
+[data-form-group-divider="design"],
+[data-form-group-divider="advanced"] {
+  margin-top: 0.5rem;
+}
+
+[data-form-group-divider] [data-form-group-marker] {
+  transition: color 160ms ease;
+}
+
+[data-form-group-divider] [data-form-group-divider-line] {
+  opacity: 0.72;
+}
+
+[data-form-group-divider="content"] [data-form-group-marker] {
+  color: rgb(3 105 161 / 0.9);
+}
+
+[data-form-group-divider="content"] [data-form-group-divider-line] {
+  background: linear-gradient(90deg, rgb(14 165 233 / 0.32), rgb(148 163 184 / 0.16));
+}
+
+[data-form-group-divider="design"] [data-form-group-marker] {
+  color: rgb(109 40 217 / 0.88);
+}
+
+[data-form-group-divider="design"] [data-form-group-divider-line] {
+  background: linear-gradient(90deg, rgb(124 58 237 / 0.28), rgb(148 163 184 / 0.15));
+}
+
+[data-form-group-divider="advanced"] [data-form-group-marker] {
+  color: rgb(71 85 105 / 0.92);
+}
+
+[data-form-group-divider="advanced"] [data-form-group-divider-line] {
+  background: linear-gradient(90deg, rgb(100 116 139 / 0.3), rgb(148 163 184 / 0.12));
+}
+
+[data-editor-section]::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 2;
+  width: 3px;
+  background: var(--editor-section-accent);
+  opacity: 0.45;
+  transition:
+    opacity 180ms ease,
+    width 180ms ease;
+  pointer-events: none;
+}
+
+[data-editor-section] > [data-editor-section-header] {
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+[data-editor-section]:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
+}
+
+[data-editor-section]:hover::before {
+  opacity: 0.68;
+}
+
+[data-editor-section] [data-editor-section-chevron] {
+  color: color-mix(in srgb, var(--color-foreground) 52%, transparent);
+}
+
+[data-editor-section]:hover [data-editor-section-chevron],
+[data-editor-section][data-editor-section-open="true"] [data-editor-section-chevron] {
+  color: color-mix(in srgb, var(--color-primary) 72%, var(--color-foreground));
+}
+
+[data-editor-section][data-editor-section-open="true"] {
+  border-color: color-mix(in srgb, var(--color-primary) 36%, var(--color-border));
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.055),
+    0 7px 20px rgb(15 23 42 / 0.065);
+}
+
+[data-editor-section][data-editor-section-open="true"] > [data-editor-section-header] {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--editor-section-accent) 12%, transparent),
+    transparent 76%
+  );
+  box-shadow: inset 0 -1px 0 rgb(15 23 42 / 0.03);
+}
+
+[data-editor-section][data-editor-section-open="true"]::before {
+  width: 4px;
+  opacity: 1;
+}
+
+/* One badge language across every section. Semantic colour is deliberately
+ * quiet: status helps scanning but never competes with the form content. */
+[data-editor-section-hint] {
+  min-height: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.42);
+}
+
+[data-editor-section-hint][data-hint-kind="ready"] {
+  border-color: rgb(16 185 129 / 0.24);
+  background: rgb(236 253 245 / 0.82);
+  color: rgb(4 120 87 / 0.94);
+}
+
+[data-editor-section-hint][data-hint-kind="empty"] {
+  border-color: rgb(245 158 11 / 0.26);
+  background: rgb(255 251 235 / 0.88);
+  color: rgb(180 83 9 / 0.92);
+}
+
+[data-editor-section] [data-editor-section-toggle] > span:last-child,
+[data-editor-section] [data-editor-section-toggle] > span:nth-last-child(2) {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.dark [data-editor-section] {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.14);
+}
+
+.dark [data-editor-section][data-editor-section-open="true"] {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.2),
+    0 8px 20px rgb(0 0 0 / 0.16);
+}
+
+.dark [data-editor-section][data-editor-section-open="true"] > [data-editor-section-header] {
+  box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.04);
+}
+
+.dark [data-form-group-divider="content"] [data-form-group-marker] {
+  color: rgb(186 230 253 / 0.92);
+}
+
+.dark [data-form-group-divider="design"] [data-form-group-marker] {
+  color: rgb(221 214 254 / 0.94);
+}
+
+.dark [data-form-group-divider="advanced"] [data-form-group-marker] {
+  color: rgb(203 213 225 / 0.92);
+}
+
+.dark [data-editor-section-hint][data-hint-kind="ready"] {
+  border-color: rgb(52 211 153 / 0.24);
+  background: rgb(6 78 59 / 0.34);
+  color: rgb(167 243 208 / 0.94);
+}
+
+.dark [data-editor-section-hint][data-hint-kind="empty"] {
+  border-color: rgb(251 191 36 / 0.24);
+  background: rgb(120 53 15 / 0.28);
+  color: rgb(253 230 138 / 0.94);
+}
+
+/*
+ * CV rubric orientation.
  *
  * Important: this follows the rubrics' actual form/DOM order. The user's
  * document order (used for CV/PDF layout) must never leak into the editor
  * navigation, otherwise the form jumps around after reordering the CV.
  */
 [data-cv-content-editor]
+  > [data-editor-rubric-tone]:nth-child(odd of [data-editor-rubric-tone]) {
+  --editor-section-accent: rgb(14 165 233 / 0.62);
+}
+
+[data-cv-content-editor]
+  > [data-editor-rubric-tone]:nth-child(even of [data-editor-rubric-tone]) {
+  --editor-section-accent: rgb(124 58 237 / 0.58);
+}
+
+[data-cv-content-editor]
   > [data-editor-rubric-tone]:nth-child(odd of [data-editor-rubric-tone])
   > [data-editor-section-header] {
-  background: rgb(240 249 255 / 0.8);
+  background-color: rgb(240 249 255 / 0.8);
 }
 
 [data-cv-content-editor]
@@ -20,7 +220,7 @@
 [data-cv-content-editor]
   > [data-editor-rubric-tone]:nth-child(even of [data-editor-rubric-tone])
   > [data-editor-section-header] {
-  background: rgb(245 243 255 / 0.75);
+  background-color: rgb(245 243 255 / 0.75);
 }
 
 [data-cv-content-editor]
@@ -33,7 +233,7 @@
   [data-cv-content-editor]
   > [data-editor-rubric-tone]:nth-child(odd of [data-editor-rubric-tone])
   > [data-editor-section-header] {
-  background: rgb(8 47 73 / 0.25);
+  background-color: rgb(8 47 73 / 0.25);
 }
 
 .dark
@@ -47,7 +247,7 @@
   [data-cv-content-editor]
   > [data-editor-rubric-tone]:nth-child(even of [data-editor-rubric-tone])
   > [data-editor-section-header] {
-  background: rgb(46 16 101 / 0.2);
+  background-color: rgb(46 16 101 / 0.2);
 }
 
 .dark
