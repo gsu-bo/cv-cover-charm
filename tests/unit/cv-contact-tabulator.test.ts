@@ -6,6 +6,7 @@ const source = readFileSync(
   "utf8",
 );
 
+// The exact second-column x position is verified in the browser geometry regression.
 describe("CV contact tabulator layout", () => {
   test("pairs address/place and phone/email without legacy middle dots", () => {
     expect(source).toContain('{ key: "address", left: p.adresse, right: p.plzOrt }');
