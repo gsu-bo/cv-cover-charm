@@ -313,3 +313,32 @@ test.describe("body alignment Web/PDF parity", () => {
     });
   }
 });
+
+test.describe("CV contact tabulator geometry", () => {
+  test("address, contact and personal values share the same second-column x position", async ({
+    page,
+  }) => {
+    await seedCv(page, "left");
+
+    const previewCanvas = page
+      .locator('[data-dossier-document="cv"][data-export-mode="false"]')
+      .first();
+    const grid = previewCanvas.locator("[data-cv-page]:visible [data-cv-contact-grid]").first();
+    await expect(grid).toBeVisible();
+
+    const selectors = [
+      '[data-cv-contact-value="address"]',
+      '[data-cv-contact-value="contact"]',
+      '[data-cv-personal-value="geburtsdatum"]',
+      '[data-cv-personal-value="nationalitaet"]',
+    ];
+    const xPositions: number[] = [];
+    for (const selector of selectors) {
+      const cell = grid.locator(selector).first();
+      await expect(cell).toBeVisible();
+      xPositions.push(await cell.evaluate((node) => node.getBoundingClientRect().left));
+    }
+
+    expect(Math.max(...xPositions) - Math.min(...xPositions)).toBeLessThan(0.5);
+  });
+});
