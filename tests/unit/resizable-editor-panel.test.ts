@@ -13,15 +13,25 @@ describe("Resizable editor panel", () => {
     expect(panel).not.toContain("sm:w-[var(--editor-panel-width)]");
   });
 
-  test("supports mouse, touch and pen resizing with viewport re-clamping", () => {
+  test("gives users a wide split range with mouse, touch and pen resizing", () => {
     const panel = read("src/components/dossier/ResizableEditorPanel.tsx");
     expect(panel).toContain('event.pointerType === "mouse" && event.button !== 0');
     expect(panel).toContain("setPointerCapture(event.pointerId)");
     expect(panel).toContain('window.addEventListener("resize", handleResize)');
     expect(panel).toContain("data-editor-panel-resize-handle");
-    expect(panel).toContain("const MIN_WIDTH = 300");
-    expect(panel).toContain("const MAX_WIDTH = 720");
-    expect(panel).toContain("const PREVIEW_MIN_WIDTH = 320");
+    expect(panel).toContain("const MIN_WIDTH = 220");
+    expect(panel).toContain("const MAX_WIDTH = 1100");
+    expect(panel).toContain("const PREVIEW_MIN_WIDTH = 220");
+  });
+
+  test("polishes dragging feedback and keyboard resizing", () => {
+    const panel = read("src/components/dossier/ResizableEditorPanel.tsx");
+    expect(panel).toContain('document.body.style.cursor = "col-resize"');
+    expect(panel).toContain('document.body.style.userSelect = "none"');
+    expect(panel).toContain("data-resizing={resizing ? \"true\" : \"false\"}");
+    expect(panel).toContain("aria-valuetext={`Formularbreite ${currentWidth} Pixel`}");
+    expect(panel).toContain("const step = event.shiftKey ? 50 : 20");
+    expect(panel).toContain("w-8 translate-x-1/2 cursor-col-resize");
   });
 
   test("aligns route controls and backdrops with the md overlay breakpoint", () => {
