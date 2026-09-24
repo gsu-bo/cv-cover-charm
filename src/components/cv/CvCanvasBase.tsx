@@ -354,47 +354,97 @@ export function CvCanvas({
   const personalInfoGridStyle = personalInfoAligned
     ? { display: "grid", gridTemplateColumns: "max-content minmax(0, 1fr)", columnGap: "2.5mm" }
     : undefined;
-  const contactRows = () =>
+  const contactRows = (cellStyle: React.CSSProperties = {}) =>
     contactPairs.map(({ key, left, right }) => {
       if (personalInfoAligned) {
         if (left && right) {
           return (
             <Fragment key={key}>
-              <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{left}</span>
-              <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{right}</span>
+              <span style={{ ...cellStyle, minWidth: 0, overflowWrap: "anywhere" }}>{left}</span>
+              <span
+                data-cv-contact-value={key}
+                style={{ ...cellStyle, minWidth: 0, overflowWrap: "anywhere" }}
+              >
+                {right}
+              </span>
             </Fragment>
           );
         }
         return (
-          <div key={key} style={{ gridColumn: "1 / -1", minWidth: 0, overflowWrap: "anywhere" }}>
+          <div
+            key={key}
+            style={{
+              ...cellStyle,
+              gridColumn: "1 / -1",
+              minWidth: 0,
+              overflowWrap: "anywhere",
+            }}
+          >
             {left || right}
           </div>
         );
       }
       return (
-        <div key={key} style={{ display: "flex", flexWrap: "wrap", columnGap: "2.5mm" }}>
-          {left && <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{left}</span>}
-          {right && <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{right}</span>}
+        <div
+          key={key}
+          style={{ ...cellStyle, display: "flex", flexWrap: "wrap", columnGap: "2.5mm" }}
+        >
+          {left && (
+            <span style={{ ...cellStyle, minWidth: 0, overflowWrap: "anywhere" }}>{left}</span>
+          )}
+          {right && (
+            <span
+              data-cv-contact-value={key}
+              style={{ ...cellStyle, minWidth: 0, overflowWrap: "anywhere" }}
+            >
+              {right}
+            </span>
+          )}
         </div>
       );
     });
-  const personalInfoRows = () =>
+  const personalInfoRows = (cellStyle: React.CSSProperties = {}) =>
     angaben.map((row) =>
       personalInfoAligned ? (
         <Fragment key={row.key}>
-          <span>
+          <span style={cellStyle}>
             {row.label}
             {personalInfoColons ? ":" : ""}
           </span>
-          <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{row.value}</span>
+          <span
+            data-cv-personal-value={row.key}
+            style={{ ...cellStyle, minWidth: 0, overflowWrap: "anywhere" }}
+          >
+            {row.value}
+          </span>
         </Fragment>
       ) : (
-        <div key={row.key}>
+        <div key={row.key} data-cv-personal-value={row.key} style={cellStyle}>
           {row.label}
           {personalInfoColons ? ":" : ""} {row.value}
         </div>
       ),
     );
+  const contactDetailRows = (
+    contactStyle: React.CSSProperties = {},
+    personalStyle: React.CSSProperties = {},
+    gapMm = 1.35,
+  ) => (
+    <>
+      {contactPairs.length > 0 && contactRows(contactStyle)}
+      {contactPairs.length > 0 && angaben.length > 0 && (
+        <div
+          aria-hidden
+          data-cv-contact-grid-gap
+          style={{
+            gridColumn: personalInfoAligned ? "1 / -1" : undefined,
+            height: `${gapMm}mm`,
+          }}
+        />
+      )}
+      {angaben.length > 0 && personalInfoRows(personalStyle)}
+    </>
+  );
   const nameSize = smartNameSize(name, layout) * TYPE_BASE * titleScale;
   const infoMirrored = infoPosition === "mirrored";
   const physicalContentBox = <T extends { left: number; right: number }>(logicalBox: T): T =>
@@ -905,15 +955,9 @@ export function CvCanvas({
             data-cv-body
             style={{ marginBottom: "2.2mm", fontSize: pt(9.8), lineHeight: 1.4, color: pal.ink }}
           >
-            {contactPairs.length > 0 && <div style={personalInfoGridStyle}>{contactRows()}</div>}
-            {angaben.length > 0 && (
-              <div
-                data-cv-muted
-                style={{ marginTop: "1mm", color: pal.muted, ...personalInfoGridStyle }}
-              >
-                {personalInfoRows()}
-              </div>
-            )}
+            <div data-cv-contact-grid style={personalInfoGridStyle}>
+              {contactDetailRows({}, { color: pal.muted }, 1)}
+            </div>
           </div>
         ),
       },
@@ -1021,34 +1065,22 @@ export function CvCanvas({
                 {p.untertitel}
               </div>
             )}
-            {contactPairs.length > 0 && (
+            {(contactPairs.length > 0 || angaben.length > 0) && (
               <div
-                data-cv-body
-                style={{
-                  marginTop: "2.5mm",
-                  fontSize: pt(9.7),
-                  color: pal.ink,
-                  lineHeight: 1.38,
-                  ...personalInfoGridStyle,
-                }}
-              >
-                {contactRows()}
-              </div>
-            )}
-            {angaben.length > 0 && (
-              <div
-                data-cv-muted
+                data-cv-contact-grid
                 data-cv-personal-info
-                style={{
-                  marginTop: "1.35mm",
-                  fontSize: pt(9.2),
-                  color: pal.muted,
-                  lineHeight: 1.35,
-                  textAlign: "left",
-                  ...personalInfoGridStyle,
-                }}
+                style={{ marginTop: "2.5mm", ...personalInfoGridStyle }}
               >
-                {personalInfoRows()}
+                {contactDetailRows(
+                  { fontSize: pt(9.7), color: pal.ink, lineHeight: 1.38 },
+                  {
+                    fontSize: pt(9.2),
+                    color: pal.muted,
+                    lineHeight: 1.35,
+                    textAlign: "left",
+                  },
+                  1.35,
+                )}
               </div>
             )}
           </div>
@@ -1255,34 +1287,22 @@ export function CvCanvas({
                 {p.untertitel}
               </div>
             )}
-            {contactPairs.length > 0 && (
+            {(contactPairs.length > 0 || angaben.length > 0) && (
               <div
-                data-cv-body
-                style={{
-                  marginTop: withName ? "2.5mm" : 0,
-                  fontSize: pt(9.7),
-                  color: pal.ink,
-                  lineHeight: 1.38,
-                  ...personalInfoGridStyle,
-                }}
-              >
-                {contactRows()}
-              </div>
-            )}
-            {angaben.length > 0 && (
-              <div
-                data-cv-muted
+                data-cv-contact-grid
                 data-cv-personal-info
-                style={{
-                  marginTop: "1.35mm",
-                  fontSize: pt(9.2),
-                  color: pal.muted,
-                  lineHeight: 1.35,
-                  textAlign: "left",
-                  ...personalInfoGridStyle,
-                }}
+                style={{ marginTop: withName ? "2.5mm" : 0, ...personalInfoGridStyle }}
               >
-                {personalInfoRows()}
+                {contactDetailRows(
+                  { fontSize: pt(9.7), color: pal.ink, lineHeight: 1.38 },
+                  {
+                    fontSize: pt(9.2),
+                    color: pal.muted,
+                    lineHeight: 1.35,
+                    textAlign: "left",
+                  },
+                  1.35,
+                )}
               </div>
             )}
           </div>

@@ -6,6 +6,7 @@ const source = readFileSync(
   "utf8",
 );
 
+// The exact second-column x position is verified in the browser geometry regression.
 describe("CV contact tabulator layout", () => {
   test("pairs address/place and phone/email without legacy middle dots", () => {
     expect(source).toContain('{ key: "address", left: p.adresse, right: p.plzOrt }');
@@ -13,9 +14,18 @@ describe("CV contact tabulator layout", () => {
     expect(source).not.toContain('join(" · ")');
   });
 
-  test("reuses the personal-info grid and lets incomplete pairs span safely", () => {
-    expect(source).toContain("{contactPairs.length > 0 && <div style={personalInfoGridStyle}>{contactRows()}</div>}");
+  test("uses one shared grid axis for contact and personal values", () => {
+    expect(source).toContain("data-cv-contact-grid");
+    expect(source).toContain("data-cv-contact-value={key}");
+    expect(source).toContain("data-cv-personal-value={row.key}");
+    expect(source).toContain("data-cv-contact-grid-gap");
+    expect(source).not.toContain(
+      "{contactPairs.length > 0 && <div style={personalInfoGridStyle}>{contactRows()}</div>}",
+    );
+  });
+
+  test("lets incomplete contact pairs span the full shared grid", () => {
     expect(source).toContain('gridColumn: "1 / -1"');
-    expect(source).toContain("...personalInfoGridStyle");
+    expect(source).toContain("left || right");
   });
 });
