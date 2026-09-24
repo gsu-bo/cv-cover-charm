@@ -38,8 +38,8 @@
  */
 
 /* The old routes had hand-written horizontal separators before design
- * controls. Group markers in Section now carry that hierarchy without using
- * extra vertical space.
+ * controls. Group markers in Section now carry that hierarchy without adding
+ * another visual rule between every accordion.
  */
 [data-editor-panel] > aside > div:last-child > .h-px.bg-border,
 [data-editor-panel]
@@ -50,38 +50,13 @@
   display: none;
 }
 
-/* Keep the same content -> design -> advanced flow even where an older route
- * declared e.g. Layout or Rubriken anordnen earlier in its JSX.
+/*
+ * Visual polish only: keep every route's existing DOM/form order intact.
+ * Group metadata is used for colour and orientation, never CSS reordering.
  */
-[data-editor-panel] > aside > div:last-child > [data-editor-section][data-form-group="design"] {
-  order: 10;
-}
-
-[data-editor-panel] > aside > div:last-child > [data-editor-section][data-form-group="advanced"] {
-  order: 20;
-}
-
-[data-editor-panel]
-  > aside
-  > div:last-child
-  > div:has(> [data-editor-section][data-form-group="design"]) {
-  order: 10;
-}
-
-[data-editor-panel]
-  > aside
-  > div:last-child
-  > div:has(> [data-editor-section])
-  > [data-editor-section][data-form-group="design"] {
-  order: 10;
-}
-
-[data-editor-panel]
-  > aside
-  > div:last-child
-  > div:has(> [data-editor-section])
-  > [data-editor-section][data-form-group="advanced"] {
-  order: 20;
+[data-editor-panel] [data-editor-section][data-form-group="design"],
+[data-editor-panel] [data-editor-section][data-form-group="advanced"] {
+  isolation: isolate;
 }
 
 /* Standard field rhythm. Existing component classes still decide colours,
@@ -98,6 +73,36 @@
     textarea
   ) {
   min-height: 2.25rem;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+[data-editor-panel]
+  [data-editor-section]
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not(
+        [type="file"]
+      ):not([type="hidden"]),
+    select,
+    textarea
+  ):hover {
+  border-color: color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
+}
+
+[data-editor-panel]
+  [data-editor-section]
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not(
+        [type="file"]
+      ):not([type="hidden"]),
+    select,
+    textarea
+  ):focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-primary) 58%, var(--color-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 [data-editor-panel] [data-editor-section] input[type="checkbox"],
@@ -116,6 +121,25 @@
   [data-editor-section]
   button.rounded-md:not([data-editor-section-toggle]) {
   min-height: 2rem;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+[data-editor-panel]
+  [data-editor-section]
+  button.rounded-md:not([data-editor-section-toggle]):hover {
+  box-shadow: 0 2px 8px rgb(15 23 42 / 0.07);
+}
+
+.dark
+  [data-editor-panel]
+  [data-editor-section]
+  button.rounded-md:not([data-editor-section-toggle]):hover {
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.2);
 }
 
 [data-editor-panel] [data-editor-section] details > summary {
@@ -134,7 +158,8 @@
 /* CV/letter field typography is stored outside the form values so the existing
  * data contracts stay backward-compatible. These attributes are also applied
  * to the A4 preview and hidden PDF canvases; keeping the rules global makes the
- * selected B/I/U choice visible after the contextual bubble closes. */
+ * selected B/I/U choice visible after the contextual bubble closes.
+ */
 [data-dossier-field-bold="true"] {
   font-weight: 700 !important;
 }
