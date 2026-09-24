@@ -1580,6 +1580,7 @@ export function CvCanvas({
     pal.ink,
     pal.muted,
     measuredAt,
+    shape,
   ]);
 
   const ground = (pageIndex: number) => (
