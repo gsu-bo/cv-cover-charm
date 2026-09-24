@@ -136,7 +136,6 @@ import {
 } from "@/lib/history";
 import { readPhoto } from "@/lib/image";
 import { useForeignWrite, usePageVisible } from "@/lib/autosave";
-import { applyDossierTheme } from "@/lib/dossier-theme";
 import { setCvPhotoStyle } from "@/components/cv/photo";
 import {
   normalizeCvPaperColor,
@@ -645,10 +644,6 @@ function Lebenslauf() {
       setConfirmDemo(false);
     }
   }, [menuOpen]);
-
-  useEffect(() => {
-    applyDossierTheme(design.template);
-  }, [design.template]);
 
   useEffect(() => {
     if (!status) return;
@@ -1876,9 +1871,7 @@ function Lebenslauf() {
                     type="checkbox"
                     className="mt-0.5"
                     checked={data.referencesSideBySide !== false}
-                    onChange={(event) =>
-                      patchData({ referencesSideBySide: event.target.checked })
-                    }
+                    onChange={(event) => patchData({ referencesSideBySide: event.target.checked })}
                   />
                   <span>
                     <span className="block font-medium">Referenzen nebeneinander</span>
