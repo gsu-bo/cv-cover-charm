@@ -26,68 +26,54 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Apply visual-only dashboard polish
-        shell: python
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           path = Path("src/routes/index.tsx")
           text = path.read_text()
 
-          replacements = {
-            '''      <div className="flex h-44 items-center justify-center border-b bg-muted/40 p-4">{art}</div>''': '''      <div className="relative flex h-44 items-center justify-center overflow-hidden border-b border-border/70 bg-gradient-to-br from-primary/[0.06] via-muted/25 to-background p-4">
-        <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent opacity-70" />
-        <div className="relative h-full transition-transform duration-300 ease-out group-hover:-translate-y-1 group-hover:scale-[1.035]">
-          {art}
-        </div>
-      </div>''',
-            '''      <div className="flex flex-1 flex-col gap-1 p-5">''': '''      <div className="flex flex-1 flex-col gap-1.5 p-5">''',
-            '''        <span className="text-lg font-semibold">{title}</span>''': '''        <span className="text-lg font-semibold tracking-tight">{title}</span>''',
-            '''        <span className="text-sm text-muted-foreground">{text}</span>''': '''        <span className="text-sm leading-relaxed text-muted-foreground">{text}</span>''',
-            '''          className={`mt-3 text-sm font-medium ${
-            disabled ? "text-muted-foreground" : "text-primary group-hover:underline"
-          }`}''': '''          className={`mt-auto w-fit pt-4 text-sm font-semibold transition-[transform,color] duration-200 ${
-            disabled ? "text-muted-foreground" : "text-primary group-hover:translate-x-0.5"
-          }`}''',
-            '''    "group flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-card text-left shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";''': '''    "group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card text-left shadow-sm transition-[transform,box-shadow,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";''',
-            '''        className="flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-card text-left opacity-75 shadow-sm"''': '''        className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card text-left opacity-75 shadow-sm"''',
-            '''    <div className="flex min-h-screen flex-col bg-background">''': '''    <div className="flex min-h-screen flex-col bg-gradient-to-b from-background via-background to-muted/20">''',
-            '''      <header className="flex items-center gap-3 border-b px-4 py-3 sm:px-6">''': '''      <header className="flex items-center gap-3 border-b border-border/70 bg-background/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6">''',
-            '''          <h2 className="text-2xl font-semibold sm:text-3xl">Was möchtest du machen?</h2>''': '''          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Was möchtest du machen?</h2>''',
-            '''        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">''': '''        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">''',
-          }
+          replacements = [
+              (
+                  '<div className="flex h-44 items-center justify-center border-b bg-muted/40 p-4">{art}</div>',
+                  '<div className="relative flex h-44 items-center justify-center overflow-hidden border-b border-border/70 bg-gradient-to-br from-primary/[0.06] via-muted/25 to-background p-4">\n        <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent opacity-70" />\n        <div className="relative h-full transition-transform duration-300 ease-out group-hover:-translate-y-1 group-hover:scale-[1.035]">\n          {art}\n        </div>\n      </div>',
+              ),
+              ('<div className="flex flex-1 flex-col gap-1 p-5">', '<div className="flex flex-1 flex-col gap-1.5 p-5">'),
+              ('<span className="text-lg font-semibold">{title}</span>', '<span className="text-lg font-semibold tracking-tight">{title}</span>'),
+              ('<span className="text-sm text-muted-foreground">{text}</span>', '<span className="text-sm leading-relaxed text-muted-foreground">{text}</span>'),
+              ('className={`mt-3 text-sm font-medium ${\n            disabled ? "text-muted-foreground" : "text-primary group-hover:underline"\n          }`}', 'className={`mt-auto w-fit pt-4 text-sm font-semibold transition-[transform,color] duration-200 ${\n            disabled ? "text-muted-foreground" : "text-primary group-hover:translate-x-0.5"\n          }`}'),
+              ('"group flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-card text-left shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";', '"group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card text-left shadow-sm transition-[transform,box-shadow,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";'),
+              ('className="flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-card text-left opacity-75 shadow-sm"', 'className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card text-left opacity-75 shadow-sm"'),
+              ('<div className="flex min-h-screen flex-col bg-background">', '<div className="flex min-h-screen flex-col bg-gradient-to-b from-background via-background to-muted/20">'),
+              ('<header className="flex items-center gap-3 border-b px-4 py-3 sm:px-6">', '<header className="flex items-center gap-3 border-b border-border/70 bg-background/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6">'),
+              ('<h2 className="text-2xl font-semibold sm:text-3xl">Was möchtest du machen?</h2>', '<h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Was möchtest du machen?</h2>'),
+              ('<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">', '<div className="grid grid-cols-1 gap-5 sm:grid-cols-2">'),
+          ]
 
-          for old, new in replacements.items():
+          for old, new in replacements:
               if old not in text:
-                  raise SystemExit(f"Expected dashboard fragment not found:\n{old}")
+                  raise SystemExit(f"Expected dashboard fragment not found: {old}")
               text = text.replace(old, new, 1)
 
           page_rect = '<rect width="74" height="105" rx="2" fill="var(--color-background)" />'
           if text.count(page_rect) != 3:
               raise SystemExit(f"Expected 3 document page rects, found {text.count(page_rect)}")
-          text = text.replace(
-              page_rect,
-              '<rect width="74" height="105" rx="2" fill="var(--color-background)" stroke="var(--color-border)" />',
-          )
+          text = text.replace(page_rect, '<rect width="74" height="105" rx="2" fill="var(--color-background)" stroke="var(--color-border)" />')
 
-          if text.count('className="h-full w-auto drop-shadow"') != 4:
-              raise SystemExit("Expected four dashboard SVG shadows")
-          text = text.replace(
-              'className="h-full w-auto drop-shadow"',
-              'className="h-full w-auto drop-shadow-md"',
-          )
+          shadow = 'className="h-full w-auto drop-shadow"'
+          if text.count(shadow) != 4:
+              raise SystemExit(f"Expected 4 dashboard SVG shadows, found {text.count(shadow)}")
+          text = text.replace(shadow, 'className="h-full w-auto drop-shadow-md"')
 
-          text = text.replace(
-              '<rect x="28" y="7" width="56" height="88" rx="2" fill="var(--color-muted)" />',
-              '<rect x="28" y="7" width="56" height="88" rx="2" fill="var(--color-muted)" stroke="var(--color-border)" />',
-              1,
-          )
-          text = text.replace(
-              '<rect x="18" y="11" width="56" height="88" rx="2" fill="var(--color-background)" />',
-              '<rect x="18" y="11" width="56" height="88" rx="2" fill="var(--color-background)" stroke="var(--color-border)" />',
-              1,
-          )
+          back_page = '<rect x="28" y="7" width="56" height="88" rx="2" fill="var(--color-muted)" />'
+          mid_page = '<rect x="18" y="11" width="56" height="88" rx="2" fill="var(--color-background)" />'
+          if back_page not in text or mid_page not in text:
+              raise SystemExit("Expected dossier page stack not found")
+          text = text.replace(back_page, '<rect x="28" y="7" width="56" height="88" rx="2" fill="var(--color-muted)" stroke="var(--color-border)" />', 1)
+          text = text.replace(mid_page, '<rect x="18" y="11" width="56" height="88" rx="2" fill="var(--color-background)" stroke="var(--color-border)" />', 1)
 
           path.write_text(text)
+          PY
 
       - name: Format
         run: bunx prettier --write src/routes/index.tsx
