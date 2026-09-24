@@ -1,5 +1,6 @@
 import { Fragment, useId, type ReactNode } from "react";
 import "./Section.css";
+import "./SectionMicroPolish.css";
 
 type Props = {
   title: string;
