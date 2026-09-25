@@ -23,16 +23,17 @@ test("CV renderer owns vertical geometry globally and Sidebar horizontal clearan
   expect(contract).not.toContain("right: var(--cv-classic-main-right) !important;");
 });
 
-test("Sidebar pinning uses the guarded physical box and reacts to mirror state", () => {
-  expect(canvas).toContain("getCvInfoPosition");
-  expect(canvas).toContain('infoPosition === "mirrored"');
-  expect(canvas).toContain("--cv-modern-physical-left");
-  expect(canvas).toContain("--cv-modern-physical-right");
+test("Sidebar pinning resolves the live rail, reviewed gutter and persisted margins", () => {
+  expect(canvas).toContain("getDossierPageMargins");
+  expect(canvas).toContain("CV_SIDEBAR_GUTTER_MM = 8");
   expect(canvas).toContain("export function pinCvSidebarMainGeometry");
-  expect(canvas).toContain('getPropertyValue("--cv-modern-physical-left")');
-  expect(canvas).toContain('getPropertyValue("--cv-modern-physical-right")');
-  expect(canvas).toContain('main.style.setProperty("left", left, "important")');
-  expect(canvas).toContain('main.style.setProperty("right", right, "important")');
+  expect(canvas).toContain('child.hasAttribute("data-cv-sidebar")');
+  expect(canvas).toContain("railRightMm + CV_SIDEBAR_GUTTER_MM");
+  expect(canvas).toContain("railLeftFromRightMm + CV_SIDEBAR_GUTTER_MM");
+  expect(canvas).toContain('setStyleValue(main.style, "--cv-modern-main-left", logicalLeft)');
+  expect(canvas).toContain('setStyleValue(main.style, "--cv-modern-main-right", logicalRight)');
+  expect(canvas).toContain('setStyleValue(main.style, "left", left, "important")');
+  expect(canvas).toContain('setStyleValue(main.style, "right", right, "important")');
   expect(canvas).toContain("main.dataset.cvMainGeometryPinned");
   expect(canvas).toContain("new MutationObserver(schedulePin)");
   expect(canvas).toContain("window.addEventListener(CV_LAYOUT_EVENT, schedulePin)");
