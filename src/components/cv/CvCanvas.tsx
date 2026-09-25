@@ -17,6 +17,7 @@ import {
   type DossierChromeOptions,
 } from "@/lib/dossier-chrome";
 import {
+  getDossierPageMargins,
   getDossierPageMarginsSnapshot,
   subscribeDossierPageMargins,
 } from "@/lib/dossier-page-margins";
@@ -130,31 +131,86 @@ const clampCvScale = (value: number) => Math.max(CV_SCALE_MIN, Math.min(CV_SCALE
 
 const SIDEBAR_MAIN_SELECTOR =
   '[data-dossier-document="cv"][data-cv-layout="modern"] :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main]';
+const CV_SIDEBAR_GUTTER_MM = 8;
+const A4_WIDTH_MM = 210;
+const roundHalfMm = (value: number) => Math.round(value * 2) / 2;
+const cssMm = (value: string): number | null => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 /**
- * The wrapper publishes the fully guarded physical Sidebar box after custom
- * page margins, structural rail clearance and mirror choice have been resolved.
- * Historic template CSS can still carry horizontal `!important`, so copy the
- * independent physical values onto each concrete main node as inline-important.
+ * Sidebar geometry has two independent facts that must both survive hydration:
+ * the live structural rail and the user's persisted physical page margins.
+ * Historic template CSS can still carry horizontal `!important`, while the
+ * inherited renderer variables can briefly reflect the initial neutral CV.
  *
- * Do not derive the pin from the node's current inline left/right. React can
- * briefly rewrite those during hydration/import while the layout subscriptions
- * settle; the guarded wrapper geometry is the stable source of truth used by
- * preview and hidden PDF pages.
+ * Resolve the final physical bounds from the live rail plus the stored margins,
+ * keep the reviewed 8 mm rail gutter, then publish the corrected logical vars
+ * locally on the main node. Inline-important left/right make preview, pagination
+ * pages and hidden PDF pages immune to stale template selectors.
  */
 export function pinCvSidebarMainGeometry(scope: HTMLElement) {
+  const customMargins = getDossierPageMargins("cv");
+
   for (const main of scope.querySelectorAll<HTMLElement>(SIDEBAR_MAIN_SELECTOR)) {
     const computed = window.getComputedStyle(main);
-    const left = computed.getPropertyValue("--cv-modern-physical-left").trim();
-    const right = computed.getPropertyValue("--cv-modern-physical-right").trim();
-    if (!left || !right) continue;
+    const cvRoot = main.closest<HTMLElement>('[data-dossier-document="cv"]');
+    const mirrored = cvRoot?.dataset.cvInfoPosition === "mirrored";
 
-    if (main.style.getPropertyValue("--cv-renderer-main-left").trim() !== left) {
-      main.style.setProperty("--cv-renderer-main-left", left);
+    let leftMm = cssMm(computed.getPropertyValue("--cv-modern-physical-left")) ?? 0;
+    let rightMm = cssMm(computed.getPropertyValue("--cv-modern-physical-right")) ?? 0;
+
+    if (customMargins) {
+      if (mirrored) {
+        leftMm = Math.max(leftMm, customMargins.right);
+        rightMm = Math.max(rightMm, customMargins.left);
+      } else {
+        leftMm = Math.max(leftMm, customMargins.left);
+        rightMm = Math.max(rightMm, customMargins.right);
+      }
     }
-    if (main.style.getPropertyValue("--cv-renderer-main-right").trim() !== right) {
-      main.style.setProperty("--cv-renderer-main-right", right);
+
+    const page = main.parentElement;
+    const sidebar = page
+      ? (Array.from(page.children).find(
+          (child) => child instanceof HTMLElement && child.hasAttribute("data-cv-sidebar"),
+        ) as HTMLElement | undefined)
+      : undefined;
+
+    if (page && sidebar) {
+      const pageRect = page.getBoundingClientRect();
+      const sidebarRect = sidebar.getBoundingClientRect();
+      const pxPerMm = pageRect.width > 0 ? pageRect.width / A4_WIDTH_MM : 0;
+      if (pxPerMm > 0) {
+        const sidebarOnLeft =
+          sidebarRect.left + sidebarRect.width / 2 < pageRect.left + pageRect.width / 2;
+        if (sidebarOnLeft) {
+          const railRightMm = (sidebarRect.right - pageRect.left) / pxPerMm;
+          leftMm = Math.max(leftMm, railRightMm + CV_SIDEBAR_GUTTER_MM);
+        } else {
+          const railLeftFromRightMm = (pageRect.right - sidebarRect.left) / pxPerMm;
+          rightMm = Math.max(rightMm, railLeftFromRightMm + CV_SIDEBAR_GUTTER_MM);
+        }
+      }
     }
+
+    leftMm = roundHalfMm(leftMm);
+    rightMm = roundHalfMm(rightMm);
+    if (!(leftMm > 0) || !(rightMm > 0)) continue;
+
+    const left = `${leftMm}mm`;
+    const right = `${rightMm}mm`;
+    const logicalLeft = mirrored ? right : left;
+    const logicalRight = mirrored ? left : right;
+
+    main.style.setProperty("--cv-renderer-main-left", left);
+    main.style.setProperty("--cv-renderer-main-right", right);
+    main.style.setProperty("--cv-modern-physical-left", left);
+    main.style.setProperty("--cv-modern-physical-right", right);
+    main.style.setProperty("--cv-modern-main-left", logicalLeft);
+    main.style.setProperty("--cv-modern-main-right", logicalRight);
+
     if (
       main.style.getPropertyValue("left").trim() !== left ||
       main.style.getPropertyPriority("left") !== "important"
