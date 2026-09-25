@@ -408,10 +408,20 @@ export function cvContentBox(
       cvPageReserves(chrome, pageIndex),
     ) ?? fallback;
 
-  if (pageIndex === 0) return resolved;
+  // A modern sidebar is a structural rail, not merely a page-margin hint.
+  // Keep the full reviewed 8 mm gutter at the final content-box boundary even
+  // while persisted state/template hydration is settling. This makes the
+  // physical renderer unable to collapse to the old ~1 mm clearance.
+  const side = sidebarWidthMm(frame, layout, sidebarPct);
+  const sidebarFloor =
+    side > 0 ? (frame.id === "card" ? frame.cardInsetMm + side + GAP : side + GAP) : null;
+  const guarded =
+    sidebarFloor === null ? resolved : { ...resolved, left: Math.max(resolved.left, sidebarFloor) };
+
+  if (pageIndex === 0) return guarded;
 
   return {
-    ...resolved,
+    ...guarded,
     top: cvContinuationContentTopMm(frame, getCvContinuationTopMarginMm(), chrome, pageIndex),
   };
 }

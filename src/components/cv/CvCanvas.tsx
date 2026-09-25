@@ -17,6 +17,7 @@ import {
   type DossierChromeOptions,
 } from "@/lib/dossier-chrome";
 import {
+  getDossierPageMargins,
   getDossierPageMarginsSnapshot,
   subscribeDossierPageMargins,
 } from "@/lib/dossier-page-margins";
@@ -130,43 +131,109 @@ const clampCvScale = (value: number) => Math.max(CV_SCALE_MIN, Math.min(CV_SCALE
 
 const SIDEBAR_MAIN_SELECTOR =
   '[data-dossier-document="cv"][data-cv-layout="modern"] :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main]';
+const CV_SIDEBAR_GUTTER_MM = 8;
+const A4_WIDTH_MM = 210;
+const roundHalfMm = (value: number) => Math.round(value * 2) / 2;
+const cssMm = (value: string): number | null => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+const setStyleValue = (
+  style: CSSStyleDeclaration,
+  property: string,
+  value: string,
+  priority = "",
+) => {
+  if (
+    style.getPropertyValue(property).trim() === value &&
+    style.getPropertyPriority(property) === priority
+  ) {
+    return;
+  }
+  style.setProperty(property, value, priority);
+};
 
 /**
- * The wrapper publishes the reviewed physical Sidebar box from current design,
- * page margins and explicit left/right choice. Do not derive this guard from the
- * main node's current `left` / `right`: that node is exactly what historic
- * `!important` template rules can corrupt before the first interaction.
+ * Sidebar geometry has two independent facts that must both survive hydration:
+ * the live structural rail and the user's persisted physical page margins.
+ * Historic template CSS can still carry horizontal `!important`, while the
+ * inherited renderer variables can briefly reflect the initial neutral CV.
  *
- * Copy the independent physical values onto every main node as inline-important
- * geometry. That makes preview and hidden PDF pages correct immediately after
- * load/import and removes the accidental need to toggle "gespiegelt" once just
- * to refresh the cascade. Classic/non-sidebar layouts stay template-owned.
+ * The rail side therefore owns its inset: rail edge + the reviewed 8 mm gutter,
+ * optionally enlarged by a user margin. The opposite side can safely inherit the
+ * renderer value and is likewise enlarged by a persisted margin. This matters for
+ * adjustable rails: a stale initial 71 mm value must never prevent a 22% sidebar
+ * from shrinking back to its real ~54 mm main origin.
  */
 export function pinCvSidebarMainGeometry(scope: HTMLElement) {
+  const customMargins = getDossierPageMargins("cv");
+
   for (const main of scope.querySelectorAll<HTMLElement>(SIDEBAR_MAIN_SELECTOR)) {
     const computed = window.getComputedStyle(main);
-    const left = computed.getPropertyValue("--cv-modern-physical-left").trim();
-    const right = computed.getPropertyValue("--cv-modern-physical-right").trim();
-    if (!left || !right) continue;
+    const cvRoot = main.closest<HTMLElement>('[data-dossier-document="cv"]');
+    const mirrored = cvRoot?.dataset.cvInfoPosition === "mirrored";
+    const customLeftMm = customMargins
+      ? mirrored
+        ? customMargins.right
+        : customMargins.left
+      : 0;
+    const customRightMm = customMargins
+      ? mirrored
+        ? customMargins.left
+        : customMargins.right
+      : 0;
 
-    if (main.style.getPropertyValue("--cv-renderer-main-left").trim() !== left) {
-      main.style.setProperty("--cv-renderer-main-left", left);
+    let leftMm = Math.max(
+      cssMm(computed.getPropertyValue("--cv-modern-physical-left")) ?? 0,
+      customLeftMm,
+    );
+    let rightMm = Math.max(
+      cssMm(computed.getPropertyValue("--cv-modern-physical-right")) ?? 0,
+      customRightMm,
+    );
+
+    const page = main.parentElement;
+    const sidebar = page
+      ? (Array.from(page.children).find(
+          (child) => child instanceof HTMLElement && child.hasAttribute("data-cv-sidebar"),
+        ) as HTMLElement | undefined)
+      : undefined;
+
+    if (page && sidebar) {
+      const pageRect = page.getBoundingClientRect();
+      const sidebarRect = sidebar.getBoundingClientRect();
+      const pxPerMm = pageRect.width > 0 ? pageRect.width / A4_WIDTH_MM : 0;
+      if (pxPerMm > 0) {
+        const sidebarOnLeft =
+          sidebarRect.left + sidebarRect.width / 2 < pageRect.left + pageRect.width / 2;
+        if (sidebarOnLeft) {
+          const railRightMm = (sidebarRect.right - pageRect.left) / pxPerMm;
+          leftMm = Math.max(railRightMm + CV_SIDEBAR_GUTTER_MM, customLeftMm);
+        } else {
+          const railLeftFromRightMm = (pageRect.right - sidebarRect.left) / pxPerMm;
+          rightMm = Math.max(railLeftFromRightMm + CV_SIDEBAR_GUTTER_MM, customRightMm);
+        }
+      }
     }
-    if (main.style.getPropertyValue("--cv-renderer-main-right").trim() !== right) {
-      main.style.setProperty("--cv-renderer-main-right", right);
-    }
-    if (
-      main.style.getPropertyValue("left").trim() !== left ||
-      main.style.getPropertyPriority("left") !== "important"
-    ) {
-      main.style.setProperty("left", left, "important");
-    }
-    if (
-      main.style.getPropertyValue("right").trim() !== right ||
-      main.style.getPropertyPriority("right") !== "important"
-    ) {
-      main.style.setProperty("right", right, "important");
-    }
+
+    leftMm = roundHalfMm(leftMm);
+    rightMm = roundHalfMm(rightMm);
+    if (!(leftMm > 0) || !(rightMm > 0)) continue;
+
+    const left = `${leftMm}mm`;
+    const right = `${rightMm}mm`;
+    const logicalLeft = mirrored ? right : left;
+    const logicalRight = mirrored ? left : right;
+
+    setStyleValue(main.style, "--cv-renderer-main-left", left);
+    setStyleValue(main.style, "--cv-renderer-main-right", right);
+    setStyleValue(main.style, "--cv-modern-physical-left", left);
+    setStyleValue(main.style, "--cv-modern-physical-right", right);
+    setStyleValue(main.style, "--cv-modern-main-left", logicalLeft);
+    setStyleValue(main.style, "--cv-modern-main-right", logicalRight);
+    setStyleValue(main.style, "left", left, "important");
+    setStyleValue(main.style, "right", right, "important");
+
     if (main.dataset.cvMainGeometryPinned !== "true") {
       main.dataset.cvMainGeometryPinned = "true";
     }
