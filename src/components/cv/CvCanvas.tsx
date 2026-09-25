@@ -138,6 +138,20 @@ const cssMm = (value: string): number | null => {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : null;
 };
+const setStyleValue = (
+  style: CSSStyleDeclaration,
+  property: string,
+  value: string,
+  priority = "",
+) => {
+  if (
+    style.getPropertyValue(property).trim() === value &&
+    style.getPropertyPriority(property) === priority
+  ) {
+    return;
+  }
+  style.setProperty(property, value, priority);
+};
 
 /**
  * Sidebar geometry has two independent facts that must both survive hydration:
@@ -145,10 +159,11 @@ const cssMm = (value: string): number | null => {
  * Historic template CSS can still carry horizontal `!important`, while the
  * inherited renderer variables can briefly reflect the initial neutral CV.
  *
- * Resolve the final physical bounds from the live rail plus the stored margins,
- * keep the reviewed 8 mm rail gutter, then publish the corrected logical vars
- * locally on the main node. Inline-important left/right make preview, pagination
- * pages and hidden PDF pages immune to stale template selectors.
+ * The rail side therefore owns its inset: rail edge + the reviewed 8 mm gutter,
+ * optionally enlarged by a user margin. The opposite side can safely inherit the
+ * renderer value and is likewise enlarged by a persisted margin. This matters for
+ * adjustable rails: a stale initial 71 mm value must never prevent a 22% sidebar
+ * from shrinking back to its real ~54 mm main origin.
  */
 export function pinCvSidebarMainGeometry(scope: HTMLElement) {
   const customMargins = getDossierPageMargins("cv");
@@ -157,19 +172,25 @@ export function pinCvSidebarMainGeometry(scope: HTMLElement) {
     const computed = window.getComputedStyle(main);
     const cvRoot = main.closest<HTMLElement>('[data-dossier-document="cv"]');
     const mirrored = cvRoot?.dataset.cvInfoPosition === "mirrored";
+    const customLeftMm = customMargins
+      ? mirrored
+        ? customMargins.right
+        : customMargins.left
+      : 0;
+    const customRightMm = customMargins
+      ? mirrored
+        ? customMargins.left
+        : customMargins.right
+      : 0;
 
-    let leftMm = cssMm(computed.getPropertyValue("--cv-modern-physical-left")) ?? 0;
-    let rightMm = cssMm(computed.getPropertyValue("--cv-modern-physical-right")) ?? 0;
-
-    if (customMargins) {
-      if (mirrored) {
-        leftMm = Math.max(leftMm, customMargins.right);
-        rightMm = Math.max(rightMm, customMargins.left);
-      } else {
-        leftMm = Math.max(leftMm, customMargins.left);
-        rightMm = Math.max(rightMm, customMargins.right);
-      }
-    }
+    let leftMm = Math.max(
+      cssMm(computed.getPropertyValue("--cv-modern-physical-left")) ?? 0,
+      customLeftMm,
+    );
+    let rightMm = Math.max(
+      cssMm(computed.getPropertyValue("--cv-modern-physical-right")) ?? 0,
+      customRightMm,
+    );
 
     const page = main.parentElement;
     const sidebar = page
@@ -187,10 +208,10 @@ export function pinCvSidebarMainGeometry(scope: HTMLElement) {
           sidebarRect.left + sidebarRect.width / 2 < pageRect.left + pageRect.width / 2;
         if (sidebarOnLeft) {
           const railRightMm = (sidebarRect.right - pageRect.left) / pxPerMm;
-          leftMm = Math.max(leftMm, railRightMm + CV_SIDEBAR_GUTTER_MM);
+          leftMm = Math.max(railRightMm + CV_SIDEBAR_GUTTER_MM, customLeftMm);
         } else {
           const railLeftFromRightMm = (pageRect.right - sidebarRect.left) / pxPerMm;
-          rightMm = Math.max(rightMm, railLeftFromRightMm + CV_SIDEBAR_GUTTER_MM);
+          rightMm = Math.max(railLeftFromRightMm + CV_SIDEBAR_GUTTER_MM, customRightMm);
         }
       }
     }
@@ -204,25 +225,15 @@ export function pinCvSidebarMainGeometry(scope: HTMLElement) {
     const logicalLeft = mirrored ? right : left;
     const logicalRight = mirrored ? left : right;
 
-    main.style.setProperty("--cv-renderer-main-left", left);
-    main.style.setProperty("--cv-renderer-main-right", right);
-    main.style.setProperty("--cv-modern-physical-left", left);
-    main.style.setProperty("--cv-modern-physical-right", right);
-    main.style.setProperty("--cv-modern-main-left", logicalLeft);
-    main.style.setProperty("--cv-modern-main-right", logicalRight);
+    setStyleValue(main.style, "--cv-renderer-main-left", left);
+    setStyleValue(main.style, "--cv-renderer-main-right", right);
+    setStyleValue(main.style, "--cv-modern-physical-left", left);
+    setStyleValue(main.style, "--cv-modern-physical-right", right);
+    setStyleValue(main.style, "--cv-modern-main-left", logicalLeft);
+    setStyleValue(main.style, "--cv-modern-main-right", logicalRight);
+    setStyleValue(main.style, "left", left, "important");
+    setStyleValue(main.style, "right", right, "important");
 
-    if (
-      main.style.getPropertyValue("left").trim() !== left ||
-      main.style.getPropertyPriority("left") !== "important"
-    ) {
-      main.style.setProperty("left", left, "important");
-    }
-    if (
-      main.style.getPropertyValue("right").trim() !== right ||
-      main.style.getPropertyPriority("right") !== "important"
-    ) {
-      main.style.setProperty("right", right, "important");
-    }
     if (main.dataset.cvMainGeometryPinned !== "true") {
       main.dataset.cvMainGeometryPinned = "true";
     }
