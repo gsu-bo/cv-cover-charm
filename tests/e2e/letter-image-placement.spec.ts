@@ -199,16 +199,31 @@ test.describe("letter image placement hardening", () => {
     const savedTop = await numericAttribute(left, "data-top-mm");
     const savedWidth = await numericAttribute(left, "data-width-mm");
 
+    // Autosave is intentionally debounced. Wait for the exact final geometry,
+    // not merely the already-true `placement: free` marker, before reloading.
     await expect
       .poll(() =>
         page.evaluate((key) => {
           const saved = JSON.parse(localStorage.getItem(key) ?? "{}") as {
             data?: { images?: Array<Record<string, unknown>> };
           };
-          return saved.data?.images?.find((image) => image.id === "image-left") ?? null;
+          const image = saved.data?.images?.find((candidate) => candidate.id === "image-left");
+          return image
+            ? {
+                placement: image.placement,
+                xMm: image.xMm,
+                topMm: image.topMm,
+                widthMm: image.widthMm,
+              }
+            : null;
         }, STORAGE_KEY),
       )
-      .toMatchObject({ placement: "free" });
+      .toEqual({
+        placement: "free",
+        xMm: savedX,
+        topMm: savedTop,
+        widthMm: savedWidth,
+      });
 
     // A literal JSON stringify/parse roundtrip must keep the explicit free signal.
     await page.evaluate((key) => {
