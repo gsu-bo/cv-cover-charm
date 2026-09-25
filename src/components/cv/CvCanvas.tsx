@@ -123,6 +123,45 @@ export function resolveCvChromeContact(
 
 const clampCvScale = (value: number) => Math.max(CV_SCALE_MIN, Math.min(CV_SCALE_MAX, value));
 
+const SIDEBAR_MAIN_SELECTOR =
+  '[data-dossier-document="cv"][data-cv-layout="modern"] :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main]';
+
+/**
+ * BaseCvCanvas already resolves the final physical left/right edges (including
+ * mirrored Sidebar, custom page margins and the template's real column width)
+ * and writes them as inline `left` / `right` values. Historic template CSS also
+ * contains `!important` horizontal rules, though, so a stale template/layout
+ * scope can still win the cascade and pull that correct box back under the rail.
+ *
+ * Promote the renderer-owned inline values to inline `!important`. This keeps
+ * the actual page node self-contained for preview and html2canvas clones and
+ * removes the accidental dependency on toggling "gespiegelt" to force a fresh
+ * cascade. Classic/non-sidebar layouts deliberately remain template-owned.
+ */
+export function pinCvSidebarMainGeometry(scope: HTMLElement) {
+  for (const main of scope.querySelectorAll<HTMLElement>(SIDEBAR_MAIN_SELECTOR)) {
+    const left = main.style.getPropertyValue("left").trim();
+    const right = main.style.getPropertyValue("right").trim();
+    if (!left || !right) continue;
+
+    if (main.style.getPropertyValue("--cv-renderer-main-left").trim() !== left) {
+      main.style.setProperty("--cv-renderer-main-left", left);
+    }
+    if (main.style.getPropertyValue("--cv-renderer-main-right").trim() !== right) {
+      main.style.setProperty("--cv-renderer-main-right", right);
+    }
+    if (main.style.getPropertyPriority("left") !== "important") {
+      main.style.setProperty("left", left, "important");
+    }
+    if (main.style.getPropertyPriority("right") !== "important") {
+      main.style.setProperty("right", right, "important");
+    }
+    if (main.dataset.cvMainGeometryPinned !== "true") {
+      main.dataset.cvMainGeometryPinned = "true";
+    }
+  }
+}
+
 /** Pure snapshot adapter: no dossier-chrome store reads happen below the route/editor boundary. */
 export function CvCanvas({
   chromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
@@ -330,8 +369,38 @@ export function CvCanvas({
     "--dossier-motif-opacity": String(Math.max(0, Math.min(1, design.bgOpacity))),
   } as CSSProperties;
 
+  const geometryScopeRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const scope = geometryScopeRef.current;
+    if (!scope) return;
+
+    let animationFrame = 0;
+    const pin = () => pinCvSidebarMainGeometry(scope);
+    const schedulePin = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(pin);
+    };
+
+    pin();
+    const observer = new MutationObserver(schedulePin);
+    observer.observe(scope, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["style"],
+    });
+    window.addEventListener(CV_LAYOUT_EVENT, schedulePin);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      observer.disconnect();
+      window.removeEventListener(CV_LAYOUT_EVENT, schedulePin);
+    };
+  }, [canvasChromeOptions, design.sidebarPct, design.template, pageFitLayout, props.exportMode]);
+
   return (
     <div
+      ref={geometryScopeRef}
       style={geometryStyle}
       data-dossier-template={design.template}
       data-cv-page-fit-mode={pageFitMode ?? undefined}
