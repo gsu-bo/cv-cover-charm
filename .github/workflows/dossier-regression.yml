@@ -132,6 +132,7 @@ jobs:
               tests/e2e/retired-frame-compatibility.spec.ts
               tests/e2e/fresh-dossier-templates.spec.ts
               tests/e2e/fresh-modern-sidebar-geometry.spec.ts
+              tests/e2e/cv-sidebar-mirror-refresh.spec.ts
               tests/e2e/dossier-docx-fresh-gallery.spec.ts
 
     name: Browser smoke - ${{ matrix.group }}
