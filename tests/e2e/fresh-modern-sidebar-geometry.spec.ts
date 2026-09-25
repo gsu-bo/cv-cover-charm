@@ -125,6 +125,7 @@ async function sidebarGeometry(
     ) as HTMLElement | undefined;
     if (!sidebar || !main) return null;
 
+    const pageRect = node.getBoundingClientRect();
     const sidebarRect = sidebar.getBoundingClientRect();
     const mainRect = main.getBoundingClientRect();
     const mainStyle = getComputedStyle(main);
@@ -133,6 +134,7 @@ async function sidebarGeometry(
     const overlap = mirrored
       ? Math.max(0, mainRect.right - sidebarRect.left)
       : Math.max(0, sidebarRect.right - mainRect.left);
+    const pxPerMm = pageRect.width / 210;
     const contentRects = Array.from(
       main.querySelectorAll<HTMLElement>("[data-cv-header], [data-cv-section], [data-cv-entry]"),
     )
@@ -150,7 +152,11 @@ async function sidebarGeometry(
       sidebarRight: sidebarRect.right,
       mainLeft: mainRect.left,
       mainRight: mainRect.right,
+      mainLeftMm: (mainRect.left - pageRect.left) / pxPerMm,
+      mainRightMm: (pageRect.right - mainRect.right) / pxPerMm,
+      sidebarWidthMm: sidebarRect.width / pxPerMm,
       gap,
+      gapMm: gap / pxPerMm,
       overlap,
       contentOverlap,
       computedLeft: mainStyle.left,
@@ -176,12 +182,21 @@ function expectSidebarClear(
     geometry?.contentOverlap ?? Number.POSITIVE_INFINITY,
     `${label}: rendered main content crosses into sidebar: ${JSON.stringify(geometry)}`,
   ).toBeLessThanOrEqual(2);
-  // CSS mm-to-px conversion may leave a fractional positive gutter in Chromium.
-  // Any positive clearance is sufficient; overlap is asserted separately above.
   expect(
     geometry?.gap ?? Number.NEGATIVE_INFINITY,
     `${label}: Sidebar layout should retain a positive gutter: ${JSON.stringify(geometry)}`,
   ).toBeGreaterThan(0);
+}
+
+function expectReviewedSidebarGutter(
+  geometry: Awaited<ReturnType<typeof sidebarGeometry>>,
+  label: string,
+) {
+  expectSidebarClear(geometry, label);
+  expect(
+    geometry?.gapMm ?? Number.NEGATIVE_INFINITY,
+    `${label}: reviewed Sidebar gutter must stay at least 8 mm: ${JSON.stringify(geometry)}`,
+  ).toBeGreaterThanOrEqual(7.5);
 }
 
 test.describe("CV sidebar content clearance", () => {
@@ -216,7 +231,7 @@ test.describe("CV sidebar content clearance", () => {
   test("stale global template CSS cannot reclaim the Sidebar main x-origin", async ({ page }) => {
     await applyTemplate(page, "terracotta", 0.22, "standard");
     const before = await sidebarGeometry(page, "terracotta", "standard");
-    expectSidebarClear(before, "terracotta before stale global template scope");
+    expectReviewedSidebarGutter(before, "terracotta before stale global template scope");
 
     // Reproduce the failure mode behind the real overlap screenshot: the local
     // CV is still Kolumne/terracotta, but a stale global template selector with
@@ -232,32 +247,34 @@ test.describe("CV sidebar content clearance", () => {
     );
 
     const after = await sidebarGeometry(page, "terracotta", "standard");
-    expectSidebarClear(after, "terracotta with stale gallery global template scope");
+    expectReviewedSidebarGutter(after, "terracotta with stale gallery global template scope");
     expect(after?.mainLeft).toBeCloseTo(before?.mainLeft ?? 0, 1);
     expect(after?.mainRight).toBeCloseTo(before?.mainRight ?? 0, 1);
   });
 
-  test("current Tim-Gauss page margins cannot pull main content back under a sidebar", async ({
-    page,
-  }) => {
+  test("current Tim-Gauss page margins preserve the full reviewed sidebar gutter", async ({ page }) => {
     for (const template of ["terracotta", "warm2"] as const) {
       await applyTemplate(page, template, 0.22, "standard");
       await applyCurrentTimGaussMargins(page);
-      expectSidebarClear(
-        await sidebarGeometry(page, template, "standard"),
-        `${template} current Tim-Gauss margins before refresh`,
-      );
+      const before = await sidebarGeometry(page, template, "standard");
+      expectReviewedSidebarGutter(before, `${template} current Tim-Gauss margins before refresh`);
+      if (template === "terracotta") {
+        expect(before?.rendererLeft).toBe("78mm");
+        expect(before?.mainLeftMm ?? 0).toBeCloseTo(78, 1);
+      }
 
       await page.reload({ waitUntil: "domcontentloaded" });
       await waitEditorReady(page);
-      expectSidebarClear(
-        await sidebarGeometry(page, template, "standard"),
-        `${template} current Tim-Gauss margins after refresh`,
-      );
+      const after = await sidebarGeometry(page, template, "standard");
+      expectReviewedSidebarGutter(after, `${template} current Tim-Gauss margins after refresh`);
+      if (template === "terracotta") {
+        expect(after?.rendererLeft).toBe("78mm");
+        expect(after?.mainLeftMm ?? 0).toBeCloseTo(78, 1);
+      }
     }
   });
 
-  test("content-rich Kolumne keeps the sidebar reservation on page 2+ in preview and export canvas", async ({
+  test("content-rich Kolumne keeps the full sidebar reservation on page 2+ in preview and export canvas", async ({
     page,
   }) => {
     await applyTemplate(page, "terracotta", 0.22, "standard");
@@ -274,11 +291,11 @@ test.describe("CV sidebar content clearance", () => {
     expect(await exported.count()).toBeGreaterThan(1);
 
     for (const pageIndex of [0, 1]) {
-      expectSidebarClear(
+      expectReviewedSidebarGutter(
         await sidebarGeometry(page, "terracotta", "standard", pageIndex, false),
         `terracotta preview page ${pageIndex + 1}`,
       );
-      expectSidebarClear(
+      expectReviewedSidebarGutter(
         await sidebarGeometry(page, "terracotta", "standard", pageIndex, true),
         `terracotta export page ${pageIndex + 1}`,
       );
@@ -287,14 +304,14 @@ test.describe("CV sidebar content clearance", () => {
 
   test("hard refresh preserves the same physical sidebar/main geometry", async ({ page }) => {
     await applyTemplate(page, "terracotta", 0.3, "standard");
-    expectSidebarClear(
+    expectReviewedSidebarGutter(
       await sidebarGeometry(page, "terracotta", "standard"),
       "terracotta before hard refresh",
     );
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await waitEditorReady(page);
-    expectSidebarClear(
+    expectReviewedSidebarGutter(
       await sidebarGeometry(page, "terracotta", "standard"),
       "terracotta after hard refresh",
     );
@@ -336,7 +353,7 @@ test.describe("CV sidebar content clearance", () => {
     for (const sidebarPct of [0.22, 0.5]) {
       await applyTemplate(page, "warm2", sidebarPct, "standard");
       const geometry = await sidebarGeometry(page, "warm2", "standard");
-      expectSidebarClear(geometry, `warm2 ${sidebarPct}`);
+      expectReviewedSidebarGutter(geometry, `warm2 ${sidebarPct}`);
       geometries.push(geometry);
     }
 
