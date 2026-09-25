@@ -27,7 +27,7 @@ test("Sidebar main boxes promote the renderer's physical inline edges above lega
   expect(canvas).toContain("export function pinCvSidebarMainGeometry");
   expect(canvas).toContain('main.style.setProperty("left", left, "important")');
   expect(canvas).toContain('main.style.setProperty("right", right, "important")');
-  expect(canvas).toContain('data-cv-main-geometry-pinned');
+  expect(canvas).toContain("main.dataset.cvMainGeometryPinned");
   expect(canvas).toContain("new MutationObserver(schedulePin)");
   expect(canvas).toContain("window.addEventListener(CV_LAYOUT_EVENT, schedulePin)");
 });
