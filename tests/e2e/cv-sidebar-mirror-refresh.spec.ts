@@ -2,6 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 const BASE_URL = "http://127.0.0.1:4173";
 const LAYOUT_EVENT = "lebenslauf-layout-change";
+const REVIEWED_SIDEBAR_GUTTER_MM = 8;
+const GUTTER_TOLERANCE_MM = 0.5;
 
 type InfoPosition = "standard" | "mirrored";
 
@@ -75,8 +77,10 @@ async function geometry(page: Page, position: InfoPosition, exportMode = false) 
     ) as HTMLElement | undefined;
     if (!sidebar || !main) return null;
 
+    const pageRect = node.getBoundingClientRect();
     const sidebarRect = sidebar.getBoundingClientRect();
     const mainRect = main.getBoundingClientRect();
+    const pxPerMm = pageRect.width / 210;
     const isMirrored = mirrored === "mirrored";
     const gap = isMirrored ? sidebarRect.left - mainRect.right : mainRect.left - sidebarRect.right;
     const overlap = isMirrored
@@ -85,6 +89,7 @@ async function geometry(page: Page, position: InfoPosition, exportMode = false) 
 
     return {
       gap,
+      gapMm: gap / pxPerMm,
       overlap,
       pinned: main.dataset.cvMainGeometryPinned,
       leftPriority: main.style.getPropertyPriority("left"),
@@ -97,7 +102,11 @@ async function geometry(page: Page, position: InfoPosition, exportMode = false) 
   }, position);
 }
 
-function expectClear(value: Awaited<ReturnType<typeof geometry>>, label: string) {
+function expectReviewedGeometry(
+  value: Awaited<ReturnType<typeof geometry>>,
+  position: InfoPosition,
+  label: string,
+) {
   expect(value, `${label}: sidebar/main must render`).not.toBeNull();
   expect(value?.pinned, `${label}: renderer geometry must be pinned before capture`).toBe("true");
   expect(value?.leftPriority, `${label}: left edge must outrank legacy !important CSS`).toBe(
@@ -106,17 +115,26 @@ function expectClear(value: Awaited<ReturnType<typeof geometry>>, label: string)
   expect(value?.rightPriority, `${label}: right edge must outrank legacy !important CSS`).toBe(
     "important",
   );
-  expect(value?.overlap ?? Number.POSITIVE_INFINITY, `${label}: ${JSON.stringify(value)}`).toBeLessThanOrEqual(2);
-  // The contract is physical separation, not an arbitrary 2 px visual gutter.
-  // Chromium's mm-to-px rounding can leave ~1.5 px between adjacent boxes even
-  // when the renderer-owned 71 mm/20 mm edges are correct. Require a clearly
-  // positive gap while keeping the independent overlap assertion above.
-  expect(value?.gap ?? Number.NEGATIVE_INFINITY, `${label}: ${JSON.stringify(value)}`).toBeGreaterThan(0.5);
+  expect(
+    value?.overlap ?? Number.POSITIVE_INFINITY,
+    `${label}: sidebar/main overlap: ${JSON.stringify(value)}`,
+  ).toBeLessThanOrEqual(2);
+  expect(
+    value?.gapMm ?? Number.NEGATIVE_INFINITY,
+    `${label}: reviewed 8 mm gutter collapsed: ${JSON.stringify(value)}`,
+  ).toBeGreaterThanOrEqual(REVIEWED_SIDEBAR_GUTTER_MM - GUTTER_TOLERANCE_MM);
+
+  // Tim-Gauss stores the physical sidebar-side page margin as 78 mm. Mirroring
+  // moves that physical inset to the right; it must never degrade to the old
+  // 71 mm near-touching state.
+  if (position === "standard") {
+    expect(value?.inlineLeft, `${label}: standard sidebar-side inset`).toBe("78mm");
+  } else {
+    expect(value?.inlineRight, `${label}: mirrored sidebar-side inset`).toBe("78mm");
+  }
 }
 
-test("Kolumne is correct before the mirror workaround and stays correct through yes/no", async ({
-  page,
-}) => {
+test("Kolumne keeps the reviewed gutter before and through mirror yes/no", async ({ page }) => {
   test.setTimeout(90_000);
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => localStorage.clear());
@@ -124,8 +142,8 @@ test("Kolumne is correct before the mirror workaround and stays correct through 
   await applyTimGaussSidebarState(page);
 
   // Recreate the historic cascade that produced the real screenshot: a stale
-  // template rule insists on a 20 mm main origin. The renderer's physical box
-  // must already win before the user touches "gespiegelt".
+  // template rule insists on a 20 mm main origin. Correct geometry must already
+  // win before the user touches "gespiegelt" and remain stable afterwards.
   await page.addStyleTag({
     content: `
       html[data-dossier-template] [data-dossier-document="cv"][data-cv-layout="modern"]
@@ -136,14 +154,38 @@ test("Kolumne is correct before the mirror workaround and stays correct through 
     `,
   });
 
-  expectClear(await geometry(page, "standard", false), "preview before mirror toggle");
-  expectClear(await geometry(page, "standard", true), "export before mirror toggle");
+  expectReviewedGeometry(
+    await geometry(page, "standard", false),
+    "standard",
+    "preview before mirror toggle",
+  );
+  expectReviewedGeometry(
+    await geometry(page, "standard", true),
+    "standard",
+    "export before mirror toggle",
+  );
 
   await setMirror(page, "mirrored");
-  expectClear(await geometry(page, "mirrored", false), "preview mirrored yes");
-  expectClear(await geometry(page, "mirrored", true), "export mirrored yes");
+  expectReviewedGeometry(
+    await geometry(page, "mirrored", false),
+    "mirrored",
+    "preview mirrored yes",
+  );
+  expectReviewedGeometry(
+    await geometry(page, "mirrored", true),
+    "mirrored",
+    "export mirrored yes",
+  );
 
   await setMirror(page, "standard");
-  expectClear(await geometry(page, "standard", false), "preview mirrored no again");
-  expectClear(await geometry(page, "standard", true), "export mirrored no again");
+  expectReviewedGeometry(
+    await geometry(page, "standard", false),
+    "standard",
+    "preview mirrored no again",
+  );
+  expectReviewedGeometry(
+    await geometry(page, "standard", true),
+    "standard",
+    "export mirrored no again",
+  );
 });
