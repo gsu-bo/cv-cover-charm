@@ -30,7 +30,12 @@ import { CvPageFitMenuPortal } from "./CvPageFitMenuPortal";
 import { CvTextAlignmentPortal } from "./CvTextAlignmentPortal";
 import { getCvTextAlignment, subscribeCvTextAlignment } from "./text-alignment";
 import { cvContentBox, cvFrameFor } from "./archetype";
-import { CV_LAYOUT_EVENT, getCvLayout, subscribeCvLayout } from "./layout";
+import {
+  CV_LAYOUT_EVENT,
+  getCvInfoPosition,
+  getCvLayout,
+  subscribeCvLayout,
+} from "./layout";
 import { CvCanvas as BaseCvCanvas } from "./CvCanvasBase";
 import { resolveCvRubricOptions } from "./citrus-rubric";
 import {
@@ -127,21 +132,21 @@ const SIDEBAR_MAIN_SELECTOR =
   '[data-dossier-document="cv"][data-cv-layout="modern"] :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main]';
 
 /**
- * BaseCvCanvas already resolves the final physical left/right edges (including
- * mirrored Sidebar, custom page margins and the template's real column width)
- * and writes them as inline `left` / `right` values. Historic template CSS also
- * contains `!important` horizontal rules, though, so a stale template/layout
- * scope can still win the cascade and pull that correct box back under the rail.
+ * The wrapper publishes the reviewed physical Sidebar box from current design,
+ * page margins and explicit left/right choice. Do not derive this guard from the
+ * main node's current `left` / `right`: that node is exactly what historic
+ * `!important` template rules can corrupt before the first interaction.
  *
- * Promote the renderer-owned inline values to inline `!important`. This keeps
- * the actual page node self-contained for preview and html2canvas clones and
- * removes the accidental dependency on toggling "gespiegelt" to force a fresh
- * cascade. Classic/non-sidebar layouts deliberately remain template-owned.
+ * Copy the independent physical values onto every main node as inline-important
+ * geometry. That makes preview and hidden PDF pages correct immediately after
+ * load/import and removes the accidental need to toggle "gespiegelt" once just
+ * to refresh the cascade. Classic/non-sidebar layouts stay template-owned.
  */
 export function pinCvSidebarMainGeometry(scope: HTMLElement) {
   for (const main of scope.querySelectorAll<HTMLElement>(SIDEBAR_MAIN_SELECTOR)) {
-    const left = main.style.getPropertyValue("left").trim();
-    const right = main.style.getPropertyValue("right").trim();
+    const computed = window.getComputedStyle(main);
+    const left = computed.getPropertyValue("--cv-modern-physical-left").trim();
+    const right = computed.getPropertyValue("--cv-modern-physical-right").trim();
     if (!left || !right) continue;
 
     if (main.style.getPropertyValue("--cv-renderer-main-left").trim() !== left) {
@@ -150,10 +155,16 @@ export function pinCvSidebarMainGeometry(scope: HTMLElement) {
     if (main.style.getPropertyValue("--cv-renderer-main-right").trim() !== right) {
       main.style.setProperty("--cv-renderer-main-right", right);
     }
-    if (main.style.getPropertyPriority("left") !== "important") {
+    if (
+      main.style.getPropertyValue("left").trim() !== left ||
+      main.style.getPropertyPriority("left") !== "important"
+    ) {
       main.style.setProperty("left", left, "important");
     }
-    if (main.style.getPropertyPriority("right") !== "important") {
+    if (
+      main.style.getPropertyValue("right").trim() !== right ||
+      main.style.getPropertyPriority("right") !== "important"
+    ) {
       main.style.setProperty("right", right, "important");
     }
     if (main.dataset.cvMainGeometryPinned !== "true") {
@@ -177,6 +188,11 @@ export function CvCanvas({
   const pageFitMode = useSyncExternalStore(subscribeCvPageFit, getCvPageFitMode, () => null);
   const pageFitRevision = useSyncExternalStore(subscribeCvPageFit, getCvPageFitRevision, () => 0);
   const pageFitLayout = useSyncExternalStore(subscribeCvLayout, getCvLayout, () => "classic");
+  const infoPosition = useSyncExternalStore(
+    subscribeCvLayout,
+    getCvInfoPosition,
+    () => "standard",
+  );
   // Page margins are stored outside the legacy CV JSON. Subscribing here keeps
   // preview, pagination and hidden PDF canvases on one geometry path.
   useSyncExternalStore(subscribeDossierPageMargins, getDossierPageMarginsSnapshot, () => "{}");
@@ -329,6 +345,10 @@ export function CvCanvas({
   const frame = cvFrameFor(design.template);
   const classicBox = cvContentBox(frame, 0, "classic", design.sidebarPct, canvasChromeOptions);
   const modernBox = cvContentBox(frame, 0, "modern", design.sidebarPct, canvasChromeOptions);
+  const modernPhysicalBox =
+    infoPosition === "mirrored"
+      ? { left: modernBox.right, right: modernBox.left }
+      : { left: modernBox.left, right: modernBox.right };
   const primary = design.colors.primary ?? design.colors.accent ?? design.colors.ink ?? "#111111";
   const secondary = design.colors.secondary ?? design.colors.accent ?? primary;
   const tertiary = design.colors.tertiary ?? design.colors.accent ?? secondary;
@@ -347,6 +367,8 @@ export function CvCanvas({
     "--cv-classic-main-right": `${classicBox.right}mm`,
     "--cv-modern-main-left": `${modernBox.left}mm`,
     "--cv-modern-main-right": `${modernBox.right}mm`,
+    "--cv-modern-physical-left": `${modernPhysicalBox.left}mm`,
+    "--cv-modern-physical-right": `${modernPhysicalBox.right}mm`,
     "--cv-rubric-x": `${rubric.horizontalMm}mm`,
     "--cv-rubric-content-indent": `${rubric.contentIndentMm}mm`,
     "--cover-primary": primary,
@@ -396,7 +418,14 @@ export function CvCanvas({
       observer.disconnect();
       window.removeEventListener(CV_LAYOUT_EVENT, schedulePin);
     };
-  }, [canvasChromeOptions, design.sidebarPct, design.template, pageFitLayout, props.exportMode]);
+  }, [
+    canvasChromeOptions,
+    design.sidebarPct,
+    design.template,
+    infoPosition,
+    pageFitLayout,
+    props.exportMode,
+  ]);
 
   return (
     <div
