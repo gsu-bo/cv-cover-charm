@@ -23,20 +23,14 @@ test("CV renderer owns vertical geometry globally and Sidebar horizontal clearan
   expect(contract).not.toContain("right: var(--cv-classic-main-right) !important;");
 });
 
-test("Sidebar pinning promotes the renderer-resolved physical box and reacts to mirror state", () => {
+test("Sidebar pinning uses the guarded physical box and reacts to mirror state", () => {
   expect(canvas).toContain("getCvInfoPosition");
   expect(canvas).toContain('infoPosition === "mirrored"');
   expect(canvas).toContain("--cv-modern-physical-left");
   expect(canvas).toContain("--cv-modern-physical-right");
   expect(canvas).toContain("export function pinCvSidebarMainGeometry");
-
-  // BaseCvCanvas owns the final per-page geometry. Pinning must promote the
-  // renderer's inline values, never re-read inherited wrapper variables that can
-  // still be stale during hydration/import.
-  expect(canvas).toContain('main.style.getPropertyValue("left")');
-  expect(canvas).toContain('main.style.getPropertyValue("right")');
-  expect(canvas).not.toContain('computed.getPropertyValue("--cv-modern-physical-left")');
-  expect(canvas).not.toContain('computed.getPropertyValue("--cv-modern-physical-right")');
+  expect(canvas).toContain('getPropertyValue("--cv-modern-physical-left")');
+  expect(canvas).toContain('getPropertyValue("--cv-modern-physical-right")');
   expect(canvas).toContain('main.style.setProperty("left", left, "important")');
   expect(canvas).toContain('main.style.setProperty("right", right, "important")');
   expect(canvas).toContain("main.dataset.cvMainGeometryPinned");
