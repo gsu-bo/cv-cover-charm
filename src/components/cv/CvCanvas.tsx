@@ -132,21 +132,21 @@ const SIDEBAR_MAIN_SELECTOR =
   '[data-dossier-document="cv"][data-cv-layout="modern"] :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main]';
 
 /**
- * The wrapper publishes the reviewed physical Sidebar box from current design,
- * page margins and explicit left/right choice. Do not derive this guard from the
- * main node's current `left` / `right`: that node is exactly what historic
- * `!important` template rules can corrupt before the first interaction.
+ * BaseCvCanvas already resolves the final physical page box (custom margins,
+ * structural sidebar clearance, mirror choice and per-page geometry) and writes
+ * that result into the node's inline `left` / `right`. Historic template CSS can
+ * beat those declarations in the cascade, but it cannot change the values stored
+ * in `main.style` itself.
  *
- * Copy the independent physical values onto every main node as inline-important
- * geometry. That makes preview and hidden PDF pages correct immediately after
- * load/import and removes the accidental need to toggle "gespiegelt" once just
- * to refresh the cascade. Classic/non-sidebar layouts stay template-owned.
+ * Promote those renderer-owned declarations to inline-important instead of
+ * copying wrapper variables that can still be stale during hydration/import.
+ * This keeps the full Sidebar gutter on first paint and remains self-contained
+ * for hidden PDF pages. Classic/non-sidebar layouts stay template-owned.
  */
 export function pinCvSidebarMainGeometry(scope: HTMLElement) {
   for (const main of scope.querySelectorAll<HTMLElement>(SIDEBAR_MAIN_SELECTOR)) {
-    const computed = window.getComputedStyle(main);
-    const left = computed.getPropertyValue("--cv-modern-physical-left").trim();
-    const right = computed.getPropertyValue("--cv-modern-physical-right").trim();
+    const left = main.style.getPropertyValue("left").trim();
+    const right = main.style.getPropertyValue("right").trim();
     if (!left || !right) continue;
 
     if (main.style.getPropertyValue("--cv-renderer-main-left").trim() !== left) {
@@ -155,16 +155,10 @@ export function pinCvSidebarMainGeometry(scope: HTMLElement) {
     if (main.style.getPropertyValue("--cv-renderer-main-right").trim() !== right) {
       main.style.setProperty("--cv-renderer-main-right", right);
     }
-    if (
-      main.style.getPropertyValue("left").trim() !== left ||
-      main.style.getPropertyPriority("left") !== "important"
-    ) {
+    if (main.style.getPropertyPriority("left") !== "important") {
       main.style.setProperty("left", left, "important");
     }
-    if (
-      main.style.getPropertyValue("right").trim() !== right ||
-      main.style.getPropertyPriority("right") !== "important"
-    ) {
+    if (main.style.getPropertyPriority("right") !== "important") {
       main.style.setProperty("right", right, "important");
     }
     if (main.dataset.cvMainGeometryPinned !== "true") {
