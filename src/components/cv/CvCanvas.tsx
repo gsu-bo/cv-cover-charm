@@ -30,7 +30,12 @@ import { CvPageFitMenuPortal } from "./CvPageFitMenuPortal";
 import { CvTextAlignmentPortal } from "./CvTextAlignmentPortal";
 import { getCvTextAlignment, subscribeCvTextAlignment } from "./text-alignment";
 import { cvContentBox, cvFrameFor } from "./archetype";
-import { CV_LAYOUT_EVENT, getCvLayout, subscribeCvLayout } from "./layout";
+import {
+  CV_LAYOUT_EVENT,
+  getCvInfoPosition,
+  getCvLayout,
+  subscribeCvLayout,
+} from "./layout";
 import { CvCanvas as BaseCvCanvas } from "./CvCanvasBase";
 import { resolveCvRubricOptions } from "./citrus-rubric";
 import {
@@ -123,6 +128,51 @@ export function resolveCvChromeContact(
 
 const clampCvScale = (value: number) => Math.max(CV_SCALE_MIN, Math.min(CV_SCALE_MAX, value));
 
+const SIDEBAR_MAIN_SELECTOR =
+  '[data-dossier-document="cv"][data-cv-layout="modern"] :is([data-cv-page], [data-cv-measure-page]) > [data-cv-main]';
+
+/**
+ * The wrapper publishes the reviewed physical Sidebar box from current design,
+ * page margins and explicit left/right choice. Do not derive this guard from the
+ * main node's current `left` / `right`: that node is exactly what historic
+ * `!important` template rules can corrupt before the first interaction.
+ *
+ * Copy the independent physical values onto every main node as inline-important
+ * geometry. That makes preview and hidden PDF pages correct immediately after
+ * load/import and removes the accidental need to toggle "gespiegelt" once just
+ * to refresh the cascade. Classic/non-sidebar layouts stay template-owned.
+ */
+export function pinCvSidebarMainGeometry(scope: HTMLElement) {
+  for (const main of scope.querySelectorAll<HTMLElement>(SIDEBAR_MAIN_SELECTOR)) {
+    const computed = window.getComputedStyle(main);
+    const left = computed.getPropertyValue("--cv-modern-physical-left").trim();
+    const right = computed.getPropertyValue("--cv-modern-physical-right").trim();
+    if (!left || !right) continue;
+
+    if (main.style.getPropertyValue("--cv-renderer-main-left").trim() !== left) {
+      main.style.setProperty("--cv-renderer-main-left", left);
+    }
+    if (main.style.getPropertyValue("--cv-renderer-main-right").trim() !== right) {
+      main.style.setProperty("--cv-renderer-main-right", right);
+    }
+    if (
+      main.style.getPropertyValue("left").trim() !== left ||
+      main.style.getPropertyPriority("left") !== "important"
+    ) {
+      main.style.setProperty("left", left, "important");
+    }
+    if (
+      main.style.getPropertyValue("right").trim() !== right ||
+      main.style.getPropertyPriority("right") !== "important"
+    ) {
+      main.style.setProperty("right", right, "important");
+    }
+    if (main.dataset.cvMainGeometryPinned !== "true") {
+      main.dataset.cvMainGeometryPinned = "true";
+    }
+  }
+}
+
 /** Pure snapshot adapter: no dossier-chrome store reads happen below the route/editor boundary. */
 export function CvCanvas({
   chromeOptions = DEFAULT_DOSSIER_CHROME_OPTIONS,
@@ -138,6 +188,11 @@ export function CvCanvas({
   const pageFitMode = useSyncExternalStore(subscribeCvPageFit, getCvPageFitMode, () => null);
   const pageFitRevision = useSyncExternalStore(subscribeCvPageFit, getCvPageFitRevision, () => 0);
   const pageFitLayout = useSyncExternalStore(subscribeCvLayout, getCvLayout, () => "classic");
+  const infoPosition = useSyncExternalStore(
+    subscribeCvLayout,
+    getCvInfoPosition,
+    () => "standard",
+  );
   // Page margins are stored outside the legacy CV JSON. Subscribing here keeps
   // preview, pagination and hidden PDF canvases on one geometry path.
   useSyncExternalStore(subscribeDossierPageMargins, getDossierPageMarginsSnapshot, () => "{}");
@@ -290,6 +345,10 @@ export function CvCanvas({
   const frame = cvFrameFor(design.template);
   const classicBox = cvContentBox(frame, 0, "classic", design.sidebarPct, canvasChromeOptions);
   const modernBox = cvContentBox(frame, 0, "modern", design.sidebarPct, canvasChromeOptions);
+  const modernPhysicalBox =
+    infoPosition === "mirrored"
+      ? { left: modernBox.right, right: modernBox.left }
+      : { left: modernBox.left, right: modernBox.right };
   const primary = design.colors.primary ?? design.colors.accent ?? design.colors.ink ?? "#111111";
   const secondary = design.colors.secondary ?? design.colors.accent ?? primary;
   const tertiary = design.colors.tertiary ?? design.colors.accent ?? secondary;
@@ -308,6 +367,8 @@ export function CvCanvas({
     "--cv-classic-main-right": `${classicBox.right}mm`,
     "--cv-modern-main-left": `${modernBox.left}mm`,
     "--cv-modern-main-right": `${modernBox.right}mm`,
+    "--cv-modern-physical-left": `${modernPhysicalBox.left}mm`,
+    "--cv-modern-physical-right": `${modernPhysicalBox.right}mm`,
     "--cv-rubric-x": `${rubric.horizontalMm}mm`,
     "--cv-rubric-content-indent": `${rubric.contentIndentMm}mm`,
     "--cover-primary": primary,
@@ -330,8 +391,45 @@ export function CvCanvas({
     "--dossier-motif-opacity": String(Math.max(0, Math.min(1, design.bgOpacity))),
   } as CSSProperties;
 
+  const geometryScopeRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const scope = geometryScopeRef.current;
+    if (!scope) return;
+
+    let animationFrame = 0;
+    const pin = () => pinCvSidebarMainGeometry(scope);
+    const schedulePin = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(pin);
+    };
+
+    pin();
+    const observer = new MutationObserver(schedulePin);
+    observer.observe(scope, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["style"],
+    });
+    window.addEventListener(CV_LAYOUT_EVENT, schedulePin);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      observer.disconnect();
+      window.removeEventListener(CV_LAYOUT_EVENT, schedulePin);
+    };
+  }, [
+    canvasChromeOptions,
+    design.sidebarPct,
+    design.template,
+    infoPosition,
+    pageFitLayout,
+    props.exportMode,
+  ]);
+
   return (
     <div
+      ref={geometryScopeRef}
       style={geometryStyle}
       data-dossier-template={design.template}
       data-cv-page-fit-mode={pageFitMode ?? undefined}
