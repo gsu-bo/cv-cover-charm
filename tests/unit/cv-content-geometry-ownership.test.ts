@@ -22,3 +22,12 @@ test("CV renderer owns vertical geometry globally and Sidebar horizontal clearan
   expect(contract).not.toContain("left: var(--cv-classic-main-left) !important;");
   expect(contract).not.toContain("right: var(--cv-classic-main-right) !important;");
 });
+
+test("Sidebar main boxes promote the renderer's physical inline edges above legacy CSS", () => {
+  expect(canvas).toContain("export function pinCvSidebarMainGeometry");
+  expect(canvas).toContain('main.style.setProperty("left", left, "important")');
+  expect(canvas).toContain('main.style.setProperty("right", right, "important")');
+  expect(canvas).toContain('data-cv-main-geometry-pinned');
+  expect(canvas).toContain("new MutationObserver(schedulePin)");
+  expect(canvas).toContain("window.addEventListener(CV_LAYOUT_EVENT, schedulePin)");
+});
